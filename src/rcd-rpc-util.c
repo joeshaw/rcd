@@ -138,6 +138,8 @@ rcd_rc_package_from_name (xmlrpc_value *value,
 
     if (!package)
         xmlrpc_env_set_fault (env, -613, "Unable to find package");
+    else
+        rc_package_ref (package);
 
 cleanup:
     return package;
@@ -235,9 +237,9 @@ rcd_rc_package_from_xmlrpc_package (xmlrpc_value *value,
             xmlrpc_env_set_fault (env, -611, "Unable to find package");
             return NULL;
         }
-            
-        return package;
     }
+
+    rc_package_ref (package);
 
 cleanup:
     return package;

@@ -34,6 +34,9 @@ typedef struct {
     gsize current_download_size;
 
     int total_transaction_steps;
+
+    char *client_host;
+    char *client_user;
 } RCDTransactionStatus;
 
 static void
@@ -544,6 +547,7 @@ transact_step_cb(RCPackman *packman,
 {
     char *action = NULL;
     char *msg;
+    const char *last;
 
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Transaction step.  seqno %d", seqno);
 
@@ -571,7 +575,11 @@ transact_step_cb(RCPackman *packman,
     else
         msg = g_strdup (action);
 
-    rcd_pending_add_message (status->pending, msg);
+    /* We don't want to push the same message multiple times */
+    last = rcd_pending_get_latest_message (status->pending);
+    if (!last || strcmp (msg, last) != 0)
+        rcd_pending_add_message (status->pending, msg);
+
     g_free (msg);
 } /* transact_step_cb */
 
@@ -609,14 +617,49 @@ cleanup_temp_package_files (RCPackageSList *packages)
     }
 } /* cleanup_temp_package_files */
 
+
+static void
+update_log (RCDTransactionStatus *status)
+{
+    RCPackageSList *iter;
+
+    for (iter = status->install_packages; iter; iter = iter->next) {
+        RCPackage *new_p = iter->data;
+        RCPackage *old_p;
+        RCDLogEntry *log_entry;
+
+        log_entry = rcd_log_entry_new (status->client_host,
+                                       status->client_user);
+
+        old_p = rc_world_get_package (rc_get_world(),
+                                      RC_WORLD_SYSTEM_PACKAGES,
+                                      new_p->spec.name);
+
+        if (old_p)
+            rcd_log_entry_set_upgrade (log_entry, old_p, new_p);
+        else
+            rcd_log_entry_set_install (log_entry, new_p);
+
+        rcd_log (log_entry);
+        rcd_log_entry_free (log_entry);
+    }
+
+    for (iter = status->remove_packages; iter; iter = iter->next) {
+        RCPackage *p = iter->data;
+        RCDLogEntry *log_entry;
+
+        log_entry = rcd_log_entry_new (status->client_host,
+                                       status->client_user);
+        rcd_log_entry_set_remove (log_entry, p);
+        rcd_log (log_entry);
+        rcd_log_entry_free (log_entry);
+    }
+} /* update_log */
+
 static gboolean
 run_transaction(gpointer user_data)
 {
     RCDTransactionStatus *status = user_data;
-
-#if 0
-    rcd_pending_add_message (status->pending, "transaction:beginning");
-#endif
 
     packsys_lock = TRUE;
 
@@ -664,6 +707,8 @@ run_transaction(gpointer user_data)
         rcd_pending_fail (status->pending, -1,
                           rc_packman_get_reason (status->packman));
     }
+    else
+        update_log (status);
 
     /*
      * If caching is turned off, we don't want to keep around the package
@@ -672,6 +717,7 @@ run_transaction(gpointer user_data)
     if (!rcd_prefs_get_cache_enabled ())
         cleanup_temp_package_files (status->packages_to_download);
 
+    /* Update the list of system packages */
     rc_world_get_system_packages (rc_get_world ());
 
     packsys_lock = FALSE;
@@ -816,7 +862,7 @@ packsys_transact(xmlrpc_env   *env,
     xmlrpc_value *xmlrpc_remove_packages;
     RCPackageSList *install_packages = NULL;
     RCPackageSList *remove_packages = NULL;
-    RCDIdentity *identity;
+    RCDRPCMethodData *method_data;
     RCDTransactionStatus *status;
     xmlrpc_value *result = NULL;
 
@@ -836,14 +882,16 @@ packsys_transact(xmlrpc_env   *env,
         RCD_PACKAGE_FROM_NAME | RCD_PACKAGE_FROM_XMLRPC_PACKAGE);
     XMLRPC_FAIL_IF_FAULT (env);
 
+    method_data = rcd_rpc_get_method_data ();
+
     if (getenv ("RCD_ENFORCE_AUTH")) {
         /* Check our permissions to install/upgrade/remove */
-        identity = rcd_rpc_get_caller_identity ();
-        
-        check_install_package_auth (env, world, install_packages, identity);
+        check_install_package_auth (
+            env, world, install_packages, method_data->identity);
         XMLRPC_FAIL_IF_FAULT (env);
         
-        check_remove_package_auth (env, remove_packages, identity);
+        check_remove_package_auth (
+            env, remove_packages, method_data->identity);
         XMLRPC_FAIL_IF_FAULT (env);
     }
 
@@ -853,6 +901,11 @@ packsys_transact(xmlrpc_env   *env,
     status->install_packages = install_packages;
     status->remove_packages = remove_packages;
     status->pending = rcd_pending_new ("Beginning transaction");
+    status->client_host = g_strdup (method_data->host);
+    if (getenv ("RCD_ENFORCE_AUTH"))
+        status->client_user = g_strdup (method_data->identity->username);
+    else
+        status->client_user = g_strdup ("(none)");
 
     g_object_set_data (G_OBJECT (status->pending), "status", status);
     rcd_pending_begin (status->pending);
@@ -994,15 +1047,19 @@ packsys_resolve_dependencies(xmlrpc_env   *env,
     for (iter = install_packages; iter; iter = iter->next) {
         RCPackage *p = iter->data;
 
-        if (g_hash_table_lookup (install_hash, p->spec.name))
+        if (g_hash_table_lookup (install_hash, p->spec.name)) {
             g_hash_table_remove (install_hash, p->spec.name);
+            rc_package_unref (p);
+        }
     }
 
     for (iter = remove_packages; iter; iter = iter->next) {
         RCPackage *p = iter->data;
 
-        if (g_hash_table_lookup (remove_hash, p->spec.name))
+        if (g_hash_table_lookup (remove_hash, p->spec.name)) {
             g_hash_table_remove (remove_hash, p->spec.name);
+            rc_package_unref (p);
+        }
     }
 
     rc_package_slist_unref (install_packages);

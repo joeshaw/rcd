@@ -50,7 +50,7 @@ typedef struct {
 
 static xmlrpc_registry *registry = NULL;
 static GHashTable *method_info_hash = NULL;
-static RCDIdentity *caller_identity = NULL;
+static RCDRPCMethodData *current_method_data = NULL;
 
 static xmlrpc_mem_block *
 serialize_permission_fault (void)
@@ -104,10 +104,10 @@ access_control_check (xmlrpc_env   *env,
 } /* access_control_check */
 
 static xmlrpc_mem_block *
-process_rpc_call (xmlrpc_env  *env,
-                  const char  *data,
-                  gsize        size,
-                  RCDIdentity *identity)
+process_rpc_call (xmlrpc_env       *env,
+                  const char       *data,
+                  gsize             size,
+                  RCDRPCMethodData *method_data)
 {
     static int call_num = 1;
 
@@ -118,13 +118,13 @@ process_rpc_call (xmlrpc_env  *env,
 
     time (&start_time);
 
-    if (caller_identity)
-        g_warning ("A caller identity was already set!");
-    caller_identity = identity;
+    if (current_method_data)
+        g_warning ("### REENTRANCY in an RPC call");
+    current_method_data = method_data;
 
     /* Set up the access control check function */
     xmlrpc_registry_set_preinvoke_method (
-        env, registry, access_control_check, identity);
+        env, registry, access_control_check, method_data->identity);
 
     output = xmlrpc_registry_process_call (
         env, registry, NULL, (char *) data, size);
@@ -136,7 +136,7 @@ process_rpc_call (xmlrpc_env  *env,
               call_num, finish_time - start_time);
     ++call_num;
 
-    caller_identity = NULL;
+    current_method_data = NULL;
 
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Call processed");
 
@@ -150,8 +150,11 @@ unix_rpc_callback (RCDUnixServerHandle *handle)
     xmlrpc_mem_block *output;
     GByteArray *out_data;
     RCDIdentity *identity;
+    RCDRPCMethodData *method_data;
 
     xmlrpc_env_init(&env);
+
+    method_data = g_new0 (RCDRPCMethodData, 1);
 
     if (getenv ("RCD_ENFORCE_AUTH")) {
         if (handle->uid != 0) {
@@ -173,8 +176,14 @@ unix_rpc_callback (RCDUnixServerHandle *handle)
     else
         identity = NULL;
 
+    method_data->host = "local";
+    method_data->identity = identity;
+
     output = process_rpc_call (
-        &env, handle->data->data, handle->data->len, identity);
+        &env, handle->data->data, handle->data->len, method_data);
+
+    rcd_identity_free (method_data->identity);
+    g_free (method_data);
 
     if (env.fault_occurred) {
         g_warning ("Some weird fault during registry processing");
@@ -195,12 +204,15 @@ unix_rpc_callback (RCDUnixServerHandle *handle)
 static void
 soup_rpc_callback (SoupServerContext *context, SoupMessage *msg, gpointer data)
 {
-    const char *username;
-    RCDIdentity *identity;
     xmlrpc_env env;
     xmlrpc_mem_block *output;
+    const char *username;
+    RCDIdentity *identity;
+    RCDRPCMethodData *method_data;
 
     xmlrpc_env_init (&env);
+
+    method_data = g_new0 (RCDRPCMethodData, 1);
 
     /* Authenticate the user's password */
     if (getenv ("RCD_ENFORCE_AUTH")) {
@@ -221,10 +233,15 @@ soup_rpc_callback (SoupServerContext *context, SoupMessage *msg, gpointer data)
     else
         identity = NULL;
 
-    output = process_rpc_call (
-        &env, msg->request.body, msg->request.length, identity);
+    method_data->host = soup_server_context_get_client_host (context);
+    method_data->identity = identity;
 
-    rcd_identity_free (identity);
+    output = process_rpc_call (
+        &env, msg->request.body, msg->request.length, method_data);
+
+    rcd_identity_free (method_data->identity);
+    g_free (method_data->host);
+    g_free (method_data);
 
     if (env.fault_occurred) {
         soup_message_set_error(msg, SOUP_ERROR_BAD_REQUEST);
@@ -294,11 +311,11 @@ run_server_thread(gpointer user_data)
     return FALSE;
 } /* run_server_thread */
 
-RCDIdentity *
-rcd_rpc_get_caller_identity(void)
+RCDRPCMethodData *
+rcd_rpc_get_method_data (void)
 {
-    return caller_identity;
-} /* rcd_rpc_get_caller_identity */
+    return current_method_data;
+} /* rcd_rpc_get_method_data */
 
 int
 rcd_rpc_register_method(const char        *method_name,

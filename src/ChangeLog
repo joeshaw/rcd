@@ -1,3 +1,22 @@
+2002-06-19  Joe Shaw  <joe@ximian.com>
+
+	* rcd-pending.c (rcd_pending_get_latest_message): Added.
+
+	* rcd-rpc-packsys.c (transact_step_cb): We probably don't want to
+	push the same message into the pending twice in a row.  Get's rid
+	of the annoying "Removing" messages for each package removed in
+	the client.
+	(update_log): Added.  Logs the package transactions.
+	(packsys_transact): Fix some package lifecycle issues.
+
+	* rcd-rpc-util.c (rcd_rc_package_from_name,
+	rcd_rc_package_from_xmlrpc_package): ref the package.
+
+	* rcd-rpc.c (process_rpc_call, unix_rpc_callback,
+	soup_rpc_callback): Pass along the client host making the call,
+	along with the identity associated with the call.  Requires CVS
+	Soup.
+
 2002-06-18  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-log.c: Added some comments describing our cutoff

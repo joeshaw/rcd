@@ -426,3 +426,14 @@ rcd_pending_get_messages (RCDPending *pending)
 
     return pending->messages;
 } /* rcd_pending_get_messages */
+
+const char *
+rcd_pending_get_latest_message (RCDPending *pending)
+{
+    g_return_val_if_fail (RCD_IS_PENDING (pending), NULL);
+
+    if (!pending->messages)
+        return NULL;
+
+    return (const char *) g_slist_last (pending->messages)->data;
+} /* rcd_pending_get_latest_message */

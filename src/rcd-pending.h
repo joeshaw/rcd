@@ -111,8 +111,10 @@ gint             rcd_pending_get_elapsed_secs     (RCDPending *);
 gint             rcd_pending_get_expected_secs    (RCDPending *);
 gint             rcd_pending_get_remaining_secs   (RCDPending *);
 
-void             rcd_pending_add_message  (RCDPending *, const char *message);
-GSList          *rcd_pending_get_messages (RCDPending *);
+void             rcd_pending_add_message        (RCDPending *,
+                                                 const char *message);
+GSList          *rcd_pending_get_messages       (RCDPending *);
+const char      *rcd_pending_get_latest_message (RCDPending *);
 #endif /* __RCD_PENDING_H__ */
 
 

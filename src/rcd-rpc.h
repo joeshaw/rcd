@@ -8,7 +8,13 @@
 
 #include "rcd-auth.h"
 
-RCDIdentity *rcd_rpc_get_caller_identity(void);
+typedef struct {
+    const char *host;
+
+    RCDIdentity *identity;
+} RCDRPCMethodData;
+
+RCDRPCMethodData *rcd_rpc_get_method_data (void);
 
 int rcd_rpc_register_method (const char        *method_name,
                              xmlrpc_method      method,
