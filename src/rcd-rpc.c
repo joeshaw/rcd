@@ -387,9 +387,11 @@ rcd_rpc_server_start (int port)
             exit (-1);
         }
 
-        auth_ctx.types = SOUP_AUTH_TYPE_BASIC;
+        auth_ctx.types = SOUP_AUTH_TYPE_DIGEST;
         auth_ctx.callback = soup_auth_callback;
-        auth_ctx.basic_info.realm = "RCD";
+        auth_ctx.digest_info.realm = "RCD";
+        auth_ctx.digest_info.allow_algorithms = SOUP_ALGORITHM_MD5;
+        auth_ctx.digest_info.force_integrity = FALSE;
         
         soup_server_register(
             server, "/RPC2", &auth_ctx, soup_rpc_callback, NULL, NULL);

@@ -1,3 +1,8 @@
+2002-09-05  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc.c (rcd_rpc_server_start): Use HTTP digest authentication
+	for client-daemon TCP connections.
+
 2002-09-05  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-rpc-packsys.c (what_requires_or_conflicts_cb): Don't do
