@@ -28,6 +28,23 @@ substring_index (char *str, int len, char *substr)
     return -1;
 } /* substring_index */
 
+static void
+read_cred (GIOChannel *channel)
+{
+    int sockfd;
+    struct ucred cred;
+    int size;
+
+    sockfd = g_io_channel_unix_get_fd (channel);
+
+    getsockopt (sockfd, SOL_SOCKET, SO_PEERCRED, &cred, &size);
+
+    g_print("PID: %d\n"
+            "UID: %d\n"
+            "GID: %d\n\n",
+            cred.pid, cred.uid, cred.gid);
+} /* read_cred */
+
 static gboolean
 read_data(GIOChannel *iochannel,
           GIOCondition condition,
@@ -41,6 +58,8 @@ read_data(GIOChannel *iochannel,
     GByteArray *result;
     int bytes_written;
     int total_written = 0;
+
+    read_cred(iochannel);
 
     printf("Reading data!\n");
 

@@ -24,6 +24,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -104,10 +105,27 @@ soup_default_callback(SoupServerContext *context, SoupMessage *msg, gpointer dat
     soup_message_set_error(msg, SOUP_ERROR_NOT_FOUND);
 } /* default_callback */
 
+static gboolean
+soup_auth_callback (SoupServerAuthContext *auth_ctx,
+                    SoupServerAuth        *auth,
+                    SoupMessage           *msg,
+                    gpointer               user_data)
+{
+    if (!auth) {
+        if (getenv("RCD_ENFORCE_AUTH"))
+            return FALSE;
+        else
+            return TRUE;
+    }
+
+    return TRUE;
+} /* auth_callback */
+
 static gpointer
 run_server_thread(gpointer user_data)
 {
     SoupServer *server;
+    SoupServerAuthContext auth_ctx = { 0 };
 
     g_print ("[%d]: Starting server\n", getpid());
 
@@ -116,7 +134,12 @@ run_server_thread(gpointer user_data)
     if (!server)
         g_error("Could not start RPC server");
 
-    soup_server_register(server, "/RPC2", NULL, soup_rpc_callback, NULL, NULL);
+    auth_ctx.types = SOUP_AUTH_TYPE_BASIC;
+    auth_ctx.callback = soup_auth_callback;
+    auth_ctx.basic_info.realm = "RCD";
+
+    soup_server_register(
+        server, "/RPC2", &auth_ctx, soup_rpc_callback, NULL, NULL);
     soup_server_register(
         server, NULL, NULL, soup_default_callback, NULL, NULL);
 

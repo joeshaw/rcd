@@ -460,7 +460,7 @@ rcd_query (RCWorld     *world,
 
         after_iteration:
 
-            if (engine->finalize)
+            if (engine && engine->finalize)
                 engine->finalize (&parts[i]);
             
             parts[i].processed = TRUE;
