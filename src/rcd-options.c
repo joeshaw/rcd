@@ -71,7 +71,7 @@ rcd_options_parse (int argc, const char **argv)
           "to accept connections.", NULL },
 #endif
 
-        { "download-distro", 'd', POPT_ARG_NONE, &download_distro_flag, 0,
+        { "download-distro", 'o', POPT_ARG_NONE, &download_distro_flag, 0,
           "Download updated distribution information from the server", NULL },
 
         { "allow-non-root", '\0', POPT_ARG_NONE, &non_root_flag, 0,

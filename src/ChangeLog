@@ -1,3 +1,8 @@
+2003-06-23  Joe Shaw  <joe@ximian.com>
+
+	* rcd-options.c: -d was already taken by --debug, so use -o for
+	--download-distro.
+
 2003-06-12  Joe Shaw  <joe@ximian.com>
 
 	* rcd-transaction.c (rcd_transaction_check_package_integrity):
