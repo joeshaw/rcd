@@ -1158,7 +1158,7 @@ rcd_rpc_block_on_pending_list (xmlrpc_env *env,
     info.env = env;
     info.inferior_loop = g_main_loop_new (NULL, FALSE);
 
-    g_idle_add (wait_for_pending_cb, &info);
+    g_timeout_add (250, wait_for_pending_cb, &info);
     g_main_loop_run (info.inferior_loop);
     g_main_loop_unref (info.inferior_loop);
 
