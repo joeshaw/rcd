@@ -32,6 +32,9 @@ Do not run the daemon in the background.
 \fB\-\-no\-network\fR
 Do not connect to the network or download any data from the server.
 .TP 
+\fB\-o</fR>
+On start, the daemon will not attempt to connect to the network immediately. Instead, it will listen for local communications. Use this option when you need to configure a proxy using the "rug set" command. The daemon will connect to the network after the heartbeat interval, or when sent the "refresh" or another network command.
+.TP 
 \fB\-i, \-\-ipaddress=\fR<\fIIP address\fR>
 Bind the remote server only to the specified IP address. This is for systems which host more than one IP address, and means that the server will be available only on the IP address you choose, rather than on all addresses leading to the system.
 .TP 
