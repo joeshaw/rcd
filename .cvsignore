@@ -22,6 +22,6 @@ config.guess
 config.sub
 ltconfig
 ltmain.sh
-xml-i18n-*
+intltool-*
 intl
 ABOUT-NLS
