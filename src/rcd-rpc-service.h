@@ -1,7 +1,7 @@
-/* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
 /*
- * rcd-mirror.h
+ * rcd-rpc-service.h
  *
  * Copyright (C) 2003 Ximian, Inc.
  *
@@ -23,10 +23,9 @@
  * USA.
  */
 
-#ifndef __RCD_RPC_MIRROR_H__
-#define __RCD_RPC_MIRROR_H__
+#ifndef __RCD_RPC_SERVICE_H__
+#define __RCD_RPC_SERVICE_H__
 
-void rcd_rpc_mirror_register_methods ();
+void rcd_rpc_service_register_methods(void);
 
-#endif /* __RCD_RPC_MIRROR_H__ */
-
+#endif /* __RCD_RPC_SERVICE_H__ */

@@ -1,3 +1,19 @@
+2003-08-28  Joe Shaw  <joe@ximian.com>
+
+	* Makefile.am: Get rid of rcd-rpc-mirror.[ch] and add
+	rcd-rpc-service.[ch].
+
+	* rcd-cache.c (rcd_cache_entry_close): Add a g_return_if_fail().
+
+	* rcd-rpc-service.[ch]: Added.  Swallows the functionality of
+	rcd-rpc-mirror.c and also the service-related stuff formerly in
+	rcd-rpc-system.c.
+
+	* rcd-rpc-system.c: Remove the service methods.
+
+	* rcd.c (initialize_rpc): Remove the registration of mirror RPC
+	methods, register the service RPC methods.
+
 2003-08-27  Joe Shaw  <joe@ximian.com>
 
 	* rcd-transaction.c (transact_start_cb): Move the pending begin

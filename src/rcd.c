@@ -48,12 +48,12 @@
 #include "rcd-privileges.h"
 #include "rcd-query.h"
 #include "rcd-rpc.h"
-#include "rcd-rpc-packsys.h"
 #include "rcd-rpc-license.h"
 #include "rcd-rpc-log.h"
-#include "rcd-rpc-mirror.h"
 #include "rcd-rpc-news.h"
+#include "rcd-rpc-packsys.h"
 #include "rcd-rpc-prefs.h"
+#include "rcd-rpc-service.h"
 #include "rcd-rpc-users.h"
 #include "rcd-services.h"
 #include "rcd-shutdown.h"
@@ -328,10 +328,10 @@ initialize_rpc (void)
     rcd_rpc_packsys_register_methods (rc_get_world ());
     rcd_rpc_license_register_methods ();
     rcd_rpc_log_register_methods ();
-    rcd_rpc_mirror_register_methods ();
     rcd_rpc_news_register_methods ();
     rcd_rpc_prefs_register_methods ();
     rcd_rpc_users_register_methods ();
+    rcd_rpc_service_register_methods ();
 } /* initialize_rpc */
 
 static void

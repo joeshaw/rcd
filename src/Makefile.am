@@ -64,14 +64,14 @@ rcd_SOURCES = 			\
 	rcd-rpc-license.h	\
 	rcd-rpc-log.c		\
 	rcd-rpc-log.h		\
-	rcd-rpc-mirror.c	\
-	rcd-rpc-mirror.h	\
 	rcd-rpc-news.c		\
 	rcd-rpc-news.h		\
 	rcd-rpc-packsys.c	\
 	rcd-rpc-packsys.h	\
 	rcd-rpc-prefs.c		\
 	rcd-rpc-prefs.h		\
+	rcd-rpc-service.c	\
+	rcd-rpc-service.h	\
 	rcd-rpc-system.c	\
 	rcd-rpc-system.h	\
 	rcd-rpc-users.c		\

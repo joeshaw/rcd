@@ -218,6 +218,7 @@ void
 rcd_cache_entry_close (RCDCacheEntry *entry)
 {
     g_return_if_fail (entry != NULL);
+    g_return_if_fail (entry->fd != -1);
 
     rc_close (entry->fd);
     entry->fd = -1;
