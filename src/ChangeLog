@@ -1,3 +1,15 @@
+2002-09-12  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd.c (main): Copy argv[0] into a static global char *,
+	rcd_executable_name, for the crash handler to use when invoking
+	rcd-buddy.
+	(crash_handler): Pass rcd_executable_name (which contains argv[0])
+	and the PID as arguments when we run rcd-buddy. (Bug #29460)
+
+	* rcd-buddy.in (gdb_cmd): Invoke gdb by passing the program and
+	pid as arguments, instead of using the --pid option. (Also bug
+	#29460)
+
 2002-09-11  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-autopull.c (package_from_xml_node): Removed some left-over

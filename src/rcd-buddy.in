@@ -18,16 +18,19 @@
 ###
 
 import sys
+import string
 import os
 import time
 
-if len(sys.argv) == 0:
-	sys.stderr.write("Usage: rcd-buddy PID")
+if len(sys.argv) != 3:
+	sys.stderr.write("Usage: rcd-buddy RCD-EXECUTABLE PID")
 	sys.exit(1)
 
-pid = sys.argv[1]
-
-gdb_cmd = "/usr/bin/gdb --batch --quiet --pid=%s --command=@DDIR@/rcd/rcd-buddy-cmds" % pid
+gdb_cmd = string.join(["/usr/bin/gdb",
+		       "--batch --quiet --command=@DDIR@/rcd/rcd-buddy-cmds",
+		       sys.argv[1], # rcd executable name
+		       sys.argv[2]], # pid name
+		      " ")
 
 try:
 	gdb = os.popen(gdb_cmd, "r")

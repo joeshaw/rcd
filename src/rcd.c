@@ -518,6 +518,8 @@ sighup_handler (int sig_num)
     g_idle_add (rehash_data, NULL);
 } /* sighup_handler */
 
+static gchar *rcd_executable_name = NULL;
+
 static void
 crash_handler (int sig_num)
 {
@@ -537,7 +539,8 @@ crash_handler (int sig_num)
     
     /* FIXME: Just to be sure, we should drop privileges before doing
        this. */
-    sprintf (cmd, "python " SHAREDIR "/rcd-buddy %d", getpid ());
+    sprintf (cmd, "python " SHAREDIR "/rcd-buddy %s %d",
+             rcd_executable_name, getpid ());
     system (cmd);
     
     exit (1);
@@ -551,6 +554,8 @@ main (int argc, const char **argv)
     char *python_path;
 
     g_type_init ();
+
+    rcd_executable_name = g_strdup (argv[0]);
 
     main_loop = g_main_loop_new (NULL, TRUE);
     rcd_shutdown_add_handler ((RCDShutdownFn) g_main_loop_quit,
