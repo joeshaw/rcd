@@ -93,11 +93,11 @@ read_data(GIOChannel *iochannel,
     RCDUnixServerHandle *handle = user_data;
     GIOError err;
     char read_buf[4096];
-    int bytes_read = 0;
-    int total_read = 0;
+    gsize bytes_read = 0;
+    gsize total_read = 0;
     GByteArray *result;
-    int bytes_written;
-    int total_written = 0;
+    gsize bytes_written;
+    gsize total_written = 0;
 
 #ifdef HAVE_SO_PEERCRED
     if (!handle->cred_available)

@@ -1,3 +1,13 @@
+2003-11-13  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-prefs.c (get_boolean_func, get_int_func,
+	set_boolean_func, set_int_func): Use the glib integer/pointer
+	conversion macros for 64 bit cleanliness.
+
+	* rcd-unix-server.c (read_data): Fix "int" to "gsize" for sizes
+	passed into g_io_channel_{read_write} so that things work nicely
+	on 64 bit archs.
+
 2003-11-06  Joe Shaw  <joe@ximian.com>
 
 	* rcd-transfer-http.c (http_info): Reset the file_size, in case we

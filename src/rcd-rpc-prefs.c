@@ -76,7 +76,7 @@ get_boolean_func (xmlrpc_env *env, gpointer value)
 {
     xmlrpc_value *v = NULL;
 
-    v = xmlrpc_build_value (env, "b", (gboolean) value);
+    v = xmlrpc_build_value (env, "b", GPOINTER_TO_INT (value));
 
     return v;
 } /* get_boolean_func */
@@ -86,7 +86,7 @@ get_int_func (xmlrpc_env *env, gpointer value)
 {
     xmlrpc_value *v = NULL;
 
-    v = xmlrpc_build_value (env, "i", (int) value);
+    v = xmlrpc_build_value (env, "i", GPOINTER_TO_INT (value));
     
     return v;
 } /* get_int_func */
@@ -115,7 +115,7 @@ set_boolean_func (xmlrpc_env *env, xmlrpc_value *value)
         xmlrpc_bool bool;
 
         xmlrpc_parse_value (env, value, "b", &bool);
-        return (gpointer) bool;
+        return GINT_TO_POINTER (bool);
     } else if (type == XMLRPC_TYPE_STRING) {
         char *str;
 
@@ -153,7 +153,7 @@ set_int_func (xmlrpc_env *env, xmlrpc_value *value)
 
     if (type == XMLRPC_TYPE_INT) {
         xmlrpc_parse_value (env, value, "i", &i);
-        return (gpointer) i;
+        return GINT_TO_POINTER (i);
     } else if (type == XMLRPC_TYPE_STRING) {
         char *str;
         char *endptr;
@@ -176,7 +176,7 @@ set_int_func (xmlrpc_env *env, xmlrpc_value *value)
         return NULL;
     }
     
-    return (gpointer) i;
+    return GINT_TO_POINTER (i);
 } /* set_int_func */
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
