@@ -1,3 +1,8 @@
+2004-09-11  Peter Teichman  <peter@ximian.com>
+
+	* rc-you-transaction.c (get_files_to_download): download .patch.rpm
+	files from patch_prefix, not pkg_prefix
+
 2004-09-11  Tambet Ingo  <tambet@ximian.com>
 
 	* wrapper.cc (rc_you_solvable_to_rc_package_spec): Fix typo.

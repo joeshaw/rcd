@@ -561,7 +561,7 @@ get_files_to_download (RCYouTransaction *transaction, GError **err)
                                  rc_you_file_ref (package->base_package));
             } else if (package->patch_rpm) {
                 rc_you_file_set_url (package->patch_rpm,
-                                     rc_maybe_merge_paths (pkg_prefix,
+                                     rc_maybe_merge_paths (patch_prefix,
                                                            package->patch_rpm->filename));
 
                 transaction->files_to_download = 
