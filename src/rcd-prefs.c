@@ -36,9 +36,11 @@
 #include "rcd-heartbeat.h"
 
 #define DEFAULT_CONFIG_FILE SYSCONFDIR "/rcd.conf"
-#define SYNC_CONFIG (gnome_config_sync_file ((char *) get_config_path (NULL)))
+#define SYNC_CONFIG if (prefs_auto_save) gnome_config_sync_file ((char *) get_config_path (NULL))
 
-const char *
+static gboolean prefs_auto_save = TRUE;
+
+static const char *
 get_config_path (const char *path)
 {
     /*
@@ -57,6 +59,24 @@ get_config_path (const char *path)
 
     return config_path;
 } /* get_config_file */
+
+gboolean
+rcd_prefs_get_auto_save (void)
+{
+    return prefs_auto_save;
+}
+
+void
+rcd_prefs_set_auto_save (gboolean auto_save)
+{
+    prefs_auto_save = auto_save;
+}
+
+void
+rcd_prefs_save (void)
+{
+    gnome_config_sync_file ((char *) get_config_path (NULL));
+}
 
 const char *
 rcd_prefs_get_string (const char *path)

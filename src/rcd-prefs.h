@@ -28,6 +28,10 @@
 
 #include <glib.h>
 
+gboolean rcd_prefs_get_auto_save (void);
+void     rcd_prefs_set_auto_save (gboolean auto_save);
+void     rcd_prefs_save          (void);
+
 gboolean     rcd_prefs_get_remote_server_enabled (void);
 
 int          rcd_prefs_get_remote_server_port (void);
@@ -105,4 +109,3 @@ gboolean    rcd_prefs_get_boolean (const char *path);
 void        rcd_prefs_set_boolean (const char *path, gboolean val);
 
 #endif /* __RCD_PREFS_H__ */
-

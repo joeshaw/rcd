@@ -1,5 +1,11 @@
 2003-03-17  Ian Peters  <itp@ximian.com>
 
+	* rcd-prefs.c, rcd-prefs.h: add the ability to have settings not
+	auto-saved, defaults to the current behavior.  Should have no
+	effect at all on rcd.  :)
+
+2003-03-17  Ian Peters  <itp@ximian.com>
+
 	* rcd-query.c: remove two unnecessary includes
 
 	* rcd-identity.h: "rcd-privileges.h", not <rcd-privileges.h>
