@@ -346,11 +346,6 @@ build_updates_list (RCPackage *old,
     if (info->failed)
         return;
 
-    /* Filter out updates in unsubscribed channels. */
-    if (nuevo->channel
-        && ! rc_channel_subscribed (nuevo->channel))
-        return;
-
     old_xmlrpc = rcd_rc_package_to_xmlrpc (old, info->env);
     new_xmlrpc = rcd_rc_package_to_xmlrpc (nuevo, info->env);
 
