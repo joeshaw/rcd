@@ -1,3 +1,13 @@
+2003-01-10  Joe Shaw  <joe@ximian.com>
+
+	* Makefile.am: Install rcd-ca-bundle.pem into $(datadir)/rcd and
+	not $(datadir)/rcd/ca since we're just using one file instead of a
+	directory.  Update EXTRA_DIST as a result.
+
+	* rcd-ca-bundle.pem: Fold the Ximian CA file into this.
+
+	* ximian-ca.pem: Remove this, it's in rcd-ca-bundle.pem now.
+
 2002-12-18  Joe Shaw  <joe@ximian.com>
 
 	* configure.in: 1.1.91
