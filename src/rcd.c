@@ -256,6 +256,7 @@ shutdown_world (gpointer user_data)
 static void
 shutdown_packman (gpointer user_data)
 {
+    rc_verification_cleanup ();
     rc_packman_set_global (NULL);
 }
 

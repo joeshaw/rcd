@@ -1,3 +1,7 @@
+2005-02-23  James Willcox  <james@ximian.com>
+
+	* rcd.c: (shutdown_packman): call rc_verification_cleanup() at shutdown
+
 2005-01-27  James Willcox  <james@ximian.com>
 
 	* rcd-transfer-http.c: (http_open):
