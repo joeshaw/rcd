@@ -37,7 +37,8 @@ downloads are permitted.
 .br
 This key specifies the server that rcd should connect to.  This is a
 URL.  By default rcd contacts
-.I http://red-carpet.ximian.com
+.I http://red-carpet.ximian.com.
+This key can be set through rcd's preferences mechanism.
 
 .TP
 .B enable-premium=[true | false]
@@ -130,7 +131,7 @@ metadata.  This defaults to 21600 (6 hours).  This key can be set
 through rcd's preferences mechanism.
 
 .TP
-.B require-verified=[true | false]
+.B require-signatures=[true | false]
 .br
 Specifies whether packages being installed must pass a GPG signature
 check.  Packages which are inconclusive for whatever reason (gpg not
