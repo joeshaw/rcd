@@ -1012,13 +1012,6 @@ rcd_transaction_download (RCDTransaction *transaction)
 {
     GError *err = NULL;
 
-    /*
-     * This function fills out the packages_to_download and
-     * total_download_size fields of the RCDTransaction.
-     */
-    if (!get_packages_to_download (transaction, &err))
-        goto ERROR;
-
     if (transaction->packages_to_download) {
         if (!check_download_space (transaction, &err))
             goto ERROR;
@@ -1074,12 +1067,26 @@ begin_transaction_cb (gpointer user_data)
 void
 rcd_transaction_begin (RCDTransaction *transaction)
 {
+    GError *err = NULL;
+
     g_return_if_fail (RCD_IS_TRANSACTION (transaction));
 
     rcd_transaction_emit_transaction_started (transaction);
 
     if (!transaction->install_packages && !transaction->remove_packages) {
         rcd_transaction_finished (transaction, "No action required.");
+        return;
+    }
+
+    /*
+     * This function fills out the packages_to_download and
+     * total_download_size fields of the RCDTransaction.
+     */
+    if (!get_packages_to_download (transaction, &err)) {
+        rcd_transaction_failed (transaction,
+                                transaction->transaction_pending,
+                                err->message);
+        g_error_free (err);
         return;
     }
 

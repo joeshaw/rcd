@@ -1,5 +1,12 @@
 2003-10-03  Joe Shaw  <joe@ximian.com>
 
+	* rcd-transaction.c (rcd_transaction_begin): Move the call to
+	get_packages_to_download() from rcd_transaction_download() to
+	here, so that when things call
+	rcd_transaction_get_download_pending() they don't get NULL.
+
+2003-10-03  Joe Shaw  <joe@ximian.com>
+
 	* rcd-transaction.c (rcd_transaction_begin): Defer actual
 	execution of the transaction so we can immediately return info to
 	clients by putting it in an idle handler.
