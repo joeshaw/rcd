@@ -49,12 +49,6 @@ rcd_rc_package_to_xmlrpc (RCPackage *package, xmlrpc_env *env)
         env, value, "channel",
         package->channel ? rc_channel_get_id(package->channel) : 0);
         
-    RCD_XMLRPC_STRUCT_SET_STRING(
-        env, value, "package_filename", package->package_filename);
-
-    RCD_XMLRPC_STRUCT_SET_STRING(
-        env, value, "signature_filename", package->signature_filename);
-
 cleanup:
     if (env->fault_occurred) {
         if (value)
@@ -148,6 +142,42 @@ cleanup:
 
     return package;
 } /* rcd_xmlrpc_streamed_to_rc_package */
+
+RCPackageSList *
+rcd_xmlrpc_streamed_array_to_rc_package_slist (RCPackman    *packman,
+                                               xmlrpc_value *value,
+                                               xmlrpc_env   *env)
+{
+    RCPackageSList *package_list = NULL;
+    int size = 0;
+    int i;
+
+    size = xmlrpc_array_size (env, value);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    for (i = 0; i < size; i++) {
+        xmlrpc_value *v;
+        RCPackage *package;
+
+        v = xmlrpc_array_get_item (env, value, i);
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        package = rcd_xmlrpc_streamed_to_rc_package (packman, v, env);
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        package_list = g_slist_prepend (package_list, package);
+    }
+
+cleanup:
+    if (env->fault_occurred) {
+        rc_package_slist_unref (package_list);
+        g_slist_free (package_list);
+
+        return NULL;
+    }
+
+    return package_list;
+} /* rcd_xmlrpc_streamed_array_to_rc_package_slist */
 
 xmlrpc_value *
 rcd_rc_channel_to_xmlrpc (RCChannel  *channel,

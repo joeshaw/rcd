@@ -8,6 +8,8 @@
 
 #include "rcd-auth.h"
 
+RCDIdentity *rcd_rpc_get_caller_identity(void);
+
 int rcd_rpc_register_method (const char        *method_name,
                              xmlrpc_method      method,
                              RCDAuthActionList *required_privileges,

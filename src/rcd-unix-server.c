@@ -46,9 +46,7 @@ read_cred (GIOChannel *channel, RCDUnixServerHandle *handle)
         handle->gid = cred.gid;
 
         rc_debug (RC_DEBUG_LEVEL_MESSAGE,
-                  "PID: %d\n"
-                  "UID: %d\n"
-                  "GID: %d\n\n",
+                  "PID: %d  UID: %d  GID: %d",
                   cred.pid, cred.uid, cred.gid);
     }
 } /* read_cred */

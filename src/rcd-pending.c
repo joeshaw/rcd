@@ -314,6 +314,23 @@ rcd_pending_set_description (RCDPending *pending,
     pending->description = g_strdup (desc);
 }
 
+gpointer
+rcd_pending_get_user_data (RCDPending *pending)
+{
+    g_return_val_if_fail (RCD_IS_PENDING (pending), NULL);
+
+    return pending->user_data;
+}
+
+void
+rcd_pending_set_user_data (RCDPending *pending,
+                           gpointer user_data)
+{
+    g_return_if_fail (RCD_IS_PENDING (pending));
+
+    pending->user_data = user_data;
+}
+
 gint
 rcd_pending_get_id (RCDPending *pending)
 {

@@ -50,7 +50,7 @@ const char *rcd_pending_status_to_string (RCDPendingStatus status);
 
 struct _RCDPending {
     GObject parent;
-    
+
     char *description;
     gint id;
 
@@ -62,6 +62,8 @@ struct _RCDPending {
 
     gint retval;
     char *error_msg;
+
+    gpointer user_data;
 };
 
 struct _RCDPendingClass {
@@ -96,6 +98,8 @@ void rcd_pending_fail     (RCDPending *, gint retval, const char *error_msg);
 
 const char      *rcd_pending_get_description      (RCDPending *);
 void             rcd_pending_set_description      (RCDPending *, const char *desc);
+gpointer         rcd_pending_get_user_data        (RCDPending *);
+void             rcd_pending_set_user_data        (RCDPending *, gpointer);
 gint             rcd_pending_get_id               (RCDPending *);
 RCDPendingStatus rcd_pending_get_status           (RCDPending *);
 double           rcd_pending_get_percent_complete (RCDPending *);

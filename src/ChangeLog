@@ -1,3 +1,29 @@
+2002-06-03  Joe Shaw  <joe@ximian.com>
+
+	* rcd-auth.c (auth_action_requirements_met): Fix a braindead goto.
+
+	* rcd-pending.c (rcd_pending_get_user_data,
+	rcd_pending_set_user_data): Added.  Allows some user data to be
+	associated with an RCDPending dingus.
+
+	* rcd-rpc-packsys.c (packsys_query): If we get a RCD_QUERY_INVALID
+	back from the conversion, set a fault.
+	(packsys_transact, packsys_transaction_get_status): Reenabled, does
+	authentication and uses RCDPending.
+
+	* rcd-rpc-util.c (rcd_rc_package_to_xmlrpc): Drop the
+	package_filename and signature_filename fields... a client
+	shouldn't need to know these.
+	(rcd_xmlrpc_streamed_array_to_rc_package_slist): Added.
+
+	* rcd-rpc.c (process_rpc_call): Set the caller's identity.
+	(rcd_rpc_get_caller_identity): Added, allows RPC calls to get
+	their caller's identity.  I'm a little worried about reentrancy
+	here, so spit out a warning if it ever happens.
+
+	* rcd-unix-server.c (read_cred): Change debug output to only be
+	one line.
+
 2002-06-03  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd.c (initialize_logging): Get initial daemon output from the

@@ -49,7 +49,8 @@ typedef struct {
 } RCDRPCMethodInfo;
 
 static xmlrpc_registry *registry = NULL;
-GHashTable *method_info_hash = NULL;
+static GHashTable *method_info_hash = NULL;
+static RCDIdentity *caller_identity = NULL;
 
 static xmlrpc_mem_block *
 serialize_permission_fault (void)
@@ -110,12 +111,18 @@ process_rpc_call (xmlrpc_env  *env,
 
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Handling RPC connection");
 
+    if (caller_identity)
+        g_warning ("A caller identity was already set!");
+    caller_identity = identity;
+
     /* Set up the access control check function */
     xmlrpc_registry_set_preinvoke_method (
         env, registry, access_control_check, identity);
 
     output = xmlrpc_registry_process_call (
         env, registry, NULL, (char *) data, size);
+
+    caller_identity = NULL;
 
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Call processed");
 
@@ -271,6 +278,12 @@ run_server_thread(gpointer user_data)
 
     return NULL;
 } /* run_server_thread */
+
+RCDIdentity *
+rcd_rpc_get_caller_identity(void)
+{
+    return caller_identity;
+} /* rcd_rpc_get_caller_identity */
 
 int
 rcd_rpc_register_method(const char        *method_name,

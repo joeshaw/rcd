@@ -1,12 +1,15 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
+#include <config.h>
+#include "rcd-rpc-packsys.h"
+
 #include <unistd.h>
 
 #include <xmlrpc.h>
 
+#include "rcd-pending.h"
 #include "rcd-query-packages.h"
 #include "rcd-rpc.h"
-#include "rcd-rpc-packsys.h"
 #include "rcd-rpc-util.h"
 
 typedef struct {
@@ -15,12 +18,9 @@ typedef struct {
     RCPackageSList *install_packages;
     RCPackageSList *remove_packages;
 
-    int transaction_id;
-    gboolean completed;
-} RCDPackmanTransactionStatus;
-
-static int current_transaction_id = 0;
-static GHashTable *transaction_log = NULL;
+    RCDPending *pending;
+    int total_steps;
+} RCDTransactionStatus;
 
 static void
 add_channel_cb (RCChannel *channel, gpointer user_data)
@@ -80,8 +80,8 @@ add_package_cb (RCPackage *package, gpointer user_data)
 
 static xmlrpc_value *
 packsys_query (xmlrpc_env   *env,
-                xmlrpc_value *param_array,
-                void         *user_data)
+               xmlrpc_value *param_array,
+               void         *user_data)
 {
     RCWorld *world = (RCWorld *) user_data;
     xmlrpc_value *value;
@@ -106,6 +106,11 @@ packsys_query (xmlrpc_env   *env,
 
         parts[i] = rcd_xmlrpc_tuple_to_query_part (v, env);
         XMLRPC_FAIL_IF_FAULT (env);
+
+        if (parts[i].type == RCD_QUERY_INVALID) {
+            xmlrpc_env_set_fault (env, -604, "Invalid search type");
+            goto cleanup;
+        }
     }
 
     parts[i].type = RCD_QUERY_LAST;
@@ -167,13 +172,16 @@ cleanup:
     return xmlrpc_package;
 } /* packsys_query_file */
 
-#if 0
 static void
 transact_start_cb(RCPackman *packman,
                   int total_steps,
-                  RCDPackmanTransactionStatus *status)
+                  RCDTransactionStatus *status)
 {
-    printf("Transaction starting.  %d steps\n", total_steps);
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE,
+              "Transaction starting.  %d steps", total_steps);
+
+    status->total_steps = total_steps;
+    rcd_pending_begin (status->pending);
 } /* transact_start_cb */
 
 static void
@@ -181,181 +189,258 @@ transact_step_cb(RCPackman *packman,
                  int seqno,
                  RCPackmanStep step,
                  char *name,
-                 RCDPackmanTransactionStatus *status)
+                 RCDTransactionStatus *status)
 {
-    printf("Transaction step.  seqno %d\n", seqno);
+    double percent;
+
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Transaction step.  seqno %d", seqno);
+
+    percent = (double) seqno / (double) status->total_steps * 100.0;
+
+    rcd_pending_update (status->pending, percent);
 } /* transact_step_cb */
 
 static void
 transact_progress_cb(RCPackman *packman,
                      int amount,
                      int total,
-                     RCDPackmanTransactionStatus *status)
+                     RCDTransactionStatus *status)
 {
-    printf("Transaction progress.  %d of %d\n", amount, total);
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE,
+              "Transaction progress.  %d of %d", amount, total);
 } /* transact_progress_cb */
 
 static void
 transact_done_cb(RCPackman *packman,
-                 RCDPackmanTransactionStatus *status)
+                 RCDTransactionStatus *status)
 {
-    status->completed = TRUE;
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Transaction done");
 
-    printf("Transaction done\n");
+    rcd_pending_finished (status->pending, 0);
 } /* transact_done_cb */
 
 static gboolean
 run_transaction(gpointer data)
 {
-    RCDPackmanTransactionStatus *status = data;
+    RCDTransactionStatus *status = data;
 
-    g_signal_connect(
-        G_OBJECT(status->packman), "transact_start",
-        G_CALLBACK(transact_start_cb), status);
-    g_signal_connect(
-        G_OBJECT(status->packman), "transact_step",
-        G_CALLBACK(transact_step_cb), status);
-    g_signal_connect(
-        G_OBJECT(status->packman), "transact_progress",
-        G_CALLBACK(transact_progress_cb), status);
-    g_signal_connect(
-        G_OBJECT(status->packman), "transact_done",
-        G_CALLBACK(transact_done_cb), status);
+    g_signal_connect (
+        G_OBJECT (status->packman), "transact_start",
+        G_CALLBACK (transact_start_cb), status);
+    g_signal_connect (
+        G_OBJECT (status->packman), "transact_step",
+        G_CALLBACK (transact_step_cb), status);
+    g_signal_connect (
+        G_OBJECT (status->packman), "transact_progress",
+        G_CALLBACK (transact_progress_cb), status);
+    g_signal_connect (
+        G_OBJECT (status->packman), "transact_done",
+        G_CALLBACK (transact_done_cb), status);
 
-    rc_packman_transact(
-        status->packman, status->install_packages, status->remove_packages);
+    rc_packman_transact (status->packman,
+                         status->install_packages,
+                         status->remove_packages);
 
-    g_signal_handlers_disconnect_by_func(
-        G_OBJECT(status->packman),
-        G_CALLBACK(transact_done_cb), status);
-    g_signal_handlers_disconnect_by_func(
-        G_OBJECT(status->packman),
-        G_CALLBACK(transact_start_cb), status);
-    g_signal_handlers_disconnect_by_func(
-        G_OBJECT(status->packman),
-        G_CALLBACK(transact_step_cb), status);
-    g_signal_handlers_disconnect_by_func(
-        G_OBJECT(status->packman),
-        G_CALLBACK(transact_progress_cb), status);
+    g_signal_handlers_disconnect_by_func (
+        G_OBJECT (status->packman),
+        G_CALLBACK (transact_done_cb), status);
+    g_signal_handlers_disconnect_by_func (
+        G_OBJECT (status->packman),
+        G_CALLBACK (transact_start_cb), status);
+    g_signal_handlers_disconnect_by_func (
+        G_OBJECT (status->packman),
+        G_CALLBACK (transact_step_cb), status);
+    g_signal_handlers_disconnect_by_func (
+        G_OBJECT (status->packman),
+        G_CALLBACK (transact_progress_cb), status);
 
-    if (rc_packman_get_error(status->packman)) {
-        printf("packman error: %s\n", rc_packman_get_reason(status->packman));
-        status->completed = TRUE;
+    if (rc_packman_get_error (status->packman)) {
+        rc_debug (RC_DEBUG_LEVEL_MESSAGE,
+                  "packman error: %s",
+                  rc_packman_get_reason (status->packman));
+
+        if (rcd_pending_get_status (status->pending) == 
+            RCD_PENDING_STATUS_PRE_BEGIN)
+            rcd_pending_begin (status->pending);
+
+        rcd_pending_fail (status->pending, -1,
+                          rc_packman_get_reason (status->packman));
     }
 
     return FALSE;
 } /* run_transaction */
 
-/**** TEMPORARY ****/
 static void
-rc_package_slist_ref(RCPackageSList *packages)
+check_install_package_auth (xmlrpc_env     *env,
+                            RCWorld        *world,
+                            RCPackageSList *packages, 
+                            RCDIdentity    *identity)
 {
-    RCPackageSList *i;
+    RCPackageSList *iter;
+    gboolean install = FALSE;
+    gboolean upgrade = FALSE;
+    RCDAuthActionList *req;
+    gboolean approved;
 
-    for (i = packages; i; i = i->next) {
-        RCPackage *p = i->data;
+    if (!packages)
+        return;
 
-        rc_package_ref(p);
+    for (iter = packages; iter && !install && !upgrade; iter = iter->next) {
+        RCPackage *p = (RCPackage *) iter->data;
+
+        if (rc_world_find_installed_version (world, p))
+            upgrade = TRUE;
+        else
+            install = TRUE;
     }
-} /* rc_package_slist_ref */
+
+    if (upgrade) {
+        req = rcd_auth_action_list_from_1 (RCD_AUTH_UPGRADE);
+        approved = rcd_auth_approve_action (identity, req, NULL);
+        g_slist_free(req);
+    
+        if (!approved) {
+            xmlrpc_env_set_fault (env, -610, "Permission denied");
+            rc_debug (RC_DEBUG_LEVEL_MESSAGE,
+                      "Caller does not have permissions to upgrade packages");
+        }
+    }
+
+    if (install) {
+        req = rcd_auth_action_list_from_1 (RCD_AUTH_INSTALL);
+        approved = rcd_auth_approve_action (identity, req, NULL);
+        g_slist_free(req);
+    
+        if (!approved) {
+            xmlrpc_env_set_fault (env, -610, "Permission denied");
+            rc_debug (RC_DEBUG_LEVEL_MESSAGE,
+                      "Caller does not have permissions to install packages");
+        }
+    }
+} /* check_install_package_auth */
+
+static void
+check_remove_package_auth (xmlrpc_env     *env,
+                           RCPackageSList *packages, 
+                           RCDIdentity    *identity)
+{
+    RCDAuthActionList *req;
+    gboolean approved;
+
+    if (!packages)
+        return;
+
+    req = rcd_auth_action_list_from_1 (RCD_AUTH_REMOVE);
+    approved = rcd_auth_approve_action (identity, req, NULL);
+    g_slist_free(req);
+    
+    if (!approved) {
+        xmlrpc_env_set_fault (env, -610, "Permission denied");
+        rc_debug (RC_DEBUG_LEVEL_MESSAGE,
+                  "Caller does not have permissions to remove packages");
+    }
+} /* check_remove_package_auth */
 
 static xmlrpc_value *
-packman_transact(xmlrpc_env   *env,
+packsys_transact(xmlrpc_env   *env,
                  xmlrpc_value *param_array,
                  void         *user_data)
 {
-    RCPackman *packman = (RCPackman *) user_data;
+    RCWorld *world = (RCWorld *) user_data;
+    RCPackman *packman;
     xmlrpc_value *xmlrpc_install_packages;
     xmlrpc_value *xmlrpc_remove_packages;
     RCPackageSList *install_packages = NULL;
     RCPackageSList *remove_packages = NULL;
-    RCDPackmanTransactionStatus *status;
-    xmlrpc_value *result;
+    RCDIdentity *identity;
+    RCDTransactionStatus *status;
+    xmlrpc_value *result = NULL;
+
+    packman = rc_world_get_packman (world);
 
     xmlrpc_parse_value(
         env, param_array, "(AA)",
         &xmlrpc_install_packages, &xmlrpc_remove_packages);
     XMLRPC_FAIL_IF_FAULT(env);
 
-    install_packages = rcd_xmlrpc_parse_package_stream_array(
+    install_packages = rcd_xmlrpc_streamed_array_to_rc_package_slist (
         packman, xmlrpc_install_packages, env);
-    remove_packages = rcd_xmlrpc_parse_package_stream_array(
+    remove_packages = rcd_xmlrpc_streamed_array_to_rc_package_slist (
         packman, xmlrpc_remove_packages, env);
 
+    if (getenv ("RCD_ENFORCE_AUTH")) {
+        /* Check our permissions to install/upgrade/remove */
+        identity = rcd_rpc_get_caller_identity ();
+        
+        check_install_package_auth (env, world, install_packages, identity);
+        XMLRPC_FAIL_IF_FAULT (env);
+        
+        check_remove_package_auth (env, remove_packages, identity);
+        XMLRPC_FAIL_IF_FAULT (env);
+    }
+
     /* Track our transaction */
-    status = g_new0(RCDPackmanTransactionStatus, 1);
+    status = g_new0(RCDTransactionStatus, 1);
     status->packman = packman;
     status->install_packages = install_packages;
     status->remove_packages = remove_packages;
-    status->transaction_id = current_transaction_id++;
-    status->completed = FALSE;
+    status->pending = rcd_pending_new ("Transaction status");
+    
+    rcd_pending_set_user_data(status->pending, status);
 
     rc_package_slist_ref(status->install_packages);
     rc_package_slist_ref(status->remove_packages);
 
-    g_hash_table_insert(
-        transaction_log,
-        g_strdup_printf("%d", status->transaction_id),
-        status);
-
     /* Schedule the transaction */
     g_idle_add(run_transaction, status);
 
-    result = xmlrpc_build_value(env, "i", status->transaction_id);
+    result = xmlrpc_build_value (
+        env, "i", rcd_pending_get_id (status->pending));
     XMLRPC_FAIL_IF_FAULT(env);
 
 cleanup:
-    if (install_packages) {
-        /* FIXME: This frees the list, it probably shouldn't */
-        /* rc_package_slist_unref(install_packages); */
-        
-        g_slist_foreach(install_packages, (GFunc) rc_package_unref, NULL);
-    }
+    if (install_packages)
+        rc_package_slist_unref(install_packages);
 
-    if (remove_packages) {
-        /* FIXME: This frees the list, it probably shouldn't */
-        /* rc_package_slist_unref(remove_packages); */
-
-        g_slist_foreach(remove_packages, (GFunc) rc_package_unref, NULL);
-    }
+    if (remove_packages)
+        rc_package_slist_unref(remove_packages);
 
     if (env->fault_occurred)
         return NULL;
 
     return result;
-} /* packman_transact */
+} /* packsys_transact */
 
 static xmlrpc_value *
-packman_transaction_get_status(xmlrpc_env   *env,
+packsys_transaction_get_status(xmlrpc_env   *env,
                                xmlrpc_value *param_array,
                                void         *user_data)
 {
     xmlrpc_int32 transaction_id;
-    char *tid;
-    RCDPackmanTransactionStatus *status;
+    RCDPending *pending;
     xmlrpc_value *result;
 
     xmlrpc_parse_value(
         env, param_array, "(i)",
         &transaction_id);
-    
-    tid = g_strdup_printf("%d", transaction_id);
-    status = g_hash_table_lookup(transaction_log, tid);
-    g_free(tid);
 
-    if (!status) {
-        xmlrpc_env_set_fault(env, -602, "Couldn't find transaction id");
+    pending = rcd_pending_lookup_by_id (transaction_id);
+    if (!pending) {
+        xmlrpc_env_set_fault (env, -602, "Couldn't find transaction id");
         return NULL;
     }
 
-    result = xmlrpc_build_value(env, "b", status->completed);
+    result = xmlrpc_build_value (
+        env, "s",
+        rcd_pending_status_to_string (rcd_pending_get_status (pending)));
 
     if (env->fault_occurred)
         return NULL;
 
     return result;
-} /* packman_transact_get_status */
+} /* packman_transaction_get_status */
 
+#if 0
 static void
 prepend_pkg (RCPackage *pkg, RCPackageStatus status, gpointer user_data)
 {
@@ -409,10 +494,9 @@ packman_resolve_dependencies(xmlrpc_env   *env,
     rc_resolver_add_packages_to_install_from_slist(resolver, install_packages);
     rc_resolver_add_packages_to_remove_from_slist(resolver, remove_packages);
 
-#if 0
     rc_package_slist_unref(install_packages);
     rc_package_slist_unref(remove_packages);
-#endif
+
     install_packages = NULL;
     remove_packages = NULL;
 
@@ -465,8 +549,6 @@ cleanup:
 void
 rcd_rpc_packsys_register_methods(RCWorld *world)
 {
-    transaction_log = g_hash_table_new(g_str_hash, g_str_equal);
-
     rcd_rpc_register_method(
         "rcd.packsys.query",
         packsys_query,
@@ -479,20 +561,24 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
         rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
         world);
 
+    rcd_rpc_register_method(
+        "rcd.packsys.transact",
+        packsys_transact,
+        rcd_auth_action_list_from_1 (RCD_AUTH_NONE),
+        world);
+
+    rcd_rpc_register_method(
+        "rcd.packsys.transaction_get_status",
+        packsys_transaction_get_status,
+        rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+        world);
+
     rcd_rpc_register_method("rcd.packsys.get_channels",
                             packsys_get_channels,
                             rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
                             world);
 
 #if 0
-    rcd_rpc_register_method(
-        "rcd.packsys.transact",
-        packman_transact,
-        packman);
-    rcd_rpc_register_method(
-        "rcd.packsys.transaction_get_status",
-        packman_transaction_get_status,
-        packman);
     rcd_rpc_register_method(
         "rcd.packsys.resolve_dependencies",
         packman_resolve_dependencies,
