@@ -25,6 +25,7 @@
 
 #include "rc-world-you.h"
 #include <rc-world-system.h>
+#include <rcd-world-remote.h>
 #include <rcd-cache.h>
 #include <rcd-transfer.h>
 #include <rcd-transaction.h>
@@ -211,24 +212,19 @@ rc_world_multi_guess_patch_channel (RCWorldMulti *world, RCYouPatch *patch)
     return info.guess;
 }
 
-static const char *
-rc_channel_get_patchinfo_file (RCChannel *channel)
+static char *
+rc_channel_get_patchinfo_file (RCDistro *distro, RCChannel *channel)
 {
     gchar *sufix;
-    RCDistro *distro;
-    static char *info_file = NULL;
+    char *info_file;
 
+    g_return_val_if_fail (distro != NULL, NULL);
     g_return_val_if_fail (channel != NULL, NULL);
-
-    g_free (info_file);
-
-    distro = rc_distro_get_current ();
 
     sufix = rc_maybe_merge_paths ("getPatchList/", rc_distro_get_target (distro));
     info_file = rc_maybe_merge_paths (rc_channel_get_path (channel), sufix);
 
     g_free (sufix);
-    rc_distro_free (distro);
 
     return info_file;
 }
@@ -243,7 +239,7 @@ fetch_patches_cb (RCYouPatch *patch, gpointer user_data)
 }
 
 typedef struct {
-    RCWorldService *world;
+    RCDWorldRemote *world;
     RCYouPatchSList *patches;
 } FetchPatchesInfo;
 
@@ -251,9 +247,10 @@ gboolean
 fetch_patches (RCChannel *channel, gpointer user_data)
 {
     FetchPatchesInfo *info = user_data;
-    gchar *url;
     RCDCacheEntry *entry;
     const GByteArray *data;
+    gchar *info_file;
+    gchar *url = NULL;
     RCDTransfer *t = NULL;
     const guint8 *buffer = NULL;
     gsize buffer_len = 0;
@@ -266,8 +263,12 @@ fetch_patches (RCChannel *channel, gpointer user_data)
                               rc_channel_get_id (channel),
                               TRUE);
 
-    url = rc_maybe_merge_paths (info->world->url,
-                                rc_channel_get_patchinfo_file (channel));
+    info_file = rc_channel_get_patchinfo_file (info->world->distro, channel);
+    if (info_file == NULL)
+        goto cleanup;
+
+    url = rc_maybe_merge_paths ((RC_WORLD_SERVICE (info->world))->url, info_file);
+    g_free (info_file);
 
     t = rcd_transfer_new (url, RCD_TRANSFER_FLAGS_NONE, entry);
     data = rcd_transfer_begin_blocking (t);
@@ -289,6 +290,8 @@ fetch_patches (RCChannel *channel, gpointer user_data)
                                           fetch_patches_cb,
                                           &(info->patches));
 cleanup:
+    g_free (url);
+
     if (t)
         g_object_unref (t);
 
@@ -313,10 +316,10 @@ rc_world_add_patches (RCWorld *world, gpointer user_data)
         RCChannel *channel = RC_WORLD_SYSTEM (world)->system_channel;
 
         patches = rc_you_wrapper_get_installed_patches (channel);
-    } else if (RC_IS_WORLD_SERVICE (world)) {
+    } else if (RCD_IS_WORLD_REMOTE (world)) {
         FetchPatchesInfo info;
 
-        info.world = RC_WORLD_SERVICE (world);
+        info.world = RCD_WORLD_REMOTE (world);
         info.patches = NULL;
         rc_world_foreach_channel (world,
                                   fetch_patches,

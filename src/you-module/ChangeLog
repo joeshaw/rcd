@@ -1,3 +1,8 @@
+2004-08-16  Tambet Ingo  <tambet@ximian.com>
+
+	* rc-world-you.c (fetch_patches): Get the distro target string from
+	current WorldRemote.
+
 2004-07-28  Tambet Ingo  <tambet@ximian.com>
 
 	* you.c (you_abort_download): Implement.
