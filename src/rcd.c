@@ -247,6 +247,9 @@ daemonize (void)
     /* A daemon should always be in its own process group. */
     setsid ();
 
+    /* Change our CWD to / */
+    chdir ("/");
+
     /* Close all file descriptors. */
     for (i = getdtablesize (); i >= 0; --i)
         close (i);
