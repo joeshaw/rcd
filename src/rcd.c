@@ -83,28 +83,6 @@ initialize_rc_world (void)
     rcd_rpc_packsys_register_methods (world);
 } /* initialize_rc_world */
 
-static void
-remove_channel_cb (RCChannel *channel, gpointer user_data)
-{
-    rc_world_remove_channel (rc_get_world (), channel);
-} /* remove_channel_cb */
-
-static void
-refresh_channels_cb (gpointer user_data)
-{
-    rc_world_foreach_channel (rc_get_world (), remove_channel_cb, NULL);
-
-    rcd_fetch_channel_list ();
-    rcd_subscriptions_load ();
-    rcd_fetch_all_channels ();
-} /* refresh_channels_cb */
-
-static void
-initialize_heartbeat_funcs (void)
-{
-    rcd_heartbeat_register_func (refresh_channels_cb, NULL);
-} /* initialize_heartbeat_funcs */
-
 int
 main (int argc, char *argv[])
 {
@@ -125,10 +103,9 @@ main (int argc, char *argv[])
         rcd_fetch_all_channels ();
     }
 
-    initialize_heartbeat_funcs ();
-    rcd_heartbeat_start ();
-
     rcd_module_init ();
+
+    rcd_heartbeat_start ();
 
     main_loop = g_main_loop_new (NULL, TRUE);
     g_main_run (main_loop);

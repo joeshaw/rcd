@@ -1,5 +1,19 @@
 2002-06-14  Joe Shaw  <joe@ximian.com>
 
+	* rcd-rpc-packsys.c (packsys_package_info): Added.  Returns
+	details on a package necessary for an "rpm -qi" like command.
+	(rcd_rpc_packsys_register_methods): Register the channel-refresh
+	heartbeat func here, and check in the heartbeat func that a
+	packaging system lock isn't held so we don't end up refreshing the
+	channel data in the middle of a transaction.
+	(run_transaction): Grab the lock at the start of the transaction
+	and release it at the end, start the heartbeat after the modules
+	have been loaded.
+
+	* rcd.c: Moved the channel refreshing heartbeat func out of here.
+
+2002-06-14  Joe Shaw  <joe@ximian.com>
+
 	* rcd-rpc-packsys.c: When adding messages to an RCDPending, use
 	strings that will be parsed by the client instead of user-visible
 	strings, to keep localization issues out of the daemon and in the

@@ -10,12 +10,15 @@
 #include "rcd-log.h"
 
 #include "rcd-fetch.h"
+#include "rcd-heartbeat.h"
 #include "rcd-pending.h"
 #include "rcd-prefs.h"
 #include "rcd-query-packages.h"
 #include "rcd-rpc.h"
 #include "rcd-rpc-util.h"
 #include "rcd-subscriptions.h"
+
+static gboolean packsys_lock = FALSE;
 
 typedef struct {
     RCPackman *packman;
@@ -109,6 +112,28 @@ packsys_refresh_channel (xmlrpc_env   *env,
     return value;
 }
 
+static void
+remove_channel_cb (RCChannel *channel, gpointer user_data)
+{
+    rc_world_remove_channel (rc_get_world (), channel);
+} /* remove_channel_cb */
+
+static void
+refresh_channels_cb (gpointer user_data)
+{
+    if (packsys_lock) {
+        rc_debug (RC_DEBUG_LEVEL_MESSAGE, 
+                  "Can't refresh channel data while transaction is running");
+        return;
+    }
+
+    rc_world_foreach_channel (rc_get_world (), remove_channel_cb, NULL);
+
+    rcd_fetch_channel_list ();
+    rcd_subscriptions_load ();
+    rcd_fetch_all_channels ();
+} /* refresh_channels_cb */
+
 static xmlrpc_value *
 packsys_refresh_all_channels (xmlrpc_env   *env,
                               xmlrpc_value *param_array,
@@ -116,9 +141,7 @@ packsys_refresh_all_channels (xmlrpc_env   *env,
 {
     xmlrpc_value *value;
 
-    rcd_fetch_channel_list ();
-    rcd_subscriptions_load ();
-    rcd_fetch_all_channels ();
+    refresh_channels_cb (NULL);
 
     value = xmlrpc_build_value (env, "i", 0);
 
@@ -446,6 +469,61 @@ cleanup:
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
+static xmlrpc_value *
+packsys_package_info (xmlrpc_env   *env,
+                      xmlrpc_value *param_array,
+                      void         *user_data)
+{
+    xmlrpc_value *xmlrpc_package;
+    RCPackage *package;
+    xmlrpc_value *result = NULL;
+
+    xmlrpc_parse_value (env, param_array, "(V)", &xmlrpc_package);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    package = rcd_xmlrpc_to_rc_package (
+        xmlrpc_package, env, RCD_PACKAGE_FROM_ANY);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    if (package) {
+        RCPackageUpdate *update;
+
+        result = xmlrpc_struct_new (env);
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        RCD_XMLRPC_STRUCT_SET_STRING (
+            env, result, "section",
+            rc_package_section_to_string (package->section));
+
+        if (package->file_size) {
+            RCD_XMLRPC_STRUCT_SET_INT (
+                env, result, "file_size", package->file_size);
+        }
+        else if ((update = rc_package_get_latest_update (package))) {
+            RCD_XMLRPC_STRUCT_SET_INT (
+                env, result, "file_size", update->package_size);
+        }
+
+        RCD_XMLRPC_STRUCT_SET_INT (
+            env, result, "installed_size", package->installed_size);
+
+        RCD_XMLRPC_STRUCT_SET_STRING (
+            env, result, "summary", package->summary);
+                                   
+        RCD_XMLRPC_STRUCT_SET_STRING (
+            env, result, "description", package->description);
+    }
+    else {
+        xmlrpc_env_set_fault(env, -601, "Couldn't get package");
+        return NULL;
+    }
+    
+cleanup:
+    return result;
+} /* packsys_package_info */
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
 static void
 transact_start_cb(RCPackman *packman,
                   int total_steps,
@@ -540,6 +618,8 @@ run_transaction(gpointer user_data)
     rcd_pending_add_message (status->pending, "transaction:beginning");
 #endif
 
+    packsys_lock = TRUE;
+
     g_signal_connect (
         G_OBJECT (status->packman), "transact_start",
         G_CALLBACK (transact_start_cb), status);
@@ -593,6 +673,8 @@ run_transaction(gpointer user_data)
         cleanup_temp_package_files (status->packages_to_download);
 
     rc_world_get_system_packages (rc_get_world ());
+
+    packsys_lock = FALSE;
 
     return FALSE;
 } /* run_transaction */
@@ -926,6 +1008,11 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
                             rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
                             world);
 
+    rcd_rpc_register_method("rcd.packsys.package_info",
+                            packsys_package_info,
+                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            world);
+
     rcd_rpc_register_method("rcd.packsys.get_updates",
                             packsys_get_updates,
                             rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
@@ -962,6 +1049,8 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
                             /* FIXME: what is the right auth to use here? */
                             rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
                             world);
+
+    rcd_heartbeat_register_func (refresh_channels_cb, NULL);
 
 #if 0
     rcd_rpc_register_method(
