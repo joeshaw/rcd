@@ -36,6 +36,7 @@
 #include "rcd-rpc.h"
 #include "rcd-rpc-packsys.h"
 #include "rcd-transfer.h"
+#include "rcd-subscriptions.h"
 #include "rcd-fetch.h"
 
 static void
@@ -91,6 +92,7 @@ main (int argc, char *argv[])
 
     rcd_fetch_channel_list ();
     rcd_fetch_all_channels ();
+    rcd_subscriptions_load ();
 
     rcd_module_init ();
     initialize_rc_world ();

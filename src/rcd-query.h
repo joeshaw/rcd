@@ -31,8 +31,10 @@
 #include "libredcarpet.h"
 
 typedef enum {
-    RCD_QUERY_IS,
-    RCD_QUERY_SUBSTR,
+    RCD_QUERY_EQUAL,
+    RCD_QUERY_NOT_EQUAL,
+    RCD_QUERY_CONTAINS,
+    RCD_QUERY_NOT_CONTAINS,
     RCD_QUERY_GT,
     RCD_QUERY_LT,
     RCD_QUERY_GT_EQ,
@@ -42,28 +44,63 @@ typedef enum {
 } RCDQueryType;
 
 typedef struct _RCDQueryPart RCDQueryPart;
+typedef struct _RCDQueryEngine RCDQueryEngine;
+
+typedef gboolean (*RCDQueryEngineValidateFn)   (RCDQueryPart *);
+typedef void     (*RCDQueryEngineInitializeFn) (RCDQueryPart *);
+typedef void     (*RCDQueryEngineFinalizeFn)   (RCDQueryPart *);
+typedef gboolean (*RCDQueryEngineMatchFn)      (RCDQueryPart *, gpointer data);
+
+struct _RCDQueryEngine {
+
+    const char *key;
+
+    RCDQueryEngineValidateFn   validate;
+    RCDQueryEngineInitializeFn initialize;
+    RCDQueryEngineFinalizeFn   finalize;
+    RCDQueryEngineMatchFn      match;
+};
+
 struct _RCDQueryPart {
+
     char        *key;
     RCDQueryType type;
     char        *query_str;
-    guint        negate : 1;
 
     /* for internal use only */
-    guint    processed : 1; 
-    gpointer data;
+    RCDQueryEngine *engine;
+    gpointer        data;
 };
+
 
 RCDQueryType rcd_query_type_from_string (const char *str);
 
 const char  *rcd_query_type_to_string   (RCDQueryType type);
 
-gboolean     rcd_query_type_compare     (RCDQueryType type,
+gboolean     rcd_query_type_int_compare (RCDQueryType type,
                                          gint x, gint y);
 
-gint rcd_query (RCWorld      *world,
-                RCDQueryPart *parts_array,
-                RCPackageFn   fn,
-                gpointer      user_data);
+
+/* Useful pre-defined RCDQueryEngine components. */
+
+gboolean     rcd_query_match_string (RCDQueryPart *part, const char *str);
+
+gboolean     rcd_query_validate_bool   (RCDQueryPart *part);
+gboolean     rcd_query_match_bool      (RCDQueryPart *part, gboolean val);
+
+
+/* The query_parts array should be terminated by type RCD_QUERY_LAST.
+   The query_engine array should be NULL-key terminated. */
+
+gboolean     rcd_query_begin (RCDQueryPart   *query_parts,
+                              RCDQueryEngine *query_engine);
+
+gboolean     rcd_query_match (RCDQueryPart   *query_parts,  
+                              RCDQueryEngine *query_engine, 
+                              gpointer        data);
+
+void         rcd_query_end   (RCDQueryPart   *query_parts,
+                              RCDQueryEngine *query_engine);
 
 #endif /* __RC_QUERY_H__ */
 

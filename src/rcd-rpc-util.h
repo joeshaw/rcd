@@ -19,6 +19,9 @@ xmlrpc_value *rcd_rc_package_to_xmlrpc(RCPackage  *package,
 xmlrpc_value *rcd_rc_package_slist_to_xmlrpc_array(RCPackageSList *rc_packages,
                                                    xmlrpc_env     *env);
 
+xmlrpc_value *rcd_rc_channel_to_xmlrpc(RCChannel  *channel,
+                                       xmlrpc_env *env);
+
 RCDQueryPart rcd_xmlrpc_tuple_to_query_part (xmlrpc_value *tuple,
                                              xmlrpc_env   *env);
 

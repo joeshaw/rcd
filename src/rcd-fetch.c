@@ -83,6 +83,8 @@ rcd_fetch_channel_list (void)
     g_assert (root != NULL); /* FIXME */
 
     rc_world_add_channels_from_xml (rc_get_world (), root->xmlChildrenNode);
+    
+    xmlFreeDoc (doc);
 }
 
 void
@@ -91,9 +93,6 @@ rcd_fetch_channel (RCChannel *channel)
     RCDTransfer *t;
     gchar *url;
     GByteArray *data;
-    gint count;
-    xmlDoc *doc;
-    xmlNode *node;
 
     g_return_if_fail (channel != NULL);
 
@@ -117,28 +116,29 @@ rcd_fetch_channel (RCChannel *channel)
 
     data = g_byte_array_append (data, "\0", 1);
 
-    if (rc_channel_get_pkginfo_compressed (channel)) {
-        
-        doc = rc_uncompress_xml (data->data, data->len);
-
-    } else {
-        
-        doc = xmlParseMemory (data->data, strlen (data->data));
-
-    }
-    g_byte_array_free (data, TRUE);
-    node = xmlDocGetRootElement (doc);
-
     /* Clear any old channel info out of the world. */
     rc_world_remove_packages (rc_get_world (), channel);
 
-    count = rc_world_add_packages_from_xml (rc_get_world (),
-                                            channel,
-                                            node);
+    if (rc_channel_get_pkginfo_compressed (channel)) {
+        
+        rc_world_add_packages_from_buffer (rc_get_world (),
+                                           channel,
+                                           data->data,
+                                           data->len);
+    } else {
+        
+        rc_world_add_packages_from_buffer (rc_get_world (),
+                                           channel,
+                                           data->data,
+                                           0);
+
+    }
 
     rc_debug (RC_DEBUG_LEVEL_INFO,
-              "Got %d packages from '%s'",
-              count, rc_channel_get_name (channel));
+              "Loaded channel '%s'",
+              rc_channel_get_name (channel));
+
+    g_byte_array_free (data, TRUE);
 }
 
 static void

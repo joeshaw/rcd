@@ -97,19 +97,49 @@ cleanup:
     return package_array;
 } /* rcd_rc_package_slist_to_xmlrpc_array */
 
+xmlrpc_value *
+rcd_rc_channel_to_xmlrpc (RCChannel  *channel,
+                          xmlrpc_env *env)
+{
+    xmlrpc_value *value;
+    
+    g_return_val_if_fail (channel != NULL, NULL);
+
+    value = xmlrpc_struct_new (env);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    RCD_XMLRPC_STRUCT_SET_INT (env, value, "id", rc_channel_get_id (channel));
+    
+    RCD_XMLRPC_STRUCT_SET_STRING (env, value, "name", rc_channel_get_name (channel));
+
+    RCD_XMLRPC_STRUCT_SET_INT (env, value, "subscribed",
+                               rc_channel_subscribed (channel) ? 1 : 0);
+
+    if (env->fault_occurred) {
+        if (value)
+            xmlrpc_DECREF (value);
+        return NULL;
+    }
+
+ cleanup:
+    if (env->fault_occurred)
+        return NULL;
+
+    return value;
+}
+
 RCDQueryPart
 rcd_xmlrpc_tuple_to_query_part (xmlrpc_value *tuple, xmlrpc_env *env)
 {
     char *key;
     char *type_str;
     char *query_str;
-    xmlrpc_bool negate;
     RCDQueryType type;
     RCDQueryPart part;
 
     xmlrpc_parse_value (
-        env, tuple, "(sssb)", 
-        &key, &type_str, &query_str, &negate);
+        env, tuple, "(sss)", 
+        &key, &type_str, &query_str);
     XMLRPC_FAIL_IF_FAULT (env);
 
     type = rcd_query_type_from_string (type_str);
@@ -117,7 +147,6 @@ rcd_xmlrpc_tuple_to_query_part (xmlrpc_value *tuple, xmlrpc_env *env)
     part.key = g_strdup (key);
     part.type = type;
     part.query_str = g_strdup (query_str);
-    part.negate = (gboolean) negate;
 
 cleanup:
     if (env->fault_occurred) {

@@ -1,3 +1,27 @@
+2002-05-29  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-rpc-packsys.c (packsys_get_channels): Added.
+	(add_package_cb): Ref the package, so we don't leave a dangling
+	pointer in our world later when we free the list and its contents.
+	(rcd_rpc_packsys_register_methods): Register the get_channels
+	method.
+
+	* rcd-rpc-util.c (rcd_rc_channel_to_xmlrpc): Added.
+
+	* rcd-query-packages.c: Added.  Implements package queries on top
+	of the framework in rcd-query.c.
+
+	* rcd-query.c: Abstracts this code into a generalized querying
+	mechanism (which we will be able to also use for log & news
+	queries).
+
+	* rcd-subscriptions.c: Added.  Reads and writes the XML file
+	containing the subscription information.
+
+	* rcd-fetch.c (rcd_fetch_channel): Use
+	rc_world_add_packages_from_buffer so that we get the full benefit
+	of the SAX parser.
+
 2002-05-28  Joe Shaw  <joe@ximian.com>
 
 	* rcd-auth.c: Change RCDAuthAction to #defines which can be

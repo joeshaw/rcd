@@ -4,7 +4,7 @@
 
 #include <xmlrpc.h>
 
-#include "rcd-query.h"
+#include "rcd-query-packages.h"
 #include "rcd-rpc.h"
 #include "rcd-rpc-packsys.h"
 #include "rcd-rpc-util.h"
@@ -23,11 +23,59 @@ static int current_transaction_id = 0;
 static GHashTable *transaction_log = NULL;
 
 static void
+add_channel_cb (RCChannel *channel, gpointer user_data)
+{
+    GSList **slist = user_data;
+    *slist = g_slist_prepend (*slist, channel);
+}
+
+static xmlrpc_value *
+packsys_get_channels (xmlrpc_env   *env,
+                      xmlrpc_value *param_array,
+                      void         *user_data)
+{
+    RCWorld *world = user_data;
+    xmlrpc_value *channel_array;
+    GSList *channel_list = NULL, *iter;
+
+    rc_world_foreach_channel (world,
+                              add_channel_cb,
+                              &channel_list);
+
+    channel_array = xmlrpc_build_value (env, "()");
+
+    for (iter = channel_list; iter != NULL; iter = iter->next) {
+        RCChannel *channel = iter->data;
+        xmlrpc_value *value;
+
+        value = rcd_rc_channel_to_xmlrpc (channel, env);
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        xmlrpc_array_append_item (env, channel_array, value);
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        /*
+         * Adding the value to the array increments its refcount, so release
+         * our ref and let the array own it.
+         */
+        xmlrpc_DECREF(value);
+    }
+
+ cleanup:
+    g_slist_free (channel_list);
+    
+    if (env->fault_occurred)
+        return NULL;
+
+    return channel_array;
+}
+
+static void
 add_package_cb (RCPackage *package, gpointer user_data)
 {
     RCPackageSList **packages = (RCPackageSList **) user_data;
 
-    *packages = g_slist_prepend(*packages, package);
+    *packages = g_slist_prepend(*packages, rc_package_ref (package));
 } /* add_package_cb */
 
 static xmlrpc_value *
@@ -62,13 +110,13 @@ packsys_query (xmlrpc_env   *env,
 
     parts[i].type = RCD_QUERY_LAST;
     
-    rcd_query(world, parts, add_package_cb, &rc_packages);
+    rcd_query_packages (world, parts, add_package_cb, &rc_packages);
 
     xmlrpc_packages = rcd_rc_package_slist_to_xmlrpc_array(rc_packages, env);
 
 cleanup:
     if (parts) {
-        for (i = 0; i <= size; i++) {
+        for (i = 0; i < size; i++) {
             g_free (parts[i].key);
             g_free (parts[i].query_str);
         }
@@ -422,6 +470,11 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
         packsys_query,
         RCD_AUTH_VIEW,
         world);
+
+    rcd_rpc_register_method("rcd.packsys.get_channels",
+                            packsys_get_channels,
+                            RCD_AUTH_VIEW,
+                            world);
 
 #if 0
     rcd_rpc_register_method(

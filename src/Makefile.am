@@ -30,12 +30,16 @@ rcd_SOURCES = 			\
 	rcd-prefs.c		\
 	rcd-query.h		\
 	rcd-query.c		\
+	rcd-query-packages.h	\
+	rcd-query-packages.c	\
 	rcd-rpc.c		\
 	rcd-rpc.h		\
 	rcd-rpc-packsys.c	\
 	rcd-rpc-packsys.h	\
 	rcd-rpc-system.c	\
 	rcd-rpc-system.h	\
+	rcd-subscriptions.h	\
+	rcd-subscriptions.c	\
 	rcd-transfer.h		\
 	rcd-transfer.c		\
 	rcd-rpc-util.c		\
