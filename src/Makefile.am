@@ -9,6 +9,8 @@ INCLUDES =						\
 noinst_PROGRAMS = rcd
 
 rcd_SOURCES = 		\
+	rcd-query.h	\
+	rcd-query.c	\
 	rcd.c
 
 rcd_LDADD =	\

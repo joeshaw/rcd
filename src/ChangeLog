@@ -1,0 +1,4 @@
+2002-05-23  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-query.c: Added a framework for complex queries.
+

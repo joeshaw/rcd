@@ -27,10 +27,57 @@
 #include <config.h>
 #include <glib.h>
 
+#include <libredcarpet.h>
+
+#include "rcd-query.h"
+
+static void
+rcd_query_fn (RCPackage *package, gpointer user_data)
+{
+    g_print ("%s\n", rc_package_to_str_static (package));
+}
+
+static void
+rcd_query_test (void)
+{
+    RCDQueryPart parts[3];
+
+    /* Query for all packages that mention 'GNOME' in the summary but
+       don't have 'gnome' in the package name. */
+
+    parts[0].key = "summary";
+    parts[0].type = RCD_QUERY_SUBSTR;
+    parts[0].query_str = "GNOME";
+    parts[0].negate = FALSE;
+
+    parts[1].key = "name";
+    parts[1].type = RCD_QUERY_SUBSTR;
+    parts[1].query_str = "gnome";
+    parts[1].negate = TRUE;
+
+    parts[2].type = RCD_QUERY_LAST;
+
+    rcd_query (rc_get_world (),
+               parts,
+               rcd_query_fn,
+               NULL);
+}
+
 int
 main (int argc, char *argv[])
 {
-    g_print ("Starting rcd\n");
+    RCWorld *world;
+    RCPackman *packman;
+
+    g_type_init ();
+
+    /* Create a packman, hand it off to the world */
+    world = rc_get_world ();
+    packman = rc_distman_new ();
+    rc_world_register_packman (world, packman);
+    rc_world_get_system_packages (world);
+
+    rcd_query_test ();
 
     return 0;
 }
