@@ -1,3 +1,8 @@
+2003-09-26  Joe Shaw  <joe@ximian.com>
+
+	* rcd-world-remote.c (rcd_world_remote_parse_serviceinfo): Don't
+	download privileges in here anymore.  It'll be handed by a module.
+
 2003-09-25  Joe Shaw  <joe@ximian.com>
 
 	* rcd-prefs.c (rcd_prefs_set_*): Make the non-generic set
