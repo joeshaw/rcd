@@ -145,6 +145,8 @@ void
 rcd_cache_entry_close (RCDCacheEntry *entry)
 {
     rc_close (entry->fd);
+    entry->fd = -1;
+
     rename (entry->tmp_file, entry->local_file);
 
     g_free (entry->tmp_file);
@@ -157,8 +159,10 @@ rcd_cache_entry_close (RCDCacheEntry *entry)
 void
 rcd_cache_entry_cancel (RCDCacheEntry *entry)
 {
-    if (entry->fd != -1)
+    if (entry->fd != -1) {
         rc_close (entry->fd);
+        entry->fd = -1;
+    }
 } /* rcd_cache_entry_cancel */
 
 void
@@ -173,6 +177,8 @@ void
 rcd_cache_entry_open (RCDCacheEntry *entry)
 {
     char *cache_dir;
+
+    g_return_if_fail (entry->fd == -1);
 
     cache_dir = g_path_get_dirname (entry->local_file);
     if (!g_file_test (cache_dir, G_FILE_TEST_EXISTS)) {

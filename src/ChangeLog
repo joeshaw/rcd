@@ -1,3 +1,16 @@
+2002-11-13  Joe Shaw  <joe@ximian.com>
+
+	* rcd-cache.c (rcd_cache_entry_close, rcd_cache_entry_cancel):
+	Reset the fd field back to -1 after closing.
+	(rcd_cache_entry_open): Add a precondition requiring the fd field
+	be -1.
+
+	* rcd-transfer-http.c (http_info): Change the conditional for
+	opening a cache entry to only do it on a 200-class (Sucessful)
+	response.  Before we were opening a cache entry on things that we
+	shouldn't have been (like 302 Found) and occasionally leaking fds
+	(for things like 302 Found and then 200 OK)
+
 2002-11-11  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc.c (rcd_rpc_init): Tune the maximum size of the XML-RPC

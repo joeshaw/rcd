@@ -312,9 +312,7 @@ http_info (SoupMessage *message,
         (RCDTransferProtocolHTTP *) t->protocol;
     const char *auth_header;
 
-    if (!HTTP_RESPONSE_NOT_MODIFIED (message->errorcode) &&
-        !HTTP_RESPONSE_AUTH_FAILURE (message->errorcode) &&
-        protocol->entry)
+    if (HTTP_RESPONSE_SUCCESSFUL (message->errorcode) && protocol->entry)
         rcd_cache_entry_open (protocol->entry);
 
     auth_header = soup_message_get_header (
