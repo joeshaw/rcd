@@ -48,11 +48,6 @@ rcd_services_load (RCWorldMulti *multi)
     xmlNode *node;
     GError *err = NULL;
 
-    if (rcd_options_get_no_services_flag ()) {
-        rc_debug (RC_DEBUG_LEVEL_DEBUG, "Not loading services");
-        return;
-    }
-
     if (loaded) {
         rc_debug (RC_DEBUG_LEVEL_ERROR, "Cannot load services more than once");
         return;
@@ -72,9 +67,16 @@ rcd_services_load (RCWorldMulti *multi)
     rc_world_multi_add_subworld (multi, world);
     g_object_unref (world);
 
-    
+    if (rcd_options_get_no_services_flag ()) {
+        rc_debug (RC_DEBUG_LEVEL_DEBUG, "Not loading services");
+        return;
+    }
+
     if (!g_file_test (SERVICES_FILE, G_FILE_TEST_EXISTS)) {
         const char *default_url;
+
+        if (rcd_options_get_no_network_flag ())
+            return;
 
         /* For compatibility with pre-2.0 rcds */
         default_url = rcd_prefs_get_string ("/Network/host=" DEFAULT_HOST_URL);
@@ -115,6 +117,10 @@ rcd_services_load (RCWorldMulti *multi)
             rc_debug (RC_DEBUG_LEVEL_WARNING, "Service missing URL");
             continue;
         }
+
+        if (strncmp (url, "file", 4) &&
+            rcd_options_get_no_network_flag ())
+            continue;
 
         world = rc_world_service_mount (url, &err);
 
