@@ -26,3 +26,16 @@ xmlrpc-c library with a libxml2-backend patch applied to it.  Whee!
 
 And now you're ready to build RCD.  Yes, this will get fixed in the
 future, if even just by having packages for this stuff.
+
+* Python module
+
+In the python directory there is an xmlrpclib.py file, which is a fork
+of the XML-RPC module that comes with Python.  This version supports
+HTTP Basic authentication and raw communication over Unix domain
+sockets.  To load this module instead of the default one, do something
+like:
+
+	PYTHONPATH=/cvs/rcd/python python
+
+and then you can just "import xmlrpclib" and the correct one will be
+loaded.
