@@ -908,6 +908,19 @@ cleanup_temp_package_files (RCPackageSList *packages)
     }
 } /* cleanup_temp_package_files */
 
+static void
+cleanup_after_transaction (RCDTransactionStatus *status)
+{
+    /*
+     * If caching is turned off, we don't want to keep around the package
+     * files on disk.
+     */
+    if (!rcd_prefs_get_cache_enabled ())
+        cleanup_temp_package_files (status->packages_to_download);
+
+    /* Allow shutdowns again. */
+    rcd_shutdown_allow ();
+} /* cleanup_after_transaction */    
 
 static void
 update_log (RCDTransactionStatus *status)
@@ -1004,15 +1017,7 @@ run_transaction(gpointer user_data)
             update_log (status);
     }
 
-    /*
-     * If caching is turned off, we don't want to keep around the package
-     * files on disk.
-     */
-    if (!rcd_prefs_get_cache_enabled ())
-        cleanup_temp_package_files (status->packages_to_download);
-
-    /* Allow shutdowns again. */
-    rcd_shutdown_allow ();
+    cleanup_after_transaction (status);
 
     /* Update the list of system packages */
     if (! status->dry_run)
@@ -1023,10 +1028,9 @@ run_transaction(gpointer user_data)
     return FALSE;
 } /* run_transaction */
 
-static gboolean
-verify_packages (gpointer user_data)
+static void
+verify_packages (RCDTransactionStatus *status)
 {
-    RCDTransactionStatus *status = user_data;
     RCPackageSList *iter;
 
     for (iter = status->install_packages; iter; iter = iter->next) {
@@ -1061,10 +1065,8 @@ verify_packages (gpointer user_data)
             rcd_pending_fail (status->pending, -1, msg);
             g_free (msg);
 
-            /* Allow shutdowns again. */
-            rcd_shutdown_allow ();
-
-            return FALSE;
+            cleanup_after_transaction (status);
+            return;
         }
         else if (worst_status == RC_VERIFICATION_STATUS_UNDEF) {
             rc_debug (RC_DEBUG_LEVEL_MESSAGE,
@@ -1079,17 +1081,13 @@ verify_packages (gpointer user_data)
                 rcd_pending_fail (status->pending, -1, msg);
                 g_free (msg);
 
-                /* Allow shutdowns again. */
-                rcd_shutdown_allow ();
-
-                return FALSE;
+                cleanup_after_transaction (status);
+                return;
             }
         }
     }
 
     g_idle_add (run_transaction, status);
-
-    return FALSE;
 } /* verify_packages */
 
 static void
@@ -1110,8 +1108,7 @@ download_completed (gboolean    successful,
     rcd_pending_fail (status->pending, -1, msg);
     g_free (msg);
 
-    /* Allow shutdowns again. */
-    rcd_shutdown_allow ();
+    cleanup_after_transaction (status);
 } /* download_completed */
 
 static void

@@ -684,7 +684,7 @@ package_completed_cb (RCDTransfer *t, gpointer user_data)
                              GINT_TO_POINTER (closure->transfer_id));
         g_free (closure);
     }
-} /* process_package_cb */
+} /* package_completed_cb */
 
 static void
 download_package_file (RCPackage           *package,
@@ -748,6 +748,7 @@ rcd_fetch_packages (RCPackageSList        *packages,
     closure->progress_callback = progress_callback;
     closure->completed_callback = completed_callback;
     closure->user_data = user_data;
+    closure->successful = TRUE;
 
     if (!package_transfer_table)
         package_transfer_table = g_hash_table_new (NULL, NULL);

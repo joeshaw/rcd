@@ -1,3 +1,16 @@
+2002-07-30  Joe Shaw  <joe@ximian.com>
+
+	* rcd-fetch.c (rcd_fetch_packages): Initialize successful to
+	TRUE.  Duh.
+
+	* rcd-rpc-packsys.c (cleanup_after_transaction): Added.  Cleans up
+	the package cache if persistent caching is turned off, and allows
+	shutdowns again.
+	(run_transaction, verify_packages, download_completed): Call
+	cleanup_after_transaction().
+	(verify_packages): Change to take an RCDTransactionStatus instead
+	of a non-descript gpointer.  Now a void function.
+
 2002-07-30  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd.c (initialize_rc_world): Added a shutdown handler that frees
