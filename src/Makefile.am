@@ -14,34 +14,38 @@ BUILT_SOURCES =			\
 	rcd-marshal.c
 
 rcd_SOURCES = 			\
-	rcd-marshal.h		\
 	rcd-marshal.c		\
-	rcd-auth.h		\
+	rcd-marshal.h		\
+	rcd-about.c		\
+	rcd-about.h		\
 	rcd-auth.c		\
-	rcd-cache.h		\
+	rcd-auth.h		\
 	rcd-cache.c		\
-	rcd-fetch.h		\
+	rcd-cache.h		\
 	rcd-fetch.c		\
-	rcd-identity.h		\
+	rcd-fetch.h		\
 	rcd-identity.c		\
+	rcd-identity.h		\
 	rcd-module.c		\
 	rcd-module.h		\
-	rcd-prefs.h		\
+	rcd-pending.c		\
+	rcd-pending.h		\
 	rcd-prefs.c		\
-	rcd-query.h		\
+	rcd-prefs.h		\
 	rcd-query.c		\
-	rcd-query-packages.h	\
+	rcd-query.h		\
 	rcd-query-packages.c	\
+	rcd-query-packages.h	\
 	rcd-rpc.c		\
 	rcd-rpc.h		\
 	rcd-rpc-packsys.c	\
 	rcd-rpc-packsys.h	\
 	rcd-rpc-system.c	\
 	rcd-rpc-system.h	\
-	rcd-subscriptions.h	\
 	rcd-subscriptions.c	\
-	rcd-transfer.h		\
+	rcd-subscriptions.h	\
 	rcd-transfer.c		\
+	rcd-transfer.h		\
 	rcd-rpc-util.c		\
 	rcd-rpc-util.h		\
 	rcd-unix-server.c	\

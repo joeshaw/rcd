@@ -1,3 +1,52 @@
+2002-06-03  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd.c (initialize_logging): Get initial daemon output from the
+	rcd_about_* functions.
+
+	* rcd-module.c: Re-ordered #include directives.
+
+	* rcd-unix-server.c: Re-ordered #include directives.
+
+	* rcd-rpc.c: Re-ordered #include directives.
+
+	* rcd-rpc-util.h: Added RCD_XMLRPC_STRUCT_GET_DOUBLE and
+	RCD_XMLRPC_STRUCT_SET_DOUBLE macros.
+
+	* rcd-rpc-util.c (rcd_xmlrpc_streamed_to_rc_package): Set package
+	to NULL to silence compiler warning.
+
+	* rcd-rpc-system.c (system_ping): Have ping return server info
+	instead of just the time.
+	(system_poll_pending): Added.  This allows us to poll for the
+	status of pending operations to see what happened, allow us to
+	update progress bars, etc.
+
+	* rcd-fetch.c (rcd_fetch_channel_list): Make our channel list
+	download be a blocking transfer.
+	(rcd_fetch_channel): ...but make our channel package info download
+	non-blocking.
+
+	* rcd-transfer.c (rcd_transfer_finalize): Unref our RCDPending.
+	(rcd_transfer_set_flags): Anal arg checking.
+	(rcd_transfer_set_proxy_url): Anal arg checking.
+	(rcd_transfer_get_pending): Accessor for our RCDPending.
+	(rcd_transfer_get_error): Anal arg checking.
+	(rcd_transfer_begin): If we aren't a blocking transfer (and don't
+	explicitly say not to do so), create an RCDPending object and hook
+	up the signals so that it will track the transfer's progress.
+	Return the id of the RCDPending instead of a GByteArray.
+	(rcd_transfer_begin_blocking): An explicit entry-point for
+	blocking transfers, which won't create an RCDPending and returns a
+	GByteArray.
+
+	* rcd-transfer.h: Add an RCDPending to the RCDTransfer struct.
+
+	* rcd-about.c: Added.  A place to hide important strings behind an
+	simple API.
+
+	* rcd-pending.c: Added.  A gadget for tracking the progress of
+	long-running operations in the daemon.
+
 2002-05-30  Joe Shaw  <joe@ximian.com>
 
 	* rcd-auth.c (rcd_string_to_auth_action_list): Fix an invalid

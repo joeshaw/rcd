@@ -23,6 +23,9 @@
  * USA.
  */
 
+#include <config.h>
+#include "rcd-rpc.h"
+
 #include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,7 +39,6 @@
 
 #include "rcd-auth.h"
 #include "rcd-identity.h"
-#include "rcd-rpc.h"
 #include "rcd-rpc-system.h"
 #include "rcd-unix-server.h"
 

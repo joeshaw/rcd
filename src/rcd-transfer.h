@@ -30,7 +30,9 @@
 
 #include <glib-object.h>
 #include <libsoup/soup.h>
+
 #include "rcd-cache.h"
+#include "rcd-pending.h"
 
 typedef   enum _RCDTransferFlags RCDTransferFlags;
 typedef   enum _RCDTransferError RCDTransferError;
@@ -43,7 +45,8 @@ enum _RCDTransferFlags {
     RCD_TRANSFER_FLAGS_DONT_CACHE     = 1 << 1,
     RCD_TRANSFER_FLAGS_FORCE_CACHE    = 1 << 2,
     RCD_TRANSFER_FLAGS_FLUSH_MEMORY   = 1 << 3,
-    RCD_TRANSFER_FLAGS_RESUME_PARTIAL = 1 << 4
+    RCD_TRANSFER_FLAGS_RESUME_PARTIAL = 1 << 4,
+    RCD_TRANSFER_FLAGS_NO_PENDING     = 1 << 5
 };
 
 enum _RCDTransferError {
@@ -89,6 +92,9 @@ struct _RCDTransfer {
     /* The cache for this transfer */
     RCDCache *cache;
 
+    /* The associated "pending" object */
+    RCDPending *pending;
+
     gboolean cached;
     gboolean aborted;
     gboolean paused;
@@ -125,11 +131,15 @@ RCDTransfer *rcd_transfer_new (RCDTransferFlags  flags,
                                RCDCache         *cache);
 
 void rcd_transfer_set_flags(RCDTransfer *t, RCDTransferFlags flags);
-GByteArray *rcd_transfer_begin(RCDTransfer *t, const char *url);
+
+gint rcd_transfer_begin(RCDTransfer *t, const char *url);
+GByteArray *rcd_transfer_begin_blocking (RCDTransfer *t, const char *url);
+
 void rcd_transfer_abort(RCDTransfer *t);
 void rcd_transfer_pause(RCDTransfer *t);
 void rcd_transfer_resume(RCDTransfer *t);
 void rcd_transfer_set_proxy_url(RCDTransfer *t, const char *url);
+RCDPending *rcd_transfer_get_pending(RCDTransfer *t);
 GSList *rcd_transfer_get_current_transfers(void);
 RCDTransferError rcd_transfer_get_error(RCDTransfer *t);
 const char *rcd_transfer_get_error_string(RCDTransfer *t);

@@ -23,25 +23,43 @@
  * USA.
  */
 
-#include <time.h>
+#include <config.h>
+#include "rcd-rpc-system.h"
 
 #include <xmlrpc.h>
 
+#include "rcd-about.h"
 #include "rcd-module.h"
+#include "rcd-pending.h"
 #include "rcd-rpc.h"
-#include "rcd-rpc-system.h"
+#include "rcd-rpc-util.h"
 
 static xmlrpc_value *
-system_ping(xmlrpc_env *env, xmlrpc_value *param_array, void *user_data)
+system_ping(xmlrpc_env   *env,
+            xmlrpc_value *param_array,
+            void         *user_data)
 {
-    xmlrpc_value *result;
+    xmlrpc_value *value = NULL;
 
-    result = xmlrpc_build_value(env, "i", time(NULL));
-    if (env->fault_occurred)
+    value = xmlrpc_struct_new(env);
+
+    /* Add server name */
+
+    RCD_XMLRPC_STRUCT_SET_STRING(env, value, "name", rcd_about_name ());
+    XMLRPC_FAIL_IF_FAULT(env);
+
+    RCD_XMLRPC_STRUCT_SET_STRING(env, value, "copyright", rcd_about_copyright ());
+    XMLRPC_FAIL_IF_FAULT(env);
+
+ cleanup: 
+    if (env->fault_occurred) {
+        if (value)
+            xmlrpc_DECREF(value);
         return NULL;
+    }
 
-    return result;
-} /* system_ping */
+    return value;
+}
 
 static xmlrpc_value *
 system_query_module(xmlrpc_env   *env,
@@ -64,6 +82,62 @@ system_query_module(xmlrpc_env   *env,
 
     return result;
 } /* system_query_module */
+
+static xmlrpc_value *
+system_poll_pending(xmlrpc_env   *env,
+                    xmlrpc_value *param_array,
+                    void         *user_data)
+{
+    xmlrpc_value *value = NULL;
+    gint pending_id;
+    RCDPending *pending;
+
+    xmlrpc_parse_value (env, param_array, "(i)", &pending_id);
+    if (env->fault_occurred)
+        return NULL;
+
+    pending = rcd_pending_lookup_by_id (pending_id);
+    if (pending == NULL)
+        return NULL;
+
+    value = xmlrpc_struct_new (env);
+
+    RCD_XMLRPC_STRUCT_SET_INT (env, value, "id",
+                               rcd_pending_get_id (pending));
+
+    RCD_XMLRPC_STRUCT_SET_STRING (env, value, "description",
+                                  rcd_pending_get_description (pending));
+
+    RCD_XMLRPC_STRUCT_SET_DOUBLE (env, value, "percent_complete",
+                                  rcd_pending_get_percent_complete (pending));
+
+    RCD_XMLRPC_STRUCT_SET_STRING (env, value, "status",
+                                  rcd_pending_status_to_string (rcd_pending_get_status (pending)));
+
+    if (rcd_pending_get_elapsed_secs (pending) >= 0) {
+        RCD_XMLRPC_STRUCT_SET_INT (env, value, "elased_sec",
+                                   rcd_pending_get_elapsed_secs (pending));
+    }
+
+    if (rcd_pending_get_remaining_secs (pending) >= 0) {
+        RCD_XMLRPC_STRUCT_SET_INT (env, value, "remaining_sec",
+                                   rcd_pending_get_remaining_secs (pending));
+    }
+
+    if (rcd_pending_get_expected_secs (pending) >= 0) {
+        RCD_XMLRPC_STRUCT_SET_INT (env, value, "expected_sec",
+                                   rcd_pending_get_expected_secs (pending));
+    }
+
+ cleanup: 
+    if (env->fault_occurred) {
+        if (value)
+            xmlrpc_DECREF(value);
+        return NULL;
+    }
+
+    return value;
+}
 	
 void
 rcd_rpc_system_register_methods(void)
@@ -72,5 +146,7 @@ rcd_rpc_system_register_methods(void)
         "rcd.system.ping", system_ping, NULL, NULL);
 	rcd_rpc_register_method(
         "rcd.system.query_module", system_query_module, NULL, NULL);
+	rcd_rpc_register_method(
+        "rcd.system.poll_pending", system_poll_pending, NULL, NULL);
 } /* rcd_rpc_system_register_methods */
 

@@ -38,6 +38,7 @@
 #include <libredcarpet.h>
 #include "rcd-prefs.h"
 #include "rcd-cache.h"
+#include "rcd-pending.h"
 #include "rcd-marshal.h"
 
 #define _(x) x
@@ -62,6 +63,8 @@ rcd_transfer_finalize (GObject *obj)
     if (t->timer)
         g_timer_destroy (t->timer);
     g_free (t->error_string);
+
+    g_object_unref (t->pending);
 
     if (parent_class->finalize)
         parent_class->finalize (obj);
@@ -162,7 +165,6 @@ rcd_transfer_new (RCDTransferFlags flags,
 void
 rcd_transfer_set_flags(RCDTransfer *t, RCDTransferFlags flags)
 {
-    g_return_if_fail(t);
     g_return_if_fail(RCD_IS_TRANSFER(t));
 
     t->flags = flags;
@@ -173,13 +175,23 @@ rcd_transfer_set_proxy_url(RCDTransfer *t, const char *url)
 {
     SoupContext *context;
 
-    if (url) {
+    g_return_if_fail (RCD_IS_TRANSFER (t));
+
+    if (url && *url) {
         context = soup_context_get(url);
         soup_set_proxy(context);
     }
     else
         soup_set_proxy(NULL);
 } /* rcd_transfer_set_proxy_info */
+
+RCDPending *
+rcd_transfer_get_pending (RCDTransfer *t)
+{
+    g_return_val_if_fail (RCD_IS_TRANSFER (t), NULL);
+
+    return t->pending;
+}
 
 GSList *
 rcd_transfer_get_current_transfers(void)
@@ -190,13 +202,14 @@ rcd_transfer_get_current_transfers(void)
 RCDTransferError
 rcd_transfer_get_error(RCDTransfer *t)
 {
+    g_return_val_if_fail (RCD_IS_TRANSFER (t), RCD_TRANSFER_ERROR_NONE);
     return t->error;
 } /* rcd_transfer_get_error */
 
 const char *
 rcd_transfer_get_error_string(RCDTransfer *t)
 {
-    g_return_val_if_fail(t, NULL);
+    g_return_val_if_fail(RCD_IS_TRANSFER (t), NULL);
     g_return_val_if_fail(t->error, NULL);
 
     return t->error_string;
@@ -1015,20 +1028,42 @@ rcd_transfer_get_vtable(RCDTransfer *t)
     return rcd_transfer_get_vtable_from_url(t->url);
 } /* rcd_transfer_get_vtable */
 
-GByteArray *
+static void
+file_data_cb (RCDTransfer *t, char *buf, int size, gpointer user_data)
+{
+    RCDPending *pending = user_data;
+    double perc;
+
+    if (t->file_size > 0)
+        perc = 100.0 * (t->trans_size / (double) t->file_size);
+    else
+        perc = 50.0; /* FIXME! */
+
+    rcd_pending_update (pending, perc);
+}
+
+static void
+file_done_cb (RCDTransfer *t, gpointer user_data)
+{
+    RCDPending *pending = user_data;
+
+    rcd_pending_finished (pending, 0);
+}
+
+gint
 rcd_transfer_begin(RCDTransfer *t, const char *url)
 {
     RCDTransferVTable *vtable;
+    gchar *desc;
     int rc;
     
-    g_return_val_if_fail(t, NULL);
-    g_return_val_if_fail(RCD_IS_TRANSFER(t), NULL);
-    g_return_val_if_fail(url, NULL);
-    
+    g_return_val_if_fail(RCD_IS_TRANSFER(t), -1);
+    g_return_val_if_fail(url && *url, -1);
+
     vtable = rcd_transfer_get_vtable_from_url(url);
     if (!vtable) {
         rcd_transfer_set_error(t, RCD_TRANSFER_ERROR_INVALID_URI, url);
-        return NULL;
+        return -1;
     }
 
     t->url = g_strdup(url);
@@ -1046,30 +1081,63 @@ rcd_transfer_begin(RCDTransfer *t, const char *url)
 
     rc_debug(RC_DEBUG_LEVEL_DEBUG, "Transfer URL: %s\n", t->url);
 
-    rc = (vtable->open_func)(t, 0);
+    rc = vtable->open_func(t, 0);
     if (rc) {
         /* An error occurred in the open call. It's the open call's
            responsibility to rcd_transfer_set_error() the appropriate
            error. */
-        return NULL;
+        return -1;
     }
 
     current_transfers = g_slist_append(current_transfers, t);
 
-    if (t->flags & RCD_TRANSFER_FLAGS_BLOCK) {
-        GByteArray *ret;
+    /* Create associated RCPending object */
+    if (! (t->flags & (RCD_TRANSFER_FLAGS_BLOCK | RCD_TRANSFER_FLAGS_NO_PENDING))) {
 
-        t->blocking_loop = g_main_loop_new (NULL, TRUE);
-        g_main_loop_run (t->blocking_loop);
+        desc = g_strdup_printf ("Downloading %s", url);
+        t->pending = rcd_pending_new (desc);
+        g_free (desc);
 
-        ret = t->data;
-        t->data = NULL;
+        g_signal_connect (t,
+                          "file_data",
+                          (GCallback) file_data_cb,
+                          t->pending);
 
-        return ret;
+        g_signal_connect (t,
+                          "file_done",
+                          (GCallback) file_done_cb,
+                          t->pending);
+
+        rcd_pending_begin (t->pending);
     }
 
-    return NULL;
+    return t->pending ? rcd_pending_get_id (t->pending) : -1;
 } /* rcd_transfer_begin */
+
+GByteArray *
+rcd_transfer_begin_blocking (RCDTransfer *t,
+                             const char  *url)
+{
+    GByteArray *ret;
+    gint id;
+
+    g_return_val_if_fail (RCD_IS_TRANSFER (t), NULL);
+    g_return_val_if_fail (url && *url, NULL);
+
+    t->flags = t->flags | RCD_TRANSFER_FLAGS_BLOCK;
+
+    id = rcd_transfer_begin (t, url);
+
+    t->blocking_loop = g_main_loop_new (NULL, TRUE);
+    g_main_loop_run (t->blocking_loop);
+
+    ret = t->data;
+    t->data = NULL;
+
+    /* FIXME: do something smart w/ the id here. */
+
+    return ret;
+}
 
 void
 rcd_transfer_abort(RCDTransfer *t)

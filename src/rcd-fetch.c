@@ -64,7 +64,7 @@ rcd_fetch_channel_list (void)
                                rcd_prefs_get_host ());
     }
 
-    data = rcd_transfer_begin (t, url);
+    data = rcd_transfer_begin_blocking (t, url);
     g_free (url);
 
     g_assert (data != NULL); /* FIXME */
@@ -87,33 +87,18 @@ rcd_fetch_channel_list (void)
     xmlFreeDoc (doc);
 }
 
-void
-rcd_fetch_channel (RCChannel *channel)
+static void
+process_channel_cb (RCDTransfer *t, gpointer user_data)
 {
-    RCDTransfer *t;
-    gchar *url;
-    GByteArray *data;
-
-    g_return_if_fail (channel != NULL);
-
-    t = rcd_transfer_new (RCD_TRANSFER_FLAGS_BLOCK,
-                          rcd_cache_get_normal_cache ());
-
-    /* FIXME: deal with mirrors */
-    url = g_strdup_printf ("%s/%s",
-                           rcd_prefs_get_host (),
-                           rc_channel_get_pkginfo_file (channel));
-    data = rcd_transfer_begin (t, url);
-    g_free (url);
+    GByteArray *data = t->data;
+    RCChannel *channel = user_data;
 
     g_assert (data != NULL); /* FIXME? */
 
     if (rcd_transfer_get_error (t)) {
         g_assert_not_reached (); /* FIXME */
     }
-
-    g_object_unref (t);
-
+    
     data = g_byte_array_append (data, "\0", 1);
 
     /* Clear any old channel info out of the world. */
@@ -138,8 +123,45 @@ rcd_fetch_channel (RCChannel *channel)
               "Loaded channel '%s'",
               rc_channel_get_name (channel));
 
-    g_byte_array_free (data, TRUE);
 }
+
+void
+rcd_fetch_channel (RCChannel *channel)
+{
+    RCDTransfer *t;
+    gchar *url, *desc;
+    RCDPending *pending;
+    gint id;
+
+    g_return_if_fail (channel != NULL);
+
+    t = rcd_transfer_new (0,
+                          rcd_cache_get_normal_cache ());
+
+    g_signal_connect(t,
+                     "file_done",
+                     (GCallback) process_channel_cb,
+                     channel);
+
+    /* FIXME: deal with mirrors */
+    url = g_strdup_printf ("%s/%s",
+                           rcd_prefs_get_host (),
+                           rc_channel_get_pkginfo_file (channel));
+
+    rcd_transfer_begin (t, url);
+    g_free (url);
+
+    /* Attach a more meaningful description to our pending object. */
+    pending = rcd_transfer_get_pending (t);
+    desc = g_strdup_printf ("Download '%s' channel info",
+                            rc_channel_get_name (channel));
+    rcd_pending_set_description (pending, desc);
+    g_free (desc);
+    
+
+    /* g_object_unref (t); */ /* FIXME: how does memory management work here. */
+
+ }
 
 static void
 all_channels_cb (RCChannel *channel, gpointer user_data)

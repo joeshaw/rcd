@@ -80,8 +80,8 @@ add_package_cb (RCPackage *package, gpointer user_data)
 
 static xmlrpc_value *
 packsys_query (xmlrpc_env   *env,
-               xmlrpc_value *param_array,
-               void         *user_data)
+                xmlrpc_value *param_array,
+                void         *user_data)
 {
     RCWorld *world = (RCWorld *) user_data;
     xmlrpc_value *value;

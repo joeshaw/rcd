@@ -4,6 +4,7 @@
 #define __RCD_UNIX_SERVER_H__
 
 #include <glib.h>
+#include <sys/types.h>
 
 typedef struct _RCDUnixServerHandle RCDUnixServerHandle;
 

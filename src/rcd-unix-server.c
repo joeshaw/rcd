@@ -1,5 +1,8 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
+#include <config.h>
+#include "rcd-unix-server.h"
+
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -8,8 +11,6 @@
 #include <unistd.h>
 
 #include <libredcarpet.h>
-
-#include "rcd-unix-server.h"
 
 int
 substring_index (char *str, int len, char *substr)

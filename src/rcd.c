@@ -31,6 +31,7 @@
 #include <glib.h>
 #include <libredcarpet.h>
 
+#include "rcd-about.h"
 #include "rcd-module.h"
 #include "rcd-query.h"
 #include "rcd-rpc.h"
@@ -55,8 +56,8 @@ initialize_logging (void)
     rc_debug_set_display_handler (debug_message_handler, NULL);
     rc_debug_set_display_level (RC_DEBUG_LEVEL_INFO);
 
-    rc_debug (RC_DEBUG_LEVEL_ALWAYS, "Starting Red Carpet Daemon " VERSION);
-    rc_debug (RC_DEBUG_LEVEL_ALWAYS, "Copyright (C) 2000-2002 Ximian Inc.  All rights reserved.");
+    rc_debug (RC_DEBUG_LEVEL_ALWAYS, "%s", rcd_about_name ());
+    rc_debug (RC_DEBUG_LEVEL_ALWAYS, "%s", rcd_about_copyright ());
 }
 
 static void
@@ -91,8 +92,9 @@ main (int argc, char *argv[])
     initialize_logging ();
 
     rcd_fetch_channel_list ();
-    rcd_fetch_all_channels ();
     rcd_subscriptions_load ();
+
+    rcd_fetch_all_channels ();
 
     rcd_module_init ();
     initialize_rc_world ();

@@ -57,6 +57,19 @@ RCDQueryPart rcd_xmlrpc_tuple_to_query_part (xmlrpc_value *tuple,
         xmlrpc_DECREF(member);                                   \
     } while (0)
 
+#define RCD_XMLRPC_STRUCT_SET_DOUBLE(env, s, key, x)             \
+    do {                                                         \
+        xmlrpc_value *member;                                    \
+                                                                 \
+        member = xmlrpc_build_value((env), "d", (x));            \
+        XMLRPC_FAIL_IF_FAULT((env));                             \
+                                                                 \
+        xmlrpc_struct_set_value((env), (s), (key), member);      \
+        XMLRPC_FAIL_IF_FAULT((env));                             \
+                                                                 \
+        xmlrpc_DECREF(member);                                   \
+    } while (0)
+
 #define RCD_XMLRPC_STRUCT_GET_STRING(env, s, key, result)        \
     do {                                                         \
         xmlrpc_value *member;                                    \
@@ -78,6 +91,16 @@ RCDQueryPart rcd_xmlrpc_tuple_to_query_part (xmlrpc_value *tuple,
         XMLRPC_FAIL_IF_FAULT((env));                             \
                                                                  \
         xmlrpc_parse_value((env), member, "i", &(result));       \
+    } while (0)
+
+#define RCD_XMLRPC_STRUCT_GET_DOUBLE(env, s, key, result)        \
+    do {                                                         \
+        xmlrpc_value *member;                                    \
+                                                                 \
+        member = xmlrpc_struct_get_value((env), (s), (key));     \
+        XMLRPC_FAIL_IF_FAULT((env));                             \
+                                                                 \
+        xmlrpc_parse_value((env), member, "d", &(result));       \
     } while (0)
 
 #define DEBUG_SERIALIZE(v)                              \

@@ -1,8 +1,9 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
-#include <rc-dep-or.h>
-
+#include <config.h>
 #include "rcd-rpc-util.h"
+
+#include <rc-dep-or.h>
 
 static void
 rcd_rc_package_spec_to_xmlrpc(RCPackageSpec *spec,
@@ -104,7 +105,7 @@ rcd_xmlrpc_streamed_to_rc_package (RCPackman    *packman,
 {
     xmlrpc_value *data;
     char *file_name;
-    RCPackage *package;
+    RCPackage *package = NULL;
 
     xmlrpc_parse_value(env, value, "V", &data);
     XMLRPC_FAIL_IF_FAULT(env);
