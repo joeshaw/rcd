@@ -1,7 +1,7 @@
 /* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 
 /*
- * you-util.c
+ * you-util.h
  *
  * Copyright (C) 2004 Novell, Inc.
  *
@@ -74,4 +74,4 @@ gint rc_extract_patches_from_helix_buffer (const guint8 *data, int len,
 #endif /* __cplusplus */
 
 
-#endif /*__RC_YOU_PATCH__ */
+#endif /*__YOU_UTIL__ */

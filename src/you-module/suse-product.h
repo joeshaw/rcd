@@ -1,7 +1,7 @@
 /* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 
 /*
- * wrapper.h
+ * suse-product.h
  *
  * Copyright (C) 2004 Novell, Inc.
  *
@@ -23,28 +23,16 @@
  * USA.
  */
 
-#ifndef _RC_YOU_WRAPPER_H
-#define _RC_YOU_WRAPPER_H
+#ifndef __SUSE_PRODUCT__
+#define __SUSE_PRODUCT__
 
 #include <glib.h>
-#include "rc-you-patch.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
+void suse_product_initialize (void);
+void suse_product_finalize   (void);
 
-typedef gboolean (*SuseProductCallback) (gchar *name, gchar *version,
-                                         gchar *arch, gboolean business,
-                                         gchar *patch_path, gpointer user_data);
+const gchar *suse_product_get_patchdir  (const gchar *product);
+const gchar *suse_product_get_rpmdir    (const gchar *product);
+const gchar *suse_product_get_scriptdir (const gchar *product);
 
-RCYouPatchSList *rc_you_wrapper_get_installed_patches (RCChannel *channel);
-void rc_you_wrapper_install_patches (RCYouPatchSList  *list,
-                                     GError          **error);
-
-void rc_you_wrapper_products_foreach (SuseProductCallback, gpointer user_data);
-
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
-
-#endif /* _RC_YOU_WRAPPER_H */
+#endif /*__SUSE_PRODUCT__ */

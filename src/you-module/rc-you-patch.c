@@ -40,6 +40,7 @@ void
 rc_you_patch_free (RCYouPatch *patch)
 {
     rc_package_spec_free_members ((RCPackageSpec *) patch);
+    g_free (patch->product);
     g_free (patch->summary);
     g_free (patch->description);
     g_free (patch->license);

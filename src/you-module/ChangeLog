@@ -1,3 +1,23 @@
+2004-08-27  Tambet Ingo  <tambet@ximian.com>
+
+	* suse-product.h: 
+	* suse-product.c: New file.
+
+	* you-util.c: Remove yast product file parser.
+	Remove yast directory tree creation.
+	Use SuseProduct class to get directory tree information.
+	(parser_patch_end): Expect "product" tag for every patch.
+
+	* wrapper.h: declare yast product function and callback.
+
+	* wrapper.cc (rc_you_wrapper_products_foreach): Implement.
+
+	* rc-you-patch.h: Add product field to RCYouPatch.
+
+	* rc-you-patch.c (rc_you_patch_free): Free product.
+
+	* Makefile.am: Add new files to build.
+
 2004-08-24  Tambet Ingo  <tambet@ximian.com>
 
 	* you-util.c: Create directory structure for all suse "products".

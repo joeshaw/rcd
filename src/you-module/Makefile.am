@@ -26,6 +26,8 @@ librcd_you_la_SOURCES =	\
 	rc-you-query.h		\
 	rc-you-transaction.c	\
 	rc-you-transaction.h	\
+	suse-product.c		\
+	suse-product.h		\
 	you-util.c		\
 	you-util.h		\
 	wrapper.cc		\

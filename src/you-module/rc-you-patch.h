@@ -44,6 +44,7 @@ typedef GSList RCYouPatchSList;
 struct _RCYouPatch {
     RCPackageSpec spec;
 
+    gchar *product;
     RCYouFile *file;
 
     gint refs;

@@ -37,6 +37,7 @@
 #include <y2pm/PMPackage.h>
 #include <y2pm/PMYouPatchInfo.h>
 #include <y2pm/PMYouPatchManager.h>
+#include <y2pm/PMYouProduct.h>
 #include <y2pm/InstYou.h>
 #include <y2pm/InstTarget.h>
 
@@ -249,6 +250,35 @@ rc_you_wrapper_get_installed_patches (RCChannel *channel)
     list = read_installed_patches (patch_info, channel);
 
     return list;
+}
+
+void
+rc_you_wrapper_products_foreach (SuseProductCallback callback, gpointer user_data)
+{
+    PMYouSettingsPtr settings = new PMYouSettings ();
+    PMYouPatchInfoPtr patchInfo = new PMYouPatchInfo( settings );
+
+    InstYou you( patchInfo, settings );
+    you.initProduct();
+
+    /*     g_print ("local dir: %s\n", rc_you_string_to_char (you.settings ()->rootAttachPoint ().asString ())); */
+    /*     g_print ("install dir: %s\n", rc_you_string_to_char (you.settings ()->installDir ().asString ())); */
+    
+    std::list<PMYouProductPtr> products = you.settings ()->products();
+
+    std::list<PMYouProductPtr>::const_iterator itProd;
+    for (itProd = products.begin (); itProd != products.end (); ++itProd) {
+        PMYouProductPtr prod = *itProd;
+
+        if (callback)
+            if (!callback (rc_you_string_to_char (prod->product ()),
+                           rc_you_string_to_char (prod->version ()),
+                           rc_you_string_to_char (prod->baseArch ()),
+                           prod->businessProduct () ? TRUE : FALSE,
+                           rc_you_string_to_char (prod->patchPath ().asString ()),
+                           user_data))
+                break;
+    }
 }
 
 }

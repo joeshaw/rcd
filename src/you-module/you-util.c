@@ -28,8 +28,7 @@
 #include "rcd-rpc-util.h"
 #include "rc-world-you.h"
 #include "rc-you-package.h"
-
-#define YAST_INFO_FILE "/var/adm/YaST/ProdDB/prod_"
+#include "suse-product.h"
 
 /*****************************************************************************/
 /* XML-RPC helpers */
@@ -75,6 +74,8 @@ rc_you_patch_to_xmlrpc (RCYouPatch *patch, xmlrpc_env *env)
 
     value = xmlrpc_struct_new (env);
     XMLRPC_FAIL_IF_FAULT (env);
+
+    RCD_XMLRPC_STRUCT_SET_STRING (env, value, "product", patch->product);
 
     rcd_rc_package_spec_to_xmlrpc (RC_PACKAGE_SPEC (patch), value, env);
     XMLRPC_FAIL_IF_FAULT (env);
@@ -273,171 +274,12 @@ cleanup:
 /*****************************************************************************/
 /* YaST directory structure */
 
-typedef struct {
-    GMainLoop *loop;
-    gchar     *dir;
-} YouBasedirInfo;
-
-static void
-get_you_basedir_read_line_cb (RCLineBuf *line_buf, const char *line,
-                              gpointer user_data)
-{
-    YouBasedirInfo *info = user_data;
-
-    if (g_str_has_prefix (line, "=YouPath:")) {
-        gchar **pieces;
-
-        pieces = g_strsplit (line, ":", 2);
-        if (pieces[1] != NULL)
-            info->dir = g_strdup (g_strstrip (pieces[1]));
-        else
-            rc_debug (RC_DEBUG_LEVEL_ERROR, "Can not parse YouPath '%s'",
-                      line);
-
-        g_strfreev (pieces);
-        g_main_quit (info->loop);
-    }
-}
-
-static void
-get_you_basedir_read_done_cb (RCLineBuf *line_buf, RCLineBufStatus status,
-                              gpointer user_data)
-{
-    YouBasedirInfo *info = user_data;
-
-    g_main_quit (info->loop);
-}
-
-static gchar *
-parse_product_file (const gchar *filename)
-{
-    int fd;
-    RCLineBuf *line_buf;
-    GMainLoop *loop;
-    YouBasedirInfo info;
-
-    if (!rc_file_exists (filename))
-        return NULL;
-
-    if ((fd = open (filename, O_RDONLY)) == -1) {
-        rc_debug (RC_DEBUG_LEVEL_ERROR, "Can not open YaST info file '%s'",
-                  filename);
-        return NULL;
-    }
-
-    line_buf = rc_line_buf_new ();
-    rc_line_buf_set_fd (line_buf, fd);
-
-    loop = g_main_new (FALSE);
-
-    info.loop = loop;
-    info.dir = NULL;
-
-    g_signal_connect (line_buf, "read_line",
-                      (GCallback) get_you_basedir_read_line_cb, &info);
-    g_signal_connect (line_buf, "read_done",
-                      (GCallback) get_you_basedir_read_done_cb, &info);
-
-    g_main_run (loop);
-    g_object_unref (line_buf);
-    g_main_destroy (loop);
-    rc_close (fd);
-
-    return info.dir;
-}
-
-static gchar *you_base_dir = NULL;
-
 static const gchar *
-get_you_basedir (void)
+get_you_pkgdir (const gchar *product,
+                const gchar *tmp_name,
+                const gchar *filename)
 {
-    if (!you_base_dir) {
-        int i;
-        gchar *product_file, *you_path;
-        gchar *patch_dir;
-
-        /* Parse all product files, create required directory structures
-           for all of them. Return the latest YouPath */
-        i = 0;
-        while (1) {
-            product_file = g_strdup_printf ("%s%08d", YAST_INFO_FILE, ++i);
-            you_path = parse_product_file (product_file);
-            g_free (product_file);
-
-            if (!you_path)
-                break;
-
-            g_free (you_base_dir);
-            you_base_dir = g_build_filename (TMP_YOU_PATH, you_path, NULL);
-            g_free (you_path);
-
-            if (!rc_file_exists (you_base_dir)) {
-                if (rc_mkdir (you_base_dir, 0755) < 0) {
-                    g_free (you_base_dir);
-                    you_base_dir = NULL;
-                    break;
-                }
-            }
-
-            /* This sucks, but we have to create "patches" subdirectory too.
-               Later we don't have access to all product directories */
-            patch_dir = g_build_filename (you_base_dir, "patches", NULL);
-            if (!rc_file_exists (patch_dir))
-                rc_mkdir (patch_dir, 0755);
-            g_free (patch_dir);
-        }
-    }
-
-    return you_base_dir;
-}
-
-static const gchar *
-get_you_patchdir (void)
-{
-    static gchar *dir = NULL;
-
-    if (!dir) {
-        const gchar *base_dir = get_you_basedir ();
-        if (base_dir != NULL)
-            dir = rc_maybe_merge_paths (base_dir, "patches");
-    }
-
-    if (dir && !rc_file_exists (dir)) {
-        if (rc_mkdir (dir, 0755) < 0) {
-            g_free (dir);
-            dir = NULL;
-        }
-    }
-
-    return dir;
-}
-
-static const gchar *
-get_you_scriptdir (void)
-{
-    static gchar *dir = NULL;
-
-    if (!dir) {
-        const gchar *base_dir = get_you_basedir ();
-        if (base_dir != NULL)
-            dir = rc_maybe_merge_paths (base_dir, "scripts");
-    }
-
-    if (dir && !rc_file_exists (dir)) {
-        if (rc_mkdir (dir, 0755) < 0) {
-            g_free (dir);
-            dir = NULL;
-        }
-    }
-
-    return dir;
-}
-
-static const gchar *
-get_you_pkgdir (const gchar *tmp_name, const gchar *filename)
-{
-    const gchar *base_dir;
-    gchar *target;
+    const gchar *rpm_dir;
     RCPackage *pkg;
     static gchar *dir = NULL;
 
@@ -447,7 +289,7 @@ get_you_pkgdir (const gchar *tmp_name, const gchar *filename)
     if (!rc_file_exists (tmp_name))
         return NULL;
 
-    if ((base_dir = get_you_basedir ()) == NULL)
+    if ((rpm_dir = suse_product_get_rpmdir (product)) == NULL)
         return NULL;
 
     pkg = rc_packman_query_file (rc_packman_get_global (), tmp_name);
@@ -457,11 +299,8 @@ get_you_pkgdir (const gchar *tmp_name, const gchar *filename)
         return NULL;
     }
 
-    target = g_build_filename ("rpm", rc_arch_to_string (pkg->arch), NULL);
+    dir = g_build_filename (rpm_dir, rc_arch_to_string (pkg->arch), NULL);
     rc_package_unref (pkg);
-
-    dir = rc_maybe_merge_paths (base_dir, target);
-    g_free (target);
 
     if (rc_mkdir (dir, 0755) < 0) {
         g_free (dir);
@@ -472,46 +311,47 @@ get_you_pkgdir (const gchar *tmp_name, const gchar *filename)
 }
 
 static void
-create_you_directories (RCYouPatchSList *patches, GError **error)
+write_directory_files (RCYouPatchSList *patches, GError **error)
 {
     RCYouPatchSList *iter;
-    const gchar *dirname;
-    gchar *filename;
-    int fd = -1;
-
-    dirname = get_you_patchdir ();
-    if (!dirname) {
-        g_set_error (error, RC_ERROR, RC_ERROR,
-                     "Could not create YOU patch directories");
-        goto cleanup;
-    }
-
-    filename = rc_maybe_merge_paths (dirname, "directory.3");
-    fd = open (filename , O_WRONLY | O_CREAT | O_TRUNC);
-    g_free (filename);
-    if (fd < 0) {
-        g_set_error (error, RC_ERROR, RC_ERROR, strerror (errno));
-        goto cleanup;
-    }
+    const gchar *dir;
+    gchar *dir_file, *buf;
+    int fd;
+    gboolean success;
 
     for (iter = patches; iter; iter = iter->next) {
-        gboolean success;
-        gchar *buf = g_strdup_printf
-            ("%s\n", rc_package_spec_to_str_static (RC_PACKAGE_SPEC (iter->data)));
+        RCYouPatch *patch = iter->data;
+
+        dir = suse_product_get_patchdir (patch->product);
+        if (!dir) {
+            g_set_error (error, RC_ERROR, RC_ERROR,
+                         "Can not get patch directory for product '%s'",
+                         patch->product);
+            return;
+        }
+
+        dir_file = g_build_filename (dir, "directory.3", NULL);
+        fd = open (dir_file, O_WRONLY | O_CREAT | O_APPEND);
+        g_free (dir_file);
+        if (fd < 0) {
+            g_set_error (error, RC_ERROR, RC_ERROR,
+                         "Can not open directory file: %s", strerror (errno));
+            return;
+        }
+
+        buf = g_strdup_printf
+            ("%s\n", rc_package_spec_to_str_static (RC_PACKAGE_SPEC (patch)));
 
         success = rc_write (fd, (void *) buf, strlen (buf));
         g_free (buf);
+        rc_close (fd);
 
         if (!success) {
             g_set_error (error, RC_ERROR, RC_ERROR,
-                         "Could not write YOU patch directory");
-            goto cleanup;
+                         "Can not write to directory file: %s", strerror (errno));
+            return;
         }
     }
-
-cleanup:
-    if (fd > 0)
-        rc_close (fd);
 }
 
 static void
@@ -531,7 +371,7 @@ write_you_file (RCYouFile *file, const gchar *dest_dir)
         return;
     }
 
-    dest_file = rc_maybe_merge_paths (dest_dir, file->filename);
+    dest_file = g_build_filename (dest_dir, file->filename, NULL);
     rc_cp (file->local_path, dest_file);
     g_free (dest_file);
 }
@@ -544,9 +384,12 @@ write_patches (RCYouPatchSList *patches, GError **error)
     for (iter = patches; iter; iter = iter->next) {
         RCYouPatch *patch = iter->data;
 
-        write_you_file (patch->file, get_you_patchdir ());
-        write_you_file (patch->pre_script, get_you_scriptdir ());
-        write_you_file (patch->post_script, get_you_scriptdir ());
+        write_you_file (patch->file,
+                        suse_product_get_patchdir (patch->product));
+        write_you_file (patch->pre_script,
+                        suse_product_get_patchdir (patch->product));
+        write_you_file (patch->post_script,
+                        suse_product_get_patchdir (patch->product));
 
         for (pkg_iter = patch->packages; pkg_iter; pkg_iter = pkg_iter->next) {
             RCYouPackage *pkg = pkg_iter->data;
@@ -555,11 +398,13 @@ write_patches (RCYouPatchSList *patches, GError **error)
 
             if (pkg->base_package)
                 write_you_file (pkg->base_package,
-                                get_you_pkgdir (pkg->base_package->local_path,
+                                get_you_pkgdir (patch->product,
+                                                pkg->base_package->local_path,
                                                 pkg->base_package->filename));
             else if (pkg->patch_rpm)
                 write_you_file (pkg->patch_rpm,
-                                get_you_pkgdir (pkg->patch_rpm->local_path,
+                                get_you_pkgdir (patch->product,
+                                                pkg->patch_rpm->local_path,
                                                 pkg->patch_rpm->filename));
         }
     }
@@ -568,7 +413,9 @@ write_patches (RCYouPatchSList *patches, GError **error)
 void
 create_you_directory_structure (RCYouPatchSList *patches, GError **error)
 {
-    create_you_directories (patches, error);
+    suse_product_initialize ();
+
+    write_directory_files (patches, error);
     if (*error)
         return;
 
@@ -578,8 +425,7 @@ create_you_directory_structure (RCYouPatchSList *patches, GError **error)
 void
 clean_you_directory_structure (void)
 {
-    you_base_dir = NULL;
-    rc_rmdir (TMP_YOU_PATH_PREFIX);
+    suse_product_finalize ();
 }
 
 /*****************************************************************************/
@@ -792,11 +638,14 @@ parser_patch_end (RCYouPatchSAXContext *ctx, const xmlChar *name)
         ctx->state = PARSER_TOPLEVEL;
     }
 
-    else if (!strcmp(name, "patchname")) {
+    else if (!strcmp(name, "product")) {
+        ctx->current_patch->product = rc_xml_strip (ctx->text_buffer);
+        ctx->text_buffer = NULL;
+    } else if (!strcmp(name, "patchname")) {
         ctx->current_patch->spec.nameq =
             g_quark_from_string (rc_xml_strip (ctx->text_buffer));
-        g_free (ctx->text_buffer);
-        ctx->text_buffer = NULL;
+        /* FIXME: Remove this when XML has "product" tag */
+        ctx->current_patch->product = g_strdup ("SUSE LINUX");
     } else if (!strcmp(name, "filename")) {
         ctx->current_patch->file =
             rc_you_file_new (rc_xml_strip (ctx->text_buffer));
