@@ -63,6 +63,13 @@ rcd_transfer_finalize (GObject *obj)
     g_free (t->url);
     g_free (t->error_string);
 
+    if (t->protocol) {
+        if (t->protocol->free_func)
+            t->protocol->free_func (t->protocol);
+        else
+            g_free (t->protocol);
+    }
+
     if (t->pending)
         g_object_unref (t->pending);
 
@@ -135,15 +142,26 @@ rcd_transfer_get_type (void)
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 RCDTransfer *
-rcd_transfer_new (RCDTransferFlags  flags,
+rcd_transfer_new (const char       *url,
+                  RCDTransferFlags  flags,
                   RCDCache         *cache)
 {
     RCDTransfer *t;
+
+    g_return_val_if_fail (url, NULL);
 
     t = g_object_new (RCD_TYPE_TRANSFER, NULL);
 
     t->flags = flags;
     t->cache = cache;
+
+    t->protocol = rcd_transfer_get_protocol_from_url (url);
+
+    if (!t->protocol)
+        rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_INVALID_URI, url);
+        
+    t->url = g_strdup (url);
+    t->filename = g_path_get_basename (t->url);
 
     return t;
 }
@@ -264,7 +282,7 @@ rcd_transfer_abort (RCDTransfer *t)
     t->protocol->abort_func (t);
 } /* rcd_transfer_abort */
 
-static RCDTransferProtocol *
+RCDTransferProtocol *
 rcd_transfer_get_protocol_from_url (const char *url)
 {
     SoupUri *uri = soup_uri_new (url);
@@ -319,22 +337,16 @@ pending_file_done_cb (RCDTransfer *t, gpointer user_data)
 } /* pending_file_done_cb */
 
 int
-rcd_transfer_begin (RCDTransfer *t, const char *url)
+rcd_transfer_begin (RCDTransfer *t)
 {
     g_return_val_if_fail (RCD_IS_TRANSFER (t), -1);
-    g_return_val_if_fail (url, -1);
-
-    t->protocol = rcd_transfer_get_protocol_from_url (url);
-
-    if (!t->protocol) {
-        rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_INVALID_URI, url);
-        return -1;
-    }
-
-    t->url = g_strdup(url);
-    t->filename = g_path_get_basename (t->url);
 
     t->bytes_transferred = 0;
+
+    if (!t->protocol) {
+        rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_INVALID_URI, t->url);
+        return -1;
+    }
 
     rc_debug(RC_DEBUG_LEVEL_DEBUG, "Transfer URL: %s\n", t->url);
 
@@ -349,7 +361,7 @@ rcd_transfer_begin (RCDTransfer *t, const char *url)
     if (!t->pending && ! (t->flags & RCD_TRANSFER_FLAGS_NO_PENDING)) {
         char *desc;
 
-        desc = g_strdup_printf ("Downloading %s", url);
+        desc = g_strdup_printf ("Downloading %s", t->url);
         t->pending = rcd_pending_new (desc);
         g_free (desc);
 
@@ -394,14 +406,12 @@ blocking_file_done_cb (RCDTransfer *t, gpointer user_data)
 }
 
 GByteArray *
-rcd_transfer_begin_blocking (RCDTransfer *t,
-                             const char  *url)
+rcd_transfer_begin_blocking (RCDTransfer *t)
 {
     BlockingTransferClosure closure;
     gint id;
 
     g_return_val_if_fail (RCD_IS_TRANSFER (t), NULL);
-    g_return_val_if_fail (url, NULL);
 
     closure.data = g_byte_array_new ();
     closure.main_loop = g_main_loop_new (NULL, TRUE);
@@ -411,7 +421,7 @@ rcd_transfer_begin_blocking (RCDTransfer *t,
     g_signal_connect (t, "file_done",
                       G_CALLBACK (blocking_file_done_cb), &closure);
 
-    id = rcd_transfer_begin (t, url);
+    id = rcd_transfer_begin (t);
 
     /* Wait until the transfer has finished */
     g_main_loop_run (closure.main_loop);

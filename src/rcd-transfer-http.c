@@ -47,6 +47,8 @@
 #define HTTP_RESPONSE_AUTH_FAILURE(x) ((x) == 401 || (x) == 407)
 #define HTTP_RESPONSE_NOT_MODIFIED(x) ((x) == 304)
 
+static char *rc_auth_header = NULL;
+
 static void
 map_soup_error_to_rcd_transfer_error (SoupMessage *message, RCDTransfer *t)
 {
@@ -123,9 +125,13 @@ http_done (SoupMessage *message, gpointer user_data)
             g_free (protocol);
             g_free (t->url);
             g_free (t->filename);
-            
-            rcd_transfer_begin (t, local_url);
+
+            t->protocol = rcd_transfer_get_protocol_from_url (local_url);
+            t->url = g_strdup (local_url);
+            t->filename = g_path_get_basename (t->url);
             g_free (local_url);
+            
+            rcd_transfer_begin (t);
             
             return;
         }
@@ -201,11 +207,20 @@ http_info (SoupMessage *message,
     RCDTransfer *t = user_data;
     RCDTransferProtocolHTTP *protocol =
         (RCDTransferProtocolHTTP *) t->protocol;
+    const char *auth_header;
 
     if (!HTTP_RESPONSE_NOT_MODIFIED (message->errorcode) &&
         !HTTP_RESPONSE_AUTH_FAILURE (message->errorcode) &&
         protocol->entry)
         rcd_cache_entry_open (protocol->entry);
+
+    auth_header = soup_message_get_header (
+        message->response_headers, "X-RC-Auth");
+
+    if (auth_header) {
+        g_free (rc_auth_header);
+        rc_auth_header = g_strdup (auth_header);
+    }
 
     rc_debug (RC_DEBUG_LEVEL_DEBUG, "[%p]: http_info called", message);
 } /* http_info */
@@ -409,6 +424,11 @@ http_open (RCDTransfer *t)
 
     soup_message_add_header (
         message->request_headers, "User-Agent", "Red Carpet Daemon/"VERSION);
+
+    if (rc_auth_header) {
+        soup_message_add_header (
+            message->request_headers, "X-RC-Auth", rc_auth_header);
+    }
 
     rc_debug (
         RC_DEBUG_LEVEL_DEBUG, "[%p]: Queuing up new transfer\n",

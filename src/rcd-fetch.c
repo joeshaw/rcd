@@ -109,8 +109,8 @@ rcd_fetch_channel_list (void)
 
     url = get_channel_list_url ();
 
-    t = rcd_transfer_new (0, rcd_cache_get_normal_cache ());
-    data = rcd_transfer_begin_blocking (t, url);
+    t = rcd_transfer_new (url, 0, rcd_cache_get_normal_cache ());
+    data = rcd_transfer_begin_blocking (t);
 
     if (rcd_transfer_get_error (t)) {
         rc_debug (RC_DEBUG_LEVEL_CRITICAL,
@@ -332,7 +332,11 @@ rcd_fetch_channel (RCChannel *channel)
 
     g_return_val_if_fail (channel != NULL, RCD_INVALID_PENDING_ID);
 
-    t = rcd_transfer_new (0, rcd_cache_get_normal_cache ());
+    url = merge_paths (rcd_prefs_get_host (),
+                       rc_channel_get_pkginfo_file (channel));
+
+    t = rcd_transfer_new (url, 0, rcd_cache_get_normal_cache ());
+    g_free (url);
 
     closure = g_new0 (ChannelFetchClosure, 1);
     closure->data = g_byte_array_new ();
@@ -347,11 +351,7 @@ rcd_fetch_channel (RCChannel *channel)
                       (GCallback) process_channel_cb,
                       closure);
 
-    url = merge_paths (rcd_prefs_get_host (),
-                       rc_channel_get_pkginfo_file (channel));
-
-    rcd_transfer_begin (t, url);
-    g_free (url);
+    rcd_transfer_begin (t);
 
     if (rcd_transfer_get_error (t)) {
         rc_debug (RC_DEBUG_LEVEL_CRITICAL,
@@ -515,8 +515,8 @@ rcd_fetch_news (void)
 
     url = get_news_url ();
 
-    t = rcd_transfer_new (0, rcd_cache_get_normal_cache ());
-    data = rcd_transfer_begin_blocking (t, url);
+    t = rcd_transfer_new (url, 0, rcd_cache_get_normal_cache ());
+    data = rcd_transfer_begin_blocking (t);
 
     g_assert (data);
 
@@ -695,7 +695,10 @@ download_package_file (RCPackage           *package,
     char *url, *desc;
     RCDPending *pending;
 
+    url = merge_paths (rcd_prefs_get_host (), file_url);
+
     t = rcd_transfer_new (
+        url,
         RCD_TRANSFER_FLAGS_FORCE_CACHE |
         RCD_TRANSFER_FLAGS_RESUME_PARTIAL,
         rcd_cache_get_package_cache ());
@@ -714,13 +717,13 @@ download_package_file (RCPackage           *package,
                       (GCallback) package_completed_cb,
                       closure);
 
-    url = merge_paths (rcd_prefs_get_host (), file_url);
-    rcd_transfer_begin (t, url);
+    rcd_transfer_begin (t);
 
     if (rcd_transfer_get_error (t)) {
         rc_debug (RC_DEBUG_LEVEL_CRITICAL,
                   "Attempt to download package failed: %s",
                   rcd_transfer_get_error_string (t));
+        g_free (url);
         return;
     }
 

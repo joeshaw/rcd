@@ -1,3 +1,29 @@
+2002-08-01  Joe Shaw  <joe@ximian.com>
+
+	* rcd-transfer.c (rcd_transfer_finalize): Free the protocol.
+	(rcd_transfer_new): Add a URL parameter here and create the
+	RCDTransfereProtocol structure here, and set the URL and filename
+	elements.
+	(rcd_transfer_get_protocol_from_url): Make this non-static.
+	(rcd_transfer_begin): Drop the URL parameter.
+	(rcd_transfer_begin_blocking): Drop the URL parameter.
+
+	* rcd-transfer.h (RCDTransferProtocol): Add a free_func element,
+	which will allow RCDTransferProtocol implementations to free their
+	extra data as well as themselves.
+
+	* rcd-transfer-http.c (http_done): When pulling from the cache,
+	create a new RCDTransferProtocol structure and set the URL and
+	filename and call rcd_transfer_begin().
+	(http_info): Get the X-RC-Auth header, if it's there, and store it
+	in the static variable.
+	(http_open): Send the X-RC-Auth header, if present, with any
+	request.
+
+	* rcd-fetch.c: Change all of the calls to rcd_transfer_new() to
+	include the URL, and all the calls to
+	rcd_transfer_begin[_blocking]() to not have a URL parameter.
+
 2002-08-01  Ian Peters  <itp@ximian.com>
 
 	* rcd-query-packages.c (needs_upgrade_match): only get upgrades in

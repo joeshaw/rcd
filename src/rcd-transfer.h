@@ -63,6 +63,8 @@ struct _RCDTransferProtocol {
     char *(*get_local_filename_func) (RCDTransfer *t);
     int   (*open_func)               (RCDTransfer *t);
     void  (*abort_func)              (RCDTransfer *t);
+
+    void  (*free_func)               (RCDTransferProtocol *t);
 };
 
 struct _RCDTransfer {
@@ -105,16 +107,15 @@ struct _RCDTransferClass {
 
 GType             rcd_transfer_get_type           (void);
 
-RCDTransfer      *rcd_transfer_new                (RCDTransferFlags  flags,
+RCDTransfer      *rcd_transfer_new                (const char       *url,
+                                                   RCDTransferFlags  flags,
                                                    RCDCache         *cache);
 
 void              rcd_transfer_set_flags          (RCDTransfer *t,
                                                    RCDTransferFlags flags);
 
-int               rcd_transfer_begin              (RCDTransfer *t,
-                                                   const char  *url);
-GByteArray       *rcd_transfer_begin_blocking     (RCDTransfer *t,
-                                                   const char  *url);
+int               rcd_transfer_begin              (RCDTransfer *t);
+GByteArray       *rcd_transfer_begin_blocking     (RCDTransfer *t);
 void              rcd_transfer_abort              (RCDTransfer *t);
 
 void              rcd_transfer_emit_data          (RCDTransfer *t,
@@ -131,6 +132,9 @@ const char       *rcd_transfer_get_error_string   (RCDTransfer *t);
 void              rcd_transfer_set_error          (RCDTransfer *t,
                                                    RCDTransferError err,
                                                    const char *err_string);
+
+RCDTransferProtocol *rcd_transfer_get_protocol_from_url (const char *url);
+
 
 #endif /* __RCD_TRANSFER_H__ */
 
