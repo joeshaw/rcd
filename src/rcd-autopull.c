@@ -27,6 +27,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <libredcarpet.h>
+#include <xmlrpc.h>
 
 #include "rcd-module.h"
 #include "rcd-fetch.h"
@@ -1176,6 +1177,18 @@ recurring_autopull_xml_fetch_init (void)
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
+static xmlrpc_value *
+autopull_refresh (xmlrpc_env   *env,
+                  xmlrpc_value *param_array,
+                  void         *user_data)
+{
+    rcd_autopull_download_xml ();
+
+    return xmlrpc_build_value (env, "i", 0);
+}
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
 /* We put a prototype here to keep the compiler from complaining. */
 void rcd_module_load (RCDModule *);
 
@@ -1193,6 +1206,9 @@ rcd_module_load (RCDModule *module)
     module->interface_minor = 0;
 
     rcd_module = module;
+
+    rcd_rpc_register_method ("rcd.autopull.refresh", autopull_refresh,
+                             "superuser", NULL);
 
     /* We don't really need to seed srandom from /dev/urandom, but
        it makes me feel all cool and 31337. */

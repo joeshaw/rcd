@@ -1,3 +1,9 @@
+2002-12-12  Joe Shaw  <joe@ximian.com>
+
+	* rcd-autopull.c (rcd_module_load): Register an
+	rcd.autopull.refresh RPC method.
+	(autopull_refresh): Implement the method.
+
 2002-12-10  Joe Shaw  <joe@ximian.com>
 
 	* rcd-prefs.c (rcd_prefs_set_repackage): Added.
