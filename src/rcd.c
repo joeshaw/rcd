@@ -55,6 +55,7 @@
 #include "rcd-rpc-users.h"
 #include "rcd-shutdown.h"
 #include "rcd-subscriptions.h"
+#include "rcd-transaction.h"
 #include "rcd-transfer.h"
 
 #ifndef POPT_TABLEEND
@@ -532,7 +533,25 @@ signal_handler (int sig_num)
 static gboolean
 rehash_data (gpointer data)
 {
-    initialize_data ();
+    /*
+     * We don't want to rehash all of the data underneath ourselves if we're
+     * in the middle of a transaction.  If we're locked, defer refreshing
+     * until later.
+     *
+     * We keep around a timeout_id so if we get multiple HUPs we don't
+     * defer the rehashing more than once.  That's just silly!
+     */
+
+    static int timeout_id = -1;
+
+    if (!rcd_transaction_is_locked ()) {
+        timeout_id = -1;
+        initialize_data ();
+    }
+    else {
+        if (timeout_id == -1)
+            timeout_id = g_timeout_add (2000, rehash_data, NULL);
+    }
 
     return FALSE;
 } /* rehash_data */

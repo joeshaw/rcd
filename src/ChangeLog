@@ -1,5 +1,18 @@
 2002-11-08  Joe Shaw  <joe@ximian.com>
 
+	* rcd-transaction.c (run_transaction): Remove the lock check and
+	lock call from here.
+	(verify_packages): Move it into here.  Instead of doing it
+	manually, call fail_transaction() whenever anything goes wrong and
+	unlock the transaction lock
+
+	* rcd.c (rehash_data): If the transaction isn't locked, call
+	initialize_data().  Otherwise, (if not already there) set a
+	timeout to call itself again until we can successfully rehash our
+	data.  Prevents nasty reentrancy during transactions.
+
+2002-11-08  Joe Shaw  <joe@ximian.com>
+
 	* rcd-rpc-packsys.c (packsys_get_channel_icon): If the channel
 	just doesn't have an icon, throw a fault before we go around
 	dereferencing NULL pointers.  Also fix a potential leak.

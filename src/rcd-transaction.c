@@ -607,14 +607,6 @@ run_transaction(gpointer user_data)
     RCDTransactionStatus *status = user_data;
     int flags = 0;
 
-    if (rcd_transaction_is_locked ()) {
-        fail_transaction (status, status->transaction_pending,
-                          "Another transaction is already in progress");
-        return FALSE;
-    }
-
-    rcd_transaction_lock ();
-
     g_signal_connect (
         G_OBJECT (status->packman), "transact_start",
         G_CALLBACK (transact_start_cb), status);
@@ -723,6 +715,14 @@ verify_packages (RCDTransactionStatus *status)
     /* Fire up the transaction pending */
     rcd_pending_begin (status->transaction_pending);
 
+    if (rcd_transaction_is_locked ()) {
+        fail_transaction (status, status->transaction_pending,
+                          "Another transaction is already in progress");
+        return;
+    }
+
+    rcd_transaction_lock ();
+
     rc_verification_set_keyring (SHAREDIR "/rcd.gpg");
 
     for (iter = status->install_packages; iter; iter = iter->next) {
@@ -746,18 +746,10 @@ verify_packages (RCDTransactionStatus *status)
             status->packman, package, RC_VERIFICATION_TYPE_ALL);
 
         if (rc_packman_get_error (status->packman)) {
-            rcd_pending_fail (status->transaction_pending, -1,
+            fail_transaction (status, status->transaction_pending,
                               rc_packman_get_reason (status->packman));
-
-            if (status->flags != RCD_TRANSACTION_FLAGS_DRY_RUN &&
-                rcd_prefs_get_premium ())
-            {
-                rcd_transaction_send_log (
-                    status, FALSE,
-                    rc_packman_get_reason (status->packman));
-            }
             
-            return;
+            goto failure;
         }
 
         for (v = vers; v; v = v->next) {
@@ -776,23 +768,13 @@ verify_packages (RCDTransactionStatus *status)
             rc_debug (RC_DEBUG_LEVEL_MESSAGE,
                       "Verification of '%s' failed",
                       g_quark_to_string (package->spec.nameq));
+
             msg = g_strdup_printf ("Verification of '%s' failed",
                                    g_quark_to_string (package->spec.nameq));
-            rcd_pending_fail (status->transaction_pending, -1, msg);
+            fail_transaction (status, status->transaction_pending, msg);
             g_free (msg);
 
-            if (status->flags != RCD_TRANSACTION_FLAGS_DRY_RUN &&
-                rcd_prefs_get_premium ())
-            {
-                msg = g_strdup_printf (
-                    "Verification of '%s' failed",
-                    g_quark_to_string (package->spec.nameq));
-                rcd_transaction_send_log (status, FALSE, msg);
-                g_free (msg);
-            }
-
-            cleanup_after_transaction (status);
-            return;
+            goto failure;
         }
         else if (worst_status == RC_VERIFICATION_STATUS_UNDEF ||
                  !gpg_attempted)
@@ -824,20 +806,17 @@ verify_packages (RCDTransactionStatus *status)
                     rcd_privileges_from_string ("trusted")) &&
                 rcd_prefs_get_require_signed_packages ())
             {
-                status_msg = g_strdup_printf (
-                    "Verified package signatures are required "
-                    "for installation");
-                rcd_pending_fail (status->transaction_pending, -1, status_msg);
+                status_msg = g_strconcat (msg,
+                                          "; verified package signatures "
+                                          "are required for installation",
+                                          NULL);
+                fail_transaction (status, status->transaction_pending,
+                                  status_msg);
+
                 g_free (status_msg);
-
-                if (status->flags != RCD_TRANSACTION_FLAGS_DRY_RUN &&
-                    rcd_prefs_get_premium ())
-                    rcd_transaction_send_log (status, FALSE, msg);
-
                 g_free (msg);
 
-                cleanup_after_transaction (status);
-                return;
+                goto failure;
             }
 
             g_free (msg);
@@ -845,6 +824,10 @@ verify_packages (RCDTransactionStatus *status)
     }
 
     g_idle_add (run_transaction, status);
+    return;
+
+failure:
+    rcd_transaction_unlock ();
 } /* verify_packages */
 
 static void
