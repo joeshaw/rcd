@@ -355,31 +355,31 @@ rcd_rpc_prefs_register_methods (void)
 {
     rcd_rpc_prefs_register_pref (
         "host", RCD_PREF_STRING,
-        "URL of the server",
+        "Server URL",
         (RCDPrefGetFunc) rcd_prefs_get_host, "view",
         (RCDPrefSetFunc) rcd_prefs_set_host, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "enable-premium", RCD_PREF_BOOLEAN,
-        "Whether the server is a CorporateConnect or Express server",
+        "Enable Premium Services (Red Carpet Express, CorporateConnect, or Enterprise)",
         (RCDPrefGetFunc) rcd_prefs_get_premium, "view",
         (RCDPrefSetFunc) rcd_prefs_set_premium, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "proxy-url", RCD_PREF_STRING,
-        "URL of the proxy",
+        "Proxy URL",
         (RCDPrefGetFunc) rcd_prefs_get_proxy_url, "superuser",
         (RCDPrefSetFunc) rcd_prefs_set_proxy_url, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "proxy-username", RCD_PREF_STRING,
-        "Username for the proxy",
+        "Proxy username",
         (RCDPrefGetFunc) rcd_prefs_get_proxy_username, "superuser",
         (RCDPrefSetFunc) rcd_prefs_set_proxy_username, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "proxy-password", RCD_PREF_STRING,
-        "Password for the proxy",
+        "Proxy password",
         (RCDPrefGetFunc) rcd_prefs_get_proxy_password, "superuser",
         (RCDPrefSetFunc) rcd_prefs_set_proxy_password, "superuser");
 
@@ -397,7 +397,7 @@ rcd_rpc_prefs_register_methods (void)
 
     rcd_rpc_prefs_register_pref (
         "cache-enabled", RCD_PREF_BOOLEAN,
-        "Whether to cache downloaded packages and metadata",
+        "Cache downloaded packages and metadata",
         (RCDPrefGetFunc) rcd_prefs_get_cache_enabled, "view",
         (RCDPrefSetFunc) rcd_prefs_set_cache_enabled, "superuser");
 
@@ -409,7 +409,7 @@ rcd_rpc_prefs_register_methods (void)
 
     rcd_rpc_prefs_register_pref (
         "cache-cleanup-enabled", RCD_PREF_BOOLEAN,
-        "Whether the cache should be cleaned up.",
+        "Automatically clean up the cache",
         (RCDPrefGetFunc) rcd_prefs_get_cache_cleanup_enabled, "view",
         (RCDPrefSetFunc) rcd_prefs_set_cache_cleanup_enabled, "superuser");
 
@@ -421,13 +421,13 @@ rcd_rpc_prefs_register_methods (void)
 
     rcd_rpc_prefs_register_pref (
         "cache-max-size-in-mb", RCD_PREF_INT,
-        "The maximum size of the cache",
+        "The maximum size of the cache (in mb)",
         (RCDPrefGetFunc) rcd_prefs_get_cache_max_size_in_mb, "view",
         (RCDPrefSetFunc) rcd_prefs_set_cache_max_size_in_mb, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "require-signatures", RCD_PREF_BOOLEAN,
-        "Whether to require packages be signed before installing",
+        "Require packages be cryptographically signed before installing",
         (RCDPrefGetFunc) rcd_prefs_get_require_signed_packages, "view",
         (RCDPrefSetFunc) rcd_prefs_set_require_signed_packages, "superuser");
 
