@@ -1,3 +1,8 @@
+2002-10-18  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-rpc-packsys.c (packsys_search_by_package_match): Initialize
+	an uninitialized variable.
+
 2002-10-17  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd.c (initialize_data): Move the call to rcd_package_locks_load

@@ -605,7 +605,7 @@ packsys_search_by_package_match (xmlrpc_env   *env,
                                  void         *user_data)
 {
     RCWorld *world = (RCWorld *) user_data;
-    RCPackageMatch *match;
+    RCPackageMatch *match = NULL;
     RCPackageSList *rc_packages = NULL;
     xmlrpc_value *value = NULL;
     xmlrpc_value *match_value = NULL;
