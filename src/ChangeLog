@@ -1,3 +1,8 @@
+2002-08-06  Ian Peters  <itp@ximian.com>
+
+	* Makefile.am: remove references to libredcarpet, red_carpet_libs,
+	etc
+
 2002-08-06  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd.c (daemonize): Reopen stdout and stderr to

@@ -49,7 +49,7 @@ AM_PROG_LIBTOOL
 
 ### get cflags and libs
 
-PKG_CHECK_MODULES(RCD, glib-2.0 gthread-2.0 gmodule-2.0 gobject-2.0 libxml-2.0)
+PKG_CHECK_MODULES(RCD, glib-2.0 gthread-2.0 gmodule-2.0 gobject-2.0 libxml-2.0 libredcarpet-2.0)
 
 ###
 ### soup magic
@@ -131,11 +131,10 @@ HOST_OS=`uname`
 case "$HOST_OS" in
   SunOS)
     FORCE_SHLIBS="dl resolv rt nsl pthread rt"
-    RCD_LIBS="$RCD_LIBS -lpthread -lrt"
   ;;
   Linux)
     FORCE_SHLIBS="dl pthread rt"
-    RCD_LIBS="$RCD_LIBS -lutil -lpthread -lrt"
+    RCD_LIBS="$RCD_LIBS -lutil"
   ;;
   *)
   ;;
@@ -153,12 +152,6 @@ AC_SUBST(LINK_END)
 AC_SUBST(SHARED_ONLY)
 AC_SUBST(RCD_CFLAGS)
 AC_SUBST(RCD_LIBS)
-
-##
-## configure libredcarpet
-##
-
-AC_CONFIG_SUBDIRS(libredcarpet)
 
 RED_CARPET_BINDIR="${prefix}/bin"
 RED_CARPET_SBINDIR="${prefix}/sbin"
