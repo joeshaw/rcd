@@ -119,8 +119,8 @@ librcd_autopull_la_SOURCES =	\
 librcd_sample_la_LDFLAGS = -module -avoid-version
 librcd_autopull_la_LDFLAGS = -module -avoid-version
 
-install-exec-hook:
-	chmod 0755 $(DESTDIR)$(rcd_buddydir)/$(rcd_buddy_DATA)
+install-data-hook:
+	chmod 0755 $(DESTDIR)$(rcd_buddydir)/rcd-buddy
 
 ###
 ### Deal with auto-generating the signal marshallers
