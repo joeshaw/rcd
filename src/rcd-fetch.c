@@ -888,10 +888,8 @@ begin_package_download (RCDTransfer *t, PackageFetchClosure *closure)
 
         closure->successful = FALSE;
         closure->error_message = g_strdup (rcd_transfer_get_error_string (t));
-#if 0
-        /* FIXME: The soup cancel crasher forces this to be commented out for now */
+
         rcd_fetch_packages_abort (closure->transfer_id);
-#endif
     }
 } /* begin_package_download */
 
@@ -954,10 +952,8 @@ package_completed_cb (RCDTransfer *t, gpointer user_data)
             closure->successful = FALSE;
             closure->error_message = g_strdup (
                 rcd_transfer_get_error_string (t));
-#if 0
-            /* FIXME: The soup cancel crasher forces this to be commented out for now */
+
             rcd_fetch_packages_abort (closure->transfer_id);
-#endif
         }
         else {
             closure->completed_callback (
@@ -990,7 +986,7 @@ package_completed_cb (RCDTransfer *t, gpointer user_data)
         }
     }
 
-    if (!closure->running_transfers) {
+    if (!closure->running_transfers && !closure->queued_transfers) {
         g_hash_table_remove (package_transfer_table,
                              GINT_TO_POINTER (closure->transfer_id));
         g_free (closure);
@@ -1096,17 +1092,13 @@ rcd_fetch_packages_abort (int transfer_id)
     for (iter = closure->running_transfers; iter; iter = next) {
         next = iter->next;
 
-        /* Workaround for a Soup bug */
-#if 0
         rcd_transfer_abort (iter->data);
-#else
-        rcd_transfer_set_error (RCD_TRANSFER (iter->data),
-                                RCD_TRANSFER_ERROR_CANCELLED,
-                                NULL);
-#endif
     }
-
 
     for (iter = closure->queued_transfers; iter; iter = iter->next)
         g_object_unref (iter->data);
+
+    g_hash_table_remove (package_transfer_table,
+                         GINT_TO_POINTER (closure->transfer_id));
+    g_free (closure);
 } /* rcd_fetch_packages_abort */

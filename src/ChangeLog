@@ -1,5 +1,18 @@
 2002-10-16  Joe Shaw  <joe@ximian.com>
 
+	* rcd-fetch.c: Remove the Soup crash workarounds.
+	(package_completed_cb): Only remove from the hash table and free the
+	closure if we have no more running or queued transfers.
+	(rcd_fetch_packages_abort): Remove from the hash table and free
+	the closure after we're done aborting transfers.
+
+	* rcd-transaction.c (download_packages): Start the download
+	pending object before checking disk space, so we can fail it if we
+	don't have enough.  Don't unref the packages_to_download list, as
+	that's done by cleanup_after_transaction() via fail_transaction().
+
+2002-10-16  Joe Shaw  <joe@ximian.com>
+
 	* rcd-fetch.c: RCX_ACTIVATION_ROOT should be https.
 
 	* rcd-prefs.c (rcd_prefs_{set|get}_require_verified_certificates):

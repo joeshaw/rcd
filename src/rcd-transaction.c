@@ -34,6 +34,7 @@
 #include "rcd-log.h"
 #include "rcd-pending.h"
 #include "rcd-prefs.h"
+#include "rcd-rollback.h"
 #include "rcd-shutdown.h"
 #include "rcd-transfer.h"
 #include "rcd-transfer-http.h"
@@ -1052,6 +1053,8 @@ download_packages (RCPackageSList *packages, RCDTransactionStatus *status)
     status->download_pending = rcd_pending_new ("Package download");
     g_object_set_data (G_OBJECT (status->download_pending), "status", status);
 
+    rcd_pending_begin (status->download_pending);
+
     if (!check_download_space (status->total_download_size)) {
         char *msg;
 
@@ -1061,13 +1064,9 @@ download_packages (RCPackageSList *packages, RCDTransactionStatus *status)
         fail_transaction (status, status->download_pending, msg);
         g_free (msg);
 
-        rc_package_slist_unref (status->packages_to_download);
-
         return -1;
     }
     
-    rcd_pending_begin (status->download_pending);
-
     status->packages_to_download =
         g_slist_reverse (status->packages_to_download);
 
