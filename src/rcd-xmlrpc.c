@@ -655,6 +655,7 @@ rcd_xmlrpc_foreach_cb (RCWorld *world, gpointer user_data)
     }
 
 cleanup:
+    xmlrpc_server_info_free (server);
     xmlrpc_env_clean (&env);
 
     return TRUE;

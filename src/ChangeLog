@@ -1,3 +1,7 @@
+2003-09-29  Tambet Ingo  <tambet@ximian.com>
+
+	* rcd-xmlrpc.c (rcd_xmlrpc_foreach_cb): Free server_info when done.
+
 2003-09-29  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-prefs.c (prefs_set_pref): Free the GError after we set a
