@@ -1229,13 +1229,13 @@ dep_get_package_info_cb (RCResolverInfo *info, gpointer user_data)
         
     case RC_RESOLVER_INFO_TYPE_OBSOLETES:
         pkgs = rc_resolver_info_packages_to_string (info, FALSE);
-        info_str = g_strconcat ("replaces: ", pkgs, NULL);
+        info_str = g_strconcat ("replaced by: ", pkgs, NULL);
         g_free (pkgs);
         break;
 
     case RC_RESOLVER_INFO_TYPE_DEPENDS_ON:
         pkgs = rc_resolver_info_packages_to_string (info, FALSE);
-        info_str = g_strconcat ("depends on: ", pkgs, NULL);
+        info_str = g_strconcat ("depended on: ", pkgs, NULL);
         g_free (pkgs);
         break;
 
