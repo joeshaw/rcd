@@ -1,3 +1,15 @@
+2002-10-17  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd.c (initialize_data): Move the call to rcd_package_locks_load
+	here from in initialize_rc_world... if we load the packages before
+	the channel data has been fetched, we are unable to resolve the
+	channel IDs in the locks to RCChannel objects and things go
+	downhill from there.
+
+	* rcd-rpc-packsys.c (packsys_search_by_package_match): Added.
+	(packsys_remove_lock): Added.
+	(rcd_rpc_packsys_register_methods): Register our new methods.
+
 2002-10-16  Joe Shaw  <joe@ximian.com>
 
 	* rcd-fetch.c: Remove the Soup crash workarounds.

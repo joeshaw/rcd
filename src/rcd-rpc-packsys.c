@@ -599,6 +599,44 @@ cleanup:
     return xmlrpc_packages;
 } /* packsys_search */
 
+static xmlrpc_value *
+packsys_search_by_package_match (xmlrpc_env   *env,
+                                 xmlrpc_value *param_array,
+                                 void         *user_data)
+{
+    RCWorld *world = (RCWorld *) user_data;
+    RCPackageMatch *match;
+    RCPackageSList *rc_packages = NULL;
+    xmlrpc_value *value = NULL;
+    xmlrpc_value *match_value = NULL;
+
+    xmlrpc_parse_value (env, param_array, "(V)", &match_value);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    match = rcd_xmlrpc_to_rc_package_match (match_value, env);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    if (match) {
+        rc_world_foreach_package_by_match (world,
+                                           match,
+                                           add_package_cb,
+                                           &rc_packages);
+    }
+
+    value = rcd_rc_package_slist_to_xmlrpc_array (rc_packages, env);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+ cleanup:
+    rc_package_match_free (match);
+    rc_package_slist_unref (rc_packages);
+    
+    if (env->fault_occurred) {
+        return NULL;
+    }
+
+    return value;
+}
+
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 static xmlrpc_value *
@@ -1877,7 +1915,7 @@ packsys_add_lock (xmlrpc_env   *env,
     RCPackageMatch *match;
     gboolean success = FALSE;
 
-    xmlrpc_parse_value(env, param_array, "(V)", &match_value);
+    xmlrpc_parse_value (env, param_array, "(V)", &match_value);
     XMLRPC_FAIL_IF_FAULT (env);
 
     match = rcd_xmlrpc_to_rc_package_match (match_value, env);
@@ -1889,6 +1927,65 @@ packsys_add_lock (xmlrpc_env   *env,
 
  cleanup:
     return xmlrpc_build_value (env, "i", success);
+}
+
+struct RemoveLockInfo {
+    RCPackageMatch *target_lock;
+    RCPackageMatch *matching_lock;
+};
+
+static void
+remove_lock_cb (RCPackageMatch *match,
+                gpointer        user_data)
+{
+    struct RemoveLockInfo *info = user_data;
+
+    if (info->matching_lock == NULL
+        && rc_package_match_equal (match, info->target_lock)) {
+        info->matching_lock = match;
+    }
+}
+
+static xmlrpc_value *
+packsys_remove_lock (xmlrpc_env   *env,
+                     xmlrpc_value *param_array,
+                     void         *user_data)
+{
+    RCWorld *world = user_data;
+    xmlrpc_value *match_value;
+    RCPackageMatch *match;
+    xmlrpc_value *retval = NULL;
+    gboolean success = FALSE;
+
+    retval = xmlrpc_build_value (env, "i", 0);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    xmlrpc_parse_value (env, param_array, "(V)", &match_value);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    match = rcd_xmlrpc_to_rc_package_match (match_value, env);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    if (match) {
+        struct RemoveLockInfo info;
+
+        info.target_lock = match;
+        info.matching_lock = NULL;
+        rc_world_foreach_lock (world, remove_lock_cb, &info);
+
+        if (info.matching_lock) {
+            rc_world_remove_lock (world, info.matching_lock);
+            rcd_package_locks_save (world);
+            success = TRUE;
+        }
+    }
+
+    if (success) {
+        xmlrpc_DECREF (retval);
+        retval = xmlrpc_build_value (env, "i", 1);
+    }
+ cleanup:
+    return retval;
 }
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
@@ -2057,6 +2154,11 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
                             "view",
                             world);
 
+    rcd_rpc_register_method("rcd.packsys.search_by_package_match",
+                            packsys_search_by_package_match,
+                            "view",
+                            world);
+
     rcd_rpc_register_method("rcd.packsys.query_file",
                             packsys_query_file,
                             "view",
@@ -2139,6 +2241,11 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
 
     rcd_rpc_register_method("rcd.packsys.add_lock",
                             packsys_add_lock,
+                            "subscribe", /* FIXME */
+                            world);
+
+    rcd_rpc_register_method("rcd.packsys.remove_lock",
+                            packsys_remove_lock,
                             "subscribe", /* FIXME */
                             world);
 

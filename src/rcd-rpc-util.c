@@ -263,7 +263,7 @@ rcd_rc_package_match_to_xmlrpc (RCPackageMatch *match,
         RCD_XMLRPC_STRUCT_SET_STRING (env, value, "importance_str",
                                       rc_package_importance_to_string (imp));
         RCD_XMLRPC_STRUCT_SET_INT (env, value, "importance_gteq", imp_gteq);
-    }    
+    }
 
  cleanup:
     if (env->fault_occurred) /* FIXME: leaks */

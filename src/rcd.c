@@ -323,10 +323,7 @@ initialize_rc_world (void)
         rc_world_get_system_packages (world);
         
     }
-
-    rcd_package_locks_load (world);
-    
-    
+  
 } /* initialize_rc_world */
 
 static void
@@ -473,6 +470,10 @@ initialize_data (void)
 
         rcd_fetch_all_channel_icons (FALSE);
     }
+
+    /* We don't want to read in the locks until after we have fetched the
+       list of channels. */
+    rcd_package_locks_load (rc_get_world ());
 
     if (!rcd_fetch_news_local ())
         rcd_fetch_news ();
