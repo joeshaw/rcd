@@ -1,11 +1,11 @@
 CONTRIBUTING
 ------------
-Contributors to rcd are more than welcome.  rcd is written in C and
-heavily uses the glib library.
+Contributors to rcd and related modules (libredcarpet and rc) are more
+than welcome.  rcd is written in C and heavily uses the glib library.
 
 Discussion takes place on the rc-devel@lists.ximian.com mailing list.
 Patches should be sent there, and should follow the existing stylistic
-conventions, be accompanied with a ChangeLog entry, and sent in GNU
+conventions, be accompanied by a ChangeLog entry, and sent in GNU
 unified diff format (diff -u).
 
 Please DO NOT commit to CVS without approval from one of the
@@ -56,21 +56,29 @@ through the hell of building this stuff yourself.
          --disable-abyss-server --disable-cgi-server \
 	 --disable-cplusplus --disable-libwww-client
 
-And now you're ready to build RCD.
+* libredcarpet
 
-Building RCD, you will need to pass in some configure flags to enable
-backends for your distro.  If you are on an RPM system, you'll want to
-pass in:
+  libredcarpet is the packaging system independent backend and library
+  containing a lot of useful functions used in Red Carpet and rcd.  It's
+  in GNOME CVS, module libredcarpet, and probably in tarball form from
+  wherever you got the rcd tarball.
 
-  --enable-backend-rpm --enable-rpm-version=[version]
+  You'll need to pass in some configure flags to enable backends for your
+  distro.  If you are on an RPM system, you'll want to pass in:
 
-If you are on Debian:
+    --enable-backend-rpm --enable-rpm-version=[version]
 
-  --enable-backend-dpkg
+  If on Debian:
+
+    --enable-backend-dpkg
+
+And now you're ready to build rcd.
 
 Since you should have installed Soup and xmlrpc-c in a weird prefix,
-you will probably also want to use --with-xmlrpc-prefix=[prefix] and
---with-soup=[path].
+you will probably want to pass in --with-xmlrpc-prefix=[prefix] and
+--with-soup=[path] to configure/autogen.sh.  You may also need to set
+your PKG_CONFIG_PATH to the paths containing the Soup and libredcarpet
+pkgconfig files ($prefix/lib/pkgconfig).
 
 Once all of that is taken care of, you should be off and running.
 Good Luck.
