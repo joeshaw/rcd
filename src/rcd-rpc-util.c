@@ -263,6 +263,10 @@ rcd_rc_package_to_xmlrpc (RCPackage *package, xmlrpc_env *env)
         env, value,
         "section_str", rc_package_section_to_string (package->section));
 
+    RCD_XMLRPC_STRUCT_SET_STRING(
+        env, value,
+        "section_user_str", rc_package_section_to_user_string (package->section));
+
     RCD_XMLRPC_STRUCT_SET_INT(
         env, value,
         "section_num", package->section);

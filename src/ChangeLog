@@ -1,8 +1,10 @@
 2002-09-03  Jon Trowbridge  <trow@ximian.com>
 
-	* rcd-rpc-util.c (rcd_rc_package_to_xmlrpc): Include the
-	file size, installed size, and section info when we map an
-	RCPackage to an xml-rpc struct.
+	* rcd-rpc-util.c (rcd_rc_package_to_xmlrpc): Include the file
+	size, installed size, and section info when we map an RCPackage to
+	an xml-rpc struct.
+	(rcd_rc_package_to_xmlrpc): We also need the section's user
+	string.
 
 2002-08-29  Joe Shaw  <joe@ximian.com>
 
