@@ -1,3 +1,11 @@
+2003-10-28  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-util.c (rcd_rc_package_dep_to_xmlrpc): Marshal the
+	channel dep into the XML-RPC struct.
+	(rcd_xmlrpc_to_rc_package_dep): Get the channel id from the XML-RPC
+	struct and get a channel for it to pass into
+	rc_package_dep_new_from_spec().
+
 2003-10-27  Tambet Ingo  <tambet@ximian.com>
 
 	* rcd-rpc-packsys.c (packsys_add_lock): Don't try to use xmlrpc_env

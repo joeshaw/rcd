@@ -67,11 +67,20 @@ rcd_rc_package_dep_to_xmlrpc (RCPackageDep *dep,
                               xmlrpc_value *value,
                               xmlrpc_env   *env)
 {
+    RCChannel *channel;
+
     rcd_rc_package_spec_to_xmlrpc ((RCPackageSpec *)dep, value, env);
     
     RCD_XMLRPC_STRUCT_SET_STRING (
         env, value, "relation",
         rc_package_relation_to_string (rc_package_dep_get_relation (dep), 0));
+
+    channel = rc_package_dep_get_channel (dep);
+
+    if (!rc_channel_is_wildcard (channel)) {
+        RCD_XMLRPC_STRUCT_SET_STRING (env, value, "channel",
+                                      rc_channel_get_id (channel));
+    }
     
  cleanup:
     ;
@@ -182,6 +191,8 @@ rcd_xmlrpc_to_rc_package_dep (xmlrpc_value *value,
     RCPackageDep *dep = NULL;
     char *relation_str = NULL;
     RCPackageRelation relation;
+    char *channel_id;
+    RCChannel *channel = RC_CHANNEL_ANY;
 
     if (! assemble_spec (value, env, &spec))
         return NULL;
@@ -193,16 +204,30 @@ rcd_xmlrpc_to_rc_package_dep (xmlrpc_value *value,
     else
         is_or = FALSE;
 
-    if (! xmlrpc_struct_has_key (env, value, "relation"))
-        goto cleanup;
+    if (! xmlrpc_struct_has_key (env, value, "relation")) {
+        XMLRPC_FAIL (env, RCD_RPC_FAULT_TYPE_MISMATCH,
+                     "No dependency relation provided");
+    }
     RCD_XMLRPC_STRUCT_GET_STRING (env, value, "relation", relation_str);
 
     relation = rc_package_relation_from_string (relation_str);
-    if (relation == RC_RELATION_INVALID)
-        goto cleanup;
+    if (relation == RC_RELATION_INVALID) {
+        XMLRPC_FAIL (env, RCD_RPC_FAULT_TYPE_MISMATCH,
+                     "Invalid dependency relation provided");
+    }
+
+    if (xmlrpc_struct_has_key (env, value, "channel")) {
+        RCD_XMLRPC_STRUCT_GET_STRING (env, value, "channel", channel_id);
+
+        channel = rc_world_get_channel_by_id (rc_get_world (), channel_id);
+
+        if (!channel) {
+            XMLRPC_FAIL (env, RCD_RPC_FAULT_INVALID_CHANNEL,
+                         "Invalid channel");
+        }
+    }
     
-    dep = rc_package_dep_new_from_spec (&spec, relation, 
-                                        RC_CHANNEL_ANY, /* FIXME!!! */
+    dep = rc_package_dep_new_from_spec (&spec, relation, channel,
                                         FALSE, is_or);
 
  cleanup:
