@@ -1,5 +1,8 @@
 2003-09-10  Joe Shaw  <joe@ximian.com>
 
+	* rcd-world-remote.c (rcd_world_remote_refresh): Call
+	rc_world_refresh_begin() before going to rcd_world_remote_fetch().
+
 	* rcd-transfer-http.c: Replace rc_auth_header with a hash table
 	rc_auth_header_table which caches X-RC-Auth per-host instead of
 	globally.

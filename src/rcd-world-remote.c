@@ -78,6 +78,8 @@ rcd_world_remote_finalize (GObject *obj)
 static RCPending *
 rcd_world_remote_refresh (RCWorld *world)
 {
+    rc_world_refresh_begin (world);
+
     return rcd_world_remote_fetch (RCD_WORLD_REMOTE (world), FALSE, NULL);
 }
 
