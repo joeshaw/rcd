@@ -1,3 +1,8 @@
+2004-02-11  Tambet Ingo  <tambet@ximian.com>
+
+	* rcd-shutdown.c (shutdown_idle_cb): Handle execv failures. Fixes
+	bug #51716.
+
 2004-02-10  Joe Shaw  <joe@ximian.com>
 
 	* rcd-transfer-http.c (http_done): Get rid of g_idle_add() of

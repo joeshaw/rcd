@@ -25,6 +25,7 @@
 
 #include <config.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include <libredcarpet.h>
 
@@ -107,7 +108,12 @@ shutdown_idle_cb (gpointer user_data)
     else {
         const char **argv = rcd_options_get_argv ();
 
-        execv (argv[0], (char **) argv);
+        errno = 0;
+        if ((execv (argv[0], (char **) argv)) < 0) {
+            rc_debug (RC_DEBUG_LEVEL_ERROR, "Can not restart rcd: %s",
+                      strerror (errno));
+            exit (EXIT_FAILURE);
+        }
     }
 
     /* We should never reach here... */
