@@ -2185,9 +2185,6 @@ packsys_remove_lock (xmlrpc_env   *env,
         info.matching_lock = NULL;
         rc_world_foreach_lock (world, remove_lock_cb, &info);
 
-        g_warning ("Can't remove locks yet!");
-        g_assert_not_reached (); /* FIXME! */
-
         if (info.matching_lock) {
             rc_world_remove_lock (world, info.matching_lock);
             rcd_package_locks_save (world);
