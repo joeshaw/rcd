@@ -136,7 +136,8 @@ GSList *rcd_fetch_refresh (char **err_msg);
 /*
  * Set up an RCDTransferPool to download all of the packages specified.
  */
-RCDTransferPool *rcd_fetch_packages (RCPackageSList *packages);
+void rcd_fetch_packages (RCDTransferPool *pool,
+                         RCPackageSList  *packages);
 
 #endif /* __RCD_FETCH_H__ */
 

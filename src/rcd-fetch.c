@@ -697,19 +697,10 @@ rcd_fetch_channel_local (RCChannel *channel, RCWorld *world)
     /* Clear any old channel info out of the world. */
     rc_world_remove_packages (world, channel);
 
-    if (rc_channel_get_pkginfo_compressed (channel)) {
-
-        rc_world_add_packages_from_buffer (world,
-                                           channel,
-                                           buf->data,
-                                           buf->size);
-    } else {
-
-        rc_world_add_packages_from_buffer (world,
-                                           channel,
-                                           buf->data,
-                                           0);
-    }
+    rc_world_add_packages_from_buffer (world,
+                                       channel,
+                                       buf->data,
+                                       0);
 
     rc_debug (RC_DEBUG_LEVEL_INFO,
               "Loaded channel '%s'",
@@ -1244,15 +1235,13 @@ package_completed_cb (RCDTransfer *t, RCPackage *package)
         package->package_filename = rcd_transfer_get_local_filename (t);
 }
 
-RCDTransferPool *
-rcd_fetch_packages (RCPackageSList *packages)
+void
+rcd_fetch_packages (RCDTransferPool *pool, RCPackageSList *packages)
 {
-    RCDTransferPool *pool;
     RCPackageSList *iter;
 
-    g_return_val_if_fail (packages != NULL, NULL);
-
-    pool = rcd_transfer_pool_new (TRUE);
+    g_return_if_fail (pool != NULL);
+    g_return_if_fail (packages != NULL);
 
     for (iter = packages; iter; iter = iter->next) {
         RCPackage *package = iter->data;
@@ -1292,6 +1281,4 @@ rcd_fetch_packages (RCPackageSList *packages)
             g_object_unref (t);
         }
     }
-
-    return pool;
 }

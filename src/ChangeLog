@@ -1,3 +1,24 @@
+2003-05-22  Joe Shaw  <joe@ximian.com>
+
+	* rcd-fetch.c (rcd_fetch_channel_local): rc_map_file()
+	transparently decompresses the data for us, so just pass it into
+	rc_world_add_packages_from_buffer().
+	(rcd_fetch_packages): Take an existing RCDTransferPool as an
+	argument instead of creating one and returning it.
+
+	* rcd-rpc-packsys.c (packsys_transaction): Use refactored
+	RCDTransaction API, comment out the old ones.
+
+	* rcd-transaction.c: Refactor this pretty heavily.  Make an
+	RCDTransaction a GObject and expose it publicly.  Get rid of most
+	of the arguments to rcd_transaction_begin() and put them in their
+	own functions.  Break up the steps of the transaction a little
+	more discretely and add transaction_started and
+	transaction_finished signals so we can more easily have code which
+	runs no matter what.  Still needs work: logging is completely
+	disabled, as is cancelling the download, and all the code is still
+	there, just #if 0'ed out.
+
 2003-05-20  Tambet Ingo  <tambet@ximian.com>
 
 	* Makefile.am (rcdinclude_HEADERS): Added rcd-rpc-util.h

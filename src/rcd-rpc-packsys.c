@@ -1003,6 +1003,27 @@ packsys_transact(xmlrpc_env   *env,
         env, remove_packages, method_data->identity);
     XMLRPC_FAIL_IF_FAULT (env);
 
+    {
+        RCDTransaction *transaction;
+
+        transaction = rcd_transaction_new ();
+        rcd_transaction_set_install_packages (transaction, install_packages);
+        rcd_transaction_set_remove_packages (transaction, remove_packages);
+        rcd_transaction_set_flags (transaction, flags);
+        rcd_transaction_set_client_info (transaction,
+                                         client_id, client_version,
+                                         method_data->host,
+                                         method_data->identity);
+
+        rcd_transaction_begin (transaction);
+
+        download_id = rcd_transaction_get_download_pending_id (transaction);
+        transaction_id =
+            rcd_transaction_get_transaction_pending_id (transaction);
+        step_id = rcd_transaction_get_step_pending_id (transaction);
+    }
+
+#if 0
     rcd_transaction_begin (NULL,
                            world,
                            install_packages,
@@ -1015,6 +1036,7 @@ packsys_transact(xmlrpc_env   *env,
                            &download_id,
                            &transaction_id,
                            &step_id);
+#endif
 
     result = xmlrpc_build_value (
         env, "(iii)", download_id, transaction_id, step_id);
@@ -1639,6 +1661,15 @@ cleanup:
         xmlrpc_DECREF (xremove);
 
     return result;
+}
+
+static xmlrpc_value *
+packsys_rollback (xmlrpc_env   *env,
+                  xmlrpc_value *param_array,
+                  void         *user_data)
+{
+    RCWorld *world = (RCWorld *) user_data;
+    RCRollbackActionSList *actions = NULL, *iter;
 }
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
