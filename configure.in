@@ -29,6 +29,16 @@ AM_MAINTAINER_MODE
 
 ### args
 
+AC_ARG_WITH(default-service,
+  [  --with-default-service=<url>],
+  with_default_service="$withval")
+
+if test "x$with_default_service" != "x"; then
+  AC_DEFINE_UNQUOTED(DEFAULT_HOST_URL, ${with_default_service}, [Set the default service])
+else
+  AC_DEFINE_UNQUOTED(DEFAULT_HOST_URL, "http://red-carpet.ximian.com", [Set the default service])
+fi
+
 AC_ARG_WITH(xmlrpc-prefix,
   [  --with-xmlrpc-prefix=PREFIX],
   with_xmlrpc_prefix="$withval")

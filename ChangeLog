@@ -1,5 +1,13 @@
 2004-11-03  James Willcox  <james@ximian.com>
 
+	* configure.in:
+	* src/rcd-services.c:
+
+	Add --with-default-service to override red-carpet.ximian.com as
+	the default service.
+
+2004-11-03  James Willcox  <james@ximian.com>
+
 	* configure.in: strip -lpthread from the libsoup libs, as it messes
 	up static linking.
 

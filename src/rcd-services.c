@@ -37,8 +37,6 @@
 #define SYNTH_DB_PATH "/var/lib/rcd"
 #define SYNTH_DB_FILE SYNTH_DB_PATH "/synthetic-packages.xml"
 
-#define DEFAULT_HOST_URL "http://red-carpet.ximian.com"
-
 void
 rcd_services_load (RCWorldMulti *multi)
 {
