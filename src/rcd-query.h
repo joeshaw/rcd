@@ -70,6 +70,7 @@ struct _RCDQueryPart {
     /* for internal use only */
     RCDQueryEngine *engine;
     gpointer        data;
+    guint           processed : 1;
 };
 
 

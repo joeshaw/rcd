@@ -93,6 +93,8 @@ main (int argc, char *argv[])
     initialize_logging ();
     initialize_rc_world ();
 
+    rcd_rpc_log_register_methods ();
+
     if (rcd_fetch_channel_list_local ()) {
         rcd_subscriptions_load ();
         rcd_fetch_all_channels_local ();

@@ -205,9 +205,9 @@ match_package_fn (RCPackage *pkg, gpointer user_data)
       
 gint
 rcd_query_packages (RCWorld      *world,
-                     RCDQueryPart *query_parts,
-                     RCPackageFn   matching_package_cb,
-                     gpointer      user_data)
+                    RCDQueryPart *query_parts,
+                    RCPackageFn   matching_package_cb,
+                    gpointer      user_data)
 {
     struct QueryInfo info;
 

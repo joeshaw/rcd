@@ -1,7 +1,7 @@
 /* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 
 /*
- * rcd-query-packages.h
+ * rcd-rpc-log.h
  *
  * Copyright (C) 2002 Ximian, Inc.
  *
@@ -25,16 +25,10 @@
  * USA.
  */
 
-#ifndef __RCD_QUERY_PACKAGES_H__
-#define __RCD_QUERY_PACKAGES_H__
+#ifndef __RCD_RPC_LOG_H__
+#define __RCD_RPC_LOG_H__
 
-#include <libredcarpet.h>
-#include "rcd-query.h"
+void rcd_rpc_log_register_methods (void);
 
-gint rcd_query_packages (RCWorld      *world,
-                         RCDQueryPart *query_parts,
-                         RCPackageFn   matching_package_cb,
-                         gpointer      user_data);
-
-#endif /* __RCD_QUERY_PACKAGES_H__ */
+#endif /* __RCD_RPC_LOG_H__ */
 

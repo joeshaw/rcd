@@ -5,7 +5,7 @@
 
 #include <rc-dep-or.h>
 
-static void
+void
 rcd_rc_package_spec_to_xmlrpc(RCPackageSpec *spec,
                               xmlrpc_value *value,
                               xmlrpc_env *env)

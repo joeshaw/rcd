@@ -228,6 +228,7 @@ rcd_query_begin (RCDQueryPart *query_parts,
         }
 
         query_parts[i].engine = eng;
+        query_parts[i].processed = FALSE;
     }
 
     /* If we made it this far, our query must be OK.  Call each part initializer. */
@@ -255,13 +256,15 @@ rcd_query_match (RCDQueryPart   *query_parts,
 
     for (i = 0; query_parts[i].type != RCD_QUERY_LAST; ++i) {
 
-        RCDQueryEngine *engine = query_parts[i].engine;
+        if (! query_parts[i].processed) {
+            RCDQueryEngine *engine = query_parts[i].engine;
+            
+            g_assert (engine != NULL);
+            g_assert (engine->match != NULL);
         
-        g_assert (engine != NULL);
-        g_assert (engine->match != NULL);
-        
-        if (! engine->match (&query_parts[i], data))
-            return FALSE;
+            if (! engine->match (&query_parts[i], data))
+                return FALSE;
+        }
     }
 
     return TRUE;

@@ -29,11 +29,16 @@
 #define __RCD_LOG_H__
 
 #include "rcd-log-entry.h"
+#include "rcd-query.h"
 
 /* If log_path is NULL, use the default path */
 void rcd_log_init (const char *log_path);
 
 void rcd_log (RCDLogEntry *entry);
+
+void rcd_log_query (RCDQueryPart *query_parts,
+                    RCDLogEntryFn entry_fn,
+                    gpointer      user_data);
 
 #endif /* __RCD_LOG_H__ */
 

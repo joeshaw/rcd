@@ -44,6 +44,8 @@ rcd_SOURCES = 			\
 	rcd-query-packages.h	\
 	rcd-rpc.c		\
 	rcd-rpc.h		\
+	rcd-rpc-log.c		\
+	rcd-rpc-log.h		\
 	rcd-rpc-packsys.c	\
 	rcd-rpc-packsys.h	\
 	rcd-rpc-system.c	\

@@ -84,11 +84,6 @@ rcd_log_init (const char *log_path)
     sigaction (SIGHUP, &sighup_action, NULL);
 }
 
-static void
-actually_write (const char *str)
-{
-}
-
 void
 rcd_log (RCDLogEntry *entry)
 {
@@ -110,4 +105,197 @@ rcd_log (RCDLogEntry *entry)
     /* FIXME should check that these writes succeed */
     write (rcd_log_fd, str, strlen (str));
     write (rcd_log_fd, "\n", 1);
+
+    g_free (str);
+}
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+static void
+cutoff_time_init (RCDQueryPart *part)
+{
+    long x = atol (part->query_str);
+    time_t *t = g_new0 (time_t, 1); 
+    *t = (time_t) x;
+    part->data = t;
+}
+
+static void
+cutoff_time_finalize (RCDQueryPart *part)
+{
+    g_free (part->data);
+}
+
+static gboolean
+cutoff_time_match (RCDQueryPart *part,
+                   gpointer      data)
+{
+    RCDLogEntry *entry = data;
+    time_t t = *(time_t *)part->data;
+    return rcd_query_type_int_compare (part->type,
+                                       (int) entry->timestamp, (int) t);
+}
+
+static gboolean
+package_name_match (RCDQueryPart *part,
+                    gpointer      data)
+{
+    gboolean x1 = FALSE, x2 = FALSE;
+
+    RCDLogEntry *entry = data;
+
+    if (entry->pkg_initial.name)
+        x1 = rcd_query_match_string (part, entry->pkg_initial.name);
+
+    if (!x1 && entry->pkg_final.name)
+        x2 = rcd_query_match_string (part, entry->pkg_final.name);
+
+    return x1 || x2;
+}
+
+static gboolean
+action_match (RCDQueryPart *part,
+              gpointer      data)
+{
+    RCDLogEntry *entry = data;
+    return rcd_query_match_string (part, entry->action);
+}
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+static RCDQueryEngine query_log_engine[] = {
+    { "cutoff_time",
+      NULL, cutoff_time_init, cutoff_time_finalize,
+      cutoff_time_match },
+
+    { "name",
+      NULL, NULL, NULL,
+      package_name_match },
+
+    { "action",
+      NULL, NULL, NULL,
+      action_match },
+
+    { NULL, NULL, NULL, NULL, NULL }
+};
+
+struct ScanInfo {
+    RCDQueryPart *query_parts;
+    RCDLogEntryFn entry_fn;
+    gpointer      user_data;
+    time_t        cutoff;
+    gboolean      cutoff_hit;
+};
+
+static void
+log_scan_cb (RCDLogEntry *entry, gpointer user_data)
+{
+    struct ScanInfo *info = user_data;
+    gboolean cutoff_check;
+
+    if (info->cutoff == 0 || difftime (info->cutoff, entry->timestamp) <= 0) {
+
+        info->cutoff_hit = TRUE;
+            
+        if (rcd_query_match (info->query_parts, query_log_engine, entry)) {
+            info->entry_fn (entry, info->user_data);
+        }
+    }
+}
+
+static gboolean
+rcd_log_scan (const char   *filename,
+              time_t        cutoff,
+              RCDQueryPart *query_parts,
+              RCDLogEntryFn entry_fn,
+              gpointer      user_data)
+{
+    struct ScanInfo info;
+    FILE *in;
+    char buffer[1024];
+
+    g_return_val_if_fail (filename && *filename, FALSE);
+
+    if (! g_file_test (filename, G_FILE_TEST_EXISTS))
+        return FALSE;
+
+    info.query_parts = query_parts;
+    info.entry_fn    = entry_fn;
+    info.user_data   = user_data;
+    info.cutoff      = cutoff;
+    info.cutoff_hit  = FALSE;
+    
+    in = fopen (filename, "r");
+    g_return_val_if_fail (in != NULL, FALSE);
+
+    while (fgets (buffer, 1024, in)) {
+        rcd_log_entry_parse (buffer, log_scan_cb, &info);
+    }
+
+    fclose (in);
+
+    /* If nothing in the file is without our cutoff range, 
+       return FALSE: this means we should stop walking backwards
+       through the rotated log files. */
+
+    return info.cutoff_hit;
+}
+
+void
+rcd_log_query (RCDQueryPart *query_parts,
+               RCDLogEntryFn entry_fn,
+               gpointer      user_data)
+{
+    time_t cutoff;
+    int i;
+
+    if (entry_fn == NULL) 
+        return;
+    g_return_if_fail (query_parts != NULL);
+
+    if (! rcd_query_begin (query_parts, query_log_engine)) {
+        g_warning ("rcd_query_begin failed");
+        return;
+    }
+
+    /*** Compute our cutoff ***/
+
+    cutoff = 0;
+
+    /* check for other cutoffs in the query */
+    for (i = 0; cutoff == 0 && query_parts[i].type != RCD_QUERY_LAST; ++i) {
+        if (query_parts[i].key
+            && ! g_strcasecmp (query_parts[i].key, "cutoff_time")
+            && (query_parts[i].type == RCD_QUERY_GT || query_parts[i].type == RCD_QUERY_GT_EQ)) {
+
+            time_t c = (time_t) atol (query_parts[i].query_str);
+            if (cutoff == 0 || difftime (cutoff, c) > 0)
+                cutoff = c;
+
+            query_parts[i].processed = TRUE;
+        }
+    }
+
+    if (cutoff == 0) {
+        /* default cutoff == 30 days ago */
+        time (&cutoff);
+        cutoff -= 60*60*24*30;
+    }
+
+    /* scan our log file */
+    if (rcd_log_scan (rcd_log_path, cutoff, query_parts, entry_fn, user_data)) {
+        int rot_num = 1;
+        char *rot_path = NULL;
+
+        /* scan through our rotated log files, as long as they return TRUE */
+        do {
+            g_free (rot_path);
+            rot_path = g_strdup_printf ("%s.%d", rcd_log_path, rot_num);
+            ++rot_num;
+        } while (rcd_log_scan (rot_path, cutoff, query_parts, entry_fn, user_data));
+        g_free (rot_path);
+
+    }
+
+    rcd_query_end (query_parts, query_log_engine);
 }

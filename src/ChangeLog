@@ -1,3 +1,29 @@
+2002-06-17  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-rpc-log.c: Added.  XML-RPC magic for log queries.
+
+	* rcd.c (main): Register log methods.
+
+	* rcd-rpc-util.c (rcd_rc_package_spec_to_xmlrpc): Made non-static
+	so that I can use it in rcd-rpc-log.c.
+
+	* rcd-query.c (rcd_query_begin): Set each part's 'processed' flag
+	to FALSE.
+	(rcd_query_match): Skip parts whose processed flag is TRUE.
+
+	* rcd-log.c (rcd_log): Directly write out stringified log message,
+	checking to make sure that the log file has been properly
+	initialized.
+	(rcd_log_query): Implements log querying, using the same
+	QueryEngine/QueryParts framework as package queries.
+
+	* rcd-log-entry.c (spec_to_str): Renamed from spec_str.  Changed
+	log format to be more efficiently parseable.
+	(split_on_vbar): A custom, high-efficiency line-splitter.
+	(spec_from_str): Parse our a RCPackageSpec.
+	(rcd_log_entry_parse): Implemented.  Parses log lines in a fairly
+	efficient manner, without any memory allocs or frees.
+
 2002-06-14  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-packsys.c (packsys_package_info): Added.  Returns

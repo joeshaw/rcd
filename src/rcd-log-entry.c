@@ -28,6 +28,8 @@
 #include <config.h>
 #include "rcd-log-entry.h"
 
+#include <ctype.h>
+
 RCDLogEntry *
 rcd_log_entry_new (const char *host, const char *user)
 {
@@ -123,7 +125,7 @@ rcd_log_entry_free (RCDLogEntry *entry)
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 static char *
-spec_str (RCPackageSpec *spec)
+spec_to_str (RCPackageSpec *spec)
 {
     char epoch_str[32] = "_";
 
@@ -159,13 +161,15 @@ rcd_log_entry_to_str (RCDLogEntry *entry)
         ++c;
     }
     
-    pkg_initial_str = spec_str (&entry->pkg_initial);
-    pkg_final_str = spec_str (&entry->pkg_final);
+    pkg_initial_str = spec_to_str (&entry->pkg_initial);
+    pkg_final_str = spec_to_str (&entry->pkg_final);
 
-    str = g_strdup_printf ("%ld %s|%s|%s|" /* time, host, user */
+    str = g_strdup_printf ("%s |%lx|"  /* timestring, timestamp */
+                           "%s|%s|"    /* host, user */
                            "%s|"       /* action */
                            "%s|%s",    /* pkg_initial, pkg_final */
-                           entry->timestamp, timestr, entry->host, entry->user,
+                           timestr, entry->timestamp,
+                           entry->host, entry->user,
                            entry->action,
                            pkg_initial_str, pkg_final_str);
 
@@ -174,4 +178,110 @@ rcd_log_entry_to_str (RCDLogEntry *entry)
     g_free (pkg_final_str);
 
     return str;
+}
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+static int
+split_on_vbar (char *buffer, char **bufv, int bufv_len)
+{
+    int bv;
+    char *c = buffer, *bk;
+
+    if (buffer == NULL || bufv == NULL || bufv_len == 0)
+        return 0;
+
+    bufv[0] = buffer;
+    bv = 1;
+
+    while (*c && bv < bufv_len) {
+
+        while (*c && *c != '|') {
+            if (*c == '\n')
+                *c = '\0';
+            else
+                ++c;
+        }
+
+        if (*c) {
+
+            /* trim off | and trailing spaces */
+            bk = c;
+            while (buffer <= bk && (*bk == '|' || isspace (*bk))) {
+                *bk = '\0';
+                --bk;
+            }
+
+            ++c;
+            /* move past leading spaces */
+            while (*c && isspace (*c))
+                ++c;
+
+            bufv[bv] = c;
+            ++bv;
+        }
+    }
+    
+    return bv;
+}
+
+#define IS_VBAR(s) ((s) && *(s) == '_' && *((s)+1) == '\0')
+static void
+spec_from_str (RCPackageSpec *spec,
+               const char *name_str,
+               const char *epoch_str,
+               const char *version_str,
+               const char *release_str)
+{
+    if (IS_VBAR (name_str)) {
+        memset (spec, 0, sizeof (RCPackageSpec));
+        return;
+    }
+
+    spec->name = (char *) name_str;
+
+    if (IS_VBAR (epoch_str)) {
+        spec->has_epoch = FALSE;
+        spec->epoch = 0;
+    } else {
+        spec->has_epoch = TRUE;
+        spec->epoch = atoi (epoch_str);
+    }
+
+    spec->version = IS_VBAR (version_str) ? NULL : (char *) version_str;
+    spec->release = IS_VBAR (release_str) ? NULL : (char *) release_str;
+}
+
+
+void
+rcd_log_entry_parse (char         *buffer,
+                     RCDLogEntryFn fn,
+                     gpointer      user_data)
+{
+    RCDLogEntry entry;
+    char *bufv[32];
+    int i, N;
+    
+    if (fn == NULL)
+        return;
+    g_return_if_fail (buffer != NULL);
+
+    N = split_on_vbar (buffer, bufv, 32);
+
+    /* We build up our RCDLogEntry item out of the parsed chunks of
+       the buffer.  This way we don't need to alloc or free any memory
+       or dup any strings.  This is evil, but much more efficient. */
+
+    entry.timestamp = (time_t) strtol (bufv[1], NULL, 16);
+    entry.host      = bufv[2];
+    entry.user      = bufv[3];
+    entry.action    = bufv[4];
+
+    spec_from_str (&entry.pkg_initial,
+                   bufv[5], bufv[6], bufv[7], bufv[8]);
+
+    spec_from_str (&entry.pkg_final,
+                   bufv[9], bufv[10], bufv[11], bufv[12]);
+
+    fn (&entry, user_data);
 }
