@@ -10,10 +10,10 @@ dnl AM_INIT_AUTOMAKE(AC_PACKAGE_NAME, AC_PACKAGE_VERSION)
 
 AC_INIT(src/rcd.c)
 
-VERSION=0.0.1
 MAJOR_VERSION=0
 MINOR_VERSION=0
 MICRO_VERSION=1
+VERSION=$MAJOR_VERSION.$MINOR_VERSION.$MICRO_VERSION
 
 AM_INIT_AUTOMAKE(rcd, $VERSION)
 
@@ -47,9 +47,9 @@ AC_PROG_INTLTOOL
 
 ### get cflags and libs
 
-PKG_CHECK_MODULES(RCD, glib-2.0 gthread-2.0 gmodule-2.0 libredcarpet-2.0 soup)
+PKG_CHECK_MODULES(RCD, glib-2.0 gthread-2.0 gmodule-2.0 libredcarpet-2.0 soup >= 0.7.5)
 
-# I'm sue there is a cleaner way to do this
+# I'm sure there is a cleaner way to do this
 if test -z "$with_xmlrpc_prefix"; then
   xmlrpc_config="xmlrpc-c-config"
   AC_PATH_PROG(XMLRPC_CONFIG, xmlrpc-c-config, no)

@@ -1,3 +1,7 @@
+2002-06-19  Joe Shaw  <joe@ximian.com>
+
+	* configure.in: Require Soup 0.7.5.
+
 2002-05-24  Joe Shaw  <joe@ximian.com>
 
 	* configure.in: Added pkg-config checks for glib-2.0, gthread-2.0,
