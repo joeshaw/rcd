@@ -1025,8 +1025,16 @@ rcd_fetch_packages_abort (int transfer_id)
     for (iter = closure->running_transfers; iter; iter = next) {
         next = iter->next;
 
+        /* Workaround for a Soup bug */
+#if 0
         rcd_transfer_abort (iter->data);
+#else
+        rcd_transfer_set_error (RCD_TRANSFER (iter->data),
+                                RCD_TRANSFER_ERROR_CANCELLED,
+                                NULL);
+#endif
     }
+
 
     for (iter = closure->queued_transfers; iter; iter = iter->next)
         g_object_unref (iter->data);
