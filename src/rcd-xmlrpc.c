@@ -83,17 +83,20 @@ xmlrpc_server_info_set_auth (xmlrpc_env *env,
                              const char *username,
                              const char *password)
 {
+    gchar *digest;
+
     g_return_if_fail (server != NULL);
     g_return_if_fail (username != NULL);
     g_return_if_fail (password != NULL);
 
-    if (server->_username)
-        g_free (server->_username);
+    g_free (server->_username);
     server->_username = g_strdup (username);
 
-    if (server->_password)
-        g_free (server->_password);
-    server->_password = rc_md5_digest_from_string (password);
+    g_free (server->_password);
+
+    digest = g_strdup_printf ("%s:Express:%s", username, password);
+    server->_password = rc_md5_digest_from_string (digest);
+    g_free (digest);
 }
 
 static xmlrpc_server_info *

@@ -1,5 +1,9 @@
 2003-08-27  Tambet Ingo  <tambet@ximian.com>
 
+	* rcd-xmlrpc.c (xmlrpc_server_info_set_auth): g_free is smart
+	enough to handle NULLs. Change the format of password so things
+	work.
+
 	* rcd-fetch.c (rcd_fetch_register): 
 	(register_cb): Make activations work, don't leak memory.
 
