@@ -17,31 +17,31 @@ The daemon is kept apart from the control application so that the control applic
 .LP 
 \fBUSAGE OPTIONS:\fR
 .TP 
-\fB\-f, \-\-config=\fR<\fIfilename\fR>
+\fB\-f, \-\-config=\fR[filename]
 Choose an alternate configuration file. Normally the daemon uses rcd.conf; see the man page for rcd.conf(8) for details of the configuration file format.
 .TP 
-\fB\-\-allow\-non\-root\fR <\fIdirectory\fP>
-Allows rcd to be run by non\-root users.  This is likely to cause errors when rug users attempt to do anything other than query the package database.
+\fB\-\-allow\-non\-root\fR
+Allows rcd to be run as a non\-root user.  This is likely to cause errors if rug attempts to do anything other than query the package database.
 .TP 
-\fB\-d, \-\-debug=\fI<INT>\fR
+\fB\-d, \-\-debug=\fR[INT]
 Turn on debugging mode. You may specify a number between 1 and 6 to determine how much debugging output you woul d like. 1 displays only the highest priority messages, and 6 displays all messages. Choosing zero causes the debugging mode to display no messages at all. The default is 4.
 .TP 
 \fB\-n, \-\-non\-daemon\fR
 Do not run the daemon in the background.
 .TP 
 \fB\-\-no\-network\fR
-Do not connect to the network or download any data from the server.
+Do not connect to the network or download any data from the server until the heartbeat interval or the command "rug refresh" is run.
 .TP 
-\fB\-o</fR>
-On start, the daemon will not attempt to connect to the network immediately. Instead, it will listen for local communications. Use this option when you need to configure a proxy using the "rug set" command. The daemon will connect to the network after the heartbeat interval, or when sent the "refresh" or another network command.
+\fB\-o, \-\-download\-distro\fR
+Download new distribution information from the server right away.
 .TP 
-\fB\-i, \-\-ipaddress=\fR<\fIIP address\fR>
+\fB\-i, \-\-ipaddress=\fR[IP address]
 Bind the remote server only to the specified IP address. This is for systems which host more than one IP address, and means that the server will be available only on the IP address you choose, rather than on all addresses leading to the system.
 .TP 
 \fB\-\-late\-background\fR
 Keep the daemon as a foreground process until it is ready to accept connections.
 .TP 
-\fB\-p, \-\-port=\fR<\fIportnumber\fR>
+\fB\-p, \-\-port=\fR[portnumber]
 Listen for remote connections on the specified port. 	
 .TP 
 \fB\-m, \-\-no\-modules\fR
@@ -50,11 +50,11 @@ Do not load any optional modules.
 \fB\-r, \-\-no\-remote\fR
 Do not listen for remote connections. This means that the daemon can only be controlled from the local system.
 .TP 
-\fB\-s, \-\-syslog=\fI<INT>\fR
+\fB\-s, \-\-syslog=\fR[INT]
 Specify the verbosity of logging information from 0 (none) to 6 (very). The default is 4.
 .TP 
-\fB\-\-undump=\fI<filename>\fR
-Initialize daemon from a dump file; dump files can be gotten from cur_to_xml or from libredcarpet examples).
+\fB\-\-undump=\fR[filename]
+Initialize daemon from a dump file; dump files can be gotten from cur_to_xml or from libredcarpet examples.
 .BR 
 .LP 
 \fBHELP OPTIONS\fR
