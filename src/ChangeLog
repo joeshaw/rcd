@@ -1,3 +1,9 @@
+2002-07-03  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc.c (unix_rpc_callback): Serialize a permission fault if
+	we can't get a username from the password file instead of
+	asserting later.
+
 2002-07-02  Joe Shaw  <joe@ximian.com>
 
 	* rcd-fetch.c (rcd_fetch_packages): Fetch the package signature as

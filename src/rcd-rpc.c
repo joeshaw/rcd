@@ -154,17 +154,19 @@ unix_rpc_callback (RCDUnixServerHandle *handle)
 
     xmlrpc_env_init(&env);
 
-    method_data = g_new0 (RCDRPCMethodData, 1);
-
     if (getenv ("RCD_ENFORCE_AUTH")) {
         if (handle->uid != 0) {
             struct passwd *pw;
             
             pw = getpwuid (handle->uid);
-            if (!pw)
+            if (!pw) {
+                g_warning ("Couldn't get info for UID %d\n", handle->uid);
                 identity = NULL;
-            else
+            }
+            else {
                 identity = rcd_identity_from_password_file (pw->pw_name);
+                g_assert (identity);
+            }
         }
         else {
             identity = rcd_identity_new ();
@@ -172,10 +174,16 @@ unix_rpc_callback (RCDUnixServerHandle *handle)
             identity->privileges = rcd_auth_action_list_from_1 (
                 RCD_AUTH_SUPERUSER);
         }
+
+        if (!identity) {
+            output = serialize_permission_fault ();
+            goto finish_request;
+        }
     }
     else
         identity = NULL;
 
+    method_data = g_new0 (RCDRPCMethodData, 1);
     method_data->host = "local";
     method_data->identity = identity;
 
@@ -190,6 +198,7 @@ unix_rpc_callback (RCDUnixServerHandle *handle)
         return NULL;
     }
 
+finish_request:
     out_data = g_byte_array_new ();
     out_data = g_byte_array_append (
         out_data, 
