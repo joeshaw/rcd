@@ -1,3 +1,10 @@
+2005-01-20  James Willcox  <james@ximian.com>
+
+	* rcd-transfer-http.c: (http_open):
+
+	Connect to 'reauthenticate' on SoupSession.  This fixes some random
+	authentication failures.  Fixes 69508.
+
 2005-01-13  Tambet Ingo  <tambet@ximian.com>
 
 	* rcd-world-remote.c (rcd_extract_packages_from_yum_buffer): Don't
