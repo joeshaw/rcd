@@ -114,6 +114,30 @@ RCD_CFLAGS="$RCD_CFLAGS $XMLRPC_CFLAGS"
 RCD_LIBS="$RCD_LIBS $XMLRPC_LIBS -lpopt -luuid"
 
 ###
+### yast and YOU
+###
+
+AC_LANG_PUSH([C++])
+SAVED_CPPFLAGS=$CPPFLAGS
+CPPFLAGS="-I /usr/include/YaST2 $CPPFLAGS"
+AC_CHECK_HEADER(Y2UTIL.h, HAVE_YAST=yes, HAVE_YAST=no)
+if test x$HAVE_YAST = xyes; then
+  AC_CHECK_HEADER(Y2PM.h, HAVE_YAST=yes, HAVE_YAST=no)
+fi
+AC_LANG_POP([C++])
+
+AM_CONDITIONAL(HAVE_YAST, false)
+if test x$HAVE_YAST = xyes; then
+  AM_CONDITIONAL(HAVE_YAST, true)
+  YAST_CFLAGS=$CPPFLAGS
+  YAST_LIBS="-ly2pm"
+fi
+AC_SUBST(YAST_CFLAGS)
+AC_SUBST(YAST_LIBS)
+CPPFLAGS=$SAVED_CPPFLAGS
+
+
+###
 ### Checking for SO_PEERCRED
 ###
 
@@ -214,6 +238,7 @@ AC_OUTPUT([
 Makefile
 src/Makefile
 src/rcd-buddy
+src/you-module/Makefile
 rcd.init.redhat
 rcd.init.lsb
 rcd.init.debian
@@ -232,6 +257,8 @@ Configuration:
   Build CFLAGS:         ${RCD_CFLAGS}
 
   Build LIBS:           ${RCD_LIBS}
+
+  Build YOU module:     ${HAVE_YAST}
 
   Static binary:        ${enable_static_binary}
 
