@@ -81,17 +81,13 @@ static RCPending *
 rcd_world_remote_refresh (RCWorld *world)
 {
     RCPending *pending;
-    GError *err = NULL;
 
     rc_world_refresh_begin (world);
 
-    pending = rcd_world_remote_fetch (RCD_WORLD_REMOTE (world), FALSE, &err);
+    pending = rcd_world_remote_fetch (RCD_WORLD_REMOTE (world), FALSE, NULL);
 
-    if (err != NULL) {
-        g_error_free (err);
+    if (pending == NULL)
         rc_world_refresh_complete (world);
-        return NULL;
-    }
 
     return pending;
 }
@@ -1259,7 +1255,7 @@ rcd_world_remote_parse_serviceinfo (RCDWorldRemote  *remote,
         pending = rcd_world_remote_fetch_channels (remote, local, &tmp_error);
 
     if (tmp_error) {
-        g_propagate_error (error, tmp_error);
+        g_error_free (tmp_error);
         return NULL;
     }
 

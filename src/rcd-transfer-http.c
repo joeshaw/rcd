@@ -322,6 +322,9 @@ http_info (SoupMessage *message,
     RCDTransfer *t = user_data;
     const char *auth_header;
 
+    /* Reset various settings*/
+    t->file_size = 0;
+
     if (HTTP_RESPONSE_SUCCESSFUL (message->errorcode) && t->cache_entry)
         rcd_cache_entry_open (t->cache_entry);
 

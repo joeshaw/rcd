@@ -1,3 +1,17 @@
+2003-11-06  Joe Shaw  <joe@ximian.com>
+
+	* rcd-transfer-http.c (http_info): Reset the file_size, in case we
+	get a Content-Length in a 30x, 401 or 407 and then don't get one
+	in the subsequent response.
+
+	* rcd-world-remote.c (rcd_world_remote_refresh): Ignore the error
+	coming back from rcd_world_remote_fetch().  If the pending is
+	NULL, call rc_world_refresh_complete().
+	(rcd_world_remote_parse_serviceinfo): If we get an error calling
+	rcd_world_remote_fetch_channels(), free the error instead of
+	propagating it up, since not being able to get the channel list
+	shouldn't be a fatal error when adding a service.
+
 2003-10-31  Joe Shaw  <joe@ximian.com>
 
 	* rcd-world-remote.c (rcd_world_remote_finalize): Don't free the
