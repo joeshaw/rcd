@@ -46,7 +46,7 @@ AM_PROG_LIBTOOL
 
 ### get cflags and libs
 
-PKG_CHECK_MODULES(RCD, glib-2.0 gthread-2.0 gmodule-2.0 gobject-2.0 soup >= 0.7.5)
+PKG_CHECK_MODULES(RCD, glib-2.0 gmodule-2.0 gobject-2.0 soup >= 0.7.5)
 
 ###
 ### xmlrpc 

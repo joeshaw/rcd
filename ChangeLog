@@ -1,5 +1,7 @@
 2002-07-31  Joe Shaw  <joe@ximian.com>
 
+	* configure.in: Drop gthread from the libraries.
+
 	* rcd.in: Change @prefix@/bin/rcd to @prefix@/sbin/rcd
 
 2002-07-30  Frank Belew  <frb@ximian.com>
