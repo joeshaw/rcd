@@ -1051,7 +1051,7 @@ check_install_package_auth (xmlrpc_env     *env,
     RCPackageSList *iter;
     gboolean install = FALSE;
     gboolean upgrade = FALSE;
-    RCDAuthActionList *req;
+    RCDPrivileges req_priv;
     gboolean approved;
 
     if (!packages)
@@ -1067,9 +1067,8 @@ check_install_package_auth (xmlrpc_env     *env,
     }
 
     if (upgrade) {
-        req = rcd_auth_action_list_from_1 (RCD_AUTH_UPGRADE);
-        approved = rcd_auth_approve_action (identity, req, NULL);
-        g_slist_free(req);
+        req_priv = rcd_privileges_from_string ("upgrade");
+        approved = rcd_identity_approve_action (identity, req_priv);
     
         if (!approved) {
             xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PERMISSION_DENIED,
@@ -1080,9 +1079,8 @@ check_install_package_auth (xmlrpc_env     *env,
     }
 
     if (install) {
-        req = rcd_auth_action_list_from_1 (RCD_AUTH_INSTALL);
-        approved = rcd_auth_approve_action (identity, req, NULL);
-        g_slist_free(req);
+        req_priv = rcd_privileges_from_string ("install");
+        approved = rcd_identity_approve_action (identity, req_priv);
     
         if (!approved) {
             xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PERMISSION_DENIED,
@@ -1098,15 +1096,14 @@ check_remove_package_auth (xmlrpc_env     *env,
                            RCPackageSList *packages, 
                            RCDIdentity    *identity)
 {
-    RCDAuthActionList *req;
+    RCDPrivileges req_priv;
     gboolean approved;
 
     if (!packages)
         return;
 
-    req = rcd_auth_action_list_from_1 (RCD_AUTH_REMOVE);
-    approved = rcd_auth_approve_action (identity, req, NULL);
-    g_slist_free(req);
+    req_priv = rcd_privileges_from_string ("remove");
+    approved = rcd_identity_approve_action (identity, req_priv);
     
     if (!approved) {
         xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PERMISSION_DENIED,
@@ -1846,99 +1843,97 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
 {
     rcd_rpc_register_method("rcd.packsys.search",
                             packsys_search,
-                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            "view",
                             world);
 
     rcd_rpc_register_method("rcd.packsys.query_file",
                             packsys_query_file,
-                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            "view",
                             world);
 
     rcd_rpc_register_method("rcd.packsys.find_latest_version",
                             packsys_find_latest_version,
-                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            "view",
                             world);
 
     rcd_rpc_register_method("rcd.packsys.package_info",
                             packsys_package_info,
-                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            "view",
                             world);
 
     rcd_rpc_register_method("rcd.packsys.get_updates",
                             packsys_get_updates,
-                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            "view",
                             world);
 
     rcd_rpc_register_method("rcd.packsys.update_summary",
                             packsys_update_summary,
-                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            "view",
                             world);
 
     rcd_rpc_register_method("rcd.packsys.resolve_dependencies",
                             packsys_resolve_dependencies,
-                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            "view",
                             world);
 
     rcd_rpc_register_method("rcd.packsys.verify_dependencies",
                             packsys_verify_dependencies,
-                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            "view",
                             world);
 
     rcd_rpc_register_method("rcd.packsys.transact",
                             packsys_transact,
-                            rcd_auth_action_list_from_1 (RCD_AUTH_NONE),
+                            "",
                             world);
 
     rcd_rpc_register_method("rcd.packsys.abort_download",
                             packsys_abort_download,
-                            rcd_auth_action_list_from_1 (RCD_AUTH_NONE),
+                            "",
                             world);
 
     rcd_rpc_register_method("rcd.packsys.what_provides",
                             packsys_what_provides,
-                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            "view",
                             world);
 
     rcd_rpc_register_method("rcd.packsys.what_requires",
                             packsys_what_requires,
-                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            "view",
                             world);
 
     rcd_rpc_register_method("rcd.packsys.what_conflicts",
                             packsys_what_conflicts,
-                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            "view",
                             world);
 
     rcd_rpc_register_method("rcd.packsys.dump",
                             packsys_dump,
-                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            "view",
                             world);
 
     rcd_rpc_register_method("rcd.packsys.get_channels",
                             packsys_get_channels,
-                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            "view",
                             world);
 
     rcd_rpc_register_method("rcd.packsys.refresh_channel",
                             packsys_refresh_channel,
-                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            "view",
                             world);
 
     rcd_rpc_register_method("rcd.packsys.refresh_all_channels",
                             packsys_refresh_all_channels,
-                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            "view",
                             world);
 
     rcd_rpc_register_method("rcd.packsys.subscribe",
                             packsys_subscribe,
-                            /* FIXME: what is the right auth to use here? */
-                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            "subscribe",
                             world);
 
     rcd_rpc_register_method("rcd.packsys.unsubscribe",
                             packsys_unsubscribe,
-                            /* FIXME: what is the right auth to use here? */
-                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            "subscribe",
                             world);
 
     rcd_heartbeat_register_func (refresh_channels_cb, NULL);

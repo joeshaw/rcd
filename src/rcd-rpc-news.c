@@ -133,6 +133,6 @@ rcd_rpc_news_register_methods (void)
 {
     rcd_rpc_register_method ("rcd.news.get_all",
                              news_get_all,
-                             rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                             "view",
                              NULL);
 }

@@ -179,6 +179,6 @@ rcd_rpc_log_register_methods (void)
 {
     rcd_rpc_register_method("rcd.log.query_log",
                             log_query_log,
-                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            "view",
                             NULL);
 }

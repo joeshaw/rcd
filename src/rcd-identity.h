@@ -30,20 +30,38 @@
 
 #include <glib.h>
 
+#include <rcd-privileges.h>
+
 typedef struct _RCDIdentity RCDIdentity;
+
+typedef void (*RCDIdentityFn) (RCDIdentity *, gpointer);
 
 struct _RCDIdentity {
     gchar *username;
     gchar *password;
-
-    RCDAuthActionList *privileges;
+    RCDPrivileges privileges;
 };
 
 RCDIdentity *rcd_identity_new  (void);
 
+RCDIdentity *rcd_identity_copy (RCDIdentity *id);
+
 void         rcd_identity_free (RCDIdentity *id);
 
+gboolean     rcd_identity_approve_action (RCDIdentity  *id,
+                                          RCDPrivileges required_priv);
+
+void         rcd_identity_foreach_from_password_file (RCDIdentityFn fn,
+                                                      gpointer user_data);
+
 RCDIdentity *rcd_identity_from_password_file (const char *username);
+
+/* If the identity already exists in the password file, replace the current
+   entry with the one contained in the RCDIdentity.  Otherwise just add it
+   to the file. */
+gboolean     rcd_identity_update_password_file (RCDIdentity *id);
+
+gboolean     rcd_identity_remove_from_password_file (const char *username);
 
 #endif /* __RCD_IDENTITY_H__ */
 

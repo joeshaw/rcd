@@ -22,8 +22,6 @@ rcd_SOURCES = 			\
 	rcd-marshal.h		\
 	rcd-about.c		\
 	rcd-about.h		\
-	rcd-auth.c		\
-	rcd-auth.h		\
 	rcd-cache.c		\
 	rcd-cache.h		\
 	rcd-fetch.c		\
@@ -44,6 +42,8 @@ rcd_SOURCES = 			\
 	rcd-pending.h		\
 	rcd-prefs.c		\
 	rcd-prefs.h		\
+	rcd-privileges.c	\
+	rcd-privileges.h	\
 	rcd-query.c		\
 	rcd-query.h		\
 	rcd-query-packages.c	\
@@ -60,6 +60,8 @@ rcd_SOURCES = 			\
 	rcd-rpc-prefs.h		\
 	rcd-rpc-system.c	\
 	rcd-rpc-system.h	\
+	rcd-rpc-users.c		\
+	rcd-rpc-users.h		\
 	rcd-shutdown.c		\
 	rcd-shutdown.h		\
 	rcd-subscriptions.c	\

@@ -270,18 +270,18 @@ rcd_rpc_prefs_register_methods(void)
 {
     rcd_rpc_register_method ("rcd.prefs.get_pref",
                              prefs_get_pref,
-                             rcd_auth_action_list_from_1 (RCD_AUTH_VIEW), 
+                             "view",
                              NULL);
 
     rcd_rpc_register_method ("rcd.prefs.set_pref",
                              prefs_set_pref,
                              /* FIXME: probably the wrong auth to use here */
-                             rcd_auth_action_list_from_1 (RCD_AUTH_SUPERUSER),
+                             "superuser",
                              NULL);
 
     rcd_rpc_register_method ("rcd.prefs.list_prefs",
                              prefs_list_prefs,
-                             rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                             "view",
                              NULL);
 } /* rcd_rpc_prefs_register_methods */
 

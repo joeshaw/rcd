@@ -41,12 +41,14 @@
 #include "rcd-heartbeat.h"
 #include "rcd-log.h"
 #include "rcd-module.h"
+#include "rcd-privileges.h"
 #include "rcd-query.h"
 #include "rcd-rpc.h"
 #include "rcd-rpc-packsys.h"
 #include "rcd-rpc-log.h"
 #include "rcd-rpc-news.h"
 #include "rcd-rpc-prefs.h"
+#include "rcd-rpc-users.h"
 #include "rcd-shutdown.h"
 #include "rcd-subscriptions.h"
 #include "rcd-transfer.h"
@@ -209,6 +211,7 @@ initialize_rpc (void)
     rcd_rpc_log_register_methods ();
     rcd_rpc_news_register_methods ();
     rcd_rpc_prefs_register_methods ();
+    rcd_rpc_users_register_methods ();
 } /* initialize_rpc */
 
 static void
@@ -242,6 +245,8 @@ main (int argc, const char **argv)
 
     root_check ();
     daemonize ();
+
+    rcd_privileges_init ();
 
     initialize_logging ();
     initialize_rc_world ();

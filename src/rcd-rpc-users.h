@@ -1,4 +1,12 @@
-/* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+/* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+
+/*
+ * rcd-rpc-users.h
+ *
+ * Copyright (C) 2002 Ximian, Inc.
+ *
+ * Developed by Jon Trowbridge <trow@ximian.com>
+ */
 
 /*
  * This program is free software; you can redistribute it and/or
@@ -17,28 +25,10 @@
  * USA.
  */
 
-#ifndef __RCD_RPC_H__
-#define __RCD_RPC_H__
+#ifndef __RCD_RPC_USERS_H__
+#define __RCD_RPC_USERS_H__
 
-#include <glib.h>
-#include <xmlrpc.h>
+void rcd_rpc_users_register_methods ();
 
-#include "rcd-identity.h"
+#endif /* __RCD_RPC_USERS_H__ */
 
-typedef struct {
-    char *host;
-
-    RCDIdentity *identity;
-} RCDRPCMethodData;
-
-RCDRPCMethodData *rcd_rpc_get_method_data (void);
-
-int rcd_rpc_register_method (const char        *method_name,
-                             xmlrpc_method      method,
-                             const char        *privilege_string,
-                             gpointer           user_data);
-
-void rcd_rpc_server_start (void);
-void rcd_rpc_init (void);
-
-#endif /* __RCD_RPC_H__ */

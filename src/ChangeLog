@@ -1,3 +1,47 @@
+2002-07-12  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-rpc-users.c: Added.  Highly preliminary (and still broken)
+	XML-RPC wrappers around account-manipulation info.
+
+	* rcd-rpc-packsys.c (rcd_rpc_packsys_register_methods):
+	Stringified our required privileges.
+	(check_install_package_auth): Hacked to use the new privileges
+	system.
+	(check_remove_package_auth): Hacked to use the new privileges
+	system.
+	(check_install_package_auth): Hacked to use the new privileges
+	system.
+
+	* rcd-rpc-news.c (rcd_rpc_news_register_methods): Stringified our
+	required privileges.
+
+	* rcd-rpc-log.c (rcd_rpc_log_register_methods): Stringified our
+	required privileges.
+
+	* rcd.c (main): Call rcd_privileges_init(), which defines our base
+	set of privileges.
+
+	* rcd-rpc.c (unix_rpc_callback): Hacked to use new privileges
+	system.
+	(rcd_rpc_register_method): Hacked to use the new privileges
+	system.  We now take as our third arg a string containing the
+	required privileges.
+
+	* rcd-identity.c: Changed throughout to use the RCDPrivileges
+	bitmasks instead of the authorization lists.
+	(rcd_identity_approve_action): Added.
+	(rcd_identity_foreach_from_password_file): Added.  Iterates across
+	user/password file.
+	(rcd_identity_update_password_file): Added.  Adds or updates
+	entries in the user/password file.
+	(rcd_identity_remove_from_password_file): Added.  Removes entries
+	from the user/password file.
+
+	* rcd-auth.c: Killed off.
+
+	* rcd-privileges.c: Added.  New, improved, all-singing all-dancing
+	privileges system.
+
 2002-07-12  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-util.h: Added a bunch of #defines for fault codes, to

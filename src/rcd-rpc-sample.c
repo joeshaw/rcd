@@ -18,6 +18,7 @@
  */
 
 #include <xmlrpc.h>
+#include <libredcarpet.h>
 
 #include "rcd-module.h"
 #include "rcd-rpc.h"

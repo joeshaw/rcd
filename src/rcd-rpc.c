@@ -37,8 +37,8 @@
 
 #include <libredcarpet.h>
 
-#include "rcd-auth.h"
 #include "rcd-identity.h"
+#include "rcd-privileges.h"
 #include "rcd-rpc-system.h"
 #include "rcd-rpc-util.h"
 #include "rcd-shutdown.h"
@@ -47,7 +47,7 @@
 typedef struct {
     const char        *method_name;
     xmlrpc_method      method;
-    RCDAuthActionList *req_privs;
+    RCDPrivileges      req_privs;
 } RCDRPCMethodInfo;
 
 static xmlrpc_registry *registry = NULL;
@@ -88,16 +88,24 @@ access_control_check (xmlrpc_env   *env,
     RCDIdentity *identity = (RCDIdentity *) user_data;
     RCDRPCMethodInfo *method_info;
 
-    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Method being called: %s", method_name);
-
     g_assert (identity != NULL);
 
     method_info = g_hash_table_lookup (method_info_hash, method_name);
 
-    if (method_info &&
-        !rcd_auth_approve_action (identity,
-                                  method_info->req_privs,
-                                  NULL)) {
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, 
+              "Method being called: %s", method_name);
+
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE,
+              "Requires Privileges: %s",
+              rcd_privileges_to_string (method_info->req_privs));
+
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE,
+              "    User Privileges: %s",
+              rcd_privileges_to_string (identity->privileges));
+
+    if (method_info
+        && ! rcd_identity_approve_action (identity, method_info->req_privs)) {
+        
         xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PERMISSION_DENIED, 
                               "Permission denied");
             
@@ -160,16 +168,14 @@ unix_rpc_callback (RCDUnixServerHandle *handle)
             if (!identity) {
                 identity = rcd_identity_new ();
                 identity->username = g_strdup (pw->pw_name);
-                identity->privileges = rcd_auth_action_list_from_1 (
-                    RCD_AUTH_VIEW);
+                identity->privileges = rcd_privileges_from_string ("view");
             }
         }
     }
     else {
         identity = rcd_identity_new ();
         identity->username = g_strdup ("root");
-        identity->privileges = rcd_auth_action_list_from_1 (
-            RCD_AUTH_SUPERUSER);
+        identity->privileges = rcd_privileges_from_string ("superuser");
     }
     
     if (!identity) {
@@ -333,12 +339,13 @@ rcd_rpc_get_method_data (void)
 } /* rcd_rpc_get_method_data */
 
 int
-rcd_rpc_register_method(const char        *method_name,
-                        xmlrpc_method      method,
-                        RCDAuthActionList *required_privs,
-                        gpointer           user_data)
+rcd_rpc_register_method(const char   *method_name,
+                        xmlrpc_method method,
+                        const char   *privilege_str,
+                        gpointer      user_data)
 {
     xmlrpc_env env;
+    RCDPrivileges priv;
     RCDRPCMethodInfo *info;
 
     if (!registry)
@@ -347,6 +354,11 @@ rcd_rpc_register_method(const char        *method_name,
     rc_debug (RC_DEBUG_LEVEL_INFO,
               "Registering method %s", method_name);
 
+    if (privilege_str == NULL)
+        privilege_str = "";
+
+    priv = rcd_privileges_from_string (privilege_str);
+    
     xmlrpc_env_init(&env);
     xmlrpc_registry_add_method(
         &env, registry, NULL, (char *) method_name, method, user_data);
@@ -363,7 +375,7 @@ rcd_rpc_register_method(const char        *method_name,
     info = g_new0 (RCDRPCMethodInfo, 1);
     info->method_name = method_name;
     info->method = method;
-    info->req_privs = required_privs;
+    info->req_privs = priv;
 
     g_hash_table_insert (method_info_hash, (char *) method_name, info);
 

@@ -277,7 +277,7 @@ rcd_rpc_system_register_methods(void)
 
 	rcd_rpc_register_method(
         "rcd.system.shutdown",
-        system_shutdown, rcd_auth_action_list_from_1 (RCD_AUTH_SUPERUSER), NULL);
+        system_shutdown, "superuser", NULL);
 
 } /* rcd_rpc_system_register_methods */
 
