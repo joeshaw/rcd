@@ -1,3 +1,7 @@
+2002-08-06  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-packsys.c (verify_packages): Set the keyring.
+
 2002-08-06  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-rpc-system.c (system_poll_pending): Fixed memory leak.
