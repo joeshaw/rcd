@@ -26,8 +26,11 @@
  */
 
 #include <config.h>
-#include <stdlib.h>
 #include "rcd-prefs.h"
+
+#include <stdlib.h>
+
+#include <rc-debug.h>
 
 const char *
 rcd_prefs_get_cache_dir (void)
@@ -36,10 +39,25 @@ rcd_prefs_get_cache_dir (void)
     return "/tmp/rcd-cache";
 }
 
+void
+rcd_prefs_set_cache_dir (const char *cache_dir)
+{
+    /* FIXME */
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Cache dir set: %s", cache_dir);
+}
+
 gboolean
 rcd_prefs_get_cache_enabled (void)
 {
     return TRUE;
+}
+
+void
+rcd_prefs_set_cache_enabled (gboolean enabled)
+{
+    /* FIXME */
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Cache dir enabled: %s",
+              enabled ? "TRUE" : "FALSE");
 }
 
 const char *
@@ -59,6 +77,14 @@ rcd_prefs_get_http10_enabled (void)
     return FALSE;
 }
 
+void
+rcd_prefs_set_http10_enabled (gboolean enabled)
+{
+    /* FIXME */
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "HTTP 1.0 enabled: %s",
+              enabled ? "TRUE" : "FALSE");
+}
+
 gboolean
 rcd_prefs_get_priority (void)
 {
@@ -70,6 +96,13 @@ rcd_prefs_get_heartbeat_interval (void)
 {
     return 3000;
 } /* rcd_prefs_get_heartbeat_interval */
+
+void
+rcd_prefs_set_heartbeat_interval (guint32 interval)
+{
+    /* FIXME */
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "heartbeat: %d", interval);
+}
 
 gboolean
 rcd_prefs_get_require_verified_packages (void)

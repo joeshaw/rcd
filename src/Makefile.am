@@ -52,6 +52,8 @@ rcd_SOURCES = 			\
 	rcd-rpc-news.h		\
 	rcd-rpc-packsys.c	\
 	rcd-rpc-packsys.h	\
+	rcd-rpc-prefs.c		\
+	rcd-rpc-prefs.h		\
 	rcd-rpc-system.c	\
 	rcd-rpc-system.h	\
 	rcd-subscriptions.c	\

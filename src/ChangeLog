@@ -1,3 +1,14 @@
+2002-07-03  Joe Shaw  <joe@ximian.com>
+
+	* rcd-prefs.c: Add a bunch of "set" functions for many of the
+	prefs.  Note that they don't do anything yet.
+
+	* rcd-rpc-prefs.c: New file.  Adds three RPC calls:
+	rcd.prefs.get_pref, rcd.prefs.set_pref, and rcd.prefs.list_prefs,
+	which do the three things you'd expect them to.
+	
+	* rcd.c (main): Register the prefs RPC calls.
+
 2002-07-03  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-query.c (rcd_query_match_string_ci): Fixed memory leak.
