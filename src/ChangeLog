@@ -1,5 +1,8 @@
 2002-07-23  Jon Trowbridge  <trow@ximian.com>
 
+	* rcd-rpc-util.c (rcd_rc_channel_to_xmlrpc): Put the alias in
+	the XML-RPCification of our channel.
+
 	* rcd-pending.c (pending_cleanup_cb): Remove the unused id
 	variable.
 

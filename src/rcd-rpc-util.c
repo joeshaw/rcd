@@ -558,6 +558,7 @@ rcd_rc_channel_to_xmlrpc (RCChannel  *channel,
                           xmlrpc_env *env)
 {
     xmlrpc_value *value;
+    const char *alias;
     
     g_return_val_if_fail (channel != NULL, NULL);
 
@@ -567,6 +568,9 @@ rcd_rc_channel_to_xmlrpc (RCChannel  *channel,
     RCD_XMLRPC_STRUCT_SET_INT (env, value, "id", rc_channel_get_id (channel));
     
     RCD_XMLRPC_STRUCT_SET_STRING (env, value, "name", rc_channel_get_name (channel));
+
+    alias = rc_channel_get_alias (channel);
+    RCD_XMLRPC_STRUCT_SET_STRING (env, value, "alias", alias ? alias : "");
 
     RCD_XMLRPC_STRUCT_SET_INT (env, value, "subscribed",
                                rc_channel_subscribed (channel) ? 1 : 0);
