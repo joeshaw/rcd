@@ -592,6 +592,74 @@ rcd_rc_channel_to_xmlrpc (RCChannel  *channel,
     return value;
 }
 
+xmlrpc_value *
+rcd_rc_resolver_info_to_xmlrpc (RCResolverInfo *info,
+                                xmlrpc_env     *env)
+{
+    xmlrpc_value *value;
+    xmlrpc_value *pkg;
+    xmlrpc_value *pkg_list;
+
+    g_return_val_if_fail (info != NULL, NULL);
+
+    value = xmlrpc_struct_new (env);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    RCD_XMLRPC_STRUCT_SET_STRING (env, value, "type",
+                                  rc_resolver_info_type_to_str (rc_resolver_info_type (info)));
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    if (info->package) {
+        pkg = rcd_rc_package_to_xmlrpc (info->package, env);
+        if (pkg == NULL) {
+            env->fault_occurred = TRUE; /* probably evil */
+            goto cleanup;
+        }
+
+        xmlrpc_struct_set_value (env, value, "package", pkg);
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        xmlrpc_DECREF (pkg);
+    }
+
+    RCD_XMLRPC_STRUCT_SET_INT (env, value, "priority", info->priority);
+    XMLRPC_FAIL_IF_FAULT (env);
+    
+    pkg_list = rcd_rc_package_slist_to_xmlrpc_array (info->package_list, env);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    xmlrpc_struct_set_value (env, value, "package_list", pkg_list);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    xmlrpc_DECREF (pkg_list);
+
+    if (info->msg) {
+        RCD_XMLRPC_STRUCT_SET_STRING (env, value, "message", info->action);
+    }
+
+
+    if (info->action) {
+        RCD_XMLRPC_STRUCT_SET_STRING (env, value, "action", info->action);
+    }
+
+    if (info->trigger) {
+        RCD_XMLRPC_STRUCT_SET_STRING (env, value, "trigger", info->trigger);
+    }
+        
+    
+    RCD_XMLRPC_STRUCT_SET_INT (env, value, "is_error",
+                               rc_resolver_info_is_error (info));
+
+    RCD_XMLRPC_STRUCT_SET_INT (env, value, "is_important",
+                               rc_resolver_info_is_important (info));
+
+ cleanup:
+    if (env->fault_occurred)
+        return NULL;
+
+    return value;
+}
+
 RCDQueryPart
 rcd_xmlrpc_tuple_to_query_part (xmlrpc_value *tuple, xmlrpc_env *env)
 {

@@ -107,6 +107,10 @@ RCPackageSList *rcd_xmlrpc_array_to_rc_package_slist (xmlrpc_value *value,
 xmlrpc_value *rcd_rc_channel_to_xmlrpc(RCChannel  *channel,
                                        xmlrpc_env *env);
 
+/* For RCResolverInfo */
+xmlrpc_value *rcd_rc_resolver_info_to_xmlrpc(RCResolverInfo *info,
+                                             xmlrpc_env     *env);
+
 /* For RCDQueryPart */
 RCDQueryPart rcd_xmlrpc_tuple_to_query_part (xmlrpc_value *tuple,
                                              xmlrpc_env   *env);

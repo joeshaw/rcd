@@ -1,3 +1,7 @@
+2002-08-08  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-rpc-util.c (rcd_rc_resolver_info_to_xmlrpc): Added.
+
 2002-08-07  Ian Peters  <itp@ximian.com>
 
 	* rcd-rpc-packsys.c (packsys_what_provides): unref a dep, don't
