@@ -1,6 +1,12 @@
 2002-08-08  Joe Shaw  <joe@ximian.com>
 
-	* rcd-cache.c: Fix some cache contention issues
+	* rcd-rpc-packsys.c (packsys_resolve_dependencies,
+	packsys_verify_dependencies): decref the xmlrpc_resolution_info
+	values.  Fixes a leak.
+
+2002-08-08  Joe Shaw  <joe@ximian.com>
+
+	* rcd-cache.c: Fix some cache contention issues...
 	(rcd_cache_entry_new): Don't insert the cache entry into the cache
 	immediately.
 	(rcd_cache_entry_open): Instead of saving to package.tmp, use

@@ -1845,13 +1845,15 @@ packsys_resolve_dependencies(xmlrpc_env   *env,
     rc_package_dep_slist_free (extra_dep_list);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    value = xmlrpc_build_value(
-        env, "(VVV)",
-        xmlrpc_install_packages, xmlrpc_remove_packages, xmlrpc_resolution_info);
+    value = xmlrpc_build_value(env, "(VVV)",
+                               xmlrpc_install_packages,
+                               xmlrpc_remove_packages,
+                               xmlrpc_resolution_info);
     XMLRPC_FAIL_IF_FAULT(env);
 
-    xmlrpc_DECREF(xmlrpc_install_packages);
-    xmlrpc_DECREF(xmlrpc_remove_packages);
+    xmlrpc_DECREF (xmlrpc_install_packages);
+    xmlrpc_DECREF (xmlrpc_remove_packages);
+    xmlrpc_DECREF (xmlrpc_resolution_info);
 
 cleanup:
     return value;
@@ -1873,12 +1875,15 @@ packsys_verify_dependencies(xmlrpc_env   *env,
                   NULL, TRUE, world);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    value = xmlrpc_build_value(
-        env, "(VVV)", xmlrpc_install_packages, xmlrpc_remove_packages, xmlrpc_resolution_info);
+    value = xmlrpc_build_value(env, "(VVV)",
+                               xmlrpc_install_packages,
+                               xmlrpc_remove_packages,
+                               xmlrpc_resolution_info);
     XMLRPC_FAIL_IF_FAULT(env);
 
-    xmlrpc_DECREF(xmlrpc_install_packages);
-    xmlrpc_DECREF(xmlrpc_remove_packages);
+    xmlrpc_DECREF (xmlrpc_install_packages);
+    xmlrpc_DECREF (xmlrpc_remove_packages);
+    xmlrpc_DECREF (xmlrpc_resolution_info);
 
 cleanup:
     return value;
