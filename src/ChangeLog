@@ -1,3 +1,11 @@
+2002-08-07  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-packsys.c (cleanup_after_transaction): Don't free
+	log_tid since rcd_transact_log_send_success() will free it.
+
+	* rcd-transact-log.c (rcd_transact_log_send_transaction,
+	rcd_transact_log_send_success): Fix memory leaks.
+
 2002-08-07  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-rpc-util.c (rcd_rc_package_from_xmlrpc_package): Memory

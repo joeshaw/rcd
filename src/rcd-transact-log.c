@@ -234,9 +234,11 @@ rcd_transact_log_send_transaction (RCPackageSList  *install_packages,
 
     t = rcd_transfer_new (url, 0, NULL);
 
+    g_free (url);
+
     if (!t->protocol || strcmp (t->protocol->name, "http") != 0) {
         rc_debug (RC_DEBUG_LEVEL_WARNING, "Invalid log URL: %s", url);
-        g_free (url);
+        g_object_unref (t);
         return;
     }
 
@@ -335,9 +337,11 @@ rcd_transact_log_send_success (char       *tid,
 
     t = rcd_transfer_new (url, 0, NULL);
 
+    g_free (url);
+
     if (!t->protocol || strcmp (t->protocol->name, "http") != 0) {
         rc_debug (RC_DEBUG_LEVEL_WARNING, "Invalid log URL: %s", url);
-        g_free (url);
+        g_object_unref (t);
         return;
     }
 

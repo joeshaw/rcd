@@ -920,7 +920,6 @@ cleanup_after_transaction (RCDTransactionStatus *status)
     g_object_unref (status->pending);
     g_free (status->client_host);
     g_free (status->client_user);
-    g_free (status->log_tid);
 
     g_free (status);
 
