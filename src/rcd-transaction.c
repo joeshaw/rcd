@@ -619,6 +619,22 @@ verify_packages (RCDTransactionStatus *status)
 
         vers = rc_packman_verify (
             status->packman, package, RC_VERIFICATION_TYPE_ALL);
+
+        if (rc_packman_get_error (status->packman)) {
+            rcd_pending_fail (status->transaction_pending, -1,
+                              rc_packman_get_reason (status->packman));
+
+            if (status->flags != RCD_TRANSACTION_FLAGS_DRY_RUN &&
+                rcd_prefs_get_premium ())
+            {
+                rcd_transaction_send_log (
+                    status, FALSE,
+                    rc_packman_get_reason (status->packman));
+            }
+            
+            return;
+        }
+
         for (v = vers; v; v = v->next) {
             RCVerification *ver = v->data;
 

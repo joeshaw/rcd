@@ -1,3 +1,10 @@
+2002-09-18  Joe Shaw  <joe@ximian.com>
+
+	* rcd-transaction.c (verify_packages): Check for an RCPackman
+	error immediately after calling rc_packman_verify(), since we
+	could have gotten an error and a NULL list of verifications if,
+	say, the package were truncated.
+
 2002-09-17  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-autopull.c (get_removal_failure_info): Added.  Generates an
