@@ -1,3 +1,10 @@
+2002-07-12  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-packsys.c (packsys_solve_dependencies): Removed.  It's
+	just silly to have two API calls for this.
+	(packsys_resolve_dependencies): Require a third argument, for a
+	list of extra requirements.
+
 2002-07-11  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-packsys.c (resolve_deps): Take an RCPackageDepSList of

@@ -1552,15 +1552,23 @@ packsys_resolve_dependencies(xmlrpc_env   *env,
     RCWorld *world = (RCWorld *) user_data;
     xmlrpc_value *xmlrpc_install_packages;
     xmlrpc_value *xmlrpc_remove_packages;
+    xmlrpc_value *xmlrpc_extra_deps;
+    RCPackageDepSList *extra_dep_list;
     xmlrpc_value *value = NULL;
 
     xmlrpc_parse_value(
-        env, param_array, "(AA)",
-        &xmlrpc_install_packages, &xmlrpc_remove_packages);
+        env, param_array, "(AAA)",
+        &xmlrpc_install_packages, &xmlrpc_remove_packages,
+        &xmlrpc_extra_deps);
     XMLRPC_FAIL_IF_FAULT(env);
 
+    extra_dep_list = rcd_xmlrpc_array_to_rc_package_dep_slist (
+        xmlrpc_extra_deps, env);
+    XMLRPC_FAIL_IF_FAULT (env);
+
     resolve_deps (env, &xmlrpc_install_packages, &xmlrpc_remove_packages,
-                  NULL, FALSE, world);
+                  extra_dep_list, FALSE, world);
+    rc_package_dep_slist_free (extra_dep_list);
     XMLRPC_FAIL_IF_FAULT (env);
 
     value = xmlrpc_build_value(
@@ -1598,40 +1606,6 @@ packsys_verify_dependencies(xmlrpc_env   *env,
 cleanup:
     return value;
 } /* packsys_verify_dependencies */
-
-static xmlrpc_value *
-packsys_solve_dependencies(xmlrpc_env   *env,
-                           xmlrpc_value *param_array,
-                           void         *user_data)
-{
-    RCWorld *world = (RCWorld *) user_data;
-    xmlrpc_value *dep_array;
-    RCPackageDepSList *extra_dep_list;
-    xmlrpc_value *xmlrpc_install_packages = NULL;
-    xmlrpc_value *xmlrpc_remove_packages = NULL;
-    xmlrpc_value *value = NULL;
-
-    xmlrpc_parse_value (env, param_array, "(V)", &dep_array);
-    XMLRPC_FAIL_IF_FAULT (env);
-
-    extra_dep_list = rcd_xmlrpc_array_to_rc_package_dep_slist (dep_array, env);
-    XMLRPC_FAIL_IF_FAULT (env);
-
-    resolve_deps (env, &xmlrpc_install_packages, &xmlrpc_remove_packages,
-                  extra_dep_list, FALSE, world);
-    rc_package_dep_slist_free (extra_dep_list);
-    XMLRPC_FAIL_IF_FAULT (env);
-
-    value = xmlrpc_build_value(
-        env, "(VV)", xmlrpc_install_packages, xmlrpc_remove_packages);
-    XMLRPC_FAIL_IF_FAULT(env);
-
-    xmlrpc_DECREF(xmlrpc_install_packages);
-    xmlrpc_DECREF(xmlrpc_remove_packages);
-
-cleanup:
-    return value;
-} /* packsys_solve_dependencies */
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
@@ -1851,11 +1825,6 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
 
     rcd_rpc_register_method("rcd.packsys.verify_dependencies",
                             packsys_verify_dependencies,
-                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
-                            world);
-
-    rcd_rpc_register_method("rcd.packsys.solve_dependencies",
-                            packsys_solve_dependencies,
                             rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
                             world);
 
