@@ -37,8 +37,14 @@ rcd_recurring_execute (RCDRecurring *recurring, time_t now)
 {
     g_return_val_if_fail (recurring != NULL, FALSE);
 
-    if (recurring->execute)
+    if (recurring->execute) {
+        /* Block reentrancy in recurring transactions */
+        rcd_recurring_block ();
+
         recurring->execute (recurring);
+
+        rcd_recurring_allow ();
+    }
 
     ++recurring->count;
     recurring->prev = recurring->when;

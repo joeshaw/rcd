@@ -1,5 +1,9 @@
 2003-10-02  Joe Shaw  <joe@ximian.com>
 
+	* rcd-recurring.c (rcd_recurring_execute): Wrap the recurring's
+	execute() method in a rcd_recurring_block()/allow() to prevent
+	reentrancy while a recurring executes.
+
 	* rcd-world-remote.c: Bah, fix a bunch of warnings which only show
 	up when building with gcc at -O2.  It should know better...
 
