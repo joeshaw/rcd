@@ -41,6 +41,7 @@
 #define  XMLRPC_WANT_INTERNAL_DECLARATIONS
 #include "rcd-xmlrpc.h"
 #include "rcd-prefs.h"
+#include "rcd-world-remote.h"
 
 /*=========================================================================
 **  xmlrpc_server_info
@@ -556,12 +557,14 @@ soup_request_done (SoupMessage *msg, gpointer user_data)
     } else
         xmlrpc_env_set_fault (&env, msg->errorcode, (char *) msg->errorphrase);
 
-    (*info->callback)(info->server->_server_url,
-                      info->method_name,
-                      info->param_array,
-                      info->user_data,
-                      &env,
-                      result);
+    if (info->callback) {
+        (*info->callback)(info->server->_server_url,
+                          info->method_name,
+                          info->param_array,
+                          info->user_data,
+                          &env,
+                          result);
+    }
 
 cleanup:
     xmlrpc_DECREF (info->param_array);
@@ -590,6 +593,8 @@ do_soup_request_async (RequestInfo *info)
     soup_message_queue (msg, soup_request_done, info);
 }
 
+/*****************************************************************************/
+
 xmlrpc_server_info *
 rcd_xmlrpc_get_server (xmlrpc_env *env, const char *host_url)
 {
@@ -606,4 +611,71 @@ rcd_xmlrpc_get_server (xmlrpc_env *env, const char *host_url)
                                  rcd_prefs_get_secret ());
 
     return server;
+}
+
+typedef struct {
+    gboolean premium_only;
+    const char *method_name;
+    xmlrpc_response_handler callback;
+    void *user_data;
+    xmlrpc_value *param_array;
+} XmlrpcForeachInfo;
+
+static gboolean
+rcd_xmlrpc_foreach_cb (RCWorld *world, gpointer user_data)
+{
+    RCDWorldRemote *remote = RCD_WORLD_REMOTE (world);
+    XmlrpcForeachInfo *info = user_data;
+    xmlrpc_env env;
+    xmlrpc_server_info *server;
+
+    if (info->premium_only && !remote->premium_service)
+        return TRUE;
+
+    xmlrpc_env_init (&env);
+
+    server = rcd_xmlrpc_get_server (&env, RC_WORLD_SERVICE (remote)->url);
+
+    if (env.fault_occurred) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING, "Unable to get server for '%s'",
+                  RC_WORLD_SERVICE (remote)->url);
+        goto cleanup;
+    }
+
+    xmlrpc_client_call_server_asynch_params (server,
+                                             (char *) info->method_name,
+                                             info->callback,
+                                             info->user_data,
+                                             info->param_array);
+
+    if (env.fault_occurred) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING, "Unable to send data to '%s': %s",
+                  RC_WORLD_SERVICE (remote)->name, env.fault_string);
+    }
+
+cleanup:
+    xmlrpc_env_clean (&env);
+
+    return TRUE;
+}
+
+void
+rcd_xmlrpc_client_foreach_host (gboolean premium_only,
+                                const char *method_name,
+                                xmlrpc_response_handler callback,
+                                void *user_data,
+                                xmlrpc_value *param_array)
+{
+    XmlrpcForeachInfo info;
+
+    info.premium_only = premium_only;
+    info.method_name = method_name;
+    info.callback = callback;
+    info.user_data = user_data;
+    info.param_array = param_array;
+
+    rc_world_multi_foreach_subworld_by_type (RC_WORLD_MULTI (rc_get_world ()),
+                                             RCD_TYPE_WORLD_REMOTE,
+                                             rcd_xmlrpc_foreach_cb,
+                                             &info);
 }

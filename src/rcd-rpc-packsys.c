@@ -1043,6 +1043,7 @@ setup_transaction (xmlrpc_env   *env,
     xmlrpc_value *xmlrpc_install_packages;
     xmlrpc_value *xmlrpc_remove_packages;
     RCDTransactionFlags flags;
+    int trid;
     char *client_id, *client_version;
     RCPackageSList *install_packages = NULL;
     RCPackageSList *remove_packages = NULL;
@@ -1053,9 +1054,9 @@ setup_transaction (xmlrpc_env   *env,
     rcd_cache_expire_package_cache ();
 
     xmlrpc_parse_value(
-        env, param_array, "(AAiss)",
+        env, param_array, "(AAiiss)",
         &xmlrpc_install_packages, &xmlrpc_remove_packages,
-        &flags, &client_id, &client_version);
+        &flags, &trid, &client_id, &client_version);
     XMLRPC_FAIL_IF_FAULT(env);
 
     install_packages = rcd_xmlrpc_array_to_rc_package_slist (
@@ -1081,6 +1082,7 @@ setup_transaction (xmlrpc_env   *env,
     XMLRPC_FAIL_IF_FAULT (env);
 
     transaction = rcd_transaction_new ();
+    rcd_transaction_set_id (transaction, trid);
     rcd_transaction_set_install_packages (transaction, install_packages);
     rcd_transaction_set_remove_packages (transaction, remove_packages);
     rcd_transaction_set_flags (transaction, flags);
@@ -1814,24 +1816,24 @@ rollback_transaction_finished_cb (RCDTransaction *transaction,
     rc_rollback_action_slist_free (actions);
 }
 
-static xmlrpc_value *
-packsys_rollback (xmlrpc_env   *env,
-                  xmlrpc_value *param_array,
-                  void         *user_data)
+static RCDTransaction *
+setup_rollback (xmlrpc_env   *env,
+                xmlrpc_value *param_array,
+                void         *user_data)
 {
     RCWorld *world = (RCWorld *) user_data;
     time_t when;
     RCDTransactionFlags flags;
+    int trid;
     char *client_id, *client_version;
     RCRollbackActionSList *actions;
-    RCDTransaction *transaction;
     RCPackageSList *install_packages = NULL, *remove_packages = NULL;
     RCDRPCMethodData *method_data;
-    int download_id, transaction_id, step_id;
-    xmlrpc_value *result = NULL;
+    RCDTransaction *transaction = NULL;
 
-    xmlrpc_parse_value (env, param_array, "(iiss)",
-                        &when, &flags, &client_id, &client_version);
+    xmlrpc_parse_value (env, param_array, "(iiiss)",
+                        &when, &flags,
+                        &trid, &client_id, &client_version);
     XMLRPC_FAIL_IF_FAULT (env);
 
     actions = rc_rollback_get_actions (when);
@@ -1840,16 +1842,17 @@ packsys_rollback (xmlrpc_env   *env,
                                   &remove_packages);
 
     method_data = rcd_rpc_get_method_data ();
-    
+
     /* Check our permissions to install/upgrade/remove */
     check_install_package_auth (env, world, install_packages,
                                 method_data->identity);
     XMLRPC_FAIL_IF_FAULT (env);
-    
+
     check_remove_package_auth (env, remove_packages, method_data->identity);
     XMLRPC_FAIL_IF_FAULT (env);
 
     transaction = rcd_transaction_new ();
+    rcd_transaction_set_id (transaction, trid);
     rcd_transaction_set_install_packages (transaction, install_packages);
     rcd_transaction_set_remove_packages (transaction, remove_packages);
     rcd_transaction_set_flags (transaction, flags);
@@ -1861,18 +1864,6 @@ packsys_rollback (xmlrpc_env   *env,
     g_signal_connect (transaction, "transaction_finished",
                       G_CALLBACK (rollback_transaction_finished_cb),
                       actions);
-
-    rcd_transaction_begin (transaction);
-
-    download_id = rcd_transaction_get_download_pending_id (transaction);
-    transaction_id = rcd_transaction_get_transaction_pending_id (transaction);
-    step_id = rcd_transaction_get_step_pending_id (transaction);
-
-    g_object_unref (transaction);
-
-    result = xmlrpc_build_value (env, "(iii)",
-                                 download_id, transaction_id, step_id);
-    XMLRPC_FAIL_IF_FAULT(env);
 
 cleanup:
     if (install_packages) {
@@ -1888,7 +1879,81 @@ cleanup:
     if (env->fault_occurred)
         return NULL;
 
+    return transaction;
+}
+
+static xmlrpc_value *
+packsys_rollback (xmlrpc_env   *env,
+                  xmlrpc_value *param_array,
+                  void         *user_data)
+{
+    RCDTransaction *transaction;
+    int download_id, transaction_id, step_id;
+    xmlrpc_value *result = NULL;
+
+    transaction = setup_rollback (env, param_array, user_data);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    rcd_transaction_begin (transaction);
+
+    download_id = rcd_transaction_get_download_pending_id (transaction);
+    transaction_id = rcd_transaction_get_transaction_pending_id (transaction);
+    step_id = rcd_transaction_get_step_pending_id (transaction);
+
+    g_object_unref (transaction);
+
+    result = xmlrpc_build_value (env, "(iii)",
+                                 download_id, transaction_id, step_id);
+    XMLRPC_FAIL_IF_FAULT(env);
+
+cleanup:
+    if (env->fault_occurred)
+        return NULL;
+
     return result;
+}
+
+static xmlrpc_value *
+packsys_rollback_blocking (xmlrpc_env   *env,
+                           xmlrpc_value *param_array,
+                           void         *user_data)
+{
+    RCDTransaction *transaction;
+    int download_id, transaction_id;
+    BlockingInfo info;
+
+    transaction = setup_rollback (env, param_array, user_data);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    rcd_transaction_begin (transaction);
+
+    download_id = rcd_transaction_get_download_pending_id (transaction);
+    transaction_id = rcd_transaction_get_transaction_pending_id (transaction);
+
+    g_object_unref (transaction);
+
+    info.pending_id_list = NULL;
+    if (download_id != -1)
+        info.pending_id_list = g_slist_prepend (info.pending_id_list,
+                                                GINT_TO_POINTER (download_id));
+    if (transaction_id != -1)
+        info.pending_id_list = g_slist_prepend (info.pending_id_list,
+                                                GINT_TO_POINTER (transaction_id));
+
+    info.fail_if_any = TRUE;
+    info.env = env;
+    info.inferior_loop = g_main_loop_new (NULL, FALSE);
+
+    g_idle_add (wait_for_pending_cb, &info);
+    g_main_loop_run (info.inferior_loop);
+    g_main_loop_unref (info.inferior_loop);
+    g_slist_free (info.pending_id_list);
+
+cleanup:
+    if (env->fault_occurred)
+        return NULL;
+
+    return xmlrpc_build_value (env, "i", 0);
 }
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
@@ -2557,6 +2622,11 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
 
     rcd_rpc_register_method("rcd.packsys.rollback",
                             packsys_rollback,
+                            "",
+                            world);
+
+    rcd_rpc_register_method("rcd.packsys.rollback_blocking",
+                            packsys_rollback_blocking,
                             "",
                             world);
 

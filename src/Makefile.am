@@ -113,7 +113,9 @@ rcdinclude_HEADERS = 		\
 	rcd-cache.h		\
 	rcd-heartbeat.h		\
 	rcd-identity.h		\
+	rcd-mirror.h		\
 	rcd-module.h 		\
+	rcd-news.h		\
 	rcd-prefs.h		\
 	rcd-privileges.h	\
 	rcd-query.h		\
@@ -125,6 +127,7 @@ rcdinclude_HEADERS = 		\
 	rcd-transfer.h		\
 	rcd-transfer-file.h	\
 	rcd-transfer-http.h	\
+	rcd-world-remote.h	\
 	rcd-xmlrpc.h
 
 rcd_moduledir = $(libdir)/rcd/modules

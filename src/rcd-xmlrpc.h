@@ -172,5 +172,11 @@ xmlrpc_client_call_server_asynch_params (xmlrpc_server_info *server,
 xmlrpc_server_info *rcd_xmlrpc_get_server (xmlrpc_env *env,
 					   const char *host_url);
 
+void
+rcd_xmlrpc_client_foreach_host (gboolean premium_only,
+                                const char *method_name,
+                                xmlrpc_response_handler callback,
+                                void *user_data,
+                                xmlrpc_value *param_array);
 
 #endif /* _REDCARPET_XMLRPC_SOUP_H_ */

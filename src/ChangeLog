@@ -1,3 +1,38 @@
+2003-08-26  Tambet Ingo  <tambet@ximian.com>
+
+	* rcd-xmlrpc.c (soup_request_done): Call callback only if it's
+	set.
+	(rcd_xmlrpc_client_foreach_host): New function. We just need
+	to send information to all (premium) hosts all the time. This
+	should make it a bit easier and more convenient.
+	(rcd_xmlrpc_foreach_cb): Real work happens here.
+
+	* rcd-transaction.h: Add id to transaction class.
+
+	* rcd-transaction.c (rcd_transaction_init): Init transaction
+	id with 0.
+	(rcd_transaction_set_id): New function.
+	(transaction_xml): Add transaction's id to xmlrpc message.
+	(rcd_transaction_send_log): Use rcd_xmlrpc_client_foreach_host
+	instead of manually sending to each host.
+
+	* rcd-rpc.c (notify_port_change): New function. Send port
+	number to all premium hosts.
+	(rcd_rpc_remote_server_start): After starting up remote server,
+	send notifications to hosts. This also happens at port changes.
+
+	* rcd-rpc-packsys.c (setup_transaction): Add new argument to
+	transaction methods: transaction id.
+	(setup_rollback): New function. Added trid argument to XML-RPC
+	interface.
+	(packsys_rollback): Reworked, use setup_rollback.
+	(packsys_rollback_blocking): New function.
+	(rcd_rpc_packsys_register_methods): Register new XML-RPC method
+	"rcd.packsys.rollback.blocking".
+
+	* Makefile.am (rcdinclude_HEADERS): Add rcd-world-remote.h,
+	rcd-mirror.h, and rcd-news.h.
+
 2003-08-25  Joe Shaw  <joe@ximian.com>
 
 	* rcd-transaction.c (rcd_transaction_transaction): Set the

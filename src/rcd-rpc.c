@@ -46,6 +46,7 @@
 #include "rcd-rpc-util.h"
 #include "rcd-shutdown.h"
 #include "rcd-unix-server.h"
+#include "rcd-xmlrpc.h"
 
 typedef struct {
     const char    *method_name;
@@ -410,6 +411,39 @@ rcd_rpc_local_server_start (void)
     }
 }
 
+static void
+notify_host_cb (char *server_url,
+                char *method_name,
+                xmlrpc_value *param_array,
+                void *user_data,
+                xmlrpc_env *fault,
+                xmlrpc_value *result)
+{
+    if (fault->fault_occurred)
+        rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Unable to send data to '%s': %s",
+                  server_url, fault->fault_string);
+}
+
+static void
+notify_port_change (int port)
+{
+    xmlrpc_env env;
+    xmlrpc_value *value;
+
+    xmlrpc_env_init (&env);
+
+    value = xmlrpc_build_value (&env, "(i)", port);
+    XMLRPC_FAIL_IF_FAULT (&env);
+
+    rcd_xmlrpc_client_foreach_host (TRUE, "rcserver.machine.updatePort",
+                                    notify_host_cb, NULL,
+                                    value);
+    xmlrpc_DECREF (value);
+
+cleanup:
+    xmlrpc_env_clean (&env);
+}
+
 gboolean
 rcd_rpc_remote_server_start (void)
 {
@@ -456,6 +490,8 @@ rcd_rpc_remote_server_start (void)
         
     soup_server_run_async (soup_server);
     soup_server_unref (soup_server);
+
+    notify_port_change (port);
 
     return TRUE;
 }
