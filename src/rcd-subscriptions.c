@@ -27,7 +27,7 @@
 
 #include <stdlib.h>
 
-#define SUBSCRIPTIONS_PATH "/var/lib/redcarpet"
+#define SUBSCRIPTIONS_PATH "/var/lib/rcd"
 #define SUBSCRIPTIONS_FILE SUBSCRIPTIONS_PATH "/subscriptions.xml"
 
 gboolean

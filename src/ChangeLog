@@ -1,5 +1,8 @@
 2003-04-17  Jon Trowbridge  <trow@ximian.com>
 
+	* rcd-subscriptions.c (SUBSCRIPTIONS_PATH): Store subscription
+	information in /var/lib/rcd.
+
 	* Lots of small, uninteresting fixes to make rcd work with
 	our bleeding-edge libredcarpet.  Most changes involve the
 	transition from integer to string channel IDs.
