@@ -82,7 +82,7 @@ if test "x$with_soup" != "x"; then
   RCD_LIBS=`echo $RCD_LIBS | sed 's/-lsoup//g'`
 else
   PKG_CHECK_MODULES(SOUP, soup >= 0.7.5)
-  CFLAGS="${CFLAGS:+$CFLAGS }$SOUP_CFLAGS"
+  RCD_CFLAGS="${RCD_CFLAGS:+$RCD_CFLAGS }$SOUP_CFLAGS"
 fi
 
 RCD_LIBS="$RCD_LIBS $SOUP_LIBS"
