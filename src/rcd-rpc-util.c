@@ -444,7 +444,8 @@ rcd_rc_package_to_xmlrpc (RCPackage *package, xmlrpc_env *env)
     /* RCPackage members */
     RCD_XMLRPC_STRUCT_SET_STRING(
         env, value, "channel",
-        package->channel ? rc_channel_get_id(package->channel) : "");
+        package->channel && !rc_channel_is_hidden (package->channel) ?
+        rc_channel_get_id (package->channel) : "");
     
     update = rc_package_get_latest_update (package);
     if (update) {

@@ -1,5 +1,8 @@
 2003-08-25  Joe Shaw  <joe@ximian.com>
 
+	* rcd-rpc-util.c (rcd_rc_package_to_xmlrpc): Don't send along the
+	channel if it's a hidden channel.
+
 	* rcd-rpc.c (rcd_rpc_remote_server_start): Remove a FIXME.
 
 	* rcd-world-remote.c (rcd-world_remote_fetch_distributions):
