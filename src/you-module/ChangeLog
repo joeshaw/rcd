@@ -1,3 +1,8 @@
+2004-07-12  Tambet Ingo  <tambet@ximian.com>
+
+	* wrapper.cc (read_installed_patches): Test if INSTALLED_YOU_PATH
+	exists before trying to open it. Fixes #61375.
+
 2004-06-17  Tambet Ingo  <tambet@ximian.com>
 
 	* you-util.[ch]: Add a constant temporary working directory for

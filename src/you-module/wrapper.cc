@@ -196,6 +196,10 @@ read_installed_patches (PMYouPatchInfoPtr patch_info,
     RCYouPatchSList *list = NULL;
     GError *error = NULL;
 
+    if (!g_file_test (INSTALLED_YOU_PATH,
+                      G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR))
+        return NULL;
+
     dir = g_dir_open (INSTALLED_YOU_PATH, 0, &error);
     if (error) {
         rc_debug (RC_DEBUG_LEVEL_ERROR,
