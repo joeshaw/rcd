@@ -8,9 +8,8 @@
 
 /*
  * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of the
- * License, or (at your option) any later version.
+ * modify it under the terms of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
  * 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -135,6 +134,8 @@ rcd_identity_foreach_from_password_file (RCDIdentityFn fn,
     fclose (in);
 }
 
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
 struct IdentityFromFileInfo {
     const char *username;
     RCDIdentity *id;
@@ -174,62 +175,96 @@ rcd_identity_from_password_file (const char *username)
     return info.id;
 }
 
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+struct IdentityUpdateInfo {
+    gboolean failed;
+    FILE *out;
+    RCDIdentity *new_id;
+};
+
 static void
-write_identity (RCDIdentity *id, FILE *out)
+write_identity (RCDIdentity *old_id,
+                RCDIdentity *new_id,
+                FILE        *out)
 {
     gchar *priv_str;
 
-    priv_str = rcd_privileges_to_string (id->privileges);
+    if (out == NULL)
+        return;
+
+    if (new_id == NULL)
+        return;
+
+    /* Merge old and new identities as necessary. */
+    if (old_id) {
+
+        if (new_id->password == NULL)
+            new_id->password = g_strdup (old_id->password);
+
+        if (new_id->privileges == 0)
+            new_id->privileges = old_id->privileges;
+    }
+
+    priv_str = rcd_privileges_to_string (new_id->privileges);
  
     fprintf (out, "%s:%s:%s\n",
-             id->username,
-             id->password ? id->password : "",
+             new_id->username,
+             new_id->password ? new_id->password : "",
              priv_str);
 
     g_free (priv_str);
 }
 
-gboolean
-rcd_identity_update_password_file (RCDIdentity *id)
+static void
+identity_update_cb (RCDIdentity *old_id,
+                    gpointer     user_data)
 {
-    FILE *in, *out;
-    char buffer[1024];
-    int id_len;
+    struct IdentityUpdateInfo *info = user_data;
+    
+    if (info->failed)
+        return;
 
-    if (id == NULL)
-        return TRUE;
-
-    in = fopen (PASSWORD_FILE, "r");
-
-    if (unlink (PASSWORD_FILE) != 0) {
-        fclose (in);
-        return FALSE;
-    }
-
-    out = fopen (PASSWORD_FILE, "w");
-
-    id_len = strlen (id->username);
-
-    while (fgets (buffer, 1024, in)) {
-        char *colon = strchr (buffer, ':');
-        
-        if (colon
-            && colon - buffer == id_len
-            && ! strncmp (buffer, id->username, colon - buffer)) {
-            write_identity (id, out);
-            id = NULL;
+    if (info->out == NULL) {
+        if (unlink (PASSWORD_FILE) != 0) {
+            info->failed = TRUE;
         } else {
-            fputs (buffer, out);
+            info->out = fopen (PASSWORD_FILE, "w");
+            if (info->out == NULL)
+                info->failed = TRUE;
         }
     }
 
-    if (id != NULL)
-        write_identity (id, out);
+    if (old_id == NULL || old_id->username == NULL)
+        return;
 
-    fclose (in);
-    fclose (out);
+    if (info->new_id && ! strcmp (old_id->username, info->new_id->username)) {
+        write_identity (old_id, info->new_id, info->out);
+        info->new_id = NULL;
+    } else
+        write_identity (NULL, old_id, info->out);
+    
+}
 
-    return TRUE;
+gboolean
+rcd_identity_update_password_file (RCDIdentity *id)
+{
+    struct IdentityUpdateInfo info;
+
+    info.failed = FALSE;
+    info.out = NULL;
+    info.new_id = id;
+
+    rcd_identity_foreach_from_password_file (identity_update_cb,
+                                             &info);
+
+    if (info.new_id != NULL && ! info.failed)
+        write_identity (NULL, info.new_id, info.out);
+
+    if (info.out && ! info.failed)
+        fclose (info.out);
+
+    return ! info.failed;
 }
 
 gboolean

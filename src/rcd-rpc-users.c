@@ -5,14 +5,12 @@
  *
  * Copyright (C) 2002 Ximian, Inc.
  *
- * Developed by Jon Trowbridge <trow@ximian.com>
  */
 
 /*
  * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of the
- * License, or (at your option) any later version.
+ * modify it under the terms of the GNU General Public License,
+ * verison 2, as published by the Free Software Foundation.
  * 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -92,8 +90,16 @@ users_update (xmlrpc_env   *env,
     XMLRPC_FAIL_IF_FAULT (env);
 
     id->username   = g_strdup (username);
-    id->password   = g_strdup (password);
-    id->privileges = rcd_privileges_from_string (privileges);
+    
+    if (strcmp (password, "-*-unchanged-*-"))
+        id->password   = g_strdup (password);
+    else
+        id->password = NULL;
+    
+    if (strcmp (privileges, "-*-unchanged-*-"))
+        id->privileges = rcd_privileges_from_string (privileges);
+    else
+        id->privileges = 0;
 
     success = rcd_identity_update_password_file (id);
 
