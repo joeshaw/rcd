@@ -2096,7 +2096,10 @@ packsys_add_lock (xmlrpc_env   *env,
     }
 
  cleanup:
-    return xmlrpc_build_value (env, "i", success);
+    if (!env->fault_occurred)
+        return xmlrpc_build_value (env, "i", success);
+
+    return NULL;
 }
 
 struct RemoveLockInfo {

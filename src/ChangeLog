@@ -1,3 +1,8 @@
+2003-10-27  Tambet Ingo  <tambet@ximian.com>
+
+	* rcd-rpc-packsys.c (packsys_add_lock): Don't try to use xmlrpc_env
+	if it's fault is already set, it asserts.
+
 2003-10-23  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-util.c (rcd_xmlrpc_to_rc_package_match): Add
