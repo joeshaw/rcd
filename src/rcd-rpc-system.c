@@ -205,6 +205,8 @@ system_poll_pending(xmlrpc_env   *env,
         
         xmlrpc_struct_set_value (env, value, "messages", messages);
         XMLRPC_FAIL_IF_FAULT (env);
+
+        xmlrpc_DECREF (messages);
     }
 
  cleanup: 

@@ -1,10 +1,19 @@
+2002-08-06  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-rpc-system.c (system_poll_pending): Fixed memory leak.
+
+	* rcd-pending.c (rcd_pending_cleanup): Don't cleanup pending items
+	if the environment variable RCD_NO_PENDING_CLEANUP is set.  (We
+	seem to need to do this when valgrinding, because the daemon runs
+	so slowly.)
+
 2002-08-06  Ian Peters  <itp@ximian.com>
 
 	* Makefile.am: remove references to libredcarpet, red_carpet_libs,
 	etc
 
 2002-08-06  Jon Trowbridge  <trow@ximian.com>
-
+	
 	* rcd.c (daemonize): Reopen stdout and stderr to
 	/var/log/rcd/rcd-messages.  If /var/log/rcd doesn't exist, create
 	it.

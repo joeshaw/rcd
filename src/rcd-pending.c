@@ -216,6 +216,9 @@ rcd_pending_cleanup (void)
     if (id_hash) {
         static time_t last_cleanup = (time_t)0;
         time_t now;
+
+        if (getenv ("RCD_NO_PENDING_CLEANUP"))
+            return;
         
         time (&now);
 
