@@ -1,3 +1,8 @@
+2002-08-21  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-autopull.c: Further hacking.  We are now pretty close
+	to having autopull actually work.
+
 2002-08-20  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd.c (main): Fixed memory leak.

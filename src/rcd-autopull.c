@@ -137,6 +137,12 @@ rcd_autopull_resolve (RCDAutopull *pull)
 
     rc_resolver_resolve_dependencies (resolver);
 
+    if (resolver->best_context)
+        rc_resolver_context_spew (resolver->best_context);
+    else
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Resolution failed!");
+    
     /* FIXME: do something */
 
     rc_resolver_free (resolver);
@@ -170,6 +176,9 @@ static void
 ap_rec_execute (RCDRecurring *rec)
 {
     RCDAutopull *pull = (RCDAutopull *) rec;
+
+    rc_debug (RC_DEBUG_LEVEL_INFO,
+              "Executing autopull!!!");
 
     rcd_autopull_find_targets (pull);
     rcd_autopull_resolve (pull);
@@ -263,37 +272,77 @@ rcd_autopull_new (time_t first_pull, guint interval)
 </autopull>
 */
 
+static RCChannel *
+channel_from_xml_props (xmlNode *node)
+{
+    RCWorld *world;
+    RCChannel *channel = NULL;
+    char *alias_str = NULL;
+    char *cid_str = NULL;
+    char *bid_str = NULL;
+
+    world = rc_get_world ();
+
+    alias_str = xml_get_prop (node, "alias");
+    if (alias_str) {
+        rc_debug (RC_DEBUG_LEVEL_INFO,
+                  "Looking for channel with alias='%s'",
+                  alias_str);
+        channel = rc_world_get_channel_by_alias (world, alias_str);
+        if (channel)
+            goto finished;
+    }
+
+    cid_str = xml_get_prop (node, "cid");
+    if (cid_str) {
+        guint32 cid = 0;
+        cid = atol (cid_str);
+        rc_debug (RC_DEBUG_LEVEL_INFO,
+                  "Looking for channel with cid=%d ('%s')",
+                  cid, cid_str);
+        if (cid) {
+            channel = rc_world_get_channel_by_id (world, cid);
+            if (channel)
+                goto finished;
+        }
+    }
+    
+    bid_str = xml_get_prop (node, "bid");
+    if (bid_str) {
+        guint32 bid = 0;
+        rc_debug (RC_DEBUG_LEVEL_INFO,
+                  "Looking for channel with bid=%d ('%s')",
+                  bid, bid_str);
+        bid = atol (bid_str);
+        if (bid) {
+            channel = rc_world_get_channel_by_base_id (world, bid);
+            if (channel)
+                goto finished;
+        }
+    }
+
+ finished:
+    g_free (alias_str);
+    g_free (bid_str);
+    g_free (cid_str);
+
+    return channel;
+}
+
 
 static RCChannel *
 channel_from_xml_node (xmlNode *node)
 {
-    RCWorld *world;
     RCChannel *channel = NULL;
-    char *bid_str = NULL;
-    guint32 bid;
-
-    if (g_strcasecmp (node->name, "channel"))
-        goto finished;
     
-    bid_str = xml_get_prop (node, "bid");
-    if (bid_str == NULL) {
-        rc_debug (RC_DEBUG_LEVEL_WARNING,
-                  "Ignoring channel tag without base ID.");
-        goto finished;
-    }
+    if (! g_strcasecmp (node->name, "channel"))
+        channel = channel_from_xml_props (node);
 
-    bid = atol (bid_str);
-    world = rc_get_world ();
-
-    channel = rc_world_get_channel_by_base_id (world, bid);
     if (channel == NULL) {
+        /* Wow... what a bad error message. */
         rc_debug (RC_DEBUG_LEVEL_WARNING,
-                  "Unknown channel base ID '%s' in channel tag.", bid_str);
-        goto finished;
+                  "No valid channel specified in channel tag!");
     }
-
- finished:
-    g_free (bid_str);
 
     return channel;
 }
@@ -303,45 +352,35 @@ package_from_xml_node (xmlNode *node)
 {
     RCWorld *world;
     RCPackage *pkg = NULL;
-    char *bid_str = NULL;
-    guint32 bid;
     char *pkg_name = NULL;
     RCChannel *channel;
 
     if (g_strcasecmp (node->name, "package"))
         goto finished;
 
-    bid_str = xml_get_prop (node, "bid");
-    if (bid_str == NULL) {
-        /* FIXME: a better warning would be nice */
-        rc_debug (RC_DEBUG_LEVEL_WARNING,
-                  "Ignoring package tag without channel base ID.");
-        goto finished;
-    }
+    channel = channel_from_xml_props (node);
 
-    bid = atol (bid_str);
+    /* If the channel comes back NULL, we will treat this as a
+       system package. */
 
     world = rc_get_world ();
 
-    channel = rc_world_get_channel_by_base_id (world, bid);
-    if (channel == NULL) {
-        rc_debug (RC_DEBUG_LEVEL_WARNING,
-                  "Unknown channel base ID '%s' in package tag.", bid_str);
-        goto finished;
-    }
+    pkg_name = xml_get_prop (node, "name");
 
-    pkg_name = xml_get_content (node);
-
-    pkg = rc_world_get_package (world, channel, pkg_name);
+    pkg = rc_world_get_package (world,
+                                channel ? channel : RC_WORLD_SYSTEM_PACKAGES,
+                                pkg_name);
 
     if (pkg == NULL) {
         rc_debug (RC_DEBUG_LEVEL_WARNING,
                   "Can't find package '%s' in channel '%s'.",
-                  pkg_name, rc_channel_get_name (channel));
+                  pkg_name,
+                  channel ? rc_channel_get_name (channel) : "SYSTEM");
     }
 
+    g_print ("%s\n", rc_package_to_str_static (pkg));
+
  finished:
-    g_free (bid_str);
     g_free (pkg_name);
 
     return pkg;
@@ -392,9 +431,29 @@ autopull_from_session_xml_node (xmlNode *node)
             
             if (package) {
                 g_assert (pull != NULL);
-                pull->packages_to_update =
-                    g_slist_prepend (pull->packages_to_update,
-                                     rc_package_ref (package));
+
+                /* 
+                   If the XML specified a system package (by omitting
+                   any channel info, thus causing us to find the package
+                   in the system instead of in a specific channel),
+                   we will just try to update the package from
+                   any subscribed channel.
+
+                   Otherwise, we will try to install the package
+                   out of the specified channel.  If that package is
+                   already installed, the install will (of course)
+                   be turned into a no-op by the dependency resolver.
+                */
+
+                if (rc_package_is_installed (package)) {
+                    pull->packages_to_update =
+                        g_slist_prepend (pull->packages_to_update,
+                                         rc_package_ref (package));
+                } else {
+                    pull->packages_to_install =
+                        g_slist_prepend (pull->packages_to_install,
+                                         rc_package_ref (package));
+                }
             }
         }
 
@@ -437,6 +496,105 @@ rcd_autopull_process_xml (xmlNode *node)
     }
 }
 
+static void
+rcd_autopull_get_xml_from_file (const char *filename)
+{
+    xmlDoc *doc;
+
+    if (! g_file_test (filename, G_FILE_TEST_EXISTS)) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "File '%s' doesn't exist; can't get autopull XML",
+                  filename);
+        return;
+    }
+
+    doc = xmlParseFile (filename);
+    if (doc == NULL) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Can't parse autopull XML in file '%s'",
+                  filename);
+        return;
+    }
+
+    /* Remove any existing recurring autopull items. */
+    rcd_recurring_foreach (g_quark_from_static_string ("autopull"),
+                           (RCDRecurringFn) rcd_recurring_remove,
+                           NULL);
+
+    rcd_autopull_process_xml (xmlDocGetRootElement (doc));
+
+    xmlFreeDoc (doc);
+}
+
+static void
+rcd_autopull_download_xml (void)
+{
+    /* FIXME! FIXME! FIXME! */
+
+    rc_debug (RC_DEBUG_LEVEL_WARNING,
+              "This is where we would download autopull.xml, if that code "
+              " had been written.  But it hasn't.");
+}
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+/* A recurring event to download/refresh the autopull information. */
+
+static RCDRecurring autopull_xml_fetch;
+
+static void
+xml_fetch_execute (RCDRecurring *recur)
+{
+    const char *file_override;
+
+    /* file_override = getenv ("RCD_AUTOPULL_XML_FROM_FILE"); */
+    file_override = "test-autopull.xml"; /* FIXME */
+
+    if (file_override) {
+
+        rc_debug (RC_DEBUG_LEVEL_INFO,
+                  "Loading autopull XML from '%s'",
+                  file_override);
+
+        rcd_autopull_get_xml_from_file (file_override);
+
+    } else {
+
+        rc_debug (RC_DEBUG_LEVEL_INFO,
+                  "Downloading autopull XML");
+
+        rcd_autopull_download_xml ();
+    }
+}
+
+time_t
+xml_fetch_first (RCDRecurring *recur, time_t now)
+{
+    /* We do our first download of the autopull XML right away. */
+    /* FIXME: Is this really what we want to do? */
+    return 0;
+}
+
+time_t
+xml_fetch_next (RCDRecurring *recur, time_t previous)
+{
+    /* FIXME: download the autopull XML once per hour. */
+    return previous + 60*60;
+}
+
+static void
+recurring_autopull_xml_fetch_init (void)
+{
+    autopull_xml_fetch.tag     = g_quark_from_static_string ("autopull-xml");
+    autopull_xml_fetch.destroy = NULL;
+    autopull_xml_fetch.execute = xml_fetch_execute;
+    autopull_xml_fetch.first   = xml_fetch_first;
+    autopull_xml_fetch.next    = xml_fetch_next;
+
+    rcd_recurring_add (&autopull_xml_fetch);
+}
+
+
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 /* We put a prototype here to keep the compiler from complaining. */
@@ -452,5 +610,5 @@ rcd_module_load (RCDModule *module)
     module->interface_major = 0;
     module->interface_minor = 0;
 
-    /* FIXME: We should actually do something. */
+    recurring_autopull_xml_fetch_init ();
 }
