@@ -1,3 +1,8 @@
+2003-04-29  Aaron Weber <aaron@ximian.com>
+
+	* rcd.conf.5: key/value pairs renamed to token/value pairs,
+	because "key" is used in a lot of other ways.
+
 2003-04-22  Joe Shaw  <joe@ximian.com>
 
 	* configure.in: Bump up to 1.5.0.  Bleeding edge.

@@ -10,7 +10,7 @@ The configuration file is in the GNOME config file format, similar to Windows .i
 .LP 
 .I [Section]
 .LP 
-and continues until the next section.  Entries in sections are specified in key\-value pairs, in the form:
+and continues until the next section.  Entries in sections are specified in token\-value pairs, in the form:
 .LP 
 .I entry=value
 .LP 
@@ -29,16 +29,16 @@ This section contains settings related to rcd's download caches.
 
 .TP 
 \fBenabled=[true | false]\fR
-Specifies whether rcd should cache downloaded data.  This defaults to true.  This key can be set with "rc set" or other rcd client settings tools.
+Specifies whether rcd should cache downloaded data.  This defaults to true.  This token can be set with "rc set" or other rcd client settings tools.
 
 .TP 
 \fBdirectory=<directory>\fR
-Specifies the parent directory where rcd should store cached downloaded data.  This defaults to /var/cache/redcarpet.  This key can be set through rcd's preferences mechanism.
+Specifies the parent directory where rcd should store cached downloaded data.  This defaults to /var/cache/redcarpet.  This token can be set through rcd's preferences mechanism.
 
 .LP 
 \fB[MagicProxy]\fR
 .TP 
-This section holds the settings for the dispatcher ("middleman" or "magic proxy") tool used to work within complex and restrictive firewall situations. It has one key/value pair:
+This section holds the settings for the dispatcher ("middleman" or "magic proxy") tool used to work within complex and restrictive firewall situations. It has one token/value pair:
 
 .TP 
 \fBmiddleman\-host=host\fR
@@ -52,15 +52,15 @@ This section contains settings for rcd's network options, including what server 
 
 .TP 
 \fBhost=<url>\fR
-This key specifies the server that rcd should connect to.  This is a URL.  By default rcd contacts \fIhttp://red\-carpet.ximian.com.\fR This key can be set with "rc set" or other rcd client settings tools.
+This token specifies the server that rcd should connect to.  This is a URL.  By default rcd contacts \fIhttp://red\-carpet.ximian.com.\fR This token can be set with "rc set" or other rcd client settings tools.
 
 .TP 
 \fBenable\-premium=[true | false]\fR
-This key specifies whether the server is an enhanced server.  Set this to true when connecting to a Red Carpet Express or Red Carpet Corporate Connect server.  This defaults to false.  This key can be set through rcd's preferences mechanism.
+This token specifies whether the server is an enhanced server.  Set this to true when connecting to a Red Carpet Express or Red Carpet Corporate Connect server.  This defaults to false.  This token can be set through rcd's preferences mechanism.
 
 .TP 
 \fBorg\-id=<organization id>\fR
-When using an enhanced server, set this to the organization id so that the daemon can register the machine with the server.  This is unset and ignored by default; this key has no effect if \fBenable\-premium\fR is not true.
+When using an enhanced server, set this to the organization id so that the daemon can register the machine with the server.  This is unset and ignored by default; this token has no effect if \fBenable\-premium\fR is not true.
 
 .TP 
 \fBproxy=<url>\fR
@@ -68,20 +68,20 @@ The URL for a proxy.  This should always begin with the protocol https://, http:
 
 .TP 
 \fBproxy\-user=<username>\fR
-For proxies requiring authentication, this is the username used. This is unset and ignored by default; this key has no effect if \fBproxy\fR is not set.  This key can be set with "rc set" or other rcd client settings tools.
+For proxies requiring authentication, this is the username used. This is unset and ignored by default; this token has no effect if \fBproxy\fR is not set.  This token can be set with "rc set" or other rcd client settings tools.
 
 .TP 
 \fBproxy\-password=<password>\fR
-For proxies requiring authentication, this is the password used. This is unset and ignored by default; this key has no effect if \fBproxy\fR is not set.  This key can be set with "rc set" or other rcd client settings tools.
+For proxies requiring authentication, this is the password used. This is unset and ignored by default; this token has no effect if \fBproxy\fR is not set.  This token can be set with "rc set" or other rcd client settings tools.
 .TP 
 
 .TP 
 \fBhttp10=[true | false]\fR
-This option determines whether or not rcd uses HTTP 1.0 or 1.1 to connect to servers.  This setting may be helpful with some uncooperative proxies.  This defaults to false.  This key can be set with "rc set" or other rcd client settings tools.
+This option determines whether or not rcd uses HTTP 1.0 or 1.1 to connect to servers.  This setting may be helpful with some uncooperative proxies.  This defaults to false.  This token can be set with "rc set" or other rcd client settings tools.
 
 .TP 
 \fBmax\-downloads=<number>\fR
-This option specifies how many concurrent package downloads rcd may start.  Users on slower connections will want to decrease this, whereas users with high bandwidth connections may want to increase this.  If set to 0, there is no limit and rcd will make as many connections as needed.  This defaults to 5.  This key can be set through rcd's preferences mechanism.
+This option specifies how many concurrent package downloads rcd may start.  Users on slower connections will want to decrease this, whereas users with high bandwidth connections may want to increase this.  If set to 0, there is no limit and rcd will make as many connections as needed.  This defaults to 5.  This token can be set through rcd's preferences mechanism.
 
 .LP 
 \fB[Server]\fR
@@ -98,7 +98,7 @@ Specifies the port rcd should listen on for remote (TCP) connections. This defau
 
 .TP 
 \fBbind\-ip=ip\fR
-Applicable only to systems which can be addressed by more than one IP address. If this value is not set, rcd will bind to all IP addresses served by the system. If you wish to have rcd available on only one IP (in addition to localhost, where it is always available), set this key to that address. 
+Applicable only to systems which can be addressed by more than one IP address. If this value is not set, rcd will bind to all IP addresses served by the system. If you wish to have rcd available on only one IP (in addition to localhost, where it is always available), set this token to that address. 
 
 .TP 
 \fB[System]
@@ -137,7 +137,7 @@ check.  Packages which are inconclusive for whatever reason (gpg not
 installed, public key unavailable, etc.) are not installed.
 .I Note that rcd will never install packages in which a gpg signature
 explicitly fails.
-This defaults to false.  This key can be set through rcd's preferences
+This defaults to false.  This token can be set through rcd's preferences
 mechanism.
 
 .TP 
