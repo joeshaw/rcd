@@ -1189,33 +1189,6 @@ cleanup:
 } /* rc_package_slist_to_xmlrpc_op_array */
 
 static void
-remove_duplicate_packages (RCPackageSList **slist)
-{
-    GSList *iter, *iter2;
-
-    /* Yes, this is brazenly O(N^2). */
-
-    iter = *slist;
-    while (iter != NULL) {
-        GSList *next = iter->next;
-
-        for (iter2 = next; iter2 != NULL; iter2 = iter2->next) {
-            RCPackage *pkg = iter->data;
-            RCPackage *pkg2 = iter2->data;
-
-            if (rc_package_spec_equal (RC_PACKAGE_SPEC (pkg),
-                                       RC_PACKAGE_SPEC (pkg2))) {
-                rc_package_unref (pkg);
-                *slist = g_slist_delete_link (*slist, iter);
-                break;
-            }
-        }
-
-        iter = next;
-    }
-}
-
-static void
 resolve_deps (xmlrpc_env         *env,
               xmlrpc_value      **packages_to_install,
               xmlrpc_value      **packages_to_remove,
@@ -1226,6 +1199,10 @@ resolve_deps (xmlrpc_env         *env,
 {
     RCPackageSList *install_packages = NULL;
     RCPackageSList *remove_packages = NULL;
+    RCPackageSList *extra_install_packages = NULL;
+    RCPackageSList *extra_remove_packages = NULL;
+    GHashTable *install_hash = NULL;
+    GHashTable *remove_hash = NULL;
     RCResolver *resolver = NULL;
     RCPackageSList *iter;
 
@@ -1293,21 +1270,54 @@ resolve_deps (xmlrpc_env         *env,
     }
 
     rc_resolver_context_foreach_install(
-        resolver->best_context, prepend_pkg, &install_packages);
+        resolver->best_context, prepend_pkg, &extra_install_packages);
     rc_resolver_context_foreach_uninstall(
-        resolver->best_context, prepend_pkg, &remove_packages);
+        resolver->best_context, prepend_pkg, &extra_remove_packages);
     rc_resolver_context_foreach_upgrade(
-        resolver->best_context, prepend_pkg_pair, &install_packages);
+        resolver->best_context, prepend_pkg_pair, &extra_install_packages);
 
-    remove_duplicate_packages (&install_packages);
-    remove_duplicate_packages (&remove_packages);
+    /* We need to remove any packages from the extra_*_packages lists
+       that already appear in the *_packages list. To do this, we
+       build up hashes containing the packages from the original lists
+       and walk over the extra_ packages lists, removing anything that
+       we've seen before. */
 
+    install_hash = g_hash_table_new (rc_package_spec_hash,
+                                     rc_package_spec_equal);
+    for (iter = install_packages; iter != NULL; iter = iter->next)
+        g_hash_table_insert (install_hash, iter->data, iter->data);
+    
+    remove_hash = g_hash_table_new (rc_package_spec_hash,
+                                    rc_package_spec_equal);
+    for (iter = remove_packages; iter != NULL; iter = iter->next)
+        g_hash_table_insert (remove_hash, iter->data, iter->data);
+    
+    iter = extra_install_packages;
+    while (iter != NULL) {
+        GSList *next = iter->next;
+        if (g_hash_table_lookup (install_hash, iter->data)) {
+            rc_package_unref (iter->data);
+            extra_install_packages = g_slist_delete_link (extra_install_packages, iter);
+        }
+        iter = next;
+    }
+
+    iter = extra_remove_packages;
+    while (iter != NULL) {
+        GSList *next = iter->next;
+        if (g_hash_table_lookup (remove_hash, iter->data)) {
+            rc_package_unref (iter->data);
+            extra_remove_packages = g_slist_delete_link (extra_remove_packages, iter);
+        }
+        iter = next;
+    }
+    
     *packages_to_install = rcd_rc_package_slist_to_xmlrpc_op_array (
-        install_packages, RCD_PACKAGE_OP_INSTALL, resolver, env);
+        extra_install_packages, RCD_PACKAGE_OP_INSTALL, resolver, env);
     XMLRPC_FAIL_IF_FAULT(env);
 
     *packages_to_remove = rcd_rc_package_slist_to_xmlrpc_op_array (
-        remove_packages, RCD_PACKAGE_OP_REMOVE, resolver, env);
+        extra_remove_packages, RCD_PACKAGE_OP_REMOVE, resolver, env);
     XMLRPC_FAIL_IF_FAULT(env);
 
 cleanup:
@@ -1316,6 +1326,13 @@ cleanup:
 
     rc_package_slist_unref (install_packages);
     rc_package_slist_unref (remove_packages);
+    rc_package_slist_unref (extra_install_packages);
+    rc_package_slist_unref (extra_remove_packages);
+
+    if (install_hash)
+        g_hash_table_destroy (install_hash);
+    if (remove_hash)
+        g_hash_table_destroy (remove_hash);
 } /* resolve_deps */
 
 static xmlrpc_value *
