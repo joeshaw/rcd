@@ -102,7 +102,7 @@ rcd_fetch_register (void)
     g_object_unref (t);
 } /* rcd_fetch_register */
 
-void
+gboolean
 rcd_fetch_distro (void)
 {
     char *url;
@@ -139,8 +139,14 @@ cleanup:
         g_byte_array_free (data, TRUE);
 
     /* Fall back onto compiled in distro info. */
-    if (!successful)
-        rc_distro_parse_xml (NULL, 0);
+    if (!successful) {
+        if (rc_distro_parse_xml (NULL, 0))
+            return TRUE;
+        else
+            return FALSE;
+    }
+    else
+        return TRUE;
 } /* rcd_fetch_distro */
 
 static void

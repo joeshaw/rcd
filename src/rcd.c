@@ -618,14 +618,18 @@ main (int argc, const char **argv)
     rcd_identity_password_file_is_secure ();
 
     /* We have to fetch this before the RCWorld gets initialized. */
-    rcd_fetch_distro ();
+    if (!rcd_fetch_distro ()) {
+        rc_debug (RC_DEBUG_LEVEL_CRITICAL, 
+                  "Unable to determine system or distribution type.");
+        exit (-1);
+    }
 
     initialize_rc_world ();
     initialize_rpc ();
     initialize_data ();
     
-    /* We can't daemonize any later than this, so hopefully module initialization
-       won't be slow. */
+    /* We can't daemonize any later than this, so hopefully module
+       initialization won't be slow. */
     if (late_background) {
         
         rc_debug (RC_DEBUG_LEVEL_ALWAYS, "Running daemon in background.");

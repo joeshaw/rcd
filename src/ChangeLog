@@ -1,3 +1,11 @@
+2002-10-08  Joe Shaw  <joe@ximian.com>
+
+	* rcd-fetch.c (rcd_fetch_distro): Make this return a gboolean,
+	TRUE on success.
+
+	* rcd.c (main): If rcd_fetch_distro() returns FALSE, throw an
+	error and abort.
+
 2002-10-01  Joe Shaw  <joe@ximian.com>
 
 	* rcd-cache.c (rcd_cache_entry_get_modification_time): Use %Z
