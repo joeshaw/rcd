@@ -1,5 +1,14 @@
 2002-10-01  Joe Shaw  <joe@ximian.com>
 
+	* rcd-cache.c (rcd_cache_entry_get_modification_time): Use %Z
+	instead of %z so we get "GMT" instead of "+0000" to be truly RFC
+	1123 compliant.
+	(rcd_cache_lookup): If our initial lookup in our in-memory cache
+	fails, create an entry if the file exists on the local disk and
+	use it.
+
+2002-10-01  Joe Shaw  <joe@ximian.com>
+
 	* rcd-transaction.c: Get rid of the HAVE_STATVFS conditionals.
 	Linux has it too, and it works just as we expect it, so just use
 	it everywhere since that's what Solaris has too.

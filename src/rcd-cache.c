@@ -118,7 +118,7 @@ rcd_cache_entry_get_modification_time (RCDCacheEntry *entry)
         time_string = g_malloc (40);
 
     /* Create a time string that conforms to RFC 1123 */
-    strftime(time_string, 40, "%a, %d %b %Y %H:%M:%S %z", tm);
+    strftime(time_string, 40, "%a, %d %b %Y %H:%M:%S %Z", tm);
 
     return time_string;
 } /* rcd_cache_entry_get_modification_time */
@@ -241,6 +241,18 @@ rcd_cache_lookup (RCDCache *cache, const char *url)
 
     local_file = rcd_cache_get_local_filename (cache, url);
     entry = g_hash_table_lookup (cache->entries, local_file);
+
+    if (!entry) {
+        if (g_file_test (local_file, G_FILE_TEST_EXISTS)) {
+            entry = g_new0 (RCDCacheEntry, 1);
+
+            entry->cache = cache;
+            entry->url = g_strdup (url);
+            entry->local_file = g_strdup (local_file);
+            entry->fd = -1;
+        }
+    }
+
     g_free (local_file);
 
     if (!entry)
