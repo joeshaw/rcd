@@ -1304,7 +1304,7 @@ rcd_world_remote_fetch (RCDWorldRemote *remote, gboolean local, GError **error)
     }
 
     url = g_strconcat (RC_WORLD_SERVICE (remote)->url,
-                       "/serviceinfo.xml.gz", NULL);
+                       "/serviceinfo.xml", NULL);
     t = rcd_transfer_new (url, RCD_TRANSFER_FLAGS_NONE, entry);
     g_free (url);
 
