@@ -53,6 +53,7 @@ struct _RCDWorldRemote {
 
     char *contact_email;
     gboolean premium_service;
+    char *activation_root_url;
 
     char *distributions_file;
     char *mirrors_file;

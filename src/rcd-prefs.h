@@ -47,12 +47,6 @@ gboolean     rcd_prefs_set_cache_dir          (const char *);
 gboolean     rcd_prefs_get_cache_enabled      (void);
 gboolean     rcd_prefs_set_cache_enabled      (gboolean);
 
-const gchar *rcd_prefs_get_host               (void);
-gboolean     rcd_prefs_set_host               (const char *);
-
-gboolean     rcd_prefs_get_premium            (void);
-gboolean     rcd_prefs_set_premium            (gboolean);
-
 const gchar *rcd_prefs_get_proxy              (void);
 
 const gchar *rcd_prefs_get_proxy_url          (void);

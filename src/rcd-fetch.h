@@ -29,6 +29,7 @@
 #include <libredcarpet.h>
 
 #include "rcd-transfer-pool.h"
+#include "rcd-xmlrpc.h"
 
 /*
  * Functions marked "local" try to read the data from a last known good
@@ -49,15 +50,11 @@
  * As of 1.4 a third field, "alias" was added.  It specifies an alias
  * for the machine when it can't be readily identified by hostname.
  *
- * Also as of 1.4 an error message is returned through the err_msg
- * parameter if appropriate.
- *
- * Returns TRUE on success.
  */
-gboolean rcd_fetch_register (const char  *activation_code,
-                             const char  *email,
-                             const char  *alias,
-                             char       **err_msg);
+xmlrpc_value *rcd_fetch_register (xmlrpc_env *env,
+                                  const char *activation_code,
+                                  const char *email,
+                                  const char *alias);
 
 /*
  * Download the (un)supported/deprecated distro information from the server.

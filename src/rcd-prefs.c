@@ -291,56 +291,6 @@ rcd_prefs_set_cache_enabled (gboolean enabled)
 }
 
 const char *
-rcd_prefs_get_host (void)
-{
-    static char *host = NULL;
-
-    g_free (host);
-
-    host = gnome_config_get_string (
-        get_config_path ("/Network/host=http://red-carpet.ximian.com"));
-
-    return host;
-} /* rcd_prefs_get_host */
-
-gboolean
-rcd_prefs_set_host (const char *host)
-{
-    if (!host) {
-        rc_debug (RC_DEBUG_LEVEL_WARNING, "Can't set empty host!");
-        return FALSE;
-    }
-
-    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Host URL changed: %s", host);
-
-    gnome_config_set_string (get_config_path ("/Network/host"), host);
-    SYNC_CONFIG;
-
-    return TRUE;
-} /* rcd_prefs_set_host */
-
-gboolean
-rcd_prefs_get_premium (void)
-{
-    return gnome_config_get_bool (
-        get_config_path ("/Network/enable-premium=FALSE"));
-} /* rcd_prefs_get_premium */
-
-gboolean
-rcd_prefs_set_premium (gboolean enabled)
-{
-    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Premium services %s",
-              enabled ? "enabled" : "disabled");
-
-    gnome_config_set_bool (
-        get_config_path ("/Network/enable-premium"), enabled);
-
-    SYNC_CONFIG;
-
-    return TRUE;
-} /* rcd_prefs_set_premium */
-
-const char *
 rcd_prefs_get_org_id (void)
 {
     static char *org_id = NULL;

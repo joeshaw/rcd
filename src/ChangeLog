@@ -1,5 +1,24 @@
 2003-08-22  Joe Shaw  <joe@ximian.com>
 
+	* rcd-fetch.c: Merge in Tambet's XML-RPC activation patch and hack
+	it up to work with multiple hosts.
+
+	* rcd-prefs.c (rcd_prefs_get_host, rcd_prefs_set_host,
+	rcd_prefs_get_premium, rcd_prefs_set_premium): Remove these.
+	Whee!
+
+	* rcd-rpc-system.c (system_activate): Merge in Tambet's patch.
+
+	* rcd-world-remote.c (extract_service_info): Get the activation
+	root URL.
+	(rcd_world_remote_finalize): Free it.
+	(rcd_world_remote_parse_channels_xml): If we're a premium service
+	and the org id is set, register.
+
+	* rcd.c (initialize_data): Don't register here anymore.
+
+2003-08-22  Joe Shaw  <joe@ximian.com>
+
 	* rcd-transaction.c (rcd_transaction_finished,
 	rcd_transaction_failed): Unconditionally call
 	rcd_transaction_send_log().  It will just effectively be a no-op

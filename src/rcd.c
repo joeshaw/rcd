@@ -466,16 +466,6 @@ initialize_data (void)
     if (!g_file_test (SYSCONFDIR "/partnernet", G_FILE_TEST_EXISTS))
         rcd_create_uuid (SYSCONFDIR "/partnernet");
 
-    /*
-     * We only want to register with the server when:
-     *
-     *    - We are in premium mode.
-     *    - We have an organization ID set in our config file.
-     */
-    if (rcd_prefs_get_premium () &&
-        rcd_prefs_get_org_id ())
-        rcd_fetch_register (NULL, NULL, NULL, NULL);
-
     /* We don't want to read in the locks until after we have fetched the
        list of channels. */
     rcd_package_locks_load (rc_get_world ());

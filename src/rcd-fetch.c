@@ -35,10 +35,12 @@
 #include "rcd-cache.h"
 #include "rcd-mirror.h"
 #include "rcd-prefs.h"
+#include "rcd-rpc-util.h"
 #include "rcd-transaction.h"
 #include "rcd-transfer.h"
 #include "rcd-transfer-http.h"
 #include "rcd-transfer-pool.h"
+#include "rcd-world-remote.h"
 
 #define RCX_ACTIVATION_ROOT "https://activation.rc.ximian.com"
 
@@ -69,24 +71,15 @@ write_file_contents (const char *filename, const GByteArray *data)
     rc_close (fd);
 } /* write_file_contents */
 
-gboolean
-rcd_fetch_register (const char  *activation_code,
-                    const char  *email,
-                    const char  *alias,
-                    char       **err_msg)
+static xmlrpc_value *
+fetch_register_build_args (xmlrpc_env *env,
+                           const char *activation_code,
+                           const char *email,
+                           const char *alias)
 {
-    const char *server;
-    char *url;
     struct utsname uname_buf;
     const char *hostname;
-    RCDTransfer *t;
-    RCDTransferProtocolHTTP *protocol;
-    const char *status;
-    const GByteArray *data;
-    gboolean success = TRUE;
-
-    if (err_msg)
-        *err_msg = NULL;
+    xmlrpc_value *value;
 
     if (uname (&uname_buf) < 0) {
         rc_debug (RC_DEBUG_LEVEL_WARNING,
@@ -96,114 +89,119 @@ rcd_fetch_register (const char  *activation_code,
     else
         hostname = uname_buf.nodename;
 
-    server = getenv ("RCD_ACTIVATION_ROOT");
-    if (!server) {
-        /*
-         * If premium services are enabled, we want to activate against our
-         * running server.  If not, then the user is using the Red Carpet free
-         * service and wants to activate to get RCX service, and we use that
-         * URL.
-         */
+    value = xmlrpc_struct_new (env);
+    XMLRPC_FAIL_IF_FAULT (env);
 
-        if (rcd_prefs_get_premium ())
-            server = rcd_prefs_get_host ();
-        else
-            server = RCX_ACTIVATION_ROOT;
-    }
-
-    /*
-     * If we're activating, we don't have an orgtoken; that information is
-     * tied to the activation code.
-     */
     if (!activation_code) {
         g_assert (rcd_prefs_get_org_id ());
-        url = g_strdup_printf ("%s/register.php?orgtoken=%s&hostname=%s",
-                               server, rcd_prefs_get_org_id (), hostname);
+        RCD_XMLRPC_STRUCT_SET_STRING (env, value,
+                                      "orgtoken",
+                                      rcd_prefs_get_org_id ());
+        XMLRPC_FAIL_IF_FAULT (env);
+    } else {
+        RCD_XMLRPC_STRUCT_SET_STRING (env, value,
+                                      "activation_code",
+                                      activation_code);
+        XMLRPC_FAIL_IF_FAULT (env);
     }
-    else {
-        url = g_strdup_printf ("%s/register.php?hostname=%s",
-                               server, hostname);
-    }
-
-    t = rcd_transfer_new (url, 0, NULL);
-    g_free (url);
-
-    /* If the protocol isn't HTTP, forget about it */
-    /* FIXME: Should we send out a warning here? */
-    if (!t->protocol || strcmp (t->protocol->name, "http") != 0)
-        return FALSE;
-
-    protocol = (RCDTransferProtocolHTTP *) t->protocol;
-
-    rcd_transfer_protocol_http_set_request_header (
-        protocol, "X-RC-MID", rcd_prefs_get_mid ());
-
-    rcd_transfer_protocol_http_set_request_header (
-        protocol, "X-RC-Secret", rcd_prefs_get_secret ());
-
-    if (activation_code) {
-        rcd_transfer_protocol_http_set_request_header (
-            protocol, "X-RC-Activation", activation_code);
-    }
-
+ 
     if (email) {
-        rcd_transfer_protocol_http_set_request_header (
-            protocol, "X-RC-Email", email);
+        RCD_XMLRPC_STRUCT_SET_STRING (env, value,
+                                      "email",
+                                      email);
+        XMLRPC_FAIL_IF_FAULT (env);
     }
-
+ 
     if (alias) {
-        rcd_transfer_protocol_http_set_request_header (
-            protocol, "X-RC-Alias", alias);
+        RCD_XMLRPC_STRUCT_SET_STRING (env, value,
+                                      "alias",
+                                      alias);
+        XMLRPC_FAIL_IF_FAULT (env);
+    }
+ 
+cleanup:
+    if (env->fault_occurred) {
+        xmlrpc_DECREF (value);
+        value = NULL;
+    }
+ 
+    return value;
+}
+
+static gboolean
+register_cb (RCWorld *world, gpointer user_data)
+{
+    RCDWorldRemote *remote = RCD_WORLD_REMOTE (world);
+    xmlrpc_value *value = user_data;
+    xmlrpc_env env;
+    xmlrpc_server_info *server = NULL;
+
+    xmlrpc_env_init (&env);
+
+    server = rcd_xmlrpc_get_server (&env, remote->activation_root_url);
+    XMLRPC_FAIL_IF_FAULT (&env);
+
+    xmlrpc_server_info_set_auth (&env, server,
+                                 rcd_prefs_get_mid (),
+                                 rcd_prefs_get_secret ());
+    XMLRPC_FAIL_IF_FAULT (&env);
+
+    /* FIXME: Return value */
+    xmlrpc_client_call_server_params (&env, server,
+                                      "rcserver.activate", value);
+ 
+cleanup:
+    if (env.fault_occurred) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING, "Unable to activate with '%s': %s",
+                  remote->activation_root_url, env.fault_string);
     }
 
-    data = rcd_transfer_begin_blocking (t);
+    xmlrpc_env_clean (&env);
+    
+    if (value)
+        xmlrpc_DECREF (value);
 
-    status = rcd_transfer_protocol_http_get_response_header (protocol,
-                                                             "X-RC-Status");
-    if (!status || atoi (status) != 1) {
-        const char *msg;
+    if (server)
+        xmlrpc_server_info_free (server);
+ 
+    return TRUE;
+}
+ 
+xmlrpc_value *
+rcd_fetch_register (xmlrpc_env *opt_env,
+                    const char *activation_code,
+                    const char *email,
+                    const char *alias)
+{
+    xmlrpc_env env;
+    xmlrpc_value *retval = NULL;
+    xmlrpc_value *value = NULL;
 
-        if (rcd_transfer_get_error (t))
-            msg = rcd_transfer_get_error_string (t);
-        else {
-            msg = rcd_transfer_protocol_http_get_response_header (protocol,
-                                                                  "X-RC-Error");
-        }
+    if (!opt_env)
+        xmlrpc_env_init (&env);
+    else
+        env = *opt_env;
 
-        if (msg) {
-            rc_debug (RC_DEBUG_LEVEL_WARNING,
-                      "Unable to register with server: %s", msg);
-        }
-        else {
-            rc_debug (RC_DEBUG_LEVEL_WARNING,
-                      "Unable to register with server");
-        }
+    value = fetch_register_build_args (&env, activation_code, email, alias);
+    XMLRPC_FAIL_IF_FAULT (&env);
 
-        if (err_msg)
-            *err_msg = g_strdup (msg);
+    rc_world_multi_foreach_subworld_by_type (RC_WORLD_MULTI (rc_get_world ()),
+                                             RCD_TYPE_WORLD_REMOTE,
+                                             register_cb, value);
+cleanup:
+    if (env.fault_occurred)
+        retval = NULL;
+    else
+        retval = xmlrpc_build_value (&env, "()"); /* FIXME? */
 
-        success = FALSE;
-    }
-    else {
-        const char *new_host;
+    if (!opt_env)
+        xmlrpc_env_clean (&env);
 
-        rc_debug (RC_DEBUG_LEVEL_INFO, "System registered successfully");
+    if (value)
+        xmlrpc_DECREF (value);
 
-        new_host =
-            rcd_transfer_protocol_http_get_response_header (protocol,
-                                                            "X-RC-Host");
-
-        if (new_host) {
-            rc_debug (RC_DEBUG_LEVEL_INFO, "Setting new host to %s", new_host);
-            rcd_prefs_set_host (new_host);
-            rcd_prefs_set_premium (TRUE);
-        }
-    }
-
-    g_object_unref (t);
-
-    return success;
-} /* rcd_fetch_register */
+    return retval;
+}
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 

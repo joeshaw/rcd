@@ -40,6 +40,7 @@
 #include "rcd-shutdown.h"
 #include "rcd-rpc.h"
 #include "rcd-rpc-util.h"
+#include "rcd-xmlrpc.h"
 
 static xmlrpc_value *
 system_ping(xmlrpc_env   *env,
@@ -290,53 +291,26 @@ system_activate (xmlrpc_env   *env,
                  void         *user_data)
 {
     char *activation_code, *email;
-    gboolean success = FALSE;
-    char *err_msg = NULL;
+    char *alias = NULL;
+    int param_count;
+    xmlrpc_value *value = NULL;
 
-    xmlrpc_parse_value (env, param_array, "(ss)", &activation_code, &email);
+    param_count = xmlrpc_array_size (env, param_array);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    success = rcd_fetch_register (activation_code, email, NULL, &err_msg);
-
-    if (err_msg) {
-        xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_CANT_ACTIVATE,
-                                        "%s", err_msg);
-        g_free (err_msg);
-    }
-
-cleanup:
-    if (env->fault_occurred)
-        return NULL;
-
-    return xmlrpc_build_value (env, "i", success);
-}
-
-static xmlrpc_value *
-system_activate_with_alias (xmlrpc_env   *env,
-                            xmlrpc_value *param_array,
-                            void         *user_data)
-{
-    char *activation_code, *email, *alias;
-    gboolean success = FALSE;
-    char *err_msg = NULL;
-
-    xmlrpc_parse_value (env, param_array, "(sss)",
-                        &activation_code, &email, &alias);
+    if (param_count == 2)
+        xmlrpc_parse_value (env, param_array, "(ss)", &activation_code, &email);
+    else
+        xmlrpc_parse_value (env, param_array, "(sss)",
+                            &activation_code, &email, &alias);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    success = rcd_fetch_register (activation_code, email, alias, &err_msg);
-
-    if (err_msg) {
-        xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_CANT_ACTIVATE,
-                                        "%s", err_msg);
-        g_free (err_msg);
-    }
+    value = rcd_fetch_register (env, activation_code, email, alias);
+    XMLRPC_FAIL_IF_FAULT (env);
 
 cleanup:
-    if (env->fault_occurred)
-        return NULL;
 
-    return xmlrpc_build_value (env, "i", success);
+    return value;
 }
 
 struct RecurringInfo {
@@ -616,9 +590,6 @@ rcd_rpc_system_register_methods(void)
                              "superuser", NULL);
     rcd_rpc_register_method ("rcd.system.activate",
                              system_activate,
-                             "superuser", NULL);
-    rcd_rpc_register_method ("rcd.system.activate_with_alias",
-                             system_activate_with_alias,
                              "superuser", NULL);
     rcd_rpc_register_method ("rcd.system.get_recurring",
                              system_get_recurring,

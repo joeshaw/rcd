@@ -48,6 +48,7 @@ rcd_world_remote_finalize (GObject *obj)
     RCDWorldRemote *remote = RCD_WORLD_REMOTE (obj);
 
     g_free (remote->contact_email);
+    g_free (remote->activation_root_url);
     g_free (remote->distributions_file);
     g_free (remote->mirrors_file);
     g_free (remote->licenses_file);
@@ -571,6 +572,11 @@ extract_service_info (RCDWorldRemote *remote,
         remote->premium_service = TRUE;
     g_free (tmp);
 
+    remote->activation_root_url = xml_get_prop (root, "activation_root_url");
+
+    if (!remote->activation_root_url)
+        remote->activation_root_url = g_strdup (service->url);
+
     remote->distributions_file = xml_get_prop (root, "distributions_file");
     remote->mirrors_file = xml_get_prop (root, "mirrors_file");
     remote->licenses_file = xml_get_prop (root, "licenses_file");
@@ -600,6 +606,10 @@ rcd_world_remote_parse_channels_xml (RCDWorldRemote *remote,
     RCPending *pending = NULL;
 
     extract_service_info (remote, buffer, buffer_len);
+
+    if (remote->premium_service && rcd_prefs_get_org_id ()) {
+        rcd_fetch_register (NULL, NULL, NULL, NULL);
+    }
 
     if (remote->distributions_file)
         rcd_world_remote_fetch_distributions (remote);
