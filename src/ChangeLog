@@ -1,3 +1,10 @@
+2002-12-04  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-unix-server.c (read_data): If our iochannel has an error
+	condition set, free our handle and stop watching the channel.
+	(conn_accept): Watch for non-standard conditions (G_IO_ERR,
+	G_IO_HUP, G_IO_NVAL) on our iochannel.
+
 2002-12-03  Joe Shaw  <joe@ximian.com>
 
 	* rcd-fetch.c (rcd_fetch_register): After activating, if the

@@ -104,6 +104,14 @@ read_data(GIOChannel *iochannel,
         read_cred(iochannel, handle);
 #endif
 
+    /* If our channel has an error condition associated with it,
+       free the handle and stop watching that iochannel. */
+    if (condition & ~G_IO_IN) {
+        g_byte_array_free(handle->data, TRUE);
+        g_free(handle);
+        return FALSE;
+    }
+
     err = g_io_channel_read (iochannel,
                              read_buf,
                              sizeof (read_buf),
@@ -122,6 +130,12 @@ read_data(GIOChannel *iochannel,
     if (err != G_IO_ERROR_NONE) {
         g_byte_array_free(handle->data, TRUE);
 
+        return FALSE;
+    }
+
+    if (handle->data->len == 0) {
+        g_byte_array_free(handle->data, TRUE);
+        g_free(handle);
         return FALSE;
     }
 
@@ -192,7 +206,7 @@ try_again:
 
     conn_chan = g_io_channel_unix_new (conn_fd);
     g_io_add_watch (conn_chan, 
-                    G_IO_IN,
+                    G_IO_IN | G_IO_ERR | G_IO_HUP | G_IO_NVAL,
                     (GIOFunc) read_data,
                     handle);
     g_io_channel_unref (conn_chan);
