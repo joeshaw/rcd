@@ -177,6 +177,7 @@ rcd_autopull_find_targets (RCDAutopull *pull)
     }
 
     rc_world_foreach_system_upgrade (rc_get_world (),
+                                     FALSE,
                                      updates_cb,
                                      pull);
 
@@ -1235,7 +1236,7 @@ autopull_refresh (xmlrpc_env   *env,
                   xmlrpc_value *param_array,
                   void         *user_data)
 {
-    rcd_autopull_download_xml ();
+    xml_fetch_execute (NULL);
 
     return xmlrpc_build_value (env, "i", 0);
 }

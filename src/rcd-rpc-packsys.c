@@ -495,7 +495,7 @@ packsys_get_updates (xmlrpc_env   *env,
     info.array  = update_array;
     info.failed = FALSE;
 
-    rc_world_foreach_system_upgrade (world,
+    rc_world_foreach_system_upgrade (world, TRUE,
                                      build_updates_list,
                                      &info);
 
@@ -551,7 +551,7 @@ packsys_update_summary (xmlrpc_env   *env,
     for (i = 0; i < RC_IMPORTANCE_LAST; ++i)
         info.by_importance[i] = 0;
 
-    rc_world_foreach_system_upgrade (world,
+    rc_world_foreach_system_upgrade (world, TRUE,
                                      count_updates,
                                      &info);
 
