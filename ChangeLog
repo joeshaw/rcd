@@ -1,3 +1,9 @@
+2002-12-10  Joe Shaw  <joe@ximian.com>
+
+	* Makefile.am: Install the init script into
+	$(sysconfdir)/rc.d/init.d for ancient distros like RH 6.2 which
+	doesn't have $(sysconfdir)/init.d.
+
 2002-12-05  Aaron Weber  <aaron@ximian.com>
 
 	* rcd.conf.5: Adjust instructions on how to set the options. ("use

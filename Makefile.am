@@ -1,7 +1,7 @@
 SUBDIRS = src
 
 passwddir = $(sysconfdir)/ximian
-initdir = $(sysconfdir)/init.d
+initdir = $(sysconfdir)/rc.d/init.d
 logrotatedir = $(sysconfdir)/logrotate.d
 
 certdir = $(datadir)/rcd
