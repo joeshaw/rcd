@@ -1,3 +1,8 @@
+2003-04-28  Ian Peters  <itp@ximian.com>
+
+	* rcd.c (initialize_rc_world): unref the packman once we've
+	created the world
+
 2003-04-24  Joe Shaw  <joe@ximian.com>
 
 	* rcd-transaction.c (download_packages): Ref the pending object we

@@ -266,6 +266,7 @@ initialize_rc_world (void)
     }
 
     world = rc_world_new (packman);
+    g_object_unref (packman);
     rc_set_world (world);
 
     rc_world_set_synthetic_package_db (world, SYNTHETIC_PACKAGE_DB_PATH);
