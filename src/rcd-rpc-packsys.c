@@ -1598,6 +1598,10 @@ synth_package_from_update (RCPackage *real_package, RCPackageUpdate *update)
 
     package = rc_package_copy (real_package);
 
+    /* Clear out the RCPackageSpec and copy in the update's */
+    rc_package_spec_free_members (RC_PACKAGE_SPEC (package));
+    rc_package_spec_copy (RC_PACKAGE_SPEC (package), RC_PACKAGE_SPEC (update));
+
     /* Reset the channel */
     rc_channel_unref (package->channel);
     package->channel = NULL;

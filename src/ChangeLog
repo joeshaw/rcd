@@ -1,3 +1,9 @@
+2003-05-30  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-packsys.c (synth_package_from_update): After copying a
+	package, clear out its spec members and graft in the update's spec
+	members so the right version numbers are returned to clients.
+
 2003-05-29  Joe Shaw  <joe@ximian.com>
 
 	* rcd-prefs.c (rcd_prefs_set_host, rcd_prefs_set_premium): Add
