@@ -185,7 +185,6 @@ static GSList *
 refresh_all_channels (char **err_msg)
 {
     ChannelRefreshInfo *info;
-    RCDistroStatus status;
     GSList *id_list;
 
     if (err_msg)
@@ -243,15 +242,6 @@ refresh_all_channels (char **err_msg)
 
     return id_list;
 }    
-
-/* Called by the heartbeat function */
-static void
-refresh_channels_cb (gpointer user_data)
-{
-    GSList **ret_list = user_data;
-
-    *ret_list = refresh_all_channels (NULL);
-} /* refresh_channels_cb */
 
 static xmlrpc_value *
 packsys_refresh_all_channels (xmlrpc_env   *env,
@@ -2586,6 +2576,7 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
                             "superuser",
                             world);
 
-    rcd_heartbeat_register_func (refresh_channels_cb, NULL);
+    rcd_heartbeat_register_func ((RCDHeartbeatFunc) refresh_all_channels,
+                                 NULL);
 } /* rcd_rpc_packsys_register_methods */
 

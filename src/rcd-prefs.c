@@ -409,7 +409,13 @@ rcd_prefs_set_http10_enabled (gboolean enabled)
 gboolean
 rcd_prefs_get_require_verified_certificates (void)
 {
-    return gnome_config_get_bool (get_config_path ("/Network/require-verified-certificates=TRUE"));
+    gboolean enabled;
+
+    enabled = gnome_config_get_bool (get_config_path ("/Network/require-verified-certificates=TRUE"));
+
+    soup_set_ssl_ca_file (enabled ? SHAREDIR "/rcd-ca-bundle.pem" : NULL);
+
+    return enabled;
 }
 
 void

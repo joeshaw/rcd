@@ -1,3 +1,13 @@
+2003-04-10  Joe Shaw  <joe@ximian.com>
+
+	* rcd-prefs.c (rcd_prefs_get_required_certificates): Also set the
+	soup SSL CA file here, as the setting may have changed underneath
+	us in the rcd.conf file.  Fixes #41003.
+
+	* rcd-rpc-packsys.c: Nuke refresh_channels_cb() and just cast and
+	call refresh_all_channels() as the heartbeat function directly.
+	Should also fix a crash on heartbeat.
+
 2003-04-08  Joe Shaw  <joe@ximian.com>
 
 	* rcd-autopull.c (rcd_autopull_fetch_channel_list): Update for
