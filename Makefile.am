@@ -7,12 +7,15 @@ logrotatedir = $(sysconfdir)/logrotate.d
 certdir = $(datadir)/rcd
 cert_DATA = rcd.pem
 
+cadir = $(datadir)/rcd/ca
+ca_DATA = rcd-ca-bundle.pem
+
 gpgdir = $(datadir)/rcd
 gpg_DATA = rcd.gpg
 
 man_MANS = rcd.8 rcd.conf.5
 
-EXTRA_DIST = rcd.passwd rcd.init rcd.logrotate $(cert_DATA) $(gpg_DATA) $(man_MANS)
+EXTRA_DIST = rcd.passwd rcd.init rcd.logrotate $(cert_DATA) $(ca_DATA) $(gpg_DATA) $(man_MANS)
 
 install-data-hook:
 	if test '!' -d $(DESTDIR)$(passwddir); then \
