@@ -329,6 +329,7 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
         rc_debug (RC_DEBUG_LEVEL_WARNING, "Resolution failed!");
 
         dep_failure_info = get_dep_failure_info (resolver);
+#if 0
         rcd_transaction_log_to_server (pull->name,
                                        pull->all_to_add,
                                        pull->all_to_subtract,
@@ -339,7 +340,7 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
                                        dep_failure_info);
 
         rc_debug (RC_DEBUG_LEVEL_WARNING, "%s", dep_failure_info);
-
+#endif
         g_free (dep_failure_info);
                                        
         goto cleanup;
@@ -365,6 +366,7 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
         removal_failure_info = get_removal_failure_info (pull->all_to_subtract,
                                                          to_remove);
 
+#if 0
         rcd_transaction_log_to_server (pull->name,
                                        to_install,
                                        to_remove,
@@ -373,6 +375,7 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
                                        VERSION,
                                        FALSE,
                                        removal_failure_info);
+#endif
 
         rc_debug (RC_DEBUG_LEVEL_WARNING,
                   "%s", removal_failure_info);
@@ -410,6 +413,7 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
                   pull->name);
     }
 
+#if 0
     rcd_transaction_begin (pull->name,
                            rc_get_world (),
                            to_install,
@@ -420,6 +424,7 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
                            "localhost",
                            dummy_identity,
                            NULL, NULL, NULL);
+#endif
     
     rcd_identity_free (dummy_identity);
 

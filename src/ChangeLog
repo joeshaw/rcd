@@ -1,5 +1,10 @@
 2003-05-22  Joe Shaw  <joe@ximian.com>
 
+	* Makefile.am: Remove some module stuff tambet accidentally
+	committed.
+
+	* rcd-autopull.c: Comment out the rcd-transaction calls.
+
 	* rcd-fetch.c (rcd_fetch_channel_local): rc_map_file()
 	transparently decompresses the data for us, so just pass it into
 	rc_world_add_packages_from_buffer().
