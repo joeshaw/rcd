@@ -83,6 +83,7 @@ rcd_transaction_finalize (GObject *obj)
     RCDTransaction *transaction = (RCDTransaction *) obj;
 
     g_free (transaction->name);
+    g_free (transaction->id);
 
     rc_package_slist_unref (transaction->install_packages);
     g_slist_free (transaction->install_packages);
@@ -192,7 +193,7 @@ rcd_transaction_class_init (RCDTransactionClass *klass)
 static void
 rcd_transaction_init (RCDTransaction *transaction)
 {
-    transaction->id = 0;
+    transaction->id = NULL;
 
     transaction->world = rc_get_world ();
 
@@ -315,11 +316,11 @@ rcd_transaction_set_client_info (RCDTransaction *transaction,
     transaction->client_identity = rcd_identity_copy (client_identity);
 }
 
-void rcd_transaction_set_id (RCDTransaction *transaction, int id)
+void rcd_transaction_set_id (RCDTransaction *transaction, const char *id)
 {
     g_return_if_fail (RCD_IS_TRANSACTION (transaction));
 
-    transaction->id = id;
+    transaction->id = g_strdup (id);
 }
 
 int
@@ -1241,7 +1242,7 @@ transaction_xml (xmlrpc_env     *env,
     }
 
     if (transaction->id) {
-        RCD_XMLRPC_STRUCT_SET_INT(
+        RCD_XMLRPC_STRUCT_SET_STRING(
             env, xtrans, "trid",
             transaction->id);
         XMLRPC_FAIL_IF_FAULT (env);

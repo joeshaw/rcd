@@ -46,8 +46,7 @@ struct _RCDTransaction {
 
     char *name;
 
-    /* FIXME: This will change to string most probably. */
-    int id;
+    char *id;
 
     RCWorld *world;
 
@@ -119,7 +118,7 @@ void rcd_transaction_set_client_info      (RCDTransaction *transaction,
                                            RCDIdentity    *client_identity);
 
 void rcd_transaction_set_id               (RCDTransaction *transaction,
-                                           int id);
+                                           const char *id);
 
 int rcd_transaction_get_download_pending_id    (RCDTransaction *transaction);
 int rcd_transaction_get_transaction_pending_id (RCDTransaction *transaction);

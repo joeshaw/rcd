@@ -1043,8 +1043,7 @@ setup_transaction (xmlrpc_env   *env,
     xmlrpc_value *xmlrpc_install_packages;
     xmlrpc_value *xmlrpc_remove_packages;
     RCDTransactionFlags flags;
-    int trid;
-    char *client_id, *client_version;
+    char *trid, *client_id, *client_version;
     RCPackageSList *install_packages = NULL;
     RCPackageSList *remove_packages = NULL;
     RCDRPCMethodData *method_data;
@@ -1054,7 +1053,7 @@ setup_transaction (xmlrpc_env   *env,
     rcd_cache_expire_package_cache ();
 
     xmlrpc_parse_value(
-        env, param_array, "(AAiiss)",
+        env, param_array, "(AAisss)",
         &xmlrpc_install_packages, &xmlrpc_remove_packages,
         &flags, &trid, &client_id, &client_version);
     XMLRPC_FAIL_IF_FAULT(env);
@@ -1824,14 +1823,13 @@ setup_rollback (xmlrpc_env   *env,
     RCWorld *world = (RCWorld *) user_data;
     time_t when;
     RCDTransactionFlags flags;
-    int trid;
-    char *client_id, *client_version;
+    char *trid, *client_id, *client_version;
     RCRollbackActionSList *actions;
     RCPackageSList *install_packages = NULL, *remove_packages = NULL;
     RCDRPCMethodData *method_data;
     RCDTransaction *transaction = NULL;
 
-    xmlrpc_parse_value (env, param_array, "(iiiss)",
+    xmlrpc_parse_value (env, param_array, "(iisss)",
                         &when, &flags,
                         &trid, &client_id, &client_version);
     XMLRPC_FAIL_IF_FAULT (env);

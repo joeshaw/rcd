@@ -130,42 +130,45 @@ cleanup:
     return value;
 }
 
+typedef struct {
+    xmlrpc_value *params;
+    GSList       *activated_hosts;
+} RegisterInfo;
+
 static gboolean
 register_cb (RCWorld *world, gpointer user_data)
 {
     RCDWorldRemote *remote = RCD_WORLD_REMOTE (world);
-    xmlrpc_value *value = user_data;
+    RegisterInfo *info = user_data;
     xmlrpc_env env;
-    xmlrpc_server_info *server = NULL;
+    xmlrpc_server_info *server;
+    xmlrpc_value *value = NULL;
 
     xmlrpc_env_init (&env);
 
     server = rcd_xmlrpc_get_server (&env, remote->activation_root_url);
     XMLRPC_FAIL_IF_FAULT (&env);
 
-    xmlrpc_server_info_set_auth (&env, server,
-                                 rcd_prefs_get_mid (),
-                                 rcd_prefs_get_secret ());
-    XMLRPC_FAIL_IF_FAULT (&env);
+    value = xmlrpc_client_call_server_params (&env, server,
+                                              "rcserver.activate",
+                                              info->params);
+    xmlrpc_server_info_free (server);
 
-    /* FIXME: Return value */
-    xmlrpc_client_call_server_params (&env, server,
-                                      "rcserver.activate", value);
- 
 cleanup:
     if (env.fault_occurred) {
         rc_debug (RC_DEBUG_LEVEL_WARNING, "Unable to activate with '%s': %s",
                   remote->activation_root_url, env.fault_string);
+    } else {
+        xmlrpc_DECREF (value);
+        info->activated_hosts = g_slist_append (info->activated_hosts,
+                                                remote->activation_root_url);
     }
 
     xmlrpc_env_clean (&env);
-    
-    if (server)
-        xmlrpc_server_info_free (server);
- 
+
     return TRUE;
 }
- 
+
 xmlrpc_value *
 rcd_fetch_register (xmlrpc_env *opt_env,
                     const char *activation_code,
@@ -173,31 +176,47 @@ rcd_fetch_register (xmlrpc_env *opt_env,
                     const char *alias)
 {
     xmlrpc_env env;
+    RegisterInfo info;
+    GSList *tmp;
     xmlrpc_value *retval = NULL;
-    xmlrpc_value *value = NULL;
 
     if (!opt_env)
         xmlrpc_env_init (&env);
     else
         env = *opt_env;
 
-    value = fetch_register_build_args (&env, activation_code, email, alias);
+    info.activated_hosts = NULL;
+    info.params = fetch_register_build_args (&env, activation_code, email, alias);
     XMLRPC_FAIL_IF_FAULT (&env);
 
     rc_world_multi_foreach_subworld_by_type (RC_WORLD_MULTI (rc_get_world ()),
                                              RCD_TYPE_WORLD_REMOTE,
-                                             register_cb, value);
+                                             register_cb, &info);
+
+    retval = xmlrpc_build_value (&env, "()");
+    XMLRPC_FAIL_IF_FAULT (&env);
+
+    for (tmp = info.activated_hosts; tmp; tmp = tmp->next) {
+        xmlrpc_value *host = xmlrpc_build_value (&env, "s", tmp->data);
+        XMLRPC_FAIL_IF_FAULT (&env);
+
+        xmlrpc_array_append_item (&env, retval, host);
+        xmlrpc_DECREF (host);
+        XMLRPC_FAIL_IF_FAULT (&env);
+    }
+
 cleanup:
-    if (env.fault_occurred)
+    g_slist_free (info.activated_hosts);
+    if (info.params)
+        xmlrpc_DECREF (info.params);
+
+    if (env.fault_occurred && retval != NULL) {
+        xmlrpc_DECREF (retval);
         retval = NULL;
-    else
-        retval = xmlrpc_build_value (&env, "()"); /* FIXME? */
+    }
 
     if (!opt_env)
         xmlrpc_env_clean (&env);
-
-    if (value)
-        xmlrpc_DECREF (value);
 
     return retval;
 }

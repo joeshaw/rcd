@@ -1,3 +1,18 @@
+2003-08-27  Tambet Ingo  <tambet@ximian.com>
+
+	* rcd-fetch.c (rcd_fetch_register): 
+	(register_cb): Make activations work, don't leak memory.
+
+	* rcd-transaction.c (rcd_transaction_finalize): Free transaction id.
+	(rcd_transaction_init):  Change transaction id type to char.
+	(rcd_transaction_set_id): Ditto.
+	(transaction_xml): Ditto.
+
+	* rcd-transaction.h: Ditto.
+
+	* rcd-rpc-packsys.c (setup_transaction): Ditto.
+	(setup_rollback): Ditto.
+
 2003-08-26  Joe Shaw  <joe@ximian.com>
 
 	* rcd-world-remote.c: Invalidate cache entries if various metadata
