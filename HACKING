@@ -47,7 +47,7 @@ through the hell of building this stuff yourself.
       libtoolize --force --copy
       aclocal
       autoheader
-      automake --gnu
+      automake --gnu --add-missing --copy
       autoconf
       ./configure --prefix=/opt/rcd --enable-libxml2-backend \
          --disable-abyss-server --disable-cgi-server \
