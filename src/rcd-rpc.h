@@ -52,4 +52,8 @@ void     rcd_rpc_remote_server_stop  (void);
 
 void rcd_rpc_init (void);
 
+xmlrpc_value *rcd_rpc_call_method (xmlrpc_env   *env,
+                                   const char   *method_name,
+                                   xmlrpc_value *param_array);
+
 #endif /* __RCD_RPC_H__ */

@@ -542,3 +542,38 @@ rcd_rpc_init(void)
     /* Register a shutdown function for the soup server (if it's started) */
     rcd_shutdown_add_handler (soup_shutdown_cb, NULL);
 } /* rcd_rpc_init */
+
+xmlrpc_value *
+rcd_rpc_call_method (xmlrpc_env   *env,
+                     const char   *method_name,
+                     xmlrpc_value *param_array)
+{
+    RCDIdentity *identity = NULL;
+    RCDRPCMethodData *method_data;
+    xmlrpc_value *value;
+
+    rc_debug (RC_DEBUG_LEVEL_DEBUG, "Handling local RPC call");
+
+    identity = rcd_identity_new ();
+    identity->username = g_strdup ("root");
+    identity->privileges = rcd_privileges_from_string ("superuser");
+
+    method_data = g_new0 (RCDRPCMethodData, 1);
+    method_data->host = "local";
+    method_data->identity = identity;
+
+    current_method_data = method_data;
+
+    value = xmlrpc_registry_dispatch_call (env, registry,
+                                           (char *) method_name,
+                                           param_array);
+
+    current_method_data = NULL;
+
+    rcd_identity_free (method_data->identity);
+    g_free (method_data);
+
+    rc_debug (RC_DEBUG_LEVEL_DEBUG, "Call processed");
+
+    return value;
+} /* rcd_rpc_call_method */

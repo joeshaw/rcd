@@ -1,3 +1,8 @@
+2003-09-11  Tambet Ingo  <tambet@ximian.com>
+
+	* rcd-rpc.c (rcd_rpc_call_method): Implement. A wrapper around
+	xmlrpc_registry_dispatch_call, which sets up method_data correctly.
+
 2003-09-10  Tambet Ingo  <tambet@ximian.com>
 
 	* rcd-recurring.c (rcd_recurring_clean): New. Remove recurring
