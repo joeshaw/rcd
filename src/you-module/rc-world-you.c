@@ -275,7 +275,7 @@ fetch_patches (RCChannel *channel, gpointer user_data)
 
     if (rcd_transfer_get_error (t)) {
         rc_debug (RC_DEBUG_LEVEL_CRITICAL,
-                  "Unable to downloaded channel list: %s",
+                  "Unable to download patch list: %s",
                   rcd_transfer_get_error_string (t));
         goto cleanup;
     }
@@ -316,7 +316,8 @@ rc_world_add_patches (RCWorld *world, gpointer user_data)
         RCChannel *channel = RC_WORLD_SYSTEM (world)->system_channel;
 
         patches = rc_you_wrapper_get_installed_patches (channel);
-    } else if (RCD_IS_WORLD_REMOTE (world)) {
+    } else if (RCD_IS_WORLD_REMOTE (world) &&
+               RCD_WORLD_REMOTE (world)->premium_service) {
         FetchPatchesInfo info;
 
         info.world = RCD_WORLD_REMOTE (world);

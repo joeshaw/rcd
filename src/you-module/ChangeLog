@@ -1,3 +1,10 @@
+2004-12-22  Tambet Ingo  <tambet@ximian.com>
+
+	* rc-world-you.c (rc_world_add_patches): Try to download patch list
+	only from premium services.
+	(fetch_patches): Fix the debug message. We're downloading patches,
+	not channels.
+
 2004-11-01  Tambet Ingo  <tambet@ximian.com>
 
 	* you-util.c (write_directory_files): Add newlines.
