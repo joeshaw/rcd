@@ -64,7 +64,8 @@ rcd_transfer_finalize (GObject *obj)
         g_timer_destroy (t->timer);
     g_free (t->error_string);
 
-    g_object_unref (t->pending);
+    if (t->pending)
+        g_object_unref (t->pending);
 
     if (parent_class->finalize)
         parent_class->finalize (obj);

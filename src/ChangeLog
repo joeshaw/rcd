@@ -1,3 +1,8 @@
+2002-06-07  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-transfer.c (rcd_transfer_finalize): Check for NULL to
+	avoid a run-time glib warning.
+
 2002-06-07  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-packsys.c:
