@@ -3,7 +3,7 @@
 /*
  * rcd-rpc-packsys.c
  *
- * Copyright (C) 2002 Ximian, Inc.
+ * Copyright (C) 2002-2003 Ximian, Inc.
  *
  */
 
@@ -2251,6 +2251,80 @@ packsys_world_sequence_numbers (xmlrpc_env   *env,
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
+struct DanglingReqInfo {
+    RCWorld      *world;
+    xmlrpc_value *results;
+    xmlrpc_env   *env;
+};
+
+static void
+dangling_req_cb (RCPackage *package,
+                 gpointer   user_data)
+{
+    struct DanglingReqInfo *info = user_data;
+    xmlrpc_value *dangling_req_list = NULL;
+    int i;
+    
+    if (package->requires_a != NULL) {
+        for (i = 0; i < package->requires_a->len; ++i) {
+            RCPackageDep *dep = package->requires_a->data[i];
+            int num = rc_world_foreach_providing_package (info->world,
+                                                          dep,
+                                                          RC_WORLD_ANY_CHANNEL,
+                                                          NULL, NULL);
+            if (num == 0) {
+
+                xmlrpc_value *dep_value = xmlrpc_struct_new (info->env);
+
+                if (dangling_req_list == NULL) {
+                    xmlrpc_value *pkg_value;
+                    dangling_req_list = xmlrpc_build_value (info->env, "()");
+                    pkg_value = rcd_rc_package_to_xmlrpc (package,
+                                                          info->env);
+                    xmlrpc_array_append_item (info->env,
+                                              dangling_req_list,
+                                              pkg_value);
+                    xmlrpc_DECREF (pkg_value);
+                }
+
+                rcd_rc_package_dep_to_xmlrpc (dep, dep_value, info->env);
+                xmlrpc_array_append_item (info->env,
+                                          dangling_req_list,
+                                          dep_value);
+                xmlrpc_DECREF (dep_value);
+            }
+        }
+
+        if (dangling_req_list != NULL) {
+            xmlrpc_array_append_item (info->env,
+                                      info->results,
+                                      dangling_req_list);
+            xmlrpc_DECREF (dangling_req_list);
+        }
+    }
+}
+
+static xmlrpc_value *
+packsys_find_dangling_requires (xmlrpc_env   *env,
+                                xmlrpc_value *param_array,
+                                void         *user_data)
+{
+    struct DanglingReqInfo info;
+
+    info.world   = user_data;
+    info.results = xmlrpc_build_value (env, "()");
+    info.env     = env;
+
+    rc_world_foreach_package (info.world,
+                              RC_WORLD_ANY_CHANNEL,
+                              dangling_req_cb,
+                              &info);
+
+    return info.results;
+}
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
 void
 rcd_rpc_packsys_register_methods(RCWorld *world)
 {
@@ -2402,6 +2476,11 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
     rcd_rpc_register_method("rcd.packsys.world_sequence_numbers",
                             packsys_world_sequence_numbers,
                             "view",
+                            world);
+
+    rcd_rpc_register_method("rcd.packsys.find_dangling_requires",
+                            packsys_find_dangling_requires,
+                            "superuser",
                             world);
 
     rcd_heartbeat_register_func (refresh_channels_cb, NULL);

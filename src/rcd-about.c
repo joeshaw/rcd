@@ -3,7 +3,7 @@
 /*
  * rcd-about.c
  *
- * Copyright (C) 2002 Ximian, Inc.
+ * Copyright (C) 2002-2003 Ximian, Inc.
  *
  */
 
@@ -35,5 +35,5 @@ rcd_about_name (void)
 const char *
 rcd_about_copyright (void)
 {
-    return "Copyright (C) 2000-2002 Ximian Inc.";
+    return "Copyright (C) 2000-2003 Ximian Inc.";
 }
