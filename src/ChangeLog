@@ -1,3 +1,11 @@
+2003-10-31  Joe Shaw  <joe@ximian.com>
+
+	* rcd-world-remote.c (rcd_world_remote_finalize): Don't free the
+	identity stuff here.
+	(lookup_identity, foreach_identity): Get rid of these, they've
+	been moved to the module.
+	(rcd_world_remote_init): Don't create the identity backend.
+
 2003-10-30  Joe Shaw  <joe@ximian.com>
 
 	* rcd.c (shutdown_world): Remove some debugging spew for the

@@ -73,12 +73,6 @@ rcd_world_remote_finalize (GObject *obj)
     rcd_world_remote_clear_licenses (remote);
     rcd_world_remote_clear_news (remote);
 
-    rcd_identity_remove_backend (remote->identity_backend);
-    g_free (remote->identity_backend);
-
-    g_slist_foreach (remote->identities, (GFunc) rcd_identity_free, NULL);
-    g_slist_free (remote->identities);
-
     if (G_OBJECT_CLASS (parent_class)->finalize)
         G_OBJECT_CLASS (parent_class)->finalize (obj);
 }
@@ -147,36 +141,6 @@ rcd_world_remote_assemble (RCWorldService *service, GError **error)
     return TRUE;
 }
 
-static RCDIdentity *
-lookup_identity (RCDIdentityBackend *backend, const char *username)
-{
-    RCDWorldRemote *remote = RCD_WORLD_REMOTE (backend->user_data);
-    GSList *iter;
-
-    for (iter = remote->identities; iter; iter = iter->next) {
-        RCDIdentity *identity = iter->data;
-
-        if (!strcmp (identity->username, username))
-            return rcd_identity_copy (identity);
-    }
-
-    return NULL;
-}
-
-static void
-foreach_identity (RCDIdentityBackend *backend, RCDIdentityFn fn,
-                  gpointer user_data)
-{
-    RCDWorldRemote *remote = RCD_WORLD_REMOTE (backend->user_data);
-    GSList *iter;
-
-    for (iter = remote->identities; iter; iter = iter->next) {
-        RCDIdentity *identity = iter->data;
-
-        fn (identity, user_data);
-    }
-}    
-
 static void
 rcd_world_remote_class_init (RCDWorldRemoteClass *klass)
 {
@@ -205,13 +169,6 @@ rcd_world_remote_class_init (RCDWorldRemoteClass *klass)
 static void
 rcd_world_remote_init (RCDWorldRemote *remote)
 {
-    remote->identity_backend = rcd_identity_backend_new (FALSE);
-    remote->identity_backend->is_editable = FALSE;
-    remote->identity_backend->user_data = remote;
-    remote->identity_backend->lookup_fn = lookup_identity;
-    remote->identity_backend->foreach_fn = foreach_identity;
-
-    rcd_identity_add_backend (remote->identity_backend);
 }
 
 GType
