@@ -1,3 +1,22 @@
+2003-02-13  Joe Shaw  <joe@ximian.com>
+
+	This commit adds support for consolehelper, so we can start rcd as
+	a regular user (with sufficient privileges).
+
+	* Makefile.am: Add rcd.console.in, rcd.pam.rh7 and rcd.pam.rh8 to
+	EXTRA_DIST.  Install them conditionally on what usermode support
+	was passed in at configure-time.
+
+	* configure.in: Add --with-usermode-type, write our rcd.console.
+
+	* rcd.console.in: Added, this file goes into
+	/etc/security/console.apps.
+
+	* rcd.pam.rh7: pam.d file which should work on RH 7.x.
+
+	* rcd.pam.rh8: pam.d file which should work on RH 8.0 and probably
+	newer Mandrakes.
+
 2003-02-04  Joe Shaw  <joe@ximian.com>
 
 	* configure.in: 1.2.0

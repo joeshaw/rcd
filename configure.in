@@ -196,6 +196,23 @@ else
   AC_ERROR([Unsupported init script type])
 fi
 
+AC_ARG_WITH(usermode-type,
+  [  --with-usermode-type=TYPE (redhat7, redhat8)],
+  with_usermode_type="$withval",
+  with_usermode_type="none")
+
+AM_CONDITIONAL(USERMODE, false)
+AM_CONDITIONAL(USERMODE_REDHAT7, false)
+AM_CONDITIONAL(USERMODE_REDHAT8, false)
+
+if test "x$with_usermode_type" = "xredhat7"; then
+  AM_CONDITIONAL(USERMODE, true)
+  AM_CONDITIONAL(USERMODE_REDHAT7, true)
+elif test "x$with_usermode_type" = "xredhat8"; then
+  AM_CONDITIONAL(USERMODE, true)
+  AM_CONDITIONAL(USERMODE_REDHAT8, true)
+fi
+
 ### build makefiles
 
 AC_OUTPUT([
@@ -205,6 +222,7 @@ src/rcd-buddy
 rcd.init.redhat
 rcd.init.suse
 rcd.init.debian
+rcd.console
 rcd.pc
 ])
 
@@ -225,6 +243,7 @@ Configuration:
   Shared ONLY LIBS:     ${SHARED_ONLY}
 
   Init script type:     ${with_init_script_type}
+  Usermode type:        ${with_usermode_type}
 
 "
 
