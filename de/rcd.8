@@ -1,0 +1,121 @@
+.\" Zur Meldung von Fehlern dieser Software besuchen Sie bitte http://bugzilla.ximian.com
+.TH "rcd" "8" "1.0" "Ximian, Inc. 2002" "Dämon der Software-Verwaltung"
+.SH "NAME"
+.LP 
+rcd \- Der Backend-Dämon für rug, der Befehlszeilenversion des Ximian Red Carpet Software\-Verwaltungswerkzeuges.
+.SH "SYNTAX"
+.LP
+/etc/init.d/rcd [\fIstart|stop|restart\fR] \fI<Optionen>\fR
+.br
+rcd \fI<Optionen>\fR
+.SH "BESCHREIBUNG"
+.LP 
+Dieser Dämon führt die Red Carpet Software\-Verwaltungsfunktionen aus, die vom rug Software\-Verwaltungswerkzeug erfordert werden, einschließlich der Aktualisierung, Installation und dem Entfernen von Software, zusätzlich zu den grundlegenden Anfragen der Paketverwaltungsdatenbank des Systems. Im Allgemeinen müssen Sie nicht direkt mit rcd interagieren.
+.LP
+Der Dämon wird getrennt von der Steuerungsanwendung gehalten, so dass die Steuerungsanwendung zur Verwaltung von Remote\-Systemen verwendet werden kann. Siehe die rug\-Manpage für zusätzliche Informationen über diesen Prozess.
+.SH "OPTIONEN"
+.LP 
+\fBVERWENDUNGSOPTIONEN:\fR
+.TP 
+\fB\-f, \-\-config=\fR[Dateiname]
+Wählt eine alternative Konfigurationsdatei aus. Normalerweise verwendet der Dämon rcd.conf; siehe Manpage zu rcd.conf(8) für Einzelheiten über das Format der Konfigurationsdatei.
+.TP 
+\fB\-\-allow\-non\-root\fR
+Erlaubt die Ausführung von rcd durch einen Nicht\-Root\-Nutzer. Dies kann Fehler verursachen, wenn rug\-Nutzer versuchen, etwas anderes als die Paketdatenbank abzufragen.
+.TP 
+\fB\-d, \-\-debug=\fR[INT]
+Schaltet den Debug\-Modus an. Sie können eine Zahl zwischen 1 und 6 angeben, um zu bestimmen, wieviel Debug\-Ausgabe Sie möchten. 1 zeigt nur die Nachrichten mit höchster Priorität an und 6 zeigt alle Nachrichten an. Die Auswahl von null verursacht, dass der Debug\-Modus überhaupt keine Nachrichten anzeigt. Die Voreinstellung ist 4.
+.TP 
+\fB\-n, \-\-non\-daemon\fR
+Führt den Dämon nicht im Hintergrund aus.
+.TP 
+\fB\-\-no\-network\fR
+Verbindet nicht zum Netzwerk und lädt keine Daten vom Server herunter bis das Taktfrequenz\-Intervall oder der Befehl \fBrug refresh\fR ausgeführt wird.
+.TP 
+\fB\-o, \-\-download\-distro\fR
+Lädt die neuen Distributionsinformationen sofort vom Server herunter.
+.TP
+\fB\-i, \-\-ipaddress=\fR[IP-Adresse]
+Bindet den Remote\-Server nur an die angegebene IP\-Adresse. Dies ist für Systeme, die mehr als eine IP\-Adresse bereitstellen und es bedeutet, dass der Server nur an der IP\-Adresse, die Sie wählen, verfügbar ist, anstatt an allen Adressen, die zu dem System führen.
+.TP 
+\fB\-p, \-\-port=\fR[Portnummer]
+Hört auf Remote\-Verbindungen an dem angegebenen Port.
+.TP 
+\fB\-m, \-\-no\-modules\fR
+Lädt keine optionalen Module.
+.TP 
+\fB\-r, \-\-no\-remote\fR
+Hört nicht auf Remote\-Verbindungen. Das bedeutet, dass der Dämon nur vom lokalen System aus gesteuert werden kann.
+.TP 
+\fB\-s, \-\-syslog=\fR[INT]
+Bestimmt den Umfang der Protokollinformationen von 0 (keine) bis 6 (viel). Die Voreinstellung ist 4.
+.TP 
+\fB\-\-undump=\fR[Dateiname]
+Initialisiert den Dämon von einer Dump\-Datei; Dump\-Dateien können von cur_to_xml oder von libredcarpet Beispielen erhalten werden.
+.LP
+\fBHILFE\-OPTIONEN\fR
+.TP 
+\fB\-\-help, \-?\fR
+Gibt Hilfe\-Informationen aus und beendet.
+.TP 
+\fB\-\-usage\fR
+Gibt Verwendungsnachricht aus und beendet.
+.TP
+\fB\-\-version\fR
+Gibt Versionsinformationen aus und beendet.
+.SH "DATEIEN"
+.TP 
+\fI/etc/ximian/rcd.conf\fR
+Konfigurationsdatei. Optionen wie Proxy\- und Cache\-Einstellungen können direkt mit dieser Datei oder mit dem \fBrug set\fR Befehl angepasst werden. Diese Datei wird in der Manpage rcd.conf(5) dokumentiert. Beachten Sie, dass der Remote\-Server nicht in dieser Datei eingestellt wird.
+
+.TP 
+\fI/etc/ximian/rc\-passwd\fR
+Passwort\-Datei. Diese Datei listet Benutzer, Passwörter für Remote\-Zugriff und Privilegien für verschiedene Aktionen auf.
+
+.TP 
+\fI/etc/init.d/rcd\fR 
+Initialisierungsskript. Es wird empfohlen, dass Sie dieses Skript zum Starten und Stoppen von rcd verwenden, anstatt es direkt auszuführen.
+
+.TP 
+\fI/var/log/rcd/rcd\-messages\fR
+Protokolldatei.
+
+.TP 
+\fI/var/log/rcd/rcd\-package\-history\fR
+Transaktionshistorie. Dies ist eine Aufzeichnung aller Paketinstallationen, \-entfernungen und \-aufrüstungen.
+
+.TP 
+\fI/var/lib/rcd\fP
+Gespeicherte Kanal\- und Paketdaten.
+
+.TP 
+\fI/var/lib/rcd/services.xml\fR
+Liste der Server, von denen rcd Software und Paketinformationen herunterladen wird.
+
+.TP 
+\fI/var/lib/redcarpet/subscriptions.xml\fP
+Informationen über Kanalabonnements.
+
+.TP 
+\fI/var/cache/redcarpet\fP
+Gespeicherte, heruntergeladene Daten. Umfasst Kanalsymbole, Paketdateien sowie Kanal\- und Paket\-Metadaten.
+
+.SH "BEISPIELE"
+Dieses Programm führt normalerweise als Root aus.
+.TP
+Zum Starten dieses Programms auf die Standard\-Weise:
+\fB/etc/init.d/rcd start\fR
+.TP 
+Alternativ können Sie das Programm direkt auführen:
+\fB/usr/sbin/rcd\fR
+.SH "AUTOREN"
+.LP 
+Copyright Ximian, Inc. 2002\-2003
+.br
+http://www.ximian.com
+.SH "SIEHE AUCH"
+.LP 
+rcd.conf(5), rcserver.conf(5), rug(1), rcman(1), rcreports(1), rce\-dump, rce\-init, rce\-restore, rcmirror(1) rcd\-mp\-server(8), rcd\-mp\-middleman(8), rcd\-mp\-client(8)
+.LP 
+Der grafische Red Carpet Client, red\-carpet, besitzt ein Handbuch, das über das GNOME\-Hilfesystem erreichbar ist. Wählen Sie Einträge aus dem Hilfe\-Menü innerhalb der Anwendung aus, um es zu lesen. Besuchen Sie http://ximian.com für zusätzliche Informationen über rcd und die gesamte Familie der Ximian Red Carpet Produkte und Dienste sowie über Evolution und andere Software von Ximian.
+Berichten Sie Probleme mit dieser Software oder ihrer Dokumentation unter http://bugzilla.ximian.com.

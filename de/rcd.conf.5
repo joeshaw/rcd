@@ -1,0 +1,159 @@
+.\" Berichten Sie Probleme mit dieser Software unter http://bugzilla.ximian.com
+.TH "rcd.config" "5" "1.0" "Ximian, Inc. 2002" "RCD-Konfigurationsdatei"
+.SH "NAME"
+rcd.conf \- Red Carpet Dämon (rcd) Konfigurationsdatei.
+.SH "BESCHREIBUNG"
+Der Red Carpet Dämon, rcd, verwendet eine systemweite Konfigurationsdatei für das Einstellen verschiedener Optionen, die mit seinen Operationen in Verbindung stehen. Sie können die Konfigurationsdatei direkt bearbeiten oder Optionen mit einem der rcd-Clients einstellen. Die beste Möglichkeit, dies vorzunehmen, ist die Verwendung des \fIrug set\fR Befehls. Lesen Sie die \fIrug\fR Manpage für zusätzliche Informationen.
+.SH "FORMAT DER KONFIGURATIONSDATEI"
+.LP 
+Die Konfigurationsdatei ist im Format der GNOME Konfigurationsdatei und ist den Windows .ini Dateien ähnlich. Einträge werden in Abschnitte gruppiert. Eine Abschnitt beginnt mit der Zeile:
+.LP 
+.I [Abschnitt]
+.LP 
+und wird bis zum nächsten Abschnitt fortgesetzt. Einträge in Abschnitten werden in Token/Wert\-Paaren angegeben, und zwar in der Form:
+.LP 
+.I entry=value
+.LP 
+Weder
+.I entry
+noch
+.I value
+sollten von Anführungszeichen umgeben sein.
+.SH "UNTERSTÜTZTE ABSCHNITTE UND EINTRÄGE"
+.LP 
+Zusätzliche rcd\-Clients oder Red Carpet Enterprise Module können ihre eigenen Abschnitte und entry/value\-Paare hinzufügen. Die grundlegende Liste der Abschnitte und Einträge wird im Folgenden beschrieben. Beachten Sie, dass die Zeilen in der Datei nicht immer exakt mit den Namen der Token, die mit dem \fBrug set\fR Befehl gesetzt wurden, übereinstimmen. Zum Beispiel wird \fBrug set proxy\-url\fR verwendet, um den Token "proxy" im Abschnitt [Network] zu setzen. Verwenden Sie \fBrug get\fR, um die Namen der Token, die Sie setzen können, zu sehen.
+
+.TP
+\fB[Cache]\fR
+Dieser Abschnitt enthält Einstellungen, die mit den rcd Download-Caches in Zusammenhang stehen.
+
+.IP 
+\fBenabled=[true | false]\fR
+.br 
+Bestimmt, ob rcd heruntergeladene Daten speichern sollte. Dies ist auf true (wahr) voreingestellt.
+
+.IP
+\fBdirectory=[Verzeichnis]\fR
+.br
+Bestimmt das Parent-Verzeichnis, in dem rcd die gespeicherten, heruntergeladenen Daten speichern sollte. Dies ist auf /var/cache/redcarpet voreingestellt. Dieser Token kann mit dem Einstellungsmechanismus von rcd gesetzt werden.
+
+.TP 
+\fB[MagicProxy]\fR
+Dieser Abschnitt beinhaltet die Einstellungen für das Dispatcher\-Werkzeug ("Mittelsmann" oder "Magischer Proxy"), das verwendet wird, um in komplexen und einschränkenden Firewall\-Situationen zu arbeiten. Er hat ein Token/Wert\-Paar:
+
+.IP 
+\fBmiddleman\-host=[Host]\fR
+.br 
+Der Hostwert sollte der Hostname des Systems, das als Mittelsmann agiert, sein. Wenn Sie das Mittelsmann-System selbst konfigurieren, dann sollte dieser Wert der Hostname des lokalen Systems sein. Dies ist nur der Hostname, keine URL, und beginnt nicht mit einem Protokoll.
+
+.TP 
+\fB[ModuleServerPoll]\fR
+Dieser Abschnitt wird nur mit Red Carpet Enterprise und dem rcd\-modules Paket verwendet. Dies legt das Intervall fest, in welchem der Dämon die Server\-seitige Warteschlange auf wiederkehrende Transaktionen oder angeforderte Updates überprüft. Er hat ein einziges Token/Wert\-Paar:
+
+.IP 
+\fBinterval=[Sekunden]\fR
+.br 
+Das Intervall in Sekunden zwischen den Updates der Transaktionswarteschlange. Verwenden Sie den Befehl \fBrug set server\-poll\-interval\fR, um diesen Wert zu verändern, und \fBrug get server\-poll\-interval\fR, um ihn anzuzeigen.
+
+.TP 
+\fB[Network]\fR
+Dieser Abschnitt enthält Einstellungen für die Netzwerk-Optionen von rcd, einschließlich zu welchem Server verbunden wird, welcher Proxy verwendet wird und wieviele gleichzeitige Downloads erlaubt sind.
+
+.IP 
+\fBhost=[URL]\fR
+.br 
+In rcd 1.5 oder höher nicht mehr verfügbar. Dieser Wert wird nur einmal für Upgrade-Zwecke eingelesen und dies erfolgt nur, wenn die Datei /var/lib/rcd/services.xml nicht existiert. Alle Server werden jetzt in dieser Datei gespeichert und wenn sie existiert, haben Änderungen an diesem Wert keine Auswirkungen. Anstatt diesen Wert zu ändern, müssen Sie die Befehle \fBrug service\-add\fR oder \fBrug service\-delete\fR verwenden.
+.IP
+\fBorg\-id=[Organisations-ID]\fR
+.br 
+Wenn Sie einen Red Carpet Enterprise Server nutzen, kann dieser Wert anstelle eines Aktivierungsschlüssels verwendet werden, um eine Maschine beim Server zu registrieren. Dies ist standardmäßig nicht eingestellt und wird ignoriert.
+.IP
+\fBproxy=[url]\fR
+.br 
+Die URL für einen Proxy. Dies sollte immer mit dem Protokoll https://, http://, socks4:// oder socks5:// beginnen und mit einem Doppelpunkt und einer Portnummer enden. Wenn Sie beispielsweise squid auf Ihrer lokalen Maschine ausführen, dann müssen Sie dies auf http://localhost:3128 setzen. Dies ist standardmäßig nicht eingestellt und wird ignoriert.
+.IP
+\fBproxy\-user=[Benutzername]\fR
+.br
+Für Proxies, die eine Legitimation erfordern, ist dies der verwendete Benutzername. Dies ist standardmäßig nicht eingestellt und wird ignoriert; dieser Token hat keine Auswirkungen, wenn \fBproxy\fR nicht gesetzt ist.
+.IP
+\fBproxy\-password=[Passwort]\fR
+.br
+Für Proxies, die eine Legitimation erfordern, ist dies das verwendete Passwort. Dies ist standardmäßig nicht eingestellt und wird ignoriert; dieser Token hat keine Auswirkungen, wenn \fBproxy\fR nicht gesetzt ist.
+.IP
+\fBhttp10=[true | false]\fR
+.br
+Diese Option bestimmt, ob rcd HTTP 1.0 oder 1.1 verwendet, um zu Servern zu verbinden. Diese Einstellung kann bei einigen unkooperativen Proxies hilfreich sein. Es ist auf false (falsch) voreingestellt.
+.IP
+\fBmax\-downloads=[Anzahl]\fR
+.br
+Diese Option bestimmt, wieviele gleichzeitige Paket-Downloads von rcd gestartet werden können. Benutzer mit langsameren Verbindungn sollten dies verringern, wohingegen Nutzer mit Verbindungen mit hohen Bandbreiten dies erhöhen können. Wird die Anzahl auf 0 gesetzt, gibt es keine Beschränkung und rcd wird so viele Verbindungen wie nötig erstellen. Die Option ist auf 5 voreingestellt.
+
+.TP 
+\fB[Server]\fR
+Dieser Abschnitt enthält Einstellungen für den Server von rcd.
+.IP 
+\fBremote\-enabled=[true | false]\fR
+.br
+Bestimmt, ob rcd auf Remote-Verbindungen (TCP) hören sollte. Dies ist auf true (wahr) voreingestellt.
+.IP
+\fBport=[Nummer]\fR
+.br
+Bestimmt den Port, an dem rcd auf Remote-Verbindungen (TCP) hören sollte. Dies ist auf 505 voreingestellt.
+.IP
+\fBbind\-ip=[IP\-Adresse]\fR
+.br
+Trifft nur auf Systeme zu, die über mehr als eine IP\-Adresse erreicht werden können. Wenn dieser Wert nicht eingestellt ist, wird rcd an alle IP-Adressen, die von dem System bedient werden, gebunden. Wenn Sie möchten, dass rcd nur an einer IP (zusätzlich zum localhost, wo es immer verfügbar ist) zur Verfügung steht, dann setzen Sie den Token auf diese Adresse.
+
+.TP
+\fB[System]\fR
+Dieser Abschnitt enthält Einstellungen zum Verhalten von rcd.
+.IP
+\fBcache\-age\-in\-days=[Anzahl]\fR
+.br
+Bestimmt die Anzahl der Tage, die ein Paket im Cache sein kann, bevor es entfernt wird. Dies ist auf 30 voreingestellt. Es hat keine Auswirkung, wenn \fBcache\-cleanup\fR nicht eingestellt ist.
+.IP
+\fBcache\-cleanup=[true | false]\fR
+.br 
+Bestimmt, ob der Paket-Cache gelöscht werden soll. Wenn dies ausgeschalten ist und das Caching aktiviert ist, werden Pakete im Cache-Verzeichnis solange gesammelt, bis sie manuell gelöscht werden. Die Voreinstellung ist true (wahr).
+.IP
+\fBcache\-size\-in\-mb=[Anzahl]\fR
+.br 
+Bestimmt die Gesamtgröße in Megabytes, die der Paket-Cache verbrauchen kann, bevor er gelöscht wird. Die Voreinstellung ist 300. Es hat keine Auswirkung, wenn \fBcache\-cleanup\fR nicht eingestellt ist.
+.IP
+\fBdebug\-level=[Nummer]\fR
+.br 
+Die Ebene, auf der zum Standard-Fehler protokolliert wird. Dies kann von 0 bis 6 reichen, wobei 6 extrem umfangreich ist. Diese Einstellung ist auf 4 voreingestellt.
+.IP
+\fBheartbeat=[Nummer]\fR
+.br 
+Bestimmt das Intervall, mit dem rcd neue Kanal\- und Paket\-Metadaten herunterlädt. Dies ist auf 7200 (2 Stunden) voreingestellt. Wird die Taktfrequenz auf 0 gesetzt, wird der Dämon nicht aktualisieren, es sei denn, er wird mit dem \fBrug refresh\fR Befehl dazu aufgefordert. Beachten Sie, dass dies nicht notwendigerweise das Gleiche ist, wie der server\-poll\-interval Wert.
+.IP
+\fBrollback=[true | false]\fR
+.br 
+Speichert detaillierte Informationen über die Pakethistorie und aktiviert den \fBrug rollback\fR Befehl für die Software\-Rücksetzung (siehe rug(1) für zusätzliche Informationen). Diese Option führt dazu, dass rcd zusätzliche Zeit und Festplattenspeicher für Transaktionen zum Aufrüsten und Entfernen einnimmt, obwohl es nicht so viel ist wie das Speichern von Archiven alter Pakete. Das Zurücksetzen funktioniert nur auf RPM\-basierten Systemen und die Pakete, zu denen Sie abrüsten, müssen auf dem Red Carpet Server zur Verfügung stehen.
+.IP
+\fBrequire\-signatures=[true | false]\fR
+.br 
+Bestimmt, ob Pakete, die installiert werden, eine GPG\-Unterschriftsprüfung bestehen müssen. Pakete, die aus irgendeinem Grund nicht schlüssig sind (gpg ist nicht installiert, öffentlicher Schlüssel ist nicht verfügbar, etc.), werden nicht installiert. Beachten Sie, dass rcd niemals Pakete installieren wird, bei denen die gpg\-Signatur ausdrücklich scheitert. Dies ist auf true (wahr) voreingestellt.
+.IP
+\fBserver\-poll\-interval=[Nummer]\fR
+.br
+Bestimmt das Intervall, mit dem rcd den Server auf neue Transaktionsinformationen überprüft. Dies ist nur relevant, wenn Sie Red Carpet Enterprise verwenden und das rcd\-modules Paket installiert haben. Der voreingestellte Wert ist 3600 (1 Stunde).
+.IP
+\fBsyslog\-level=[Nummer]\fR
+.br 
+Die Ebene, bei der in syslog protokolliert werden soll. Dies reicht von 0 bis 6, wobei 6 extrem umfangreich ist. Es ist auf 4 voreingestellt.
+
+.SH "AUTOREN"
+.LP 
+Copyright Ximian, Inc. 2002\-2003
+.br
+http://www.ximian.com
+
+.SH "SIEHE AUCH"
+.LP 
+rcd(8), rug(1), rcman(1), rcreports(1), rce\-dump, rce\-restore, rcmirror(1)
+.LP
+Der grafische Red Carpet Client, red\-carpet, besitzt ein Handbuch, das über das GNOME\-Hilfesystem erreichbar ist. Wählen Sie Einträge aus dem Hilfe\-Menü innerhalb der Anwendung aus, um es zu lesen. Besuchen Sie http://ximian.com für zusätzliche Informationen über rcd und die gesamte Familie der Ximian Red Carpet Produkte und Dienste sowie über Evolution und andere Software von Ximian.
+Berichten Sie Probleme mit dieser Software oder ihrer Dokumentation unter http://bugzilla.ximian.com.
+
