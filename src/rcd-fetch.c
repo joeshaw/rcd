@@ -102,6 +102,47 @@ rcd_fetch_register (void)
     g_object_unref (t);
 } /* rcd_fetch_register */
 
+void
+rcd_fetch_distro (void)
+{
+    char *url;
+    RCDTransfer *t;
+    GByteArray *data;
+    gboolean successful = FALSE;
+
+    url = g_strdup_printf ("%s/distributions.xml", rcd_prefs_get_host ());
+    t = rcd_transfer_new (url, 0, rcd_cache_get_normal_cache ());
+    g_free (url);
+
+    data = rcd_transfer_begin_blocking (t);
+
+    if (rcd_transfer_get_error (t)) {
+        rc_debug (RC_DEBUG_LEVEL_CRITICAL,
+                  "Unable to download supported distribution info; "
+                  "falling back: %s", rcd_transfer_get_error_string (t));
+        goto cleanup;
+    }
+
+    if (!rc_distro_parse_xml (data->data, data->len)) {
+        rc_debug (RC_DEBUG_LEVEL_CRITICAL,
+                  "Unable to parse supported distribution info; "
+                  "falling back");
+        goto cleanup;
+    }
+    else
+        successful = TRUE;
+
+cleanup:
+    g_object_unref (t);
+
+    if (data)
+        g_byte_array_free (data, TRUE);
+
+    /* Fall back onto compiled in distro info. */
+    if (!successful)
+        rc_distro_parse_xml (NULL, 0);
+} /* rcd_fetch_distro */
+
 static void
 write_file_contents (const char *filename, GByteArray *data)
 {

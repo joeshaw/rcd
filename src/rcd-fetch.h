@@ -36,6 +36,13 @@
 /* Register the daemon against the server, if we're in premium mode */
 void     rcd_fetch_register (void);
 
+/*
+ * Download the (un)supported/deprecated distro information from the server.
+ * This -must- be done before the RCWorld is initialized.  If we don't find
+ * it, we'll fall back to some built-in data.
+ */
+void     rcd_fetch_distro (void);
+
 /* 
    Download the channel list from the server, then
    add the channels corresponding to our disto to the global

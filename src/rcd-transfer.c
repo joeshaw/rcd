@@ -109,8 +109,6 @@ rcd_transfer_class_init (RCDTransferClass *klass)
 static void
 rcd_transfer_init (RCDTransfer *t)
 {
-    /* FIXME: Need to support proxies */
-
     t->error = RCD_TRANSFER_ERROR_NONE;
 }
 
@@ -432,8 +430,6 @@ rcd_transfer_begin_blocking (RCDTransfer *t)
         t, G_CALLBACK (blocking_file_data_cb), &closure);
     g_signal_handlers_disconnect_by_func (
         t, G_CALLBACK (blocking_file_done_cb), &closure);
-
-    /* FIXME: do something smart w/ the id here. */
 
     return closure.data;
 }

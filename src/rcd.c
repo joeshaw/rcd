@@ -489,11 +489,6 @@ main (int argc, const char **argv)
 
     option_parsing (argc, argv);
 
-    /* FIXME: needs to be done right */
-    if (!rc_distro_parse_xml (NULL, 0)) {
-        exit (-1);
-    }
-
     root_check ();
     if (! late_background)
         daemonize ();
@@ -531,6 +526,9 @@ main (int argc, const char **argv)
     /* Check to see if the password file is secure.
        If it isn't, a big warning will go out to the log file. */
     rcd_identity_password_file_is_secure ();
+
+    /* We have to fetch this before the RCWorld gets initialized. */
+    rcd_fetch_distro ();
     
     initialize_rc_world ();
     initialize_rpc ();

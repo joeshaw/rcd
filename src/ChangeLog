@@ -1,5 +1,17 @@
 2002-08-26  Joe Shaw  <joe@ximian.com>
 
+	* rcd-fetch.c (rcd_fetch_distro): Added.  Downloads
+	"distributions.xml" from the server, so we can dynamically change
+	things like what distributions are supported, which are
+	deprecated, etc.
+
+	* rcd.c (main): Fix the rc_distro_parse_xml() FIXME; add a call to
+	rcd_fetch_distro() to immediately before initializing the RCWorld.
+
+	* rcd-transfer.c: Remove some errant FIXMEs.
+
+2002-08-26  Joe Shaw  <joe@ximian.com>
+
 	* rcd-log.c (rcd_log_init): Remove the SIGHUP handler from here.
 
 	* rcd.c (daemonize): Add some asserts so we can be sure that we're
