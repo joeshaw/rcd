@@ -441,7 +441,7 @@ http_open (RCDTransfer *t)
 
         uri = soup_uri_new (proxy_url);
 
-        if (!uri) {
+        if (!uri || !uri->host) {
             char *err_str;
 
             /* 

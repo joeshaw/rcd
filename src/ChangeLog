@@ -1,3 +1,8 @@
+2004-02-12  Joe Shaw  <joe@ximian.com>
+
+	* rcd-transfer-http.c (http_open): When checking the proxy URL,
+	also check to make sure that the host is not NULL.
+
 2004-02-11  Tambet Ingo  <tambet@ximian.com>
 
 	* Makefile.am: Add libsoup libs to link line. These are already in
