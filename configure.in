@@ -168,23 +168,42 @@ AC_SUBST(SHARED_ONLY)
 AC_SUBST(RCD_CFLAGS)
 AC_SUBST(RCD_LIBS)
 
-RED_CARPET_BINDIR="${prefix}/bin"
-RED_CARPET_SBINDIR="${prefix}/sbin"
-
-AC_SUBST(RED_CARPET_BINDIR)
-AC_SUBST(RED_CARPET_SBINDIR)
-
+# Put the datadir into the rcd-buddy.in file.
 DDIR=`echo $datadir | sed -e "s,"'${prefix}'",$prefix,"`
 AC_SUBST(DDIR)
 
+AC_ARG_WITH(init-script-type,
+  [  --with-init-script-type=TYPE (redhat, suse, debian)],
+  with_init_script_type="$withval",
+  with_init_script_type="redhat")
+
+AM_CONDITIONAL(INIT_REDHAT, false)
+AM_CONDITIONAL(INIT_SUSE, false)
+AM_CONDITIONAL(INIT_DEBIAN, false)
+
+if test "x$with_init_script_type" = "xredhat"; then
+  INIT_SCRIPT=rcd.init.redhat
+  AM_CONDITIONAL(INIT_REDHAT, true)
+elif test "x$with_init_script_type" = "xsuse"; then
+  INIT_SCRIPT=rcd.init.suse
+  AM_CONDITIONAL(INIT_SUSE, true)
+elif test "x$with_init_script_type" = "xdebian"; then
+  INIT_SCRIPT=rcd.init.debian
+  AM_CONDITIONAL(INIT_DEBIAN, true)
+else
+  AC_ERROR([Unsupported init script type])
+fi
+
 ### build makefiles
 
-AC_OUTPUT([
+AC_OUTPUT(
 Makefile
 src/Makefile
 src/rcd-buddy
-rcd.init
-])
+rcd.init.redhat
+rcd.init.suse
+rcd.init.debian
+)
 
 echo "
 
@@ -201,6 +220,8 @@ Configuration:
   Static binary:        ${enable_static_binary}
 
   Shared ONLY LIBS:     ${SHARED_ONLY}
+
+  Init script type:     ${with_init_script_type}
 
 "
 

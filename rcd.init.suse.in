@@ -1,0 +1,105 @@
+#! /bin/sh
+# Default-Start:  3 4 5
+# Default-Stop:   0 1 2 6
+# Description:    Start Red Carpet Daemon
+### END INIT INFO
+
+# $Id$
+
+# Source SuSE config
+if [ -f /etc/rc.config ]; then
+  . /etc/rc.config
+else
+  PATH=/sbin:/bin:/usr/sbin:/usr/bin
+fi
+		
+. /etc/rc.status
+
+RCD_BIN=@prefix@/sbin/rcd
+test -x $RCD_BIN || exit 5
+
+# Shell functions sourced from /etc/rc.status:
+#      rc_check         check and set local and overall rc status
+#      rc_status        check and set local and overall rc status
+#      rc_status -v     ditto but be verbose in local rc status
+#      rc_status -v -r  ditto and clear the local rc status
+#      rc_failed        set local and overall rc status to failed
+#      rc_reset         clear local rc status (overall remains)
+#      rc_exit          exit appropriate to overall rc status
+
+# First reset status of this service
+rc_reset
+
+# Return values acc. to LSB for all commands but status:
+# 0 - success
+# 1 - misc error
+# 2 - invalid or excess args
+# 3 - unimplemented feature (e.g. reload)
+# 4 - insufficient privilege
+# 5 - program not installed
+# 6 - program not configured
+#
+# Note that starting an already running service, stopping
+# or restarting a not-running service as well as the restart
+# with force-reload (in case signalling is not supported) are
+# considered a success.
+
+case "$1" in
+    start)
+        echo -n "Starting Red Carpet Daemon"
+        ## Start daemon with startproc(8). If this fails
+        ## the echo return value is set appropriate.
+        startproc $RCD_BIN
+
+        # Remember status and be verbose
+        rc_status -v
+        ;;
+    stop)
+        echo -n "Shutting down Red Carpet Daemon"
+        ## Stop daemon with killproc(8) and if this fails
+        ## set echo the echo return value.
+
+        killproc -TERM $RCD_BIN
+
+        # Remember status and be verbose
+        rc_status -v
+        ;;
+    restart)
+        ## Stop the service and regardless of whether it was
+        ## running or not, start it again.
+        $0 stop
+        $0 start
+
+        # Remember status and be quiet
+        rc_status
+        ;;
+    force-reload)
+        ## Signal the daemon to reload its config. Most daemons
+        ## do this on signal 1 (SIGHUP).
+        ## If it does not support it, restart.
+
+        echo "Reload Red Carpet Daemon"
+        killproc -HUP $RCD_BIN
+        rc_status -v
+        ;;
+    reload)
+        ## Like force-reload, but if daemon does not support
+        ## signalling, do nothing (!)
+
+        # If it supports signalling:
+        echo -n "Reload Red Carpet Daemon"
+        killproc -HUP $RCD_BIN
+        rc_status -v
+        ;;
+    status)
+        echo -n "Checking for Red Carpet Daemon: "
+        checkproc $RCD_BIN
+        rc_status -v
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|status|restart|force-reload|reload|probe}"
+        exit 1
+        ;;
+esac
+rc_exit
+

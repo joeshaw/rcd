@@ -15,7 +15,20 @@ gpg_DATA = rcd.gpg
 
 man_MANS = rcd.8 rcd.conf.5
 
-EXTRA_DIST = rcd.passwd rcd.init rcd.logrotate $(cert_DATA) $(ca_DATA) $(gpg_DATA) $(man_MANS)
+EXTRA_DIST = rcd.passwd rcd.init.redhat rcd.init.suse rcd.init.debian \
+             rcd.logrotate $(cert_DATA) $(ca_DATA) $(gpg_DATA) $(man_MANS)
+
+if INIT_REDHAT
+init_file = rcd.init.redhat
+endif
+
+if INIT_SUSE
+init_file = rcd.init.suse
+endif
+
+if INIT_DEBIAN
+init_file = rcd.init.debian
+endif
 
 install-data-hook:
 	if test '!' -d $(DESTDIR)$(passwddir); then \
@@ -31,12 +44,14 @@ install-data-hook:
 
 	$(INSTALL_DATA) $(srcdir)/rcd.passwd $(DESTDIR)$(passwddir)/rcd.passwd.default
 
+
+
 	if test '!' -d $(DESTDIR)$(initdir); then \
 		$(mkinstalldirs) $(DESTDIR)$(initdir); \
 		chmod 0755 $(DESTDIR)$(initdir); \
 	fi
 
-	$(INSTALL_DATA) -m 0755 $(srcdir)/rcd.init $(DESTDIR)$(initdir)/rcd;
+	$(INSTALL_DATA) -m 0755 $(srcdir)/$(init_file) $(DESTDIR)$(initdir)/rcd;
 
 	if test '!' -d $(DESTDIR)$(logrotatedir); then \
 		$(mkinstalldirs) $(DESTDIR)$(logrotatedir); \

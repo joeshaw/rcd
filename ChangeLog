@@ -1,3 +1,14 @@
+2002-11-18  Joe Shaw  <joe@ximian.com>
+
+	* configure.in: Add a --with-init-script-type argument with Red
+	Hat-style, SuSE-style, and Debian-style init scripts.
+
+	* Makefile.am: Dist all of the init script templates and install
+	whichever one was set with configure.
+
+	* rcd.init.in: Removed, replaced with rcd.init.redhat.in,
+	rcd.init.suse.in, and rcd.init.debian.in.
+
 2002-11-16  Frank Belew  <frb@ximian.com>
 
 	* configure.in: added third argument to all the AC_DEFINE* to set
