@@ -26,6 +26,36 @@
 #ifndef __RCD_RPC_PREFS_H__
 #define __RCD_RPC_PREFS_H__
 
+#include <glib.h>
+#include <xmlrpc.h>
+
+typedef xmlrpc_value *(*RCDPrefGetConversionFunc) (xmlrpc_env   *,
+                                                   gpointer);
+typedef gpointer      (*RCDPrefSetConversionFunc) (xmlrpc_env   *,
+                                                   xmlrpc_value *);
+
+typedef gpointer      (*RCDPrefGetFunc) (void);
+typedef void          (*RCDPrefSetFunc) (gpointer);
+
+typedef enum _RCDPrefType RCDPrefType;
+
+enum _RCDPrefType {
+    RCD_PREF_STRING = 0,
+    RCD_PREF_BOOLEAN,
+    RCD_PREF_INT
+};
+
+void rcd_rpc_prefs_register_pref (const char     *pref_name,
+                                  RCDPrefType     pref_type,
+                                  RCDPrefGetFunc  get_pref_func,
+                                  RCDPrefSetFunc  set_pref_func);
+
+void rcd_rpc_prefs_register_pref_full (const char               *pref_name,
+                                       RCDPrefGetConversionFunc  get_conv_func,
+                                       RCDPrefGetFunc            get_pref_func,
+                                       RCDPrefSetConversionFunc  set_conv_func,
+                                       RCDPrefSetFunc            set_pref_func);
+
 void rcd_rpc_prefs_register_methods(void);
 
 #endif /* __RCD_RPC_PREFS_H__ */

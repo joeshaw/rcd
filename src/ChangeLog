@@ -1,5 +1,20 @@
 2002-08-05  Joe Shaw  <joe@ximian.com>
 
+	* rcd-rpc-prefs.c (pref_table): Make this dynamically allocated.
+	(get_pref, prefs_set_pref, prefs_set_pref): Update for the
+	dynamically allocated array.
+	(rcd_rpc_prefs_register_pref): Added.  Public function which
+	allows modules to register preferences.
+	(rcd_rpc_prefs_register_pref_full): Added.  Like above, but allows
+	the user to specify conversion functions instead of built in ones.
+	(rcd_rpc_prefs_register_methods): Register a bunch of standard
+	preferences.
+
+	* rcd-rpc-prefs.h: Move a lot of now publicly exported types and
+	functions here.
+
+2002-08-05  Joe Shaw  <joe@ximian.com>
+
 	* rcd-module.h: Added version, interface_major, and
 	interface_minor fields.
 

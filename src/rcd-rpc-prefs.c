@@ -26,8 +26,6 @@
 #include <config.h>
 #include "rcd-rpc-prefs.h"
 
-#include <xmlrpc.h>
-
 #include "rcd-prefs.h"
 #include "rcd-rpc.h"
 #include "rcd-rpc-util.h"
@@ -40,53 +38,18 @@ static gpointer      set_string_func  (xmlrpc_env *env, xmlrpc_value *value);
 static gpointer      set_boolean_func (xmlrpc_env *env, xmlrpc_value *value);
 static gpointer      set_int_func     (xmlrpc_env *env, xmlrpc_value *value);
 
-typedef xmlrpc_value *(*PrefGetConversionFunc) (xmlrpc_env   *env,
-                                                gpointer      value);
-typedef gpointer      (*PrefSetConversionFunc) (xmlrpc_env   *env, 
-                                                xmlrpc_value *value);
-
-typedef gpointer      (*PrefGetFunc) (void);
-typedef void          (*PrefSetFunc) (gpointer);
-
 typedef struct {
-    const char            *name;
+    const char               *name;
 
-    PrefGetConversionFunc  get_conv_func;
-    PrefGetFunc            get_pref_func;
+    RCDPrefGetConversionFunc  get_conv_func;
+    RCDPrefGetFunc            get_pref_func;
 
-    PrefSetConversionFunc  set_conv_func;
-    PrefSetFunc            set_pref_func;
-} RPCPrefTable;
+    RCDPrefSetConversionFunc  set_conv_func;
+    RCDPrefSetFunc            set_pref_func;
+} RCDPrefTable;
 
-static RPCPrefTable pref_table[] = {
-    { "cache-directory",
-      get_string_func,  (PrefGetFunc) rcd_prefs_get_cache_dir,
-      set_string_func,  (PrefSetFunc) rcd_prefs_set_cache_dir },
-
-    { "cache-enabled",
-      get_boolean_func, (PrefGetFunc) rcd_prefs_get_cache_enabled,
-      set_boolean_func, (PrefSetFunc) rcd_prefs_set_cache_enabled },
-
-    { "http-1.0",
-      get_boolean_func, (PrefGetFunc) rcd_prefs_get_http10_enabled,
-      set_boolean_func, (PrefSetFunc) rcd_prefs_set_http10_enabled },
-
-    { "heartbeat-interval",
-      get_int_func,     (PrefGetFunc) rcd_prefs_get_heartbeat_interval,
-      set_int_func,     (PrefSetFunc) rcd_prefs_set_heartbeat_interval },
-
-    { "debug-level",
-      get_int_func,     (PrefGetFunc) rcd_prefs_get_debug_level,
-      set_int_func,     (PrefSetFunc) rcd_prefs_set_debug_level },
-
-    { "syslog-level",
-      get_int_func,     (PrefGetFunc) rcd_prefs_get_syslog_level,
-      set_int_func,     (PrefSetFunc) rcd_prefs_set_syslog_level },
-
-    { 0 },
-};
-
-/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+static int pref_table_size = 0;
+static RCDPrefTable *pref_table = NULL;
 
 /* Functions to convert from a glib value to an xmlrpc value */
 static xmlrpc_value *
@@ -155,20 +118,20 @@ set_int_func (xmlrpc_env *env, xmlrpc_value *value)
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 static xmlrpc_value *
-get_pref (xmlrpc_env *env,
-          const char *pref_name)
+get_pref (xmlrpc_env *env, const char *pref_name)
 {
-    RPCPrefTable *p;
+    int i;
     xmlrpc_value *result;
 
-    for (p = pref_table; p->name; p++) {
+    for (i = 0; i < pref_table_size; i++) {
+        RCDPrefTable pt = pref_table[i];
         gpointer v;
 
-        if (g_strcasecmp (p->name, pref_name) != 0)
+        if (g_strcasecmp (pt.name, pref_name) != 0)
             continue;
 
-        v = p->get_pref_func ();
-        result = p->get_conv_func (env, v);
+        v = pt.get_pref_func ();
+        result = pt.get_conv_func (env, v);
 
         if (env->fault_occurred)
             return NULL;
@@ -206,23 +169,24 @@ prefs_set_pref (xmlrpc_env   *env,
 {
     char *pref_name;
     xmlrpc_value *value;
-    RPCPrefTable *p;
+    int i;
  
     xmlrpc_parse_value (env, param_array, "(sV)", &pref_name, &value);
     if (env->fault_occurred)
         return NULL;
 
-    for (p = pref_table; p->name; p++) {
+    for (i = 0; i < pref_table_size; i++) {
+        RCDPrefTable pt = pref_table[i];
         gpointer v;
 
-        if (g_strcasecmp (p->name, pref_name) != 0)
+        if (g_strcasecmp (pt.name, pref_name) != 0)
             continue;
 
-        v = p->set_conv_func (env, value);
+        v = pt.set_conv_func (env, value);
         if (env->fault_occurred)
             return NULL;
 
-        p->set_pref_func (v);
+        pt.set_pref_func (v);
 
         return xmlrpc_build_value (env, "i", 0);
     }
@@ -238,23 +202,24 @@ prefs_list_prefs (xmlrpc_env   *env,
                   xmlrpc_value *param_array,
                   void         *user_data)
 {
-    RPCPrefTable *p;
+    int i;
     xmlrpc_value *result = NULL;
 
     result = xmlrpc_build_value (env, "()");
     XMLRPC_FAIL_IF_FAULT (env);
 
-    for (p = pref_table; p->name; p++) {
+    for (i = 0; i < pref_table_size; i++) {
+        RCDPrefTable pt = pref_table[i];
         xmlrpc_value *pref_info;
         xmlrpc_value *value;
         xmlrpc_value *member;
 
         pref_info = xmlrpc_struct_new (env);
 
-        RCD_XMLRPC_STRUCT_SET_STRING (env, pref_info, "name", p->name);
+        RCD_XMLRPC_STRUCT_SET_STRING (env, pref_info, "name", pt.name);
         XMLRPC_FAIL_IF_FAULT (env);
 
-        value = get_pref (env, p->name);
+        value = get_pref (env, pt.name);
         g_assert (value && !env->fault_occurred);
 
         member = xmlrpc_build_value (env, "V", value);
@@ -276,8 +241,85 @@ cleanup:
 } /* prefs_list_prefs */
 
 void
+rcd_rpc_prefs_register_pref_full (const char  *pref_name,
+                                  RCDPrefGetConversionFunc get_conv_func,
+                                  RCDPrefGetFunc           get_pref_func,
+                                  RCDPrefSetConversionFunc set_conv_func,
+                                  RCDPrefSetFunc           set_pref_func)
+{
+    pref_table_size++;
+
+    if (!pref_table)
+        pref_table = g_malloc (sizeof (RCDPrefTable) * pref_table_size);
+    else
+        pref_table = g_realloc (pref_table,
+                                sizeof (RCDPrefTable) * pref_table_size);
+
+    pref_table[pref_table_size - 1].name = pref_name;
+    pref_table[pref_table_size - 1].get_conv_func = get_conv_func;
+    pref_table[pref_table_size - 1].get_pref_func = get_pref_func;
+    pref_table[pref_table_size - 1].set_conv_func = set_conv_func;
+    pref_table[pref_table_size - 1].set_pref_func = set_pref_func;
+} /* rcd_rpc_prefs_register_pref_full */
+
+void
+rcd_rpc_prefs_register_pref (const char     *pref_name,
+                             RCDPrefType     pref_type,
+                             RCDPrefGetFunc  get_pref_func,
+                             RCDPrefSetFunc  set_pref_func)
+{
+    /* Make sure to keep these in sync with RCDPrefType! */
+    RCDPrefGetConversionFunc get_conv_funcs[] = {
+        get_string_func,
+        get_boolean_func,
+        get_int_func
+    };
+
+    RCDPrefSetConversionFunc set_conv_funcs[] = {
+        set_string_func,
+        set_boolean_func,
+        set_int_func
+    };
+
+    rcd_rpc_prefs_register_pref_full (
+        pref_name,
+        get_conv_funcs[pref_type], get_pref_func,
+        set_conv_funcs[pref_type], set_pref_func);
+} /* rcd_rpc_prefs_register_pref */
+
+void
 rcd_rpc_prefs_register_methods(void)
 {
+    rcd_rpc_prefs_register_pref (
+        "cache-directory", RCD_PREF_STRING,
+        (RCDPrefGetFunc) rcd_prefs_get_cache_dir,
+        (RCDPrefSetFunc) rcd_prefs_set_cache_dir);
+
+    rcd_rpc_prefs_register_pref (
+        "cache-enabled", RCD_PREF_BOOLEAN,
+        (RCDPrefGetFunc) rcd_prefs_get_cache_enabled,
+        (RCDPrefSetFunc) rcd_prefs_set_cache_enabled);
+
+    rcd_rpc_prefs_register_pref (
+        "http-1.0", RCD_PREF_BOOLEAN,
+        (RCDPrefGetFunc) rcd_prefs_get_http10_enabled,
+        (RCDPrefSetFunc) rcd_prefs_set_http10_enabled);
+
+    rcd_rpc_prefs_register_pref (
+        "heartbeat-interval", RCD_PREF_INT,
+        (RCDPrefGetFunc) rcd_prefs_get_heartbeat_interval,
+        (RCDPrefSetFunc) rcd_prefs_set_heartbeat_interval);
+
+    rcd_rpc_prefs_register_pref (
+        "debug-level", RCD_PREF_INT,
+        (RCDPrefGetFunc) rcd_prefs_get_debug_level,
+        (RCDPrefSetFunc) rcd_prefs_set_debug_level);
+
+    rcd_rpc_prefs_register_pref (
+        "syslog-level", RCD_PREF_INT,
+        (RCDPrefGetFunc) rcd_prefs_get_syslog_level,
+        (RCDPrefSetFunc) rcd_prefs_set_syslog_level);
+
     rcd_rpc_register_method ("rcd.prefs.get_pref",
                              prefs_get_pref,
                              "view",
