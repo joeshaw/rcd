@@ -1,3 +1,8 @@
+2004-07-28  Tambet Ingo  <tambet@ximian.com>
+
+	* you.c (you_abort_download): Implement.
+	(rcd_module_load): Register abort_download method.
+
 2004-07-15  James Willcox  <james@ximian.com>
 
 	* wrapper.cc: Cast to GFileTest to make the compiler stop whining.

@@ -412,6 +412,39 @@ you_info (xmlrpc_env   *env,
     return result;
 }
 
+static xmlrpc_value *
+you_abort_download (xmlrpc_env   *env,
+                    xmlrpc_value *param_array,
+                    void         *user_data)
+{
+    int download_id;
+    RCDRPCMethodData *method_data;
+    int success;
+    xmlrpc_value *result = NULL;
+
+    xmlrpc_parse_value (env, param_array, "(i)", &download_id);
+
+    if (!rc_you_transaction_is_valid (download_id)) {
+        xmlrpc_env_set_fault (env, RCD_RPC_FAULT_INVALID_TRANSACTION_ID,
+                              "Cannot find transaction for that id");
+        return NULL;
+    }
+
+    method_data = rcd_rpc_get_method_data ();
+
+    success = rc_you_transaction_abort (download_id, method_data->identity);
+
+    if (success < 0) {
+        xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PERMISSION_DENIED,
+                              "Permission denied");
+        return NULL;
+    }
+
+    result = xmlrpc_build_value (env, "i", success);
+
+    return result;
+}
+
 /*****************************************************************************/
 
 void rcd_module_load (RCDModule *);
@@ -446,5 +479,6 @@ rcd_module_load (RCDModule *module)
                              "view", NULL);
     rcd_rpc_register_method ("rcd.you.patch_info", you_info,
                              "view", NULL);
-
+    rcd_rpc_register_method ("rcd.you.abort_download", you_abort_download,
+                             "view", NULL);
 } /* rcd_module_load */
