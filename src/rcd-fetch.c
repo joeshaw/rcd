@@ -158,9 +158,6 @@ cleanup:
 
     xmlrpc_env_clean (&env);
     
-    if (value)
-        xmlrpc_DECREF (value);
-
     if (server)
         xmlrpc_server_info_free (server);
  

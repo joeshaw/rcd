@@ -1,5 +1,9 @@
 2003-08-22  Joe Shaw  <joe@ximian.com>
 
+	* rcd-fetch.c (register_cb): Fix an errant xmlrpc decref.
+
+2003-08-22  Joe Shaw  <joe@ximian.com>
+
 	* rcd-fetch.c: Merge in Tambet's XML-RPC activation patch and hack
 	it up to work with multiple hosts.
 
