@@ -46,6 +46,7 @@ static gpointer      set_int_func     (xmlrpc_env *env, xmlrpc_value *value);
 typedef struct {
     const char               *name;
     const char               *description;
+    const char               *category;
 
     RCDPrefGetConversionFunc  get_conv_func;
     RCDPrefGetFunc            get_pref_func;
@@ -267,6 +268,12 @@ prefs_list_prefs (xmlrpc_env   *env,
                                       pt.description);
         XMLRPC_FAIL_IF_FAULT (env);
 
+        if (pt.category) {
+            RCD_XMLRPC_STRUCT_SET_STRING (env, pref_info, "category",
+                                          pt.category);
+            XMLRPC_FAIL_IF_FAULT (env);
+        }
+
         member = xmlrpc_build_value (env, "V", value);
         XMLRPC_FAIL_IF_FAULT (env);
         xmlrpc_DECREF (value);
@@ -294,6 +301,7 @@ cleanup:
 static void
 rcd_rpc_prefs_register_pref_full (const char               *pref_name,
                                   const char               *description,
+                                  const char               *category,
                                   RCDPrefGetConversionFunc  get_conv_func,
                                   RCDPrefGetFunc            get_pref_func,
                                   const char               *get_privileges_str,
@@ -317,6 +325,7 @@ rcd_rpc_prefs_register_pref_full (const char               *pref_name,
 
     pref_table[pref_table_size - 1].name = pref_name;
     pref_table[pref_table_size - 1].description = description;
+    pref_table[pref_table_size - 1].category = category;
     pref_table[pref_table_size - 1].get_conv_func = get_conv_func;
     pref_table[pref_table_size - 1].get_pref_func = get_pref_func;
     pref_table[pref_table_size - 1].get_privileges =
@@ -331,6 +340,7 @@ void
 rcd_rpc_prefs_register_pref (const char     *pref_name,
                              RCDPrefType     pref_type,
                              const char     *description,
+                             const char     *category,
                              RCDPrefGetFunc  get_pref_func,
                              const char     *get_privileges_str,
                              RCDPrefSetFunc  set_pref_func,
@@ -350,7 +360,7 @@ rcd_rpc_prefs_register_pref (const char     *pref_name,
     };
 
     rcd_rpc_prefs_register_pref_full (
-        pref_name, description,
+        pref_name, description, category,
         get_conv_funcs[pref_type], get_pref_func, get_privileges_str,
         set_conv_funcs[pref_type], set_pref_func, set_privileges_str);
 } /* rcd_rpc_prefs_register_pref */
@@ -364,102 +374,119 @@ rcd_rpc_prefs_register_methods (void)
     rcd_rpc_prefs_register_pref (
         "host", RCD_PREF_STRING,
         "Server URL",
+        "Server",
         (RCDPrefGetFunc) rcd_prefs_get_host, "view",
         (RCDPrefSetFunc) rcd_prefs_set_host, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "enable-premium", RCD_PREF_BOOLEAN,
         "Enable Premium Services (Red Carpet Express, CorporateConnect, or Enterprise)",
+        "Server",
         (RCDPrefGetFunc) rcd_prefs_get_premium, "view",
         (RCDPrefSetFunc) rcd_prefs_set_premium, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "proxy-url", RCD_PREF_STRING,
         "Proxy URL",
+        "Proxy",
         (RCDPrefGetFunc) rcd_prefs_get_proxy_url, "superuser",
         (RCDPrefSetFunc) rcd_prefs_set_proxy_url, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "proxy-username", RCD_PREF_STRING,
         "Proxy username",
+        "Proxy",
         (RCDPrefGetFunc) rcd_prefs_get_proxy_username, "superuser",
         (RCDPrefSetFunc) rcd_prefs_set_proxy_username, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "proxy-password", RCD_PREF_STRING,
         "Proxy password",
+        "Proxy",
         (RCDPrefGetFunc) rcd_prefs_get_proxy_password, "superuser",
         (RCDPrefSetFunc) rcd_prefs_set_proxy_password, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "http-1.0", RCD_PREF_BOOLEAN,
         "Use HTTP/1.0 for server communications",
+        "Server",
         (RCDPrefGetFunc) rcd_prefs_get_http10_enabled, "view",
         (RCDPrefSetFunc) rcd_prefs_set_http10_enabled, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "require-verified-certificates", RCD_PREF_BOOLEAN,
         "Require server SSL certificates verify against a certificate authority",
+        "Server",
         (RCDPrefGetFunc) rcd_prefs_get_require_verified_certificates, "superuser",
         (RCDPrefSetFunc) rcd_prefs_set_require_verified_certificates, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "cache-enabled", RCD_PREF_BOOLEAN,
         "Cache downloaded packages and metadata",
+        "Cache",
         (RCDPrefGetFunc) rcd_prefs_get_cache_enabled, "view",
         (RCDPrefSetFunc) rcd_prefs_set_cache_enabled, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "cache-directory", RCD_PREF_STRING,
         "The directory to store cached packages and metadata",
+        "Cache",
         (RCDPrefGetFunc) rcd_prefs_get_cache_dir, "view",
         (RCDPrefSetFunc) rcd_prefs_set_cache_dir, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "cache-cleanup-enabled", RCD_PREF_BOOLEAN,
         "Automatically clean up the cache",
+        "Cache",
         (RCDPrefGetFunc) rcd_prefs_get_cache_cleanup_enabled, "view",
         (RCDPrefSetFunc) rcd_prefs_set_cache_cleanup_enabled, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "cache-max-age-in-days", RCD_PREF_INT,
         "The number of days a package may be in the cache before clean up",
+        "Cache",
         (RCDPrefGetFunc) rcd_prefs_get_cache_max_age_in_days, "view",
         (RCDPrefSetFunc) rcd_prefs_set_cache_max_age_in_days, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "cache-max-size-in-mb", RCD_PREF_INT,
         "The maximum size of the cache (in mb)",
+        "Cache",
         (RCDPrefGetFunc) rcd_prefs_get_cache_max_size_in_mb, "view",
         (RCDPrefSetFunc) rcd_prefs_set_cache_max_size_in_mb, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "require-signatures", RCD_PREF_BOOLEAN,
         "Require packages be cryptographically signed before installing",
+        "Advanced",
         (RCDPrefGetFunc) rcd_prefs_get_require_signed_packages, "view",
         (RCDPrefSetFunc) rcd_prefs_set_require_signed_packages, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "heartbeat-interval", RCD_PREF_INT,
         "The interval between refreshing server data (in seconds)",
+        "Advanced",
         (RCDPrefGetFunc) rcd_prefs_get_heartbeat_interval, "view",
         (RCDPrefSetFunc) rcd_prefs_set_heartbeat_interval, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "max-downloads", RCD_PREF_INT,
         "Maximum number of concurrent package downloads",
+        "Advanced",
         (RCDPrefGetFunc) rcd_prefs_get_max_downloads, "view",
         (RCDPrefSetFunc) rcd_prefs_set_max_downloads, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "debug-level", RCD_PREF_INT,
         "Level at which to log to standard error (0 to 6)",
+        "Advanced",
         (RCDPrefGetFunc) rcd_prefs_get_debug_level, "view",
         (RCDPrefSetFunc) rcd_prefs_set_debug_level, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "syslog-level", RCD_PREF_INT,
         "Level at which to log to syslog (0 to 6)",
+        "Advanced",
         (RCDPrefGetFunc) rcd_prefs_get_syslog_level, "view",
         (RCDPrefSetFunc) rcd_prefs_set_syslog_level, "superuser");
 
@@ -469,6 +496,7 @@ rcd_rpc_prefs_register_methods (void)
         rcd_rpc_prefs_register_pref (
             "repackage", RCD_PREF_BOOLEAN,
             "Repackage installed packages on upgrade or removal for rollback",
+            "Advanced",
             (RCDPrefGetFunc) rcd_prefs_get_repackage, "view",
             (RCDPrefSetFunc) rcd_prefs_set_repackage, "superuser");
     }

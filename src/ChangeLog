@@ -1,3 +1,19 @@
+2003-01-14  Joe Shaw  <joe@ximian.com>
+
+	* rcd-module.c (load_module): Add module versioning.  Read the
+	rcd_module_major_version and (optionally) rcd_module_minor_version
+	symbols out of the module and complain if they're not there or
+	insufficient.
+
+	* rcd-rpc-sample.c, rcd-autopull.c: Add rcd_module_major_version
+	and rcd_module_minor_version symbols and assign them to
+	RCD_MODULE_MAJOR_VERSION and RCD_MODULE_MINOR_VERSION
+	respectively.
+
+	* rcd-rpc-prefs.c (rcd_rpc_prefs_register_pref): Add a category
+	argument which helps clients categorize the various daemon
+	options.
+
 2003-01-10  Joe Shaw  <joe@ximian.com>
 
 	* rcd-prefs.c (rcd_prefs_set_require_verified_certificates): Use

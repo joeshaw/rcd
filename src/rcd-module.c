@@ -44,6 +44,7 @@ load_module(const char *file_name)
     GModule *module;
     RCDModuleLoadFunc module_load_func;
     RCDModule *rcd_module;
+    int *major_module_version, *minor_module_version;
 
     module = g_module_open(file_name, G_MODULE_BIND_LAZY);
     if (!module) {
@@ -53,8 +54,42 @@ load_module(const char *file_name)
         return NULL;
     }
 
-    g_module_symbol(
-        module, "rcd_module_load", (gpointer *) &module_load_func);
+    g_module_symbol (module, "rcd_module_major_version",
+                     (gpointer *) &major_module_version);
+
+    if (!major_module_version) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Can't load module %s: Missing major version info "
+                  "(probably too old)", file_name);
+        g_module_close (module);
+        return NULL;
+    }
+
+    if (*major_module_version != RCD_MODULE_MAJOR_VERSION) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Can't load module %s: Module major version %d, %d is "
+                  "required",
+                  file_name, major_module_version, RCD_MODULE_MAJOR_VERSION);
+        g_module_close (module);
+        return NULL;
+    }
+
+    g_module_symbol (module, "rcd_module_minor_version",
+                     (gpointer *) &minor_module_version);
+
+    if (minor_module_version &&
+        *minor_module_version > RCD_MODULE_MINOR_VERSION) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Can't load module %s: Module minor version %d, %d or "
+                  "lower is required",
+                  file_name, minor_module_version, RCD_MODULE_MINOR_VERSION);
+        g_module_close (module);
+        return NULL;
+    }
+
+    g_module_symbol (module, "rcd_module_load", 
+                     (gpointer *) &module_load_func);
+
     if (!module_load_func) {
         rc_debug (RC_DEBUG_LEVEL_WARNING,
                   "Couldn't load module %s: %s", file_name, g_module_error());

@@ -42,6 +42,7 @@ enum _RCDPrefType {
 void rcd_rpc_prefs_register_pref (const char     *pref_name,
                                   RCDPrefType     pref_type,
                                   const char     *description,
+                                  const char     *category,
                                   RCDPrefGetFunc  get_pref_func,
                                   const char     *get_privileges_str,
                                   RCDPrefSetFunc  set_pref_func,

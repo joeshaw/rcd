@@ -60,3 +60,5 @@ rcd_module_load(RCDModule *module)
     rcd_rpc_register_method ("rcd.sample.add", sample_add, NULL, NULL);
 } /* rcd_module_load */
 
+int rcd_module_major_version = RCD_MODULE_MAJOR_VERSION;
+int rcd_module_minor_version = RCD_MODULE_MINOR_VERSION;

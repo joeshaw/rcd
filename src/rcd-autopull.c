@@ -1218,3 +1218,6 @@ rcd_module_load (RCDModule *module)
 
     recurring_autopull_xml_fetch_init ();
 }
+
+int rcd_module_major_version = RCD_MODULE_MAJOR_VERSION;
+int rcd_module_minor_version = RCD_MODULE_MINOR_VERSION;

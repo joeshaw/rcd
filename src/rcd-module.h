@@ -28,6 +28,18 @@
 
 #include <gmodule.h>
 
+/*
+ * The current rcd module interface versions.  Any time the rcd's public API
+ * changes, the major number will be incremented and the minor number reset
+ * to zero.  Any time the rcd's public API is added to, the minor number
+ * will be incremented.  Modules must expose a "rcd_module_major_version"
+ * symbol which matches the major version.  Modules may expose a
+ * "rcd_module_minor_version" symbol which must be less than or equal to
+ * the minor version.
+ */
+#define RCD_MODULE_MAJOR_VERSION 1
+#define RCD_MODULE_MINOR_VERSION 0
+
 typedef struct _RCDModule RCDModule;
 
 typedef void (*RCDModuleLoadFunc)(RCDModule *module);
