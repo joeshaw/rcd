@@ -2315,36 +2315,32 @@ packsys_mount_directory(xmlrpc_env   *env,
     RCWorld *world = (RCWorld *) user_data;
     char *path, *name, *alias;
     char *url;
-    RCWorld *mounted_world;
+    gboolean success;
     RCChannel *channel;
     xmlrpc_value *retval;
 
     xmlrpc_parse_value (env, param_array, "(sss)",
                         &path, &name, &alias);
 
-    if (path[0] == '/') 
-        url = g_strconcat ("file://", path, NULL);
-    else
-        url = g_strdup (path);
+    url = g_strdup_printf ("%s%s?name=%s;alias=%s",
+                           path[0] == '/' ? "file://" : "",
+                           path, name, alias);
 
-    mounted_world = rc_world_service_mount (url);
+    success = rc_world_multi_mount_service (RC_WORLD_MULTI (world), url);
 
     g_free (url);
 
-    if (!mounted_world)
+    if (!success)
         return xmlrpc_build_value (env, "s", "");
-
-    rc_world_local_dir_set_name (RC_WORLD_LOCAL_DIR (mounted_world), name);
-    rc_world_local_dir_set_alias (RC_WORLD_LOCAL_DIR (mounted_world), alias);
-
-    rc_world_multi_add_subworld (RC_WORLD_MULTI (world), mounted_world);
-    g_object_unref (mounted_world);
 
     rcd_services_save ();
 
-    channel = rc_world_get_channel_by_name (mounted_world, name);
+    channel = rc_world_get_channel_by_name (world, name);
 
     g_assert (channel != NULL);
+
+    /* Subscribe to mounted channels */
+    rc_channel_set_subscription (channel, TRUE);
 
     retval = xmlrpc_build_value (env, "s", rc_channel_get_id (channel));
 
@@ -2372,7 +2368,14 @@ packsys_unmount_directory(xmlrpc_env   *env,
 
     g_assert (mounted_world != NULL);
 
+    /* We only want to be able to unmount local dirs, not just any world. */
+    if (!g_type_is_a (G_TYPE_FROM_INSTANCE (mounted_world),
+                      RC_TYPE_WORLD_LOCAL_DIR))
+        return xmlrpc_build_value (env, "i", 0);
+
     rc_world_multi_remove_subworld (RC_WORLD_MULTI (world), mounted_world);
+
+    rcd_services_save ();
 
 cleanup:
     if (env->fault_occurred)

@@ -1,3 +1,12 @@
+2003-08-19  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-packsys.c (packsys_mount_directory): Build a file URI
+	with the name and alias for mounting local directories.  Subscribe
+	to the channel after we've mounted it.
+	(packsys_unmount_directory): We only want to be able to unmount
+	local directory worlds, so check the GType here and save the
+	services list after an unmount.
+	
 2003-08-18  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-news.c (foreach_subworld_cb): Use the new
