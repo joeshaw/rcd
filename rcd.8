@@ -10,6 +10,8 @@ rcd \fI<options>\fR
 .SH "DESCRIPTION"
 .LP 
 This daemon performs the Red Carpet software management functions that are asked of it by the rc software management tool, including the updating, installation, and removal of software, in addition to basic queries of the system's package management database. In general, you will not need to interact directly with rcd.
+.LP 
+The daemon is kept apart from the control application so that the control application can be used to administer remote systems. See the rc man page for more information about this process.
 .SH "OPTIONS"
 .LP 
 .TP 
@@ -50,6 +52,6 @@ Copyright Ximian, Inc. 2002
 http://www.ximian.com
 .SH "SEE ALSO"
 .LP 
-rc(1) red\-carpet(1)
+rc(1) red\-carpet(1) rcman(1)
 .LP 
 Visit http://ximian.com for more information about rcd, Ximian Red Carpet Enterprise, and other software from Ximian.

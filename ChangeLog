@@ -1,3 +1,8 @@
+2002-07-17 Aaron Weber <aaron@ximian.com>
+
+	* rcd.8: slight expansion.
+
+	
 2002-07-16  Frank Belew  <frb@ximian.com>
 
 	* Makefile.am: added rcd.8 to EXTRA_DIST to fix compiles
@@ -5,7 +10,8 @@
 2002-07-16 Aaron Weber <aaron@ximian.com>
 	* Makefile.am: added man page
 	* rcd.8: new file. Man page.
-
+	* README: added some generic content.
+	
 2002-07-11  Frank Belew  <frb@ximian.com>
 
 	* configure.in: remove leftover gettext junk
