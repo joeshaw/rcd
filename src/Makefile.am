@@ -100,6 +100,7 @@ rcdinclude_HEADERS = 		\
 	rcd-about.h		\
 	rcd-cache.h		\
 	rcd-heartbeat.h		\
+	rcd-identity.h		\
 	rcd-module.h 		\
 	rcd-pending.h		\
 	rcd-prefs.h		\

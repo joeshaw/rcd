@@ -1,3 +1,7 @@
+2003-03-01  Tambet Ingo  <tambet@ximian.com>
+
+	* Makefile.am (rcdinclude_HEADERS): Add rcd-identity.h.
+
 2003-02-13  Tambet Ingo  <tambet@ximian.com>
 
 	* rcd-package-locks.c: Add locking sequnece number.
