@@ -266,6 +266,7 @@ process_channel_cb (RCDTransfer *t, gpointer user_data)
     GByteArray *data = closure->data;
     RCChannel *channel = closure->channel;
     char *local_file;
+    gboolean success;
 
     g_assert (data != NULL);
 
@@ -282,35 +283,38 @@ process_channel_cb (RCDTransfer *t, gpointer user_data)
 
     if (rc_channel_get_pkginfo_compressed (channel)) {
         
-        rc_world_add_packages_from_buffer (rc_get_world (),
-                                           channel,
-                                           data->data,
-                                           data->len);
+        success = rc_world_add_packages_from_buffer (rc_get_world (),
+                                                     channel,
+                                                     data->data,
+                                                     data->len);
     } else {
         
-        rc_world_add_packages_from_buffer (rc_get_world (),
-                                           channel,
-                                           data->data,
-                                           0);
+        success = rc_world_add_packages_from_buffer (rc_get_world (),
+                                                     channel,
+                                                     data->data,
+                                                     0);
 
     }
 
     /* 
-     * FIXME: The above add_packages functions should return success
-     * or failure, and we should only write out the following on
-     * success.  We should ensure that these files are always the last
+     *  We try to ensure that these files are always the last
      * known good files.
      */
-    local_file = g_strdup_printf (
-        "/var/lib/rcd/channel-%d.xml%s",
-        rc_channel_get_id (channel),
-        rc_channel_get_pkginfo_compressed (channel) ? ".gz" : "");
-    write_file_contents (local_file, data);
-    g_free (local_file);
+    if (success) {
+        local_file = g_strdup_printf ("/var/lib/rcd/channel-%d.xml%s",
+                                      rc_channel_get_id (channel),
+                                      rc_channel_get_pkginfo_compressed (channel) ? ".gz" : "");
+        write_file_contents (local_file, data);
+        g_free (local_file);
 
-    rc_debug (RC_DEBUG_LEVEL_INFO,
-              "Loaded channel '%s'",
-              rc_channel_get_name (channel));
+        rc_debug (RC_DEBUG_LEVEL_INFO,
+                  "Loaded channel '%s'",
+                  rc_channel_get_name (channel));
+    } else {
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Attempt to load package data for channel '%s' failed",
+                  rc_channel_get_name (channel));
+    }
 
     g_byte_array_free (data, TRUE);
 

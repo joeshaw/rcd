@@ -93,7 +93,6 @@ option_parsing (int argc, const char **argv)
 static void
 root_check (void)
 {
-    /* Maybe-FIXME: Root always has a UID of zero, right? */
     if (getuid () == 0)
         return;
 

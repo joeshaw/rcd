@@ -101,7 +101,6 @@ rcd_log (RCDLogEntry *entry)
         goto cleanup;
     }
 
-    /* FIXME should check that these writes succeed */
     write (rcd_log_fd, str, strlen (str));
     write (rcd_log_fd, "\n", 1);
 

@@ -266,7 +266,10 @@ rcd_log_entry_parse (char         *buffer,
     g_return_if_fail (buffer != NULL);
 
     N = split_on_vbar (buffer, bufv, 32);
-    /* FIXME: we should check that N for the right # of elts */
+
+    /* If a log line looks malformed, skip it. */
+    if (N != 13)
+        return;
 
     /* We build up our RCDLogEntry item out of the parsed chunks of
        the buffer.  This way we don't need to alloc or free any memory

@@ -275,7 +275,6 @@ rcd_rpc_prefs_register_methods(void)
 
     rcd_rpc_register_method ("rcd.prefs.set_pref",
                              prefs_set_pref,
-                             /* FIXME: probably the wrong auth to use here */
                              "superuser",
                              NULL);
 
