@@ -29,6 +29,8 @@
 #include "rc-world-you.h"
 #include "rc-you-package.h"
 
+#define YAST_INFO_FILE "/var/adm/YaST/ProdDB/prod_"
+
 /*****************************************************************************/
 /* XML-RPC helpers */
 
@@ -271,33 +273,122 @@ cleanup:
 /*****************************************************************************/
 /* YaST directory structure */
 
+typedef struct {
+    GMainLoop *loop;
+    gchar     *dir;
+} YouBasedirInfo;
+
+static void
+get_you_basedir_read_line_cb (RCLineBuf *line_buf, const char *line,
+                              gpointer user_data)
+{
+    YouBasedirInfo *info = user_data;
+
+    if (g_str_has_prefix (line, "=YouPath:")) {
+        gchar **pieces;
+
+        pieces = g_strsplit (line, ":", 2);
+        if (pieces[1] != NULL)
+            info->dir = g_strdup (g_strstrip (pieces[1]));
+        else
+            rc_debug (RC_DEBUG_LEVEL_ERROR, "Can not parse YouPath '%s'",
+                      line);
+
+        g_strfreev (pieces);
+        g_main_quit (info->loop);
+    }
+}
+
+static void
+get_you_basedir_read_done_cb (RCLineBuf *line_buf, RCLineBufStatus status,
+                              gpointer user_data)
+{
+    YouBasedirInfo *info = user_data;
+
+    g_main_quit (info->loop);
+}
+
+static gchar *
+parse_product_file (const gchar *filename)
+{
+    int fd;
+    RCLineBuf *line_buf;
+    GMainLoop *loop;
+    YouBasedirInfo info;
+
+    if (!rc_file_exists (filename))
+        return NULL;
+
+    if ((fd = open (filename, O_RDONLY)) == -1) {
+        rc_debug (RC_DEBUG_LEVEL_ERROR, "Can not open YaST info file '%s'",
+                  filename);
+        return NULL;
+    }
+
+    line_buf = rc_line_buf_new ();
+    rc_line_buf_set_fd (line_buf, fd);
+
+    loop = g_main_new (FALSE);
+
+    info.loop = loop;
+    info.dir = NULL;
+
+    g_signal_connect (line_buf, "read_line",
+                      (GCallback) get_you_basedir_read_line_cb, &info);
+    g_signal_connect (line_buf, "read_done",
+                      (GCallback) get_you_basedir_read_done_cb, &info);
+
+    g_main_run (loop);
+    g_object_unref (line_buf);
+    g_main_destroy (loop);
+    rc_close (fd);
+
+    return info.dir;
+}
+
+static gchar *you_base_dir = NULL;
+
 static const gchar *
 get_you_basedir (void)
 {
-    static gchar *dir = NULL;
+    if (!you_base_dir) {
+        int i;
+        gchar *product_file, *you_path;
+        gchar *patch_dir;
 
-    if (!dir) {
-        RCDistro *distro;
+        /* Parse all product files, create required directory structures
+           for all of them. Return the latest YouPath */
+        i = 0;
+        while (1) {
+            product_file = g_strdup_printf ("%s%08d", YAST_INFO_FILE, ++i);
+            you_path = parse_product_file (product_file);
+            g_free (product_file);
 
-        distro = rc_distro_get_current ();
-        /* FIXME: i386 is hard coded. I would use rc_arch_to_string(),
-           but it returns i586 instead of i386.
-         */
-        dir = g_strdup_printf ("%s/%s/update/%s/",
-                               TMP_YOU_PATH,
-                               "i386",
-                               rc_distro_get_version (distro));
-        rc_distro_free (distro);
-    }
+            if (!you_path)
+                break;
 
-    if (!rc_file_exists (dir)) {
-        if (rc_mkdir (dir, 0755) < 0) {
-            g_free (dir);
-            dir = NULL;
+            g_free (you_base_dir);
+            you_base_dir = g_build_filename (TMP_YOU_PATH, you_path, NULL);
+            g_free (you_path);
+
+            if (!rc_file_exists (you_base_dir)) {
+                if (rc_mkdir (you_base_dir, 0755) < 0) {
+                    g_free (you_base_dir);
+                    you_base_dir = NULL;
+                    break;
+                }
+            }
+
+            /* This sucks, but we have to create "patches" subdirectory too.
+               Later we don't have access to all product directories */
+            patch_dir = g_build_filename (you_base_dir, "patches", NULL);
+            if (!rc_file_exists (patch_dir))
+                rc_mkdir (patch_dir, 0755);
+            g_free (patch_dir);
         }
     }
 
-    return dir;
+    return you_base_dir;
 }
 
 static const gchar *
@@ -305,10 +396,13 @@ get_you_patchdir (void)
 {
     static gchar *dir = NULL;
 
-    if (!dir)
-        dir = rc_maybe_merge_paths (get_you_basedir (), "patches");
+    if (!dir) {
+        const gchar *base_dir = get_you_basedir ();
+        if (base_dir != NULL)
+            dir = rc_maybe_merge_paths (base_dir, "patches");
+    }
 
-    if (!rc_file_exists (dir)) {
+    if (dir && !rc_file_exists (dir)) {
         if (rc_mkdir (dir, 0755) < 0) {
             g_free (dir);
             dir = NULL;
@@ -323,10 +417,13 @@ get_you_scriptdir (void)
 {
     static gchar *dir = NULL;
 
-    if (!dir)
-        dir = rc_maybe_merge_paths (get_you_basedir (), "scripts");
+    if (!dir) {
+        const gchar *base_dir = get_you_basedir ();
+        if (base_dir != NULL)
+            dir = rc_maybe_merge_paths (base_dir, "scripts");
+    }
 
-    if (!rc_file_exists (dir)) {
+    if (dir && !rc_file_exists (dir)) {
         if (rc_mkdir (dir, 0755) < 0) {
             g_free (dir);
             dir = NULL;
@@ -337,21 +434,35 @@ get_you_scriptdir (void)
 }
 
 static const gchar *
-get_you_pkgdir (const gchar *filename)
+get_you_pkgdir (const gchar *tmp_name, const gchar *filename)
 {
-    const gchar *target;
+    const gchar *base_dir;
+    gchar *target;
+    RCPackage *pkg;
     static gchar *dir = NULL;
 
     if (dir)
         g_free (dir);
 
-    /* Determine target from file name, ugh */
-    if (g_strrstr (filename, "noarch.rpm"))
-        target = "rpm/noarch";
-    else
-        target = "rpm/i586";
+    if (!rc_file_exists (tmp_name))
+        return NULL;
 
-    dir = rc_maybe_merge_paths (get_you_basedir (), target);
+    if ((base_dir = get_you_basedir ()) == NULL)
+        return NULL;
+
+    pkg = rc_packman_query_file (rc_packman_get_global (), tmp_name);
+    if (!pkg) {
+        rc_debug (RC_DEBUG_LEVEL_ERROR,
+                  "Downloaded package does not appear to be a valid package");
+        return NULL;
+    }
+
+    target = g_build_filename ("rpm", rc_arch_to_string (pkg->arch), NULL);
+    rc_package_unref (pkg);
+
+    dir = rc_maybe_merge_paths (base_dir, target);
+    g_free (target);
+
     if (rc_mkdir (dir, 0755) < 0) {
         g_free (dir);
         dir = NULL;
@@ -408,6 +519,8 @@ write_you_file (RCYouFile *file, const gchar *dest_dir)
 {
     gchar *dest_file;
 
+    g_return_if_fail (dest_dir != NULL);
+
     if (file == NULL)
         return;
 
@@ -442,10 +555,12 @@ write_patches (RCYouPatchSList *patches, GError **error)
 
             if (pkg->base_package)
                 write_you_file (pkg->base_package,
-                                get_you_pkgdir (pkg->base_package->filename));
+                                get_you_pkgdir (pkg->base_package->local_path,
+                                                pkg->base_package->filename));
             else if (pkg->patch_rpm)
                 write_you_file (pkg->patch_rpm,
-                                get_you_pkgdir (pkg->patch_rpm->filename));
+                                get_you_pkgdir (pkg->patch_rpm->local_path,
+                                                pkg->patch_rpm->filename));
         }
     }
 }
@@ -461,8 +576,9 @@ create_you_directory_structure (RCYouPatchSList *patches, GError **error)
 }
 
 void
-clean_you_direcorty_structure (void)
+clean_you_directory_structure (void)
 {
+    you_base_dir = NULL;
     rc_rmdir (TMP_YOU_PATH_PREFIX);
 }
 

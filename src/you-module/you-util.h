@@ -53,7 +53,7 @@ RCYouPatchSList *rc_xmlrpc_array_to_rc_you_patch_slist (xmlrpc_value *value,
                                                         int           flags);
 
 void create_you_directory_structure (RCYouPatchSList *patches, GError **error);
-void clean_you_direcorty_structure  (void);
+void clean_you_directory_structure  (void);
 
 /* SAX Parser */
 typedef struct _RCYouPatchSAXContext      RCYouPatchSAXContext;

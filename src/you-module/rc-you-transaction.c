@@ -457,7 +457,7 @@ rc_you_transaction_transaction (RCYouTransaction *transaction)
     rc_you_transaction_finished (transaction, NULL);
 
  cleanup:
-    clean_you_direcorty_structure ();
+    clean_you_directory_structure ();
 
     if (error) {
         rc_you_transaction_failed (transaction,
@@ -481,19 +481,14 @@ rc_you_transaction_verification (RCYouTransaction *transaction)
 }
 
 static gchar *
-rc_channel_get_patch_path (RCChannel *channel)
+rc_channel_get_patch_path (RCDistro *distro, RCChannel *channel)
 {
     gchar *path;
     gchar *sufix;
-    RCDistro *distro;
-
-    distro = rc_distro_get_current ();
 
     sufix = rc_maybe_merge_paths ("getPatch/", rc_distro_get_target (distro));
     path = rc_maybe_merge_paths (rc_channel_get_path (channel), sufix);
-
     g_free (sufix);
-    rc_distro_free (distro);
 
     return path;
 }
@@ -516,7 +511,7 @@ get_files_to_download (RCYouTransaction *transaction, GError **err)
 
         service = RC_WORLD_SERVICE (rc_channel_get_world (patch->channel));
 
-        channel_path = rc_channel_get_patch_path (patch->channel);
+        channel_path = rc_channel_get_patch_path (RCD_WORLD_REMOTE (service)->distro, patch->channel);
         patch_prefix = rc_maybe_merge_paths (service->url, channel_path);
         g_free (channel_path);
 

@@ -1,3 +1,11 @@
+2004-08-24  Tambet Ingo  <tambet@ximian.com>
+
+	* you-util.c: Create directory structure for all suse "products".
+	This fixes #63708.
+
+	* rc-you-transaction.c (rc_you_transaction_transaction): Fix a typo.
+	(rc_channel_get_patch_path): Get distro from channels.
+
 2004-08-16  Tambet Ingo  <tambet@ximian.com>
 
 	* rc-world-you.c (fetch_patches): Get the distro target string from
