@@ -1598,10 +1598,6 @@ synth_package_from_update (RCPackage *real_package, RCPackageUpdate *update)
     rc_package_spec_free_members (RC_PACKAGE_SPEC (package));
     rc_package_spec_copy (RC_PACKAGE_SPEC (package), RC_PACKAGE_SPEC (update));
 
-    /* Reset the channel */
-    rc_channel_unref (package->channel);
-    package->channel = NULL;
-
     /* Delete the old history and replace it with one entry: the update */
     rc_package_update_slist_free (package->history);
     package->history = NULL;
