@@ -495,6 +495,8 @@ cleanup:
 typedef struct {
     RCWorld *world;
     RCPackage *package;
+
+    gboolean subscribed_only;
 } LatestVersionClosure;
 
 static void
@@ -502,6 +504,9 @@ find_latest_version (RCPackage *package, gpointer user_data)
 {
     LatestVersionClosure *closure = user_data;
     RCPackman *packman = rc_world_get_packman (closure->world);
+
+    if (closure->subscribed_only && !rc_channel_subscribed (package->channel))
+        return;
 
     if (!closure->package)
         closure->package = package;
@@ -521,14 +526,16 @@ packsys_find_latest_version (xmlrpc_env   *env,
 {
     RCWorld *world = (RCWorld *) user_data;
     char *name;
+    gboolean subscribed_only;
     LatestVersionClosure closure;
     xmlrpc_value *result = NULL;
 
-    xmlrpc_parse_value (env, param_array, "(s)", &name);
+    xmlrpc_parse_value (env, param_array, "(sb)", &name, &subscribed_only);
     XMLRPC_FAIL_IF_FAULT (env);
 
     closure.world = world;
     closure.package = NULL;
+    closure.subscribed_only = subscribed_only;
     rc_world_foreach_package_by_name (
         world, name, RC_WORLD_ANY_NON_SYSTEM, find_latest_version, &closure);
 

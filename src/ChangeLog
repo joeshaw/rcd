@@ -1,3 +1,10 @@
+2002-07-01  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-packsys.c (find_latest_version): If subscribed_only is
+	set, skip over packages in unsubscribed channels.
+	(packsys_find_latest_version): Take a second parameter: whether to
+	only return packages in subscribed channels.
+
 2002-06-27  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd.c (main): Added a FIXME comment about a potential caching
