@@ -1,3 +1,11 @@
+2002-07-23  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-pending.c (pending_cleanup_cb): Remove the unused id
+	variable.
+
+	* rcd.c (initialize_rc_world): Check for an error on the packman.
+	Fail if we find one.
+
 2002-07-23  Joe Shaw  <joe@ximian.com>
 
 	* rcd-cache.c (rcd_cache_entry_new): Initialize the fd to -1.

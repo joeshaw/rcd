@@ -197,9 +197,17 @@ initialize_rc_world (void)
     /* Create a packman, hand it off to the world */
     packman = rc_distman_new ();
     if (! packman) {
-        rc_debug(RC_DEBUG_LEVEL_ERROR, "Couldn't get a packman");
+        rc_debug (RC_DEBUG_LEVEL_ERROR, "Couldn't get a packman");
         exit (-1);
     }
+
+    if (rc_packman_get_error (packman)) {
+        rc_debug (RC_DEBUG_LEVEL_ERROR,
+                  "Couldn't access the packaging system: %s",
+                  rc_packman_get_reason (packman));
+        exit (-1);
+    }
+
     rc_packman_set_packman (packman);
 
     world = rc_get_world ();

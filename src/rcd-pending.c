@@ -186,7 +186,6 @@ pending_cleanup_cb (gpointer key,
                     gpointer value,
                     gpointer user_data)
 {
-    gint id = GPOINTER_TO_INT (key);
     RCDPending *pending = value;
     time_t *now = user_data;
 
