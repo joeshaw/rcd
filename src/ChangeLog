@@ -1,3 +1,8 @@
+2003-10-16  Joe Shaw  <joe@ximian.com>
+
+	* rcd-prefs.c: Make rcd_prefs_error_quark() and RCD_PREFS_ERROR
+	public so modules can use them.
+
 2003-10-15  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-service.c (add_service_cb): Don't send distro info if the

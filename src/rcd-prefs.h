@@ -28,6 +28,10 @@
 
 #include <glib.h>
 
+/* GError stuff */
+#define RCD_PREFS_ERROR rcd_prefs_error_quark()
+GQuark rcd_prefs_error_quark (void);
+
 gboolean rcd_prefs_get_auto_save (void);
 void     rcd_prefs_set_auto_save (gboolean auto_save);
 void     rcd_prefs_save          (void);

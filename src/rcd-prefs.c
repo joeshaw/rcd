@@ -39,11 +39,10 @@
 
 #define DEFAULT_CONFIG_FILE SYSCONFDIR "/rcd.conf"
 #define SYNC_CONFIG if (prefs_auto_save) gnome_config_sync_file ((char *) get_config_path (NULL))
-#define RCD_PREFS_ERROR rcd_prefs_error_quark()
 
 static gboolean prefs_auto_save = TRUE;
 
-static GQuark
+GQuark
 rcd_prefs_error_quark (void)
 {
     static GQuark quark;
