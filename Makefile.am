@@ -10,9 +10,9 @@ cert_DATA = rcd.pem
 gpgdir = $(datadir)/rcd
 gpg_DATA = rcd.gpg
 
-man_MANS = rcd.8 rcd.config.5
+man_MANS = rcd.8 rcd.conf.5
 
-EXTRA_DIST = rc-passwd $(cert_DATA) $(gpg_DATA) $(man_MANS)
+EXTRA_DIST = rcd.passwd $(cert_DATA) $(gpg_DATA) $(man_MANS)
 
 install-data-hook:
 	if test '!' -d $(DESTDIR)$(passwddir); then \
@@ -20,13 +20,13 @@ install-data-hook:
 		chmod 0755 $(DESTDIR)$(passwddir); \
 	fi
 
-	if test '!' -f $(DESTDIR)$(passwddir)/rc-passwd; then \
-		$(INSTALL_DATA) $(srcdir)/rc-passwd $(DESTDIR)$(passwddir)/rc-passwd; \
+	if test '!' -f $(DESTDIR)$(passwddir)/rcd.passwd; then \
+		$(INSTALL_DATA) $(srcdir)/rcd.passwd $(DESTDIR)$(passwddir)/rcd.passwd; \
 	fi
-	chmod 0600 $(DESTDIR)$(passwddir)/rc-passwd
-	-chown root $(DESTDIR)$(passwddir)/rc-passwd
+	chmod 0600 $(DESTDIR)$(passwddir)/rcd.passwd
+	-chown root $(DESTDIR)$(passwddir)/rcd.passwd
 
-	$(INSTALL_DATA) $(srcdir)/rc-passwd $(DESTDIR)$(passwddir)/rc-passwd.default
+	$(INSTALL_DATA) $(srcdir)/rcd.passwd $(DESTDIR)$(passwddir)/rcd.passwd.default
 
 	if test '!' -d $(DESTDIR)$(initdir); then \
 		$(mkinstalldirs) $(DESTDIR)$(initdir); \

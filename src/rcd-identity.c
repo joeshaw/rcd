@@ -34,7 +34,7 @@
 
 #include "rcd-identity.h"
 
-#define PASSWORD_FILE SYSCONFDIR "/rc-passwd"
+#define PASSWORD_FILE SYSCONFDIR "/rcd.passwd"
 
 RCDIdentity *
 rcd_identity_new (void)

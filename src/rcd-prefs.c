@@ -33,8 +33,7 @@
 
 #include "gnome-config.h"
 
-#define OVERRIDE_PATH "=" SYSCONFDIR "/rc.overrides="
-#define CONFIG_PATH "=" SYSCONFDIR "/rcd.config="
+#define CONFIG_PATH "=" SYSCONFDIR "/rcd.conf="
 #define SYNC_CONFIG (gnome_config_sync_file (CONFIG_PATH))
 
 gboolean

@@ -1,3 +1,11 @@
+2002-09-03  Joe Shaw  <joe@ximian.com>
+
+	* rcd-prefs.c: The config file is now rcd.conf, to be more
+	consistent with every other daemon configuration file.
+
+	* rcd-identity.c: The ACL file is now rcd.passwd, to be more
+	consistent with rcd.conf.
+
 2002-09-03  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-rpc-util.c (rcd_rc_package_to_xmlrpc): Include the file

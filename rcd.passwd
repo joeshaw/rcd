@@ -11,6 +11,7 @@
 #
 # none: no privileges
 # view: ability to view settings, channels, and system packages
+# subscribe: ability to subscribe and unsubscribe from channels
 # install: ability to install new packages on the system
 # upgrade: ability to upgrade existing packages on the system
 # remove: ability to remove existing packages from the system
