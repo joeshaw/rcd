@@ -199,7 +199,8 @@ transfer_file_done_cb (RCDTransfer *transfer, gpointer user_data)
         }
     }
 
-    if (!pool->running_transfers && !pool->queued_transfers) {
+    if (!pool->running_transfers &&
+        (pool->failing_error || !pool->queued_transfers)) {
         /* We're done! */
 
         if (!pool->failing_error)

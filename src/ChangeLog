@@ -1,5 +1,31 @@
 2003-05-23  Joe Shaw  <joe@ximian.com>
 
+	* rcd-rpc-packsys.c (packsys_transact): Clean up and make it use
+	the new RCDTransaction API permanently.  Unref the transaction
+	object when we're through with it.
+
+	* rcd-transaction.c (rcd_transaction_started_handler): Ref
+	ourselves so users can safely unref the transaction object after
+	they're done and have it get cleaned up automatically.
+	(rcd_transaction_finished_handler): Clean up the cache after the
+	transaction if caching is off and we're not in download-only
+	mode.  Unref ourselves.
+	(update_log): Re-enable this.
+	(rcd_transaction_failed): Don't try to fail the pending if it's no
+	longer active.
+	(transfer_done_cb): Remove ourselves from the abortable
+	transactions hash table when the download is finished.
+	(rcd_transaction_download): Add ourselves to the abortable
+	transactions hash table when the download starts
+	(rcd_transaction_abort): Cancel a download
+
+	* rcd-transfer-pool.c (transfer_file_done_cb): Fix a bug where if
+	there were still queued up transfers and a running one died or was
+	cancelled then the transfer pool would never be failed and would
+	hang.
+
+2003-05-23  Joe Shaw  <joe@ximian.com>
+
 	* rcd-fetch.c (get_mirrors_url): Fix a FIXME in which the daemon
 	was always trying to download mirrors.xml from
 	red-carpet.ximian.com.
