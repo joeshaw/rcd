@@ -53,6 +53,7 @@ struct _RCDAutopull {
     guint interval;
 
     GSList *channels_to_update;  /* update whole channel if possible */
+    GSList *channels_to_install; /* install _everything_ in this channel */
     GSList *packages_to_update;  /* update if possible */
     GSList *packages_to_hold;    /* DON'T update */
     GSList *packages_to_install; /* extra installs */
@@ -121,11 +122,34 @@ updates_cb (RCPackage *old,
 }
 
 static void
+install_whole_channel_cb (RCPackage *pkg, gpointer user_data)
+{
+    RCDAutopull *pull = user_data;
+    const char *name;
+
+    name = g_quark_to_string (RC_PACKAGE_SPEC (pkg)->nameq);
+
+    /* When we install a whole channel, we skip packages where
+       a package of the same name is already installed on the system */
+
+    if (rc_world_get_package (rc_get_world (),
+                              RC_WORLD_SYSTEM_PACKAGES,
+                              name) == NULL) {
+
+        pull->all_to_add = g_slist_prepend (pull->all_to_add,
+                                            rc_package_ref (pkg));
+    }
+}
+
+static void
 rcd_autopull_find_targets (RCDAutopull *pull)
 {
     GSList *iter;
 
     g_return_if_fail (pull != NULL);
+
+    /* If there is already stuff in ->all_to_add and ->all_to_subtract,
+       clean it out. */
 
     if (pull->all_to_add) {
         rc_package_slist_unref (pull->all_to_add);
@@ -138,6 +162,9 @@ rcd_autopull_find_targets (RCDAutopull *pull)
         g_slist_free (pull->all_to_subtract);
         pull->all_to_subtract = NULL;
     }
+
+    /* Populate ->all_to_add and ->all_to_subtract with all of the
+       packages that we need to install/remove. */
 
     for (iter = pull->packages_to_install; iter != NULL; iter = iter->next) {
         pull->all_to_add = g_slist_prepend (pull->all_to_add,
@@ -152,6 +179,14 @@ rcd_autopull_find_targets (RCDAutopull *pull)
     rc_world_foreach_system_upgrade (rc_get_world (),
                                      updates_cb,
                                      pull);
+
+    for (iter = pull->channels_to_install; iter != NULL; iter = iter->next) {
+        RCChannel *ch = iter->data;
+        rc_world_foreach_package (rc_get_world (),
+                                  ch,
+                                  install_whole_channel_cb,
+                                  pull);
+    }
 }
 
 static void
@@ -499,6 +534,11 @@ rcd_autopull_unref (RCDAutopull *pull)
                          NULL);
         g_slist_free (pull->channels_to_update);
 
+        g_slist_foreach (pull->channels_to_install,
+                         (GFunc) rc_channel_unref,
+                         NULL);
+        g_slist_free (pull->channels_to_install);
+
         rc_package_slist_unref (pull->packages_to_update);
         g_slist_free (pull->packages_to_update);
 
@@ -629,12 +669,13 @@ rcd_autopull_new (time_t first_pull, guint interval, const char *name)
     if (name == NULL)
         name = "Unnamed";
 
-    pull->name               = g_strdup (name);
-    pull->first_pull         = first_pull;
-    pull->interval           = interval;
-    pull->channels_to_update = NULL;
-    pull->packages_to_update = NULL;
-    pull->packages_to_hold   = NULL;
+    pull->name                = g_strdup (name);
+    pull->first_pull          = first_pull;
+    pull->interval            = interval;
+    pull->channels_to_update  = NULL;
+    pull->channels_to_install = NULL;
+    pull->packages_to_update  = NULL;
+    pull->packages_to_hold    = NULL;
 
     return pull;
 }
@@ -649,7 +690,7 @@ rcd_autopull_new (time_t first_pull, guint interval, const char *name)
     <starttime>1029775674</starttime>
     <interval>7200</interval>
     <channel bid="2" />
-    <channel bid="20769" />
+    <channel bid="20769" install_everything="1"/>
     <package bid="418" name="evolution" />
     <package bid="20769" name="perl" />
   </session>
@@ -669,7 +710,7 @@ rcd_autopull_new (time_t first_pull, guint interval, const char *name)
 */
 
 static RCChannel *
-channel_from_xml_props (xmlNode *node)
+channel_from_xml_props (xmlNode *node, gboolean *install_everything)
 {
     RCWorld *world;
     RCChannel *channel = NULL;
@@ -678,6 +719,12 @@ channel_from_xml_props (xmlNode *node)
     char *bid_str = NULL;
 
     world = rc_get_world ();
+
+    if (install_everything) {
+        guint32 ie;
+        ie = xml_get_guint32_prop_default (node, "install_everything", 0);
+        *install_everything = (ie != 0);
+    }
 
     alias_str = xml_get_prop (node, "alias");
     if (alias_str) {
@@ -706,10 +753,10 @@ channel_from_xml_props (xmlNode *node)
     bid_str = xml_get_prop (node, "bid");
     if (bid_str) {
         guint32 bid = 0;
+        bid = atol (bid_str);
         rc_debug (RC_DEBUG_LEVEL_INFO,
                   "Looking for channel with bid=%d ('%s')",
                   bid, bid_str);
-        bid = atol (bid_str);
         if (bid) {
             channel = rc_world_get_channel_by_base_id (world, bid);
             if (channel)
@@ -717,22 +764,23 @@ channel_from_xml_props (xmlNode *node)
         }
     }
 
+
  finished:
     g_free (alias_str);
-    g_free (bid_str);
     g_free (cid_str);
+    g_free (bid_str);
 
     return channel;
 }
 
 
 static RCChannel *
-channel_from_xml_node (xmlNode *node)
+channel_from_xml_node (xmlNode *node, gboolean *install_everything)
 {
     RCChannel *channel = NULL;
     
     if (! g_strcasecmp (node->name, "channel"))
-        channel = channel_from_xml_props (node);
+        channel = channel_from_xml_props (node, install_everything);
 
     if (channel == NULL) {
         /* Wow... what a bad error message. */
@@ -754,7 +802,7 @@ package_from_xml_node (xmlNode *node)
     if (g_strcasecmp (node->name, "package"))
         goto finished;
 
-    channel = channel_from_xml_props (node);
+    channel = channel_from_xml_props (node, NULL);
 
     /* If the channel comes back NULL, we will treat this as a
        system package. */
@@ -818,14 +866,23 @@ autopull_from_session_xml_node (xmlNode *node)
                           "Extra interval tag ignored.");
             
         } else if (! g_strcasecmp (node->name, "channel")) {
+
+            gboolean install_everything = FALSE;
             
-            RCChannel *channel = channel_from_xml_node (node);
+            RCChannel *channel = channel_from_xml_node (node,
+                                                        &install_everything);
 
             if (channel) {
                 g_assert (pull != NULL);
                 pull->channels_to_update =
                     g_slist_prepend (pull->channels_to_update,
                                      rc_channel_ref (channel));
+
+                if (install_everything) {
+                    pull->channels_to_install = 
+                        g_slist_prepend (pull->channels_to_install,
+                                         rc_channel_ref (channel));
+                }
             }
 
         } else if (! g_strcasecmp (node->name, "package")) {
@@ -912,7 +969,7 @@ rcd_autopull_xml_contains_unknown_channels (xmlDoc *doc)
                 if (! g_strcasecmp (node2->name, "package")
                     || ! g_strcasecmp (node2->name, "channel")) {
 
-                    if (channel_from_xml_props (node2) == NULL) {
+                    if (channel_from_xml_props (node2, NULL) == NULL) {
                         /* Channel?  I've never heard of it! */
                         return TRUE;
                     }

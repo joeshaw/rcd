@@ -1,3 +1,29 @@
+2003-01-20  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-autopull.c: Added 'channels_to_install' field to RCDAutopull
+	struct.
+	(install_whole_channel_cb): Added.  Iterator function for
+	installing entire channel.
+	(rcd_autopull_find_targets): Process the list of channels to
+	install.
+	(rcd_autopull_unref): Free the list of channels to install.
+	(rcd_autopull_new): Initialize the list of channels to install.
+	(channel_from_xml_props): Support check for the
+	'install_everything' property.
+	(channel_from_xml_props): Fix some out-of-order debug spew.
+	(We were spewing a value before computing it, which was not
+	particularly helpful.)
+	(channel_from_xml_node): Support checking for the
+	'install_everything' property.
+	(package_from_xml_node): Pass NULL as the second argument
+	to channel_from_xml_props, explicitly ignoring the
+	'install_everything' property.
+	(rcd_autopull_xml_contains_unknown_channels): Ditto.
+	(autopull_from_session_xml_node): Check for the 'install_everything'
+	property in a channel tag.  If it is present, add the channel
+	to our list of channels to install.  (The channel will also be
+	updated.)
+
 2003-01-20  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-packsys.c, rcd-transfer-http.c: If we ever have problems
