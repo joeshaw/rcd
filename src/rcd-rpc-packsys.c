@@ -857,6 +857,33 @@ packsys_package_dependency_info (xmlrpc_env   *env,
     return result;
 }
 
+static xmlrpc_value *
+packsys_file_list (xmlrpc_env   *env,
+                   xmlrpc_value *param_array,
+                   void         *user_data)
+{
+    xmlrpc_value *xmlrpc_package;
+    RCPackage *package;
+    xmlrpc_value *result = NULL;
+
+    xmlrpc_parse_value (env, param_array, "(V)", &xmlrpc_package);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    package = rcd_xmlrpc_to_rc_package (xmlrpc_package, env,
+                                        RCD_PACKAGE_FROM_ANY);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    if (package)
+        result = rcd_xmlrpc_package_file_list (package, env);
+    else {
+        xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PACKAGE_NOT_FOUND,
+                              "Couldn't get package");
+    }
+
+cleanup:
+    return result;
+}
+
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 static void
@@ -2330,6 +2357,11 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
 
     rcd_rpc_register_method("rcd.packsys.package_dependency_info",
                             packsys_package_dependency_info,
+                            "view",
+                            world);
+
+    rcd_rpc_register_method("rcd.packsys.file_list",
+                            packsys_file_list,
                             "view",
                             world);
     

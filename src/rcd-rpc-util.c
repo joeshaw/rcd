@@ -998,6 +998,32 @@ cleanup:
     return part;
 } /* rcd_xmlrpc_tuple_to_query_part */
 
+xmlrpc_value *
+rcd_xmlrpc_package_file_list (RCPackage *package, xmlrpc_env *env)
+{
+    RCWorld *world;
+    RCPackman *packman;
+    RCPackageFileSList *files, *iter;
+    xmlrpc_value *file_array;
+
+    world = rc_get_world ();
+    packman = rc_world_get_packman (world);
+
+    files = rc_packman_file_list (packman, package);
+    
+    file_array = xmlrpc_build_value (env, "()");
+    for (iter = files; iter; iter = iter->next) {
+        RCPackageFile *file = iter->data;
+        xmlrpc_value *file_value;
+
+        file_value = xmlrpc_build_value (env, "s", file->filename);
+        xmlrpc_array_append_item (env, file_array, file_value);
+        xmlrpc_DECREF (file_value);
+    }
+
+    return file_array;
+}
+
 static void
 copy_array (xmlrpc_env *env, xmlrpc_value **out_array, xmlrpc_value *in_array)
 {

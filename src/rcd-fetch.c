@@ -45,10 +45,37 @@
 
 #define RCX_ACTIVATION_ROOT "https://activation.rc.ximian.com"
 
+static void
+write_file_contents (const char *filename, GByteArray *data)
+{
+    char *dir;
+    int fd;
+
+    dir = g_path_get_dirname (filename);
+    if (!g_file_test (dir, G_FILE_TEST_EXISTS) && rc_mkdir (dir, 0755) < 0) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Couldn't create '%s'", dir);
+        g_free (dir);
+        return;
+    }
+    g_free (dir);
+
+    fd = open (filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd < 0) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Couldn't open '%s' for writing", filename);
+        return;
+    }
+
+    rc_write (fd, data->data, data->len);
+
+    rc_close (fd);
+} /* write_file_contents */
+
 gboolean
 rcd_fetch_licenses_local (void)
 {
-    const char *local_file = "/var/lib/rcd/licenses.xml";
+    const char *local_file = "/var/lib/rcd/licenses.xml.gz";
     RCBuffer *buf;
 
     if (!g_file_test (local_file, G_FILE_TEST_EXISTS))
@@ -74,7 +101,7 @@ rcd_fetch_licenses (void)
     GByteArray *data;
     gboolean successful = FALSE;
 
-    url = g_strdup_printf ("%s/licenses.xml", rcd_prefs_get_host ());
+    url = g_strdup_printf ("%s/licenses.xml.gz", rcd_prefs_get_host ());
     t = rcd_transfer_new (url, 0, rcd_cache_get_normal_cache ());
     g_free (url);
 
@@ -91,8 +118,10 @@ rcd_fetch_licenses (void)
         rc_debug (RC_DEBUG_LEVEL_CRITICAL, "Unable to parse licenses info");
         goto cleanup;
     }
-    else
+    else {
         successful = TRUE;
+        write_file_contents ("/var/lib/rcd/licenses.xml.gz", data);
+    }
 
 cleanup:
     g_object_unref (t);
@@ -290,33 +319,6 @@ cleanup:
     else
         return TRUE;
 } /* rcd_fetch_distro */
-
-static void
-write_file_contents (const char *filename, GByteArray *data)
-{
-    char *dir;
-    int fd;
-
-    dir = g_path_get_dirname (filename);
-    if (!g_file_test (dir, G_FILE_TEST_EXISTS) && rc_mkdir (dir, 0755) < 0) {
-        rc_debug (RC_DEBUG_LEVEL_WARNING,
-                  "Couldn't create '%s'", dir);
-        g_free (dir);
-        return;
-    }
-    g_free (dir);
-
-    fd = open (filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-    if (fd < 0) {
-        rc_debug (RC_DEBUG_LEVEL_WARNING,
-                  "Couldn't open '%s' for writing", filename);
-        return;
-    }
-
-    rc_write (fd, data->data, data->len);
-
-    rc_close (fd);
-} /* write_file_contents */
 
 static char *
 get_channel_list_url (void)

@@ -1,3 +1,22 @@
+2003-05-01  Joe Shaw  <joe@ximian.com>
+
+	* rcd-fetch.c (rcd_fetch_licenses_local): Use licenses.xml.gz.
+	(rcd_fetch_licenses): Use licenses.xml.gz.  Also make sure we
+	write out the contents to /var/lib.
+
+	* rcd-license.c (rcd_license_parse): Take in compressed XML data
+	and decompress it here.
+
+2003-04-30  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-packsys.c (packsys_file_list): Added.  An RPC method
+	which gets the list of files out of an RCPackage.
+	(rcd_rpc_packsys_register_methods): Register the RPC method.
+
+	* rcd-rpc-util.c (rcd_xmlrpc_package_file_list): Added.  Does the
+	heavy lifting in converting the filenames from a package's file
+	list to an xmlrpc array.
+
 2003-04-28  Ian Peters  <itp@ximian.com>
 
 	* rcd.c (initialize_rc_world): unref the packman once we've

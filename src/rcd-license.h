@@ -28,7 +28,8 @@
 
 #include <glib.h>
 
-gboolean    rcd_license_parse                     (const char     *xml,
+/* This takes compressed XML data */
+gboolean    rcd_license_parse                     (const char     *data,
                                                    gsize           size);
 
 const char *rcd_license_lookup                    (const char     *name);

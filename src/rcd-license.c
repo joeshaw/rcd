@@ -34,15 +34,15 @@
 static GHashTable *rcd_licenses = NULL;
 
 gboolean
-rcd_license_parse (const char *xml, gsize size)
+rcd_license_parse (const char *data, gsize size)
 {
     xmlDoc *doc;
     xmlNode *node;
     GHashTable *licenses;
 
-    g_return_val_if_fail (xml != NULL, FALSE);
+    g_return_val_if_fail (data != NULL, FALSE);
 
-    doc = xmlParseMemory (xml, size);
+    doc = rc_uncompress_xml (data, size);
     if (doc == NULL) {
         rc_debug (RC_DEBUG_LEVEL_CRITICAL,
                   "Couldn't parse license XML file");

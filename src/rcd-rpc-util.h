@@ -132,6 +132,9 @@ RCDQueryPart rcd_xmlrpc_tuple_to_query_part (xmlrpc_value *tuple,
                                              xmlrpc_env   *env);
 
 
+xmlrpc_value *rcd_xmlrpc_package_file_list (RCPackage  *package,
+                                            xmlrpc_env *env);
+
 #define RCD_XMLRPC_STRUCT_SET_STRING(env, s, key, string)        \
     do {                                                         \
         xmlrpc_value *member;                                    \
