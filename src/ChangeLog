@@ -1,3 +1,10 @@
+2002-08-06  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-privileges.c (rcd_privileges_from_string): Properly handle
+	the case of a superuser privileges mixed in with lower-level
+	privileges.  This lets us actually add superuser-level users
+	through rc.
+
 2002-08-06  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-packsys.c (verify_packages): Set the keyring.
@@ -56,7 +63,6 @@
 	/tmp/rcd-messages file isn't hundreds and hundreds of megs by
 	default.
 
->>>>>>> 1.141
 2002-08-05  Joe Shaw  <joe@ximian.com>
 
 	* rcd-recurring.[ch]: Fix the license.

@@ -116,33 +116,30 @@ rcd_privileges_from_string (const char *priv_str)
         return 0;
 
     folded_priv_str = g_utf8_casefold (priv_str, -1);
-
-    if (! strcmp (folded_priv_str, "superuser")) {
-
-        accumulated_priv = SU_PRIV;
-
-    } else {
-        strv = g_strsplit (folded_priv_str, ",", 0);
+    strv = g_strsplit (folded_priv_str, ",", 0);
         
-        for (i = 0; strv[i] != NULL; ++i) {
-            RCDPrivileges *priv = NULL;
-
-            g_strstrip (strv[i]);
-            
-            if (priv_hash)
-                priv = g_hash_table_lookup (priv_hash, strv[i]);
-            
-            if (priv) {
-                accumulated_priv |= *priv;
-            } else {
-                rc_debug (RC_DEBUG_LEVEL_WARNING,
-                          "Ignoring unknown privilege '%s'", strv[i]);
-            }
+    for (i = 0; strv[i] != NULL; ++i) {
+        RCDPrivileges *priv = NULL;
+        
+        g_strstrip (strv[i]);
+        
+        if (! strcmp (strv[i], "superuser")) {
+            accumulated_priv = SU_PRIV;
+            break;
         }
-
-        g_strfreev (strv);
+        
+        if (priv_hash)
+            priv = g_hash_table_lookup (priv_hash, strv[i]);
+        
+        if (priv) {
+            accumulated_priv |= *priv;
+        } else {
+            rc_debug (RC_DEBUG_LEVEL_WARNING,
+                      "Ignoring unknown privilege '%s'", strv[i]);
+        }
     }
-
+    
+    g_strfreev (strv);
     g_free (folded_priv_str);
 
     return accumulated_priv;
