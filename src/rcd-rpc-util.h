@@ -50,7 +50,6 @@
 #define RCD_RPC_FAULT_NOT_SUPPORTED          -614
 #define RCD_RPC_FAULT_LICENSE_NOT_FOUND      -615
 #define RCD_RPC_FAULT_CANT_SET_PREFERENCE    -616
-#define RCD_RPC_FAULT_CANT_EXECUTE           -617
 
 #define is_empty_string(x)     (!(x) || !(*(x)))
 #define RC_STRING_TO_XMLRPC(x) ((x) == NULL ? "" : (x))

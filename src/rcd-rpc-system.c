@@ -475,81 +475,6 @@ cleanup:
         return xmlrpc_build_value (env, "i", 0);
 }
 
-static xmlrpc_value *
-system_execute (xmlrpc_env   *env,
-                xmlrpc_value *param_array,
-                void         *user_data)
-{
-    char *command_line;
-    char *standard_output, *standard_error;
-    int exit_status;
-    GError *err = NULL;
-
-    xmlrpc_parse_value (env, param_array, "(s)", &command_line);
-    XMLRPC_FAIL_IF_FAULT (env);
-
-    if (!g_spawn_command_line_sync (command_line, &standard_output,
-                                   &standard_error, &exit_status, &err))
-    {
-        xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_CANT_EXECUTE,
-                                        "Cannot execute '%s': %s",
-                                        command_line, err->message);
-        g_error_free (err);
-    }
-
-cleanup:
-    if (env->fault_occurred)
-        return NULL;
-    else {
-        return xmlrpc_build_value (env, "(iss)", exit_status,
-                                   standard_output, standard_error);
-    }
-}
-
-static xmlrpc_value *
-system_execute_script (xmlrpc_env   *env,
-                       xmlrpc_value *param_array,
-                       void         *user_data)
-{
-    char *script_data;
-    int script_size;
-    int fd;
-    char *script_file;
-    char *command_line;
-    char *standard_output, *standard_error;
-    int exit_status;
-    GError *err = NULL;
-
-    xmlrpc_parse_value (env, param_array, "(6)", &script_data, &script_size);
-    XMLRPC_FAIL_IF_FAULT (env);
-
-    fd = g_file_open_tmp ("script-XXXXXX", &script_file, NULL);
-    rc_write (fd, script_data, script_size);
-    rc_close (fd);
-
-    command_line = g_strdup_printf ("/bin/sh %s", script_file);
-    if (!g_spawn_command_line_sync (command_line, &standard_output,
-                                   &standard_error, &exit_status, &err))
-    {
-        xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_CANT_EXECUTE,
-                                        "Cannot execute script: %s",
-                                        err->message);
-        g_error_free (err);
-    }
-
-    g_free (command_line);
-    unlink (script_file);
-    g_free (script_file);
-
-cleanup:
-    if (env->fault_occurred)
-        return NULL;
-    else {
-        return xmlrpc_build_value (env, "(iss)", exit_status,
-                                   standard_output, standard_error);
-    }
-}
-
 void
 rcd_rpc_system_register_methods(void)
 {
@@ -589,12 +514,6 @@ rcd_rpc_system_register_methods(void)
     rcd_rpc_register_method ("rcd.system.queue_method",
                              system_queue_method,
                              "", NULL);
-    rcd_rpc_register_method ("rcd.system.execute",
-                             system_execute,
-                             "superuser", NULL);
-    rcd_rpc_register_method("rcd.system.execute_script",
-                            system_execute_script,
-                            "superuser", NULL);
 
 } /* rcd_rpc_system_register_methods */
 

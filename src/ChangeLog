@@ -1,3 +1,8 @@
+2003-07-09  Joe shaw  <joe@ximian.com>
+
+	* rcd-rpc-system.c, rcd-rpc-util.h: Remove the execution stuff,
+	we're going to do it in a module instead.
+
 2003-07-09  Tambet Ingo  <tambet@ximian.com>
 
 	* rcd-transaction.c (transaction_xml): Added new flag
