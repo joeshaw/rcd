@@ -269,6 +269,7 @@ normal_cache_filename_func (RCDCache *cache, const char *url)
         g_strdelimit (filename, "/", '-'));
 
     g_free (fn);
+    soup_uri_free (uri);
 
     return local_filename;
 } /* normal_cache_filename_func */

@@ -165,6 +165,8 @@ log_query_log (xmlrpc_env   *env,
     rcd_log_query (parts, add_log_cb, &info);
 
  cleanup:
+    g_free (parts);
+
     if (info.failed || env->fault_occurred)
         return NULL;
 

@@ -260,6 +260,8 @@ prefs_list_prefs (xmlrpc_env   *env,
         member = xmlrpc_build_value (env, "V", value);
         XMLRPC_FAIL_IF_FAULT (env);
 
+        xmlrpc_DECREF (value);
+
         xmlrpc_struct_set_value (env, pref_info, "value", member);
 
         xmlrpc_DECREF (member);

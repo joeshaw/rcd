@@ -176,6 +176,7 @@ rcd_xmlrpc_to_rc_package_dep (xmlrpc_value *value,
     dep = rc_package_dep_new_from_spec (&spec, relation);
 
  cleanup:
+    rc_package_spec_free_members (&spec);
     g_free (relation_str);
     
     return dep;
@@ -404,7 +405,7 @@ RCPackage *
 rcd_rc_package_from_xmlrpc_package (xmlrpc_value *value,
                                     xmlrpc_env   *env)
 {
-    char *name;
+    char *name = NULL;
     int channel_id;
     RCWorld *world = rc_get_world ();
     RCPackman *packman = rc_world_get_packman (world);
@@ -423,14 +424,14 @@ rcd_rc_package_from_xmlrpc_package (xmlrpc_value *value,
         if (!channel) {
             xmlrpc_env_set_fault (env, RCD_RPC_FAULT_INVALID_CHANNEL,
                                   "Unable to find channel");
-            return NULL;
+            goto cleanup;
         }
 
         package = rc_world_get_package (world, channel, name);
         if (!package) {
             xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PACKAGE_NOT_FOUND,
                                   "Unable to find package");
-            return NULL;
+            goto cleanup;
         }
     }
     else {
@@ -447,7 +448,7 @@ rcd_rc_package_from_xmlrpc_package (xmlrpc_value *value,
             package = rcd_rc_package_from_streamed_package (package_data, env);
             XMLRPC_FAIL_IF_FAULT (env);
 
-            return package;
+            goto cleanup;
         }
 
         has_key = xmlrpc_struct_has_key (env, value, "package_filename");
@@ -468,7 +469,7 @@ rcd_rc_package_from_xmlrpc_package (xmlrpc_value *value,
                 xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PACKAGE_NOT_FOUND,
                                       "Unable to find package");
 
-            return package;
+            goto cleanup;
         }
 
         package = rc_world_get_package (world, RC_WORLD_SYSTEM_PACKAGES, name);
@@ -476,13 +477,15 @@ rcd_rc_package_from_xmlrpc_package (xmlrpc_value *value,
         if (!package) {
             xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PACKAGE_NOT_FOUND,
                                   "Unable to find package");
-            return NULL;
+            goto cleanup;
         }
     }
 
     rc_package_ref (package);
 
 cleanup:
+    g_free (name);
+
     return package;
 } /* rcd_rc_package_from_xmlrpc_package */
 

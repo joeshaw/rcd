@@ -386,6 +386,7 @@ build_updates_list (RCPackage *old,
 
     xmlrpc_DECREF (old_xmlrpc);
     xmlrpc_DECREF (new_xmlrpc);
+    xmlrpc_DECREF (history);
     xmlrpc_DECREF (pair);
 
  cleanup:
@@ -1899,6 +1900,8 @@ packsys_what_provides (xmlrpc_env   *env,
                                             RC_WORLD_ANY_CHANNEL,
                                             what_provides_cb,
                                             &info);
+
+        rc_package_dep_free (dep);
     }
 
     return info.array;
@@ -1961,6 +1964,8 @@ packsys_what_requires (xmlrpc_env   *env,
                                             RC_WORLD_ANY_CHANNEL,
                                             what_requires_or_conflicts_cb,
                                             &info);
+
+        rc_package_dep_free (dep);
     }
 
     return info.array;
@@ -1991,6 +1996,8 @@ packsys_what_conflicts (xmlrpc_env   *env,
                                               RC_WORLD_ANY_CHANNEL,
                                               what_requires_or_conflicts_cb,
                                               &info);
+
+        rc_package_dep_free (dep);
     }
 
     return info.array;
