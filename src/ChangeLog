@@ -1,3 +1,9 @@
+2002-09-03  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-rpc-util.c (rcd_rc_package_to_xmlrpc): Include the
+	file size, installed size, and section info when we map an
+	RCPackage to an xml-rpc struct.
+
 2002-08-29  Joe Shaw  <joe@ximian.com>
 
 	* rcd.c (is_supported_distro): Added.  Checks to see if we're on a

@@ -250,6 +250,23 @@ rcd_rc_package_to_xmlrpc (RCPackage *package, xmlrpc_env *env)
     }
 
     /* Extra data useful to a client */
+
+    RCD_XMLRPC_STRUCT_SET_INT(
+        env, value,
+        "file_size", package->file_size);
+
+    RCD_XMLRPC_STRUCT_SET_INT(
+        env, value,
+        "installed_size", package->installed_size);
+
+    RCD_XMLRPC_STRUCT_SET_STRING(
+        env, value,
+        "section_str", rc_package_section_to_string (package->section));
+
+    RCD_XMLRPC_STRUCT_SET_INT(
+        env, value,
+        "section_num", package->section);
+
     if (package->installed) {
         RCChannel *guess;
 
