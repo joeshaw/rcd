@@ -32,11 +32,43 @@
 
 #include "rcd-rpc.h"
 #include "rcd-rpc-system.h"
+#include "rcd-unix-server.h"
 
 static xmlrpc_registry *registry = NULL;
 
+static GByteArray *
+unix_rpc_callback (GByteArray *in_data)
+{
+    xmlrpc_env env;
+    xmlrpc_mem_block *output;
+    GByteArray *out_data;
+
+    g_print ("[%d]: Handling RPC connection\n", getpid());
+
+    xmlrpc_env_init(&env);
+
+    output = xmlrpc_registry_process_call(
+        &env, registry, NULL, in_data->data, in_data->len);
+
+    g_print ("[%d]: Call processed\n", getpid());
+
+    if (env.fault_occurred) {
+        g_warning ("Some weird fault during registry processing");
+        return NULL;
+    }
+
+    out_data = g_byte_array_new();
+    g_byte_array_append(out_data, 
+                        XMLRPC_TYPED_MEM_BLOCK_CONTENTS(char, output),
+                        XMLRPC_TYPED_MEM_BLOCK_SIZE(char, output));
+
+    xmlrpc_mem_block_free(output);
+
+    return out_data;
+} /* unix_rpc_callback */    
+
 static void
-rpc_callback (SoupServerContext *context, SoupMessage *msg, gpointer data)
+soup_rpc_callback (SoupServerContext *context, SoupMessage *msg, gpointer data)
 {
     xmlrpc_env env;
     xmlrpc_mem_block *output;
@@ -64,20 +96,13 @@ rpc_callback (SoupServerContext *context, SoupMessage *msg, gpointer data)
     soup_message_set_error(msg, SOUP_ERROR_OK);
 
     xmlrpc_mem_block_free(output);
-} /* rpc_callback */
+} /* soup_rpc_callback */
 
 static void
-default_callback(SoupServerContext *context, SoupMessage *msg, gpointer data)
+soup_default_callback(SoupServerContext *context, SoupMessage *msg, gpointer data)
 {
     soup_message_set_error(msg, SOUP_ERROR_NOT_FOUND);
 } /* default_callback */
-
-static void
-server_init(SoupServer *server)
-{
-    soup_server_register(server, "/RPC2", NULL, rpc_callback, NULL, NULL);
-    soup_server_register(server, NULL, NULL, default_callback, NULL, NULL);
-} /* server_init */
 
 static gpointer
 run_server_thread(gpointer user_data)
@@ -91,9 +116,13 @@ run_server_thread(gpointer user_data)
     if (!server)
         g_error("Could not start RPC server");
 
-    server_init(server);
+    soup_server_register(server, "/RPC2", NULL, soup_rpc_callback, NULL, NULL);
+    soup_server_register(
+        server, NULL, NULL, soup_default_callback, NULL, NULL);
 
     soup_server_run_async(server);
+
+    rcd_unix_server_run_async(unix_rpc_callback);
 
     return NULL;
 } /* run_server_thread */
@@ -151,4 +180,3 @@ rcd_rpc_init(void)
     /* FIXME: Probably use g_thread_create() here */
     g_idle_add(run_server_thread, NULL);
 } /* rcd_rpc_init */
-    

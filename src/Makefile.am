@@ -20,8 +20,14 @@ rcd_SOURCES = 			\
 	rcd-query.c		\
 	rcd-rpc.c		\
 	rcd-rpc.h		\
+	rcd-rpc-packsys.c	\
+	rcd-rpc-packsys.h	\
 	rcd-rpc-system.c	\
 	rcd-rpc-system.h	\
+	rcd-rpc-util.c		\
+	rcd-rpc-util.h		\
+	rcd-unix-server.c	\
+	rcd-unix-server.h	\
 	rcd.c
 
 rcd_LDADD =	\

@@ -34,6 +34,7 @@
 #include "rcd-module.h"
 #include "rcd-query.h"
 #include "rcd-rpc.h"
+#include "rcd-rpc-packsys.h"
 
 static void
 rcd_query_fn (RCPackage *package, gpointer user_data)
@@ -83,9 +84,7 @@ initialize_rc_world (void)
     rc_world_register_packman (world, packman);
     rc_world_get_system_packages (world);
 
-#if 0
-    rcd_rpc_packsys_register_methods (packman);
-#endif
+    rcd_rpc_packsys_register_methods (world);
 
     rcd_query_test ();
 } /* initialize_rc_world */

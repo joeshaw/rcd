@@ -1,5 +1,36 @@
 2002-05-24  Joe Shaw  <joe@ximian.com>
 
+	* Makefile.am: Add in rcd-rpc-packsys.[ch], rcd-rpc-util.[ch],
+	rcd-unix-server.[ch]: Added these.
+
+	* rcd-rpc.c (unix_rpc_callback): Handle an XML-RPC callback over
+	unix domain sockets.
+	(rpc_callback, default_callback): Prefix these functions with
+	"soup_"
+	(server_init): Removed this function, it wasn't long enough to be
+	useful.
+	(run_server_thread): Move the contents of server_init() here, add
+	a call to rcd_unix_server_run_async() for handling requests over
+	unix domain sockets.
+
+	* rcd-rpc.h: Move header includes inside of the only-include-once
+	#ifdef magic.
+
+	* rcd-rpc-packsys.[ch]: Added.  Contains packaging system RPC
+	calls (just query for now).
+
+	* rcd-rpc-util.[ch]: Added.  Contains utility functions for
+	converting an RCPackage or RCPackageSList to XML-RPC values and
+	XML-RPC values into RCDQueryParts.
+
+	* rcd-unix-server.[ch]: Added.  Lame first cut at doing XML-RPC
+	calls over unix domain sockets.
+
+	* rcd.c (initialize_rc_world): Register the packaging system RPC
+	methods.
+
+2002-05-24  Joe Shaw  <joe@ximian.com>
+
 	* Makefile.am: Lots of magic
 
 	* rcd-module.c: Added dynamic module loading.
