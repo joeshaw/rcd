@@ -1,3 +1,10 @@
+2002-07-24  Joe Shaw  <joe@ximian.com>
+
+	* rcd.pem: Added a generic certificate for the daemon.
+
+	* Makefile.am: Install and dist the certificate.  Install the
+	rc-passwd file mode 0600 and try to chown it to root if we can.
+
 2002-07-22  Joe Shaw  <joe@ximian.com>
 
 	* Makefile.am: Make sure to chmod 0755 rcd when we install it.
