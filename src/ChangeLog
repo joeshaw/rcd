@@ -1,3 +1,9 @@
+2002-07-09  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd.c (root_check): Even if the --allow-non-root option has been
+	given, point out that things may fail to work when run w/o root
+	privileges.
+
 2002-07-08  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-packsys.c (packsys_transact): Take a boolean third

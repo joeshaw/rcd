@@ -86,9 +86,6 @@ option_parsing (int argc, const char **argv)
 static void
 root_check (void)
 {
-    if (non_root_flag)
-        return;
-
     /* Maybe-FIXME: Root always has a UID of zero, right? */
     if (getuid () == 0)
         return;
@@ -98,11 +95,13 @@ root_check (void)
     g_printerr ("In general, this will not work -- rcd will be unable to modify\n");
     g_printerr ("the system to install, upgrade or remove packages.\n");
     g_printerr ("\n");
-    g_printerr ("If you really want to do this, re-run rcd with the --allow-non-root\n");
-    g_printerr ("option to suppress this warning message.  However, don't be surprised\n");
-    g_printerr ("when rcd fails to work properly.\n");
 
-    exit (-1);
+    if (! non_root_flag) {
+        g_printerr ("If you really want to do this, re-run rcd with the --allow-non-root\n");
+        g_printerr ("option to suppress this warning message.  However, don't be surprised\n");
+        g_printerr ("when rcd fails to work properly.\n");
+        exit (-1);
+    }
 }
 
 static void
