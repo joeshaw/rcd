@@ -3,6 +3,8 @@
 	* rcd-rpc-packsys.c (run_transaction): Properly handle dry runs.
 	(run_transaction): If we just did a dry run, don't log the
 	transaction and don't rescan the system packages.
+	(dep_get_package_info_cb): Generate a text message for
+	RC_RESOLVER_INFO_TYPE_OBSOLETES items.
 
 	* rcd.c (option_parsing): Added the --undump command line option.
 	(root_check): Allow non-root without complaining if we have
