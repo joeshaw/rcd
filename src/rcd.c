@@ -524,7 +524,7 @@ rehash_data (gpointer data)
 
     if (!rcd_transaction_is_locked ()) {
         timeout_id = -1;
-        initialize_data ();
+        rcd_fetch_refresh (NULL);
     }
     else {
         if (timeout_id == -1)

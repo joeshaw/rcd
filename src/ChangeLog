@@ -1,3 +1,20 @@
+2003-04-24  Joe Shaw  <joe@ximian.com>
+
+	* rcd-fetch.c (rcd_fetch_channel_list_local): Pass the world in as
+	user_data to remove_channel_cb().
+	(rcd_fetch_refresh): Moved the refresh call here from
+	rcd-rpc-packsys.c.  Makes more sense here anyway.  Refreshes
+	channel list, data, and icons as well as news and mirrors.
+
+	* rcd-rpc-packsys.c (packsys_refresh_all_channels): Call
+	rcd_fetch_refresh().
+	(rcd_rpc_packsys_register_methods): Call rcd_fetch_refresh() as
+	the heartbeat func.
+
+	* rcd.c (rehash_data): On SIGHUP we might as well just refresh the
+	data.  Call rcd_fetch_refresh() instead of recalling
+	initialize_data() and possibly breaking things.
+
 2003-04-22  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-util.c (rcd_rc_package_to_xmlrpc): Serialize the

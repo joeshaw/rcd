@@ -127,6 +127,13 @@ void     rcd_fetch_mirrors       (void);
 gboolean rcd_fetch_mirrors_local (void);
 
 /*
+ * Refresh channel data, news and mirrors.  Returns a list of pending
+ * IDs for the channel data.  The optional out parameter is an error
+ * message in case it fails.
+ */
+GSList *rcd_fetch_refresh (char **err_msg);
+
+/*
  * Set up an RCDTransferPool to download all of the packages specified.
  */
 RCDTransferPool *rcd_fetch_packages (RCPackageSList *packages);
