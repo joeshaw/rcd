@@ -1,3 +1,11 @@
+2002-07-22  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-identity.c (rcd_identity_remove_from_password_file): Chmod
+	the password file after we re-open it.
+
+	* rcd-rpc-users.c (users_remove): Added.  A wrapper around
+	rcd_identity_remove_from_password_file.
+
 2002-07-22  Joe Shaw  <joe@ximian.com>
 
 	* rcd-unix-server.c (read_cred): Set the size of the length before

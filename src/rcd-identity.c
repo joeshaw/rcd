@@ -390,6 +390,7 @@ rcd_identity_remove_from_password_file (const char *username)
     }
 
     out = fopen (PASSWORD_FILE, "w");
+    chmod (PASSWORD_FILE, S_IRUSR | S_IWUSR);
 
     id_len = strlen (username);
 

@@ -166,9 +166,21 @@ users_remove (xmlrpc_env   *env,
               xmlrpc_value *param_array,
               void         *user_data)
 {
-    /* FIXME! */
+    char *username;
+    gboolean rv = FALSE;
+    xmlrpc_value *value = NULL;
+    
+    xmlrpc_parse_value (env, param_array, "(s)", &username);
+    XMLRPC_FAIL_IF_FAULT (env);
 
-    return NULL;
+    if (username && *username) {
+        rv = rcd_identity_remove_from_password_file (username);
+    }
+
+    value = xmlrpc_build_value (env, "i", rv ? 1 : 0);
+
+ cleanup:
+    return value;
 }
 
 void
