@@ -2133,7 +2133,11 @@ extra_dump_info (void)
     xmlNewTextChild (info, NULL, "host", rcd_prefs_get_host ());
     xmlNewTextChild (info, NULL, "premium",
                      rcd_prefs_get_premium () ? "1" : "0");
-    xmlNewTextChild (info, NULL, "proxy", rcd_prefs_get_proxy ());
+    xmlNewTextChild (info, NULL, "proxy", rcd_prefs_get_proxy_url ());
+    xmlNewTextChild (info, NULL, "proxy_has_user",
+                     (rcd_prefs_get_proxy_username () != NULL) ? "1" : "0");
+    xmlNewTextChild (info, NULL, "proxy_has_password",
+                     (rcd_prefs_get_proxy_password () != NULL) ? "1" : "0");
 
     return info;
 

@@ -148,7 +148,12 @@ map_soup_error_to_rcd_transfer_error (SoupMessage *message, RCDTransfer *t)
         if (!url)
             url = rcd_prefs_get_proxy ();
 
-        err = g_strdup_printf ("%s (%s)", soup_err, url);
+        /* 
+         * We can't use 'url' above because it may contain the user's
+         * password.
+         */
+        err = g_strdup_printf ("%s (%s)", soup_err,
+                               rcd_prefs_get_proxy_url ());
         rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_CANT_CONNECT, err);
         g_free (err);
         break;
@@ -159,7 +164,12 @@ map_soup_error_to_rcd_transfer_error (SoupMessage *message, RCDTransfer *t)
         if (!url)
             url = rcd_prefs_get_proxy ();
 
-        err = g_strdup_printf ("%s (%s)", soup_err, url);
+        /* 
+         * We can't use 'url' above because it may contain the user's
+         * password.
+         */
+        err = g_strdup_printf ("%s (%s)", soup_err,
+                               rcd_prefs_get_proxy_url ());
         rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_CANT_AUTHENTICATE, err);
         g_free (err);
         break;
@@ -431,7 +441,12 @@ http_open (RCDTransfer *t)
         if (!proxy_context) {
             char *err_str;
 
-            err_str = g_strconcat("Invalid proxy URL: ", proxy_url, NULL);
+            /* 
+             * We can't use 'proxy_url' because it may contain the user's
+             * password.
+             */
+            err_str = g_strconcat("Invalid proxy URL: ",
+                                  rcd_prefs_get_proxy_url (), NULL);
 
             rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_INVALID_URI,
                                     err_str);

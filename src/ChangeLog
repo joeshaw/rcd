@@ -1,3 +1,9 @@
+2003-01-20  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-packsys.c, rcd-transfer-http.c: If we ever have problems
+	with the URL returned from rcd_prefs_get_proxy(), show the URL to
+	the user from rcd_prefs_get_proxy_url().
+
 2003-01-15  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-util.c (rcd_rc_channel_to_xmlrpc): Export the
