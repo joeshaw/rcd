@@ -29,6 +29,9 @@
 #include "rcd-query.h"
 
 #include <glib.h>
+#include <xmlrpc.h>
+#include <libredcarpet.h>
+#include "rcd-rpc.h"
 
 typedef struct _RCDQueryEngine RCDQueryEngine;
 struct _RCDQueryEngine {
@@ -477,3 +480,4 @@ rcd_query (RCWorld     *world,
 
     return count;
 }
+

@@ -58,6 +58,7 @@ rcd_module_init(void)
     }
 
     dir = g_dir_open(MODULEDIR, 0, NULL);
+    g_assert (dir);
     while ((file_name = g_dir_read_name(dir))) {
         if (strstr(file_name, ".so")) {
             char *f;
