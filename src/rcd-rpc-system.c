@@ -210,6 +210,11 @@ system_poll_pending(xmlrpc_env   *env,
                                        (gint) rcd_pending_get_last_time (pending));
         }
 
+        if (rcd_pending_get_error_msg (pending)) {
+            RCD_XMLRPC_STRUCT_SET_STRING (env, value, "error_msg",
+                                          rcd_pending_get_error_msg (pending));
+        }
+
         messages = rcd_pending_messages_to_xmlrpc (
             env, rcd_pending_get_messages (pending));
         XMLRPC_FAIL_IF_FAULT (env);

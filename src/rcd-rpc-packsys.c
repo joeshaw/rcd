@@ -937,7 +937,7 @@ packsys_transact(xmlrpc_env   *env,
     RCPackageSList *install_packages = NULL;
     RCPackageSList *remove_packages = NULL;
     RCDRPCMethodData *method_data;
-    int transaction_id;
+    int download_id, transaction_id, step_id;
     xmlrpc_value *result = NULL;
 
     /* Before we begin any transaction, expire the package cache. */
@@ -971,16 +971,20 @@ packsys_transact(xmlrpc_env   *env,
         env, remove_packages, method_data->identity);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    transaction_id = rcd_transaction_begin (world,
-                                            install_packages,
-                                            remove_packages,
-                                            dry_run,
-                                            client_id,
-                                            client_version,
-                                            method_data->host,
-                                            method_data->identity);
+    rcd_transaction_begin (world,
+                           install_packages,
+                           remove_packages,
+                           dry_run,
+                           client_id,
+                           client_version,
+                           method_data->host,
+                           method_data->identity,
+                           &download_id,
+                           &transaction_id,
+                           &step_id);
 
-    result = xmlrpc_build_value (env, "i", transaction_id);
+    result = xmlrpc_build_value (
+        env, "(iii)", download_id, transaction_id, step_id);
     XMLRPC_FAIL_IF_FAULT(env);
 
 cleanup:
@@ -1003,43 +1007,31 @@ packsys_abort_download(xmlrpc_env   *env,
                        xmlrpc_value *param_array,
                        void         *user_data)
 {
-    RCWorld *world = (RCWorld *) user_data;
-    int transaction_id;
-    RCPackageSList *install_packages;
-    xmlrpc_value *result = NULL;
+    int download_id;
     RCDRPCMethodData *method_data;
+    int success;
+    xmlrpc_value *result = NULL;
 
-    xmlrpc_parse_value (env, param_array, "(i)", &transaction_id);
+    xmlrpc_parse_value (env, param_array, "(i)", &download_id);
 
-    if (!rcd_transaction_is_valid (transaction_id)) {
+    if (!rcd_transaction_is_valid (download_id)) {
         xmlrpc_env_set_fault (env, RCD_RPC_FAULT_INVALID_TRANSACTION_ID,
                               "Cannot find transaction for that id");
         return NULL;
     }
 
-    install_packages = rcd_transaction_get_install_packages (transaction_id);
+    method_data = rcd_rpc_get_method_data ();
 
-    if (!install_packages || rcd_transaction_is_locked ()) {
-        /*
-         * We can only abort downloads, so if we're not installing anything,
-         * or we are in the middle of a transaction, we cannot abort it.
-         */
-        result = xmlrpc_build_value (env, "i", 0);
-        return result;
+    success = rcd_transaction_abort (download_id, method_data->identity);
+
+    if (success < 0) {
+        xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PERMISSION_DENIED,
+                              "Permission denied");
+        return NULL;
     }
 
-    /* Check our permissions to abort this download */
-    method_data = rcd_rpc_get_method_data ();
-    check_install_package_auth (
-        env, world, install_packages, method_data->identity);
-    XMLRPC_FAIL_IF_FAULT (env);
+    result = xmlrpc_build_value (env, "i", success);
 
-    rcd_fetch_packages_abort (
-        rcd_transaction_get_package_download_id (transaction_id));
-
-    result = xmlrpc_build_value (env, "i", 1);
-
-cleanup:
     return result;
 } /* packsys_abort_download */
 

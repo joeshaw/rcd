@@ -89,12 +89,13 @@ typedef void (*RCDFetchCompletedFunc) (gboolean    successful,
                                        const char *error_string,
                                        gpointer    user_data);
 
-int rcd_fetch_packages (RCPackageSList        *packages,
-                        RCDFetchProgressFunc   progress_callback,
-                        RCDFetchCompletedFunc  completed_callback,
-                        gpointer               user_data);
+void rcd_fetch_packages (RCPackageSList        *packages,
+                         int                    pending_id,
+                         RCDFetchProgressFunc   progress_callback,
+                         RCDFetchCompletedFunc  completed_callback,
+                         gpointer               user_data);
 
-void rcd_fetch_packages_abort (int transaction_id);
+void rcd_fetch_packages_abort (int pending_id);
 
 
 #endif /* __RCD_FETCH_H__ */

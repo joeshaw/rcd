@@ -150,7 +150,8 @@ rcd_cache_entry_close (RCDCacheEntry *entry)
     g_free (entry->tmp_file);
     entry->tmp_file = NULL;
 
-    g_hash_table_insert (entry->cache->entries, entry->local_file, entry);
+    g_hash_table_insert (entry->cache->entries,
+                         g_strdup (entry->local_file), entry);
 } /* rcd_cache_entry_close */
 
 void
@@ -260,7 +261,8 @@ rcd_cache_new (RCDCacheFilenameFunc filename_func)
     RCDCache *cache;
 
     cache = g_new0 (RCDCache, 1);
-    cache->entries = g_hash_table_new (g_str_hash, g_str_equal);
+    cache->entries = g_hash_table_new_full (g_str_hash, g_str_equal,
+                                            g_free, NULL);
     cache->filename_func = filename_func;
 
     return cache;

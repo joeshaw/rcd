@@ -56,13 +56,16 @@ struct _RCDTransactionStatus {
 
     RCPackageSList *packages_to_download;
 
-    RCDPending *pending;
-    int package_download_id;
+    RCDPending *download_pending;
+    RCDPending *transaction_pending;
+    RCDPending *transaction_step_pending;
 
     gsize total_download_size;
     gsize current_download_size;
 
     int total_transaction_steps;
+
+    int transaction_size;
 
     char *client_id;
     char *client_version;
@@ -95,7 +98,10 @@ rcd_transaction_status_unref (RCDTransactionStatus *status)
         rc_package_slist_unref (status->install_packages);
         rc_package_slist_unref (status->remove_packages);
         rc_package_slist_unref (status->packages_to_download);
-        g_object_unref (status->pending);
+        if (status->download_pending)
+            g_object_unref (status->download_pending);
+        g_object_unref (status->transaction_pending);
+        g_object_unref (status->transaction_step_pending);
         g_free (status->client_id);
         g_free (status->client_version);
         g_free (status->client_host);
@@ -357,6 +363,8 @@ transact_step_cb(RCPackman *packman,
 
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Transaction step.  seqno %d", seqno);
 
+    status->transaction_size = 0;
+
     switch (step) {
     case RC_PACKMAN_STEP_UNKNOWN:
     case RC_PACKMAN_STEP_PREPARE:
@@ -382,9 +390,9 @@ transact_step_cb(RCPackman *packman,
         msg = g_strdup (action);
 
     /* We don't want to push the same message multiple times */
-    last = rcd_pending_get_latest_message (status->pending);
+    last = rcd_pending_get_latest_message (status->transaction_pending);
     if (!last || strcmp (msg, last) != 0)
-        rcd_pending_add_message (status->pending, msg);
+        rcd_pending_add_message (status->transaction_pending, msg);
 
     g_free (msg);
 } /* transact_step_cb */
@@ -397,6 +405,19 @@ transact_progress_cb(RCPackman *packman,
 {
     rc_debug (RC_DEBUG_LEVEL_MESSAGE,
               "Transaction progress.  %d of %d", amount, total);
+
+    if (status->transaction_size == 0) {
+        if (rcd_pending_get_status (status->transaction_step_pending) ==
+            RCD_PENDING_STATUS_PRE_BEGIN)
+            rcd_pending_begin (status->transaction_step_pending);
+        else
+            rcd_pending_update (status->transaction_step_pending, 0);
+    }
+
+    if (amount > status->transaction_size) {
+        rcd_pending_update_by_size (status->transaction_step_pending,
+                                    amount, total);
+    }
 } /* transact_progress_cb */
 
 static void
@@ -405,8 +426,10 @@ transact_done_cb(RCPackman *packman,
 {
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Transaction done");
 
-    rcd_pending_add_message (status->pending, "finish");
-    rcd_pending_finished (status->pending, 0);
+    rcd_pending_finished (status->transaction_pending, 0);
+    if (rcd_pending_get_status (status->transaction_step_pending) !=
+        RCD_PENDING_STATUS_PRE_BEGIN)
+        rcd_pending_finished (status->transaction_step_pending, 0);
 } /* transact_done_cb */
 
 static void
@@ -478,17 +501,13 @@ update_log (RCDTransactionStatus *status)
 } /* update_log */
 
 static void
-fail_transaction (RCDTransactionStatus *status, const char *msg)
+fail_transaction (RCDTransactionStatus *status,
+                  RCDPending           *pending,
+                  const char           *msg)
 {
-    char *pending_msg;
-
     rc_debug (RC_DEBUG_LEVEL_WARNING, "Transaction failed: %s", msg);
 
-    pending_msg = g_strdup_printf ("failed:%s", msg);
-    rcd_pending_add_message (status->pending, pending_msg);
-    g_free (pending_msg);
-
-    rcd_pending_fail (status->pending, -1, msg);
+    rcd_pending_fail (pending, -1, msg);
 
     if (!status->dry_run && rcd_prefs_get_premium ())
         rcd_transaction_send_log (status, FALSE, msg);
@@ -500,7 +519,7 @@ run_transaction(gpointer user_data)
     RCDTransactionStatus *status = user_data;
 
     if (rcd_transaction_is_locked ()) {
-        fail_transaction (status,
+        fail_transaction (status, status->transaction_pending,
                           "Another transaction is already in progress");
         goto cleanup;
     }
@@ -539,7 +558,8 @@ run_transaction(gpointer user_data)
         G_CALLBACK (transact_progress_cb), status);
 
     if (rc_packman_get_error (status->packman)) {
-        fail_transaction (status, rc_packman_get_reason (status->packman));
+        fail_transaction (status, status->transaction_pending,
+                          rc_packman_get_reason (status->packman));
         goto unlock_and_cleanup;
     }
     else {
@@ -569,6 +589,9 @@ verify_packages (RCDTransactionStatus *status)
 {
     RCPackageSList *iter;
 
+    /* Fire up the transaction pending */
+    rcd_pending_begin (status->transaction_pending);
+
     rc_verification_set_keyring (SHAREDIR "/rcd.gpg");
 
     for (iter = status->install_packages; iter; iter = iter->next) {
@@ -580,7 +603,7 @@ verify_packages (RCDTransactionStatus *status)
 
         msg = g_strconcat ("verify:",
                            g_quark_to_string (package->spec.nameq), NULL);
-        rcd_pending_add_message (status->pending, msg);
+        rcd_pending_add_message (status->transaction_pending, msg);
         g_free (msg);
 
         vers = rc_packman_verify (
@@ -598,10 +621,9 @@ verify_packages (RCDTransactionStatus *status)
             rc_debug (RC_DEBUG_LEVEL_MESSAGE,
                       "Verification of '%s' failed",
                       g_quark_to_string (package->spec.nameq));
-            msg = g_strdup_printf ("failed:Verification of '%s' failed",
+            msg = g_strdup_printf ("Verification of '%s' failed",
                                    g_quark_to_string (package->spec.nameq));
-            rcd_pending_add_message (status->pending, msg);
-            rcd_pending_fail (status->pending, -1, msg);
+            rcd_pending_fail (status->transaction_pending, -1, msg);
             g_free (msg);
 
             if (!status->dry_run && rcd_prefs_get_premium ()) {
@@ -626,10 +648,9 @@ verify_packages (RCDTransactionStatus *status)
                     rcd_privileges_from_string ("trusted")))
             {
                 msg = g_strdup_printf (
-                    "failed:Verification of '%s' was inconclusive",
+                    "Verification of '%s' was inconclusive",
                     g_quark_to_string (package->spec.nameq));
-                rcd_pending_add_message (status->pending, msg);
-                rcd_pending_fail (status->pending, -1, msg);
+                rcd_pending_fail (status->transaction_pending, -1, msg);
                 g_free (msg);
 
                 if (!status->dry_run && rcd_prefs_get_premium ()) {
@@ -658,19 +679,19 @@ download_completed (gboolean    successful,
     char *msg;
 
     if (successful) {
+        rcd_pending_finished (status->download_pending, 0);
         verify_packages (user_data);
         return;
     }
 
     /* A NULL error message indicates that it was cancelled, not a failure */
     if (!error_message) {
-        rcd_pending_abort (status->pending, -1);
+        rcd_pending_abort (status->download_pending, -1);
         error_message = "Cancelled by user";
     }
     else {
         msg = g_strdup_printf ("failed:Download failed - %s", error_message);
-        rcd_pending_add_message (status->pending, msg);
-        rcd_pending_fail (status->pending, -1, msg);
+        rcd_pending_fail (status->download_pending, -1, error_message);
         g_free (msg);
     }
 
@@ -690,7 +711,7 @@ update_download_progress (gsize size, gpointer user_data)
 
     status->current_download_size += size;
 
-    rcd_pending_update_by_size (status->pending,
+    rcd_pending_update_by_size (status->download_pending,
                                 status->current_download_size,
                                 status->total_download_size);    
 } /* update_download_progress */
@@ -826,26 +847,29 @@ download_packages (RCPackageSList *packages, RCDTransactionStatus *status)
     if (!status->packages_to_download)
         return 0;
 
+    status->download_pending = rcd_pending_new ("Package download");
+    g_object_set_data (G_OBJECT (status->download_pending), "status", status);
+
     if (!check_download_space (status->total_download_size)) {
         char *msg;
 
         msg = g_strdup_printf ("Insufficient disk space: %s needed in %s",
                                format_size (status->total_download_size),
                                rcd_prefs_get_cache_dir ());
-        fail_transaction (status, msg);
+        fail_transaction (status, status->download_pending, msg);
         g_free (msg);
 
         return -1;
     }
-
-    rcd_pending_add_message (status->pending, "download");
-    rcd_pending_update (status->pending, 0.0);
+    
+    rcd_pending_begin (status->download_pending);
 
     status->packages_to_download =
         g_slist_reverse (status->packages_to_download);
 
-    status->package_download_id = rcd_fetch_packages (
-        status->packages_to_download, 
+    rcd_fetch_packages (
+        status->packages_to_download,
+        rcd_pending_get_id (status->download_pending),
         update_download_progress,
         download_completed,
         status);
@@ -853,7 +877,7 @@ download_packages (RCPackageSList *packages, RCDTransactionStatus *status)
     return g_slist_length (status->packages_to_download);
 } /* download_packages */
 
-int
+void
 rcd_transaction_begin (RCWorld        *world,
                        RCPackageSList *install_packages,
                        RCPackageSList *remove_packages,
@@ -861,9 +885,13 @@ rcd_transaction_begin (RCWorld        *world,
                        const char     *client_id,
                        const char     *client_version,
                        const char     *client_host,
-                       RCDIdentity    *identity)
+                       RCDIdentity    *identity,
+                       int            *download_pending_id,
+                       int            *transaction_pending_id,
+                       int            *step_pending_id)
 {
     RCDTransactionStatus *status;
+    int download_count;
 
     status = g_new0 (RCDTransactionStatus, 1);
     status->refs = 1;
@@ -878,15 +906,15 @@ rcd_transaction_begin (RCWorld        *world,
     status->identity = rcd_identity_copy (identity);
     status->start_time = time (NULL);
 
-    status->pending = rcd_pending_new ("Package Transaction");
-    g_object_set_data (G_OBJECT (status->pending), "status", status);
-    rcd_pending_begin (status->pending);
-
     /*
      * We don't want to allow the shutting down of the daemon while we're
      * in the middle of a transaction.
      */
     rcd_shutdown_block ();
+
+    status->transaction_pending = rcd_pending_new ("Package transaction");
+    status->transaction_step_pending =
+        rcd_pending_new ("Package transaction step");
 
     /*
      * If we have to download files, start the download.  Otherwise,
@@ -896,19 +924,38 @@ rcd_transaction_begin (RCWorld        *world,
      * return a negative value (and not triggering the run_transaction()
      * call).
      */
-    if (!download_packages (status->install_packages, status))
-        verify_packages (status);
+    download_count = download_packages (status->install_packages, status);
 
-    return rcd_pending_get_id (status->pending);
+    if (download_pending_id) {
+        if (status->download_pending) {
+            *download_pending_id = rcd_pending_get_id (
+                status->download_pending);
+        }
+        else
+            *download_pending_id = -1;
+    }
+
+    if (transaction_pending_id) {
+        *transaction_pending_id =
+            rcd_pending_get_id (status->transaction_pending);
+    }
+
+    if (step_pending_id) {
+        *step_pending_id =
+            rcd_pending_get_id (status->transaction_step_pending);
+    }
+
+    if (!download_count)
+        verify_packages (status);
 } /* rcd_transaction_begin */
 
 static RCDTransactionStatus *
-get_transaction_from_id (int transaction_id)
+get_transaction_from_id (int download_id)
 {
     RCDPending *pending;
     RCDTransactionStatus *status;
 
-    pending = rcd_pending_lookup_by_id (transaction_id);
+    pending = rcd_pending_lookup_by_id (download_id);
 
     if (!pending)
         return NULL;
@@ -921,34 +968,82 @@ get_transaction_from_id (int transaction_id)
 } /* get_transaction_from_id */
 
 gboolean
-rcd_transaction_is_valid (int transaction_id)
+rcd_transaction_is_valid (int download_id)
 {
-    return get_transaction_from_id (transaction_id) != NULL;
+    return get_transaction_from_id (download_id) != NULL;
 }
 
-RCPackageSList *
-rcd_transaction_get_install_packages (int transaction_id)
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+static gboolean
+check_install_auth (RCDTransactionStatus *status, RCDIdentity *identity)
 {
-    RCDTransactionStatus *status;
+    RCPackageSList *iter;
+    gboolean install = FALSE;
+    gboolean upgrade = FALSE;
+    RCDPrivileges req_priv;
+    gboolean approved;
 
-    status = get_transaction_from_id (transaction_id);
+    if (!status->install_packages)
+        return TRUE;
 
-    g_return_val_if_fail (status, NULL);
+    for (iter = status->install_packages;
+         iter && !install && !upgrade;
+         iter = iter->next)
+    {
+        RCPackage *p = (RCPackage *) iter->data;
 
-    return status->install_packages;
-} /* rcd_transaction_get_install_packages */
+        if (rc_world_find_installed_version (status->world, p))
+            upgrade = TRUE;
+        else
+            install = TRUE;
+    }
+
+    if (upgrade) {
+        req_priv = rcd_privileges_from_string ("upgrade");
+        approved = rcd_identity_approve_action (identity, req_priv);
+
+        if (!approved)
+            return FALSE;
+    }
+
+    if (install) {
+        req_priv = rcd_privileges_from_string ("install");
+        approved = rcd_identity_approve_action (identity, req_priv);
+    
+        if (!approved)
+            return FALSE;
+    }
+
+    return TRUE;
+} /* check_install_auth */
 
 int
-rcd_transaction_get_package_download_id (int transaction_id)
+rcd_transaction_abort (int download_id, RCDIdentity *identity)
 {
     RCDTransactionStatus *status;
 
-    status = get_transaction_from_id (transaction_id);
+    status = get_transaction_from_id (download_id);
 
-    g_return_val_if_fail (status, 0);
+    if (!status)
+        return 0;
 
-    return status->package_download_id;
-} /* rcd_transaction_get_package_download_id */
+    if (!status->install_packages || rcd_transaction_is_locked ()) {
+        /*
+         * We can only abort downloads, so if we're not installing anything,
+         * or we are in the middle of a transaction, we cannot abort it.
+         */
+        return 0;
+    }
+
+    /* Check our permissions to abort this download */
+    if (!check_install_auth (status, identity))
+        return -1;
+
+    rcd_fetch_packages_abort (download_id);
+
+    return 1;
+} /* rcd_transaction_abort */
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 

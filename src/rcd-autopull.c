@@ -216,7 +216,6 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
     RCResolver *resolver;
     GSList *to_install = NULL;
     GSList *to_remove = NULL;
-    int tid;
 
     g_return_if_fail (pull != NULL);
 
@@ -281,14 +280,15 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
         dummy_identity->privileges = rcd_privileges_from_string (
             "install, remove, upgrade, trusted");
 
-        tid = rcd_transaction_begin (rc_get_world (),
-                                     to_install,
-                                     to_remove,
-                                     FALSE,
-                                     rcd_module->description,
-                                     VERSION,
-                                     "localhost",
-                                     dummy_identity);
+        rcd_transaction_begin (rc_get_world (),
+                               to_install,
+                               to_remove,
+                               FALSE,
+                               rcd_module->description,
+                               VERSION,
+                               "localhost",
+                               dummy_identity,
+                               NULL, NULL, NULL);
         
         rcd_identity_free (dummy_identity);
 

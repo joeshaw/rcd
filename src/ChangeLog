@@ -1,3 +1,58 @@
+2002-09-10  Joe Shaw  <joe@ximian.com>
+
+	* rcd-autopull.c (rcd_autopull_resolve_and_transact): Update for
+	the rcd_transaction_begin() API change.
+
+	* rcd-cache.c (rcd_cache_entry_close): g_strdup() the filename
+	before adding it as the key to the hash table.
+	(rcd_cache_new): Call g_hash_table_new_full() and pass in g_free()
+	as the key destroy func.
+
+	* rcd-fetch.c: Get rid of package_transfer_id, we'll be using the
+	download pending id now instead.
+	(rcd_fetch_packages): Don't return a download id, take in the
+	pending_id as an argument.
+
+	* rcd-pending.c (rcd_pending_get_error_msg): Added.
+
+	* rcd-rpc-packsys.c (packsys_transact): Update for the new
+	rcd_transaction_begin() API.  Return a tuple of download pending
+	id, transaction pending id, and transaction step pending id.
+	(packsys_abort_download): Offload the work into
+	rcd-transaction.c where it should be.
+
+	* rcd-rpc-system.c (system_poll_pending): Set error_msg on the
+	xmlrpc struct if it's set on the pending object.
+
+	* rcd-transaction.c (RCDTransactionStatus): Use three pendings
+	instead of one and a generic download id.
+	(rcd_transaction_status_unref): Unref all of our pendings.
+	(transaction_step_cb): Reset the transaction_size to 0.  Add
+	messages to the transaction_pending.
+	(transact_progress_cb): Update the transaction_step_pending
+	progress.
+	(transact_done_cb): Get rid of the "finish" message.  Set
+	transaction_pending and transaction_step_pending to "finished".
+	(fail_transaction): Take an RCDPending to use in the
+	rcd_pending_fail() call.  Get rid of the "failed" message.
+	(run_transaction): Pass transaction_pending into
+	fail_transaction().
+	(verify_packages): Start transaction_pending.  Get rid
+	of the "failed" message; rcd_pending_fail() is sufficient.
+	(download_completed): call rcd_pending_finished() on
+	download_pending if we're successful.  Otherwise abort or fail it.
+	(download_packages): Create download_pending and begin
+	it if we have packages to download.  Pass the id into
+	rcd_fetch_packages().
+	(rcd_transaction_begin): Make it a void function, take three out
+	parameters which are for the download_pending id,
+	transaction_pending id, and transaction_step_pending id.
+	(check_install_auth): Takes an RCDTransactionStatus object and an
+	RCDIdentity and determines if the identity has the authorization
+	to cancel the download for the transaction.
+	(rcd_transaction_abort): Added.  Given a download_id and an
+	identity, abort the transaction if we can.
+
 2002-09-10  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-autopull.c: Added name field to RCDAutopull struct.

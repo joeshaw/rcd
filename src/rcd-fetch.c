@@ -783,7 +783,6 @@ rcd_fetch_news_local (void)
 }
 
 static GHashTable *package_transfer_table = NULL;
-static int package_transfer_id = 0;
 
 typedef struct {
     int transfer_id;
@@ -974,8 +973,9 @@ download_package_file (RCPackage           *package,
         begin_package_download (t, closure);
 } /* download_package_file */
 
-int
+void
 rcd_fetch_packages (RCPackageSList        *packages,
+                    int                    pending_id,
                     RCDFetchProgressFunc   progress_callback,
                     RCDFetchCompletedFunc  completed_callback,
                     gpointer               user_data)
@@ -983,10 +983,10 @@ rcd_fetch_packages (RCPackageSList        *packages,
     PackageFetchClosure *closure;
     RCPackageSList *iter;
 
-    g_return_val_if_fail (packages != NULL, 0);
+    g_return_if_fail (packages != NULL);
 
     closure = g_new0 (PackageFetchClosure, 1);
-    closure->transfer_id = ++package_transfer_id;
+    closure->transfer_id = pending_id;
     closure->progress_callback = progress_callback;
     closure->completed_callback = completed_callback;
     closure->user_data = user_data;
@@ -1008,8 +1008,6 @@ rcd_fetch_packages (RCPackageSList        *packages,
         if (update->signature_url)
             download_package_file (package, update->signature_url, closure);
     }
-
-    return closure->transfer_id;
 }
 
 void

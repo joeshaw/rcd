@@ -562,6 +562,14 @@ rcd_pending_get_remaining_secs (RCDPending *pending)
     return elapsed <= expected ? expected - elapsed : 0;
 }
 
+const char *
+rcd_pending_get_error_msg (RCDPending *pending)
+{
+    g_return_val_if_fail (RCD_IS_PENDING (pending), NULL);
+
+    return pending->error_msg;
+} /* rcd_pending_get_error_msg */
+
 void
 rcd_pending_add_message (RCDPending *pending, const char *message)
 {

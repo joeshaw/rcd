@@ -119,6 +119,7 @@ time_t           rcd_pending_get_last_time        (RCDPending *);
 gint             rcd_pending_get_elapsed_secs     (RCDPending *);
 gint             rcd_pending_get_expected_secs    (RCDPending *);
 gint             rcd_pending_get_remaining_secs   (RCDPending *);
+const char      *rcd_pending_get_error_msg        (RCDPending *);
 
 void             rcd_pending_add_message        (RCDPending *,
                                                  const char *message);

@@ -30,20 +30,21 @@
 
 #include "rcd-identity.h"
 
-int rcd_transaction_begin (RCWorld        *world,
-                           RCPackageSList *install_packages,
-                           RCPackageSList *remove_packages,
-                           gboolean        dry_run,
-                           const char     *client_id,
-                           const char     *client_version,
-                           const char     *client_host,
-                           RCDIdentity    *client_identity);
+void rcd_transaction_begin (RCWorld        *world,
+                            RCPackageSList *install_packages,
+                            RCPackageSList *remove_packages,
+                            gboolean        dry_run,
+                            const char     *client_id,
+                            const char     *client_version,
+                            const char     *client_host,
+                            RCDIdentity    *client_identity,
+                            int            *download_pending_id,
+                            int            *transaction_pending_id,
+                            int            *transaction_step_pending_id);
 
-gboolean rcd_transaction_is_valid (int transaction_id);
+int rcd_transaction_abort (int download_id, RCDIdentity *identity);
 
-RCPackageSList *rcd_transaction_get_install_packages (int transaction_id);
-
-int rcd_transaction_get_package_download_id (int transaction_id);
+gboolean rcd_transaction_is_valid (int download_id);
 
 /*
  * Global transaction locks.  rcd_transaction_begin() will lock and
