@@ -1,3 +1,9 @@
+2002-08-08  Ian Peters  <itp@ximian.com>
+
+	* rcd-rpc-util.c (rcd_rc_package_dep_to_xmlrpc): opaque
+	RCPackageDeps
+	(rcd_xmlrpc_to_rc_package_dep): ditto
+
 2002-08-08  Joe Shaw  <joe@ximian.com>
 
 	* rcd-prefs.c (rcd_prefs_get_proxy): We can get back a NULL

@@ -68,8 +68,9 @@ rcd_rc_package_dep_to_xmlrpc (RCPackageDep *dep,
 {
     rcd_rc_package_spec_to_xmlrpc ((RCPackageSpec *)dep, value, env);
     
-    RCD_XMLRPC_STRUCT_SET_STRING (env, value, "relation",
-                                  rc_package_relation_to_string (dep->relation, 0));
+    RCD_XMLRPC_STRUCT_SET_STRING (
+        env, value, "relation",
+        rc_package_relation_to_string (rc_package_dep_get_relation (dep), 0));
     
  cleanup:
 }
@@ -168,7 +169,7 @@ rcd_xmlrpc_to_rc_package_dep (xmlrpc_value *value,
         goto cleanup;
     RCD_XMLRPC_STRUCT_GET_STRING (env, value, "relation", relation_str);
 
-    relation = rc_string_to_package_relation (relation_str);
+    relation = rc_package_relation_from_string (relation_str);
     if (relation == RC_RELATION_INVALID)
         goto cleanup;
     
