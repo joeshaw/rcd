@@ -556,7 +556,6 @@ soup_request_done (SoupMessage *msg, gpointer user_data)
         result = xmlrpc_parse_response (&env,
                                         msg->response.body,
                                         msg->response.length);
-        XMLRPC_FAIL_IF_FAULT (&env);
     } else
         xmlrpc_env_set_fault (&env, msg->errorcode, (char *) msg->errorphrase);
 
@@ -569,7 +568,6 @@ soup_request_done (SoupMessage *msg, gpointer user_data)
                           result);
     }
 
-cleanup:
     xmlrpc_DECREF (info->param_array);
     g_free (info->method_name);
     xmlrpc_server_info_free (info->server);
