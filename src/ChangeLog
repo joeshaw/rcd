@@ -1,3 +1,8 @@
+2004-08-26  Tambet Ingo  <tambet@ximian.com>
+
+	* rcd-transaction.c (rcd_transaction_transaction): Handle case where
+	rc_world_transact() fails but doesn't set packman error. Fixes #63720.
+
 2004-08-25  Tambet Ingo  <tambet@ximian.com>
 
 	* rcd-rpc-util.c (rcd_rc_package_from_xmlrpc_package): Free channel_id

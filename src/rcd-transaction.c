@@ -566,6 +566,7 @@ static void
 rcd_transaction_transaction (RCDTransaction *transaction)
 {
     RCPackman *packman = rc_packman_get_global ();
+    gboolean success;
     int flags = 0;
 
     /*
@@ -594,10 +595,10 @@ rcd_transaction_transaction (RCDTransaction *transaction)
     rc_pending_begin (transaction->transaction_pending);
     rc_pending_begin (transaction->transaction_step_pending);
 
-    rc_world_transact (transaction->world,
-                       transaction->install_packages,
-                       transaction->remove_packages,
-                       flags);
+    success = rc_world_transact (transaction->world,
+                                 transaction->install_packages,
+                                 transaction->remove_packages,
+                                 flags);
 
     g_signal_handlers_disconnect_by_func (packman,
                                           G_CALLBACK (transact_start_cb),
@@ -617,6 +618,14 @@ rcd_transaction_transaction (RCDTransaction *transaction)
                                 transaction->transaction_pending,
                                 rc_packman_get_reason (packman));
 
+        return;
+    }
+
+    /* rc_world_transact () failed, but didn't set packman error */
+    if (!success) {
+        rcd_transaction_failed (transaction,
+                                transaction->transaction_pending,
+                                "Transaction failed");
         return;
     }
 
