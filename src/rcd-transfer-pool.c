@@ -365,19 +365,27 @@ rcd_transfer_pool_begin (RCDTransferPool *pool)
 void
 rcd_transfer_pool_abort (RCDTransferPool *pool)
 {
-    GSList *iter;
-    GSList *next;
-
     g_return_if_fail (RCD_IS_TRANSFER_POOL (pool));
 
-    /* 
-     * Our running_transfers list is modified by the transfer_file_done_cb
-     * callback.  Handle that here.
-     */
-    for (iter = pool->running_transfers; iter; iter = next) {
-        next = iter->next;
+    if (pool->running_transfers) {
+        GSList *copy, *iter;
 
-        rcd_transfer_abort (RCD_TRANSFER (iter->data));
+        copy = g_slist_copy (pool->running_transfers);
+        g_slist_foreach (copy, (GFunc) g_object_ref, NULL);
+
+        for (iter = copy; iter; iter = iter->next) {
+            RCDTransfer *transfer = RCD_TRANSFER (iter->data);
+            RCPending *pending = rcd_transfer_get_pending (transfer);
+            RCPendingStatus status = rc_pending_get_status (pending);
+
+            if (status != RC_PENDING_STATUS_ABORTED &&
+                status != RC_PENDING_STATUS_FAILED  &&
+                status != RC_PENDING_STATUS_FINISHED)
+                rcd_transfer_abort (transfer);
+            g_object_unref (transfer);
+        }
+
+        g_slist_free (copy);
     }
 }
 

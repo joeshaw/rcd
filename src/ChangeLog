@@ -3,6 +3,11 @@
 	* rcd-rpc-util.c (rcd_xmlrpc_package_file_list): Free PackageFileSList
 	when done with it.
 
+2004-09-01  Tambet Ingo  <tambet@ximian.com>
+
+	* rcd-transfer-pool.c (rcd_transfer_pool_abort): While aborting running
+	transfers, the list can change on each iteration. Handle that.
+
 2004-08-26  Tambet Ingo  <tambet@ximian.com>
 
 	* rcd-transaction.c (rcd_transaction_transaction): Handle case where
