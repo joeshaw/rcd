@@ -76,7 +76,6 @@ AC_SUBST(RCD_LIBS)
 AC_OUTPUT([
 Makefile
 src/Makefile
-po/Makefile.in
 ])
 
 echo "

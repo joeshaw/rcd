@@ -1,4 +1,4 @@
-SUBDIRS = po src
+SUBDIRS = src
 
 passwddir = $(sysconfdir)/ximian
 passwd_DATA = rc-passwd

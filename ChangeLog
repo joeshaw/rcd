@@ -1,5 +1,10 @@
 2002-07-11  Frank Belew  <frb@ximian.com>
 
+	* configure.in: remove leftover gettext junk
+	* Makefile.am: remove po from subdirs
+
+2002-07-11  Frank Belew  <frb@ximian.com>
+
 	* configure.in: remove intltool junk
 
 2002-07-11  Joe Shaw  <joe@ximian.com>
