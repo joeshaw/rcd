@@ -1,11 +1,5 @@
 (Maybe further down the road...) Allow modules to register prefs
 
-We need to add a fault to distinguish between an authentication
-failure caused by a bad password and the user not having proper
-privileges.  Right now a bad password results in the "You do not have
-permissions to perform the requested action." error message in the
-cmd-line client, which is confusing.
-
 We are leaking all of the RCDPending objects that get created -- we
 should have a mechanism for cleaning them up after task-completion
 when a certain amount of time has passed
@@ -14,6 +8,3 @@ Need to be able to add users, remove users, set passwords, etc. via
 the daemon.
 
 Need docs and a man page.
-
-Need to check through all the source files and check to make sure
-the license is GPL v2 only.  (not "at your option, any later version")
