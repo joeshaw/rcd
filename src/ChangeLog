@@ -1,5 +1,10 @@
 2003-04-24  Joe Shaw  <joe@ximian.com>
 
+	* rcd-transaction.c (download_packages): Ref the pending object we
+	get back from rcd_transfer_pool_get_pending().  Should fix a crash.
+
+2003-04-24  Joe Shaw  <joe@ximian.com>
+
 	* rcd-fetch.c (rcd_fetch_channel_list_local): Pass the world in as
 	user_data to remove_channel_cb().
 	(rcd_fetch_refresh): Moved the refresh call here from

@@ -1093,7 +1093,8 @@ download_packages (RCPackageSList *packages, RCDTransactionStatus *status)
                                          status->total_download_size);
     g_signal_connect (status->pool, "transfer_done",
                       G_CALLBACK (transfer_done_cb), status);
-    status->download_pending = rcd_transfer_pool_get_pending (status->pool);
+    status->download_pending =
+        g_object_ref (rcd_transfer_pool_get_pending (status->pool));
     rcd_pending_set_description (status->download_pending, "Package download");
     g_object_set_data (G_OBJECT (status->download_pending), "status", status);
     rcd_transfer_pool_begin (status->pool);
