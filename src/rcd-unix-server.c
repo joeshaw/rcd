@@ -40,7 +40,7 @@
 
 #include "rcd-shutdown.h"
 
-#define SOCKET_PATH "/tmp/rcd"
+#define SOCKET_PATH "/var/run/rcd"
 
 int
 substring_index (char *str, int len, char *substr)
