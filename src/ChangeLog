@@ -1,5 +1,12 @@
 2003-10-01  Joe Shaw  <joe@ximian.com>
 
+	* rcd-world-remote.c (rcd_world_remote_fetch): After we free
+	tmp_error, reassign NULL to it.  After we invalidate the cache
+	entry, create a new one since we're going to pass it into
+	rcd_transfer_new() next.
+
+2003-10-01  Joe Shaw  <joe@ximian.com>
+
 	* rcd-rpc.c (rcd_rpc_remote_server_start): Change the error
 	message to avoid a double-negative.
 

@@ -1296,8 +1296,6 @@ rcd_world_remote_fetch (RCDWorldRemote *remote, gboolean local, GError **error)
                        
     entry = rcd_cache_lookup (rcd_cache_get_normal_cache (),
                               "service_info", cache_entry_str, TRUE);
-    g_free (cache_entry_str);
-
     if (local) {
         RCBuffer *buf;
 
@@ -1313,18 +1311,28 @@ rcd_world_remote_fetch (RCDWorldRemote *remote, gboolean local, GError **error)
 
             rc_buffer_unmap_file (buf);
 
-            if (tmp_error == NULL)
+            if (tmp_error == NULL) {
+                g_free (cache_entry_str);
+
                 return pending;
-            else {
+            } else {
                 g_error_free (tmp_error);
+                tmp_error = NULL;
+
                 /* 
                  * The data is bad on disk, so let's invalidate the
                  * cache entry so we download it again
                  */
                 rcd_cache_entry_invalidate (entry);
+                
+                entry = rcd_cache_lookup (rcd_cache_get_normal_cache (),
+                                          "service_info", cache_entry_str,
+                                          TRUE);
             }
         }
     }
+
+    g_free (cache_entry_str);
 
     url = g_strconcat (RC_WORLD_SERVICE (remote)->url,
                        "/serviceinfo.xml", NULL);
