@@ -961,11 +961,10 @@ run_transaction(gpointer user_data)
         G_OBJECT (status->packman), "transact_done",
         G_CALLBACK (transact_done_cb), status);
 
-    /* FIXME: Somehow set the transact to dry_run if it's set */
-
     rc_packman_transact (status->packman,
                          status->install_packages,
-                         status->remove_packages);
+                         status->remove_packages,
+                         ! status->dry_run);
 
     g_signal_handlers_disconnect_by_func (
         G_OBJECT (status->packman),
