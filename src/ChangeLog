@@ -1,3 +1,8 @@
+2003-10-02  Joe Shaw  <joe@ximian.com>
+
+	* rcd-world-remote.c: Bah, fix a bunch of warnings which only show
+	up when building with gcc at -O2.  It should know better...
+
 2003-10-01  Joe Shaw  <joe@ximian.com>
 
 	* rcd-world-remote.c (rcd_world_remote_fetch): After we free

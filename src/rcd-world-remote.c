@@ -246,8 +246,8 @@ rcd_world_remote_fetch_distributions (RCDWorldRemote *remote, gboolean local)
     RCDCacheEntry *entry;
     RCDTransfer *t = NULL;
     RCBuffer *buf = NULL;
-    const guint8 *buffer;
-    gsize buffer_len;
+    const guint8 *buffer = NULL;
+    gsize buffer_len = 0;
 
     entry = rcd_cache_lookup (rcd_cache_get_normal_cache (),
                               "distro_info",
@@ -283,6 +283,8 @@ rcd_world_remote_fetch_distributions (RCDWorldRemote *remote, gboolean local)
         buffer_len = data->len;
     }
 
+    g_assert (buffer != NULL);
+
     remote->distro = rc_distro_parse_xml (buffer, buffer_len);
 
     if (!remote->distro) {
@@ -305,8 +307,8 @@ rcd_world_remote_fetch_licenses (RCDWorldRemote *remote, gboolean local)
     RCDCacheEntry *entry;
     RCDTransfer *t = NULL;
     RCBuffer *buf = NULL;
-    const guint8 *buffer;
-    gsize buffer_len;
+    const guint8 *buffer = NULL;
+    gsize buffer_len = 0;
 
     entry = rcd_cache_lookup (rcd_cache_get_normal_cache (),
                               "licenses", RC_WORLD_SERVICE (remote)->unique_id,
@@ -340,6 +342,8 @@ rcd_world_remote_fetch_licenses (RCDWorldRemote *remote, gboolean local)
         buffer_len = data->len;
     }
 
+    g_assert (buffer != NULL);
+
     if (!rcd_license_parse (remote, buffer, buffer_len)) {
         rc_debug (RC_DEBUG_LEVEL_CRITICAL, "Unable to parse licenses info");
         rcd_cache_entry_invalidate (entry);
@@ -359,8 +363,8 @@ rcd_world_remote_fetch_news (RCDWorldRemote *remote, gboolean local)
     RCDCacheEntry *entry;
     RCDTransfer *t = NULL;
     RCBuffer *buf = NULL;
-    const guint8 *buffer;
-    gsize buffer_len;
+    const guint8 *buffer = NULL;
+    gsize buffer_len = 0;
     xmlDoc *doc;
     xmlNode *node;
 
@@ -395,6 +399,8 @@ rcd_world_remote_fetch_news (RCDWorldRemote *remote, gboolean local)
         buffer = data->data;
         buffer_len = data->len;
     }
+
+    g_assert (buffer != NULL);
 
     doc = rc_parse_xml_from_buffer (buffer, buffer_len);
     if (doc == NULL) {
@@ -435,8 +441,8 @@ rcd_world_remote_fetch_mirrors (RCDWorldRemote *remote, gboolean local)
     RCDCacheEntry *entry;
     RCDTransfer *t = NULL;
     RCBuffer *buf = NULL;
-    const guint8 *buffer;
-    gsize buffer_len;
+    const guint8 *buffer = NULL;
+    gsize buffer_len = 0;
     xmlDoc *doc = NULL;
     xmlNode *node;
 
@@ -471,6 +477,8 @@ rcd_world_remote_fetch_mirrors (RCDWorldRemote *remote, gboolean local)
         buffer = data->data;
         buffer_len = data->len;
     }
+
+    g_assert (buffer != NULL);
 
     doc = rc_parse_xml_from_buffer (buffer, buffer_len);
     if (doc == NULL) {
@@ -921,8 +929,8 @@ rcd_world_remote_fetch_channels (RCDWorldRemote *remote, gboolean local,
     ChannelData channel_data;
     int N;
     RCBuffer *buf = NULL;
-    const guint8 *buffer;
-    gsize buffer_len;
+    const guint8 *buffer = NULL;
+    gsize buffer_len = 0;
 
     entry = rcd_cache_lookup (rcd_cache_get_normal_cache (),
                               "channel_list",
@@ -959,6 +967,8 @@ rcd_world_remote_fetch_channels (RCDWorldRemote *remote, gboolean local,
         buffer = data->data;
         buffer_len = data->len;
     }
+
+    g_assert (buffer != NULL);
 
     /* Clear out the old channel and package data */
     rc_world_foreach_channel (RC_WORLD (remote), remove_channel_cb, remote);
@@ -1278,7 +1288,7 @@ static RCPending *
 rcd_world_remote_fetch (RCDWorldRemote *remote, gboolean local, GError **error)
 {
     char *url;
-    char *cache_entry_str;
+    char *cache_entry_str = NULL;
     RCDCacheEntry *entry;
     RCDTransfer *t;
     const GByteArray *data;
