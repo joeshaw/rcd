@@ -100,6 +100,9 @@ main (int argc, char *argv[])
     rcd_rpc_log_register_methods ();
     rcd_rpc_news_register_methods ();
 
+    /* FIXME!: if the channel list is in the cache, we are assuming
+       that the individual channel files are also cached.  If they
+       aren't, we will silently fail to load any package info. */
     if (rcd_fetch_channel_list_local ()) {
         rcd_subscriptions_load ();
         rcd_fetch_all_channels_local ();

@@ -1,5 +1,29 @@
 2002-06-27  Jon Trowbridge  <trow@ximian.com>
 
+	* rcd.c (main): Added a FIXME comment about a potential caching
+	bug.
+
+	* rcd-query-packages.c (name_match): Use case-insensitive
+	matching.
+	(summary_match): Use case-insensitive matching.
+	(description_match): Use case-insensitive matching.
+	(text_match): Use case-insensitive matching.
+	(channel_match): Use case-insensitive matching.
+
+	* rcd-query.c: Added string versions of CONTAINS_WORD and
+	NOT_CONTAINS_WORD to our query2str table.  Add query_str_folded
+	to the "private" part of RCDQueryPart.
+	(rcd_query_match_string): Support CONTAINS_WORD and
+	NOT_CONTAINS_WORD operations.
+	(rcd_query_match_string_ci): Added.  Does case-insensitive
+	matching.
+	(rcd_query_begin): Initialize query_str_folded in each part.
+	(rcd_query_end): Free query_str_folded (as necessary) in
+	each part.
+
+	* rcd-query.h: Added RCD_QUERY_CONTAINS_WORD and
+	RCD_QUERY_NOT_CONTAINS_WORD to RCDQueryType enum.
+
 	* rcd-fetch.c (rcd_fetch_channel_list_local): Better resource
 	cleanup.
 	(rcd_fetch_news): Removed an extra g_free of the URL string ---

@@ -35,7 +35,7 @@ name_match (RCDQueryPart *part,
             gpointer      data)
 {
     RCPackage *pkg = data;
-    return rcd_query_match_string (part, pkg->spec.name);
+    return rcd_query_match_string_ci (part, pkg->spec.name);
 }
 
 static gboolean
@@ -43,7 +43,7 @@ summary_match (RCDQueryPart *part,
             gpointer      data)
 {
     RCPackage *pkg = data;
-    return rcd_query_match_string (part, pkg->summary);
+    return rcd_query_match_string_ci (part, pkg->summary);
 }
 
 static gboolean
@@ -51,7 +51,7 @@ description_match (RCDQueryPart *part,
                    gpointer      data)
 {
     RCPackage *pkg = data;
-    return rcd_query_match_string (part, pkg->description);
+    return rcd_query_match_string_ci (part, pkg->description);
 }
 
 static gboolean
@@ -60,9 +60,9 @@ text_match (RCDQueryPart *part,
 {
     RCPackage *pkg = data;
 
-    return rcd_query_match_string (part, pkg->spec.name)
-        || rcd_query_match_string (part, pkg->summary)
-        || rcd_query_match_string (part, pkg->description);
+    return rcd_query_match_string_ci (part, pkg->spec.name)
+        || rcd_query_match_string_ci (part, pkg->summary)
+        || rcd_query_match_string_ci (part, pkg->description);
 }
 
 #define SYSTEM_HACK (guint)(~0)
@@ -106,7 +106,7 @@ channel_match (RCDQueryPart *part,
         return FALSE;
     
     /* Fallback: match against name */
-    return rcd_query_match_string (part, rc_channel_get_name (pkg->channel));
+    return rcd_query_match_string_ci (part, rc_channel_get_name (pkg->channel));
 }
 
 static gboolean

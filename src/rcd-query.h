@@ -34,7 +34,9 @@ typedef enum {
     RCD_QUERY_EQUAL,
     RCD_QUERY_NOT_EQUAL,
     RCD_QUERY_CONTAINS,
+    RCD_QUERY_CONTAINS_WORD,
     RCD_QUERY_NOT_CONTAINS,
+    RCD_QUERY_NOT_CONTAINS_WORD,
     RCD_QUERY_GT,
     RCD_QUERY_LT,
     RCD_QUERY_GT_EQ,
@@ -70,6 +72,7 @@ struct _RCDQueryPart {
     char        *query_str;
 
     /* for internal use only */
+    char           *query_str_folded;
     RCDQueryEngine *engine;
     gpointer        data;
     guint           processed : 1;
@@ -86,7 +89,8 @@ gboolean     rcd_query_type_int_compare (RCDQueryType type,
 
 /* Useful pre-defined RCDQueryEngine components. */
 
-gboolean     rcd_query_match_string (RCDQueryPart *part, const char *str);
+gboolean     rcd_query_match_string    (RCDQueryPart *part, const char *str);
+gboolean     rcd_query_match_string_ci (RCDQueryPart *part, const char *str); /* case-insensitive */
 
 gboolean     rcd_query_validate_bool   (RCDQueryPart *part);
 gboolean     rcd_query_match_bool      (RCDQueryPart *part, gboolean val);

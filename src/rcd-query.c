@@ -49,7 +49,11 @@ static struct QueryTypeStrings {
 
     { RCD_QUERY_CONTAINS, "contains" },
 
+    { RCD_QUERY_CONTAINS_WORD, "contains_word" },
+
     { RCD_QUERY_NOT_CONTAINS, "!contains" },
+
+    { RCD_QUERY_NOT_CONTAINS_WORD, "!contains_word" },
     
     { RCD_QUERY_GT, ">" },
     { RCD_QUERY_GT, "gt" },
@@ -134,6 +138,38 @@ rcd_query_type_int_compare (RCDQueryType type,
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
+static char *
+strstr_word (const char *haystack, const char *needle)
+{
+    const char *hay = haystack;
+    while (*hay) {
+        char *n = strstr (hay, needle);
+        gboolean failed = FALSE;
+
+        if (n == NULL)
+            return NULL;
+
+        if (n != haystack) {
+            char *prev = g_utf8_prev_char (n);
+            if (g_unichar_isalnum (g_utf8_get_char (prev)))
+                failed = TRUE;
+        }
+
+        if (! failed) {
+            char *next = n + strlen (needle);
+            if (*next && g_unichar_isalnum (g_utf8_get_char (next)))
+                failed = TRUE;
+        }
+
+        if (! failed)
+            return n;
+
+        hay = g_utf8_next_char (hay);
+    }
+
+    return NULL;
+}
+
 gboolean
 rcd_query_match_string (RCDQueryPart *part,
                         const char *str)
@@ -142,9 +178,45 @@ rcd_query_match_string (RCDQueryPart *part,
         return strstr (str, part->query_str) != NULL;
     } else if (part->type == RCD_QUERY_NOT_CONTAINS) {
         return strstr (str, part->query_str) == NULL;
+    } else if (part->type == RCD_QUERY_CONTAINS_WORD) {
+        return strstr_word (str, part->query_str) != NULL;
+    } else if (part->type == RCD_QUERY_NOT_CONTAINS_WORD) {
+        return strstr_word (str, part->query_str) == NULL;
     }
     
     return rcd_query_type_int_compare (part->type, strcmp (part->query_str, str), 0);
+}
+
+gboolean
+rcd_query_match_string_ci (RCDQueryPart *part,
+                           const char *str)
+{
+    char *str_folded;
+    int rv;
+
+    if (part->query_str_folded == NULL) {
+        part->query_str_folded = g_utf8_casefold (part->query_str, -1);
+    }
+
+    str_folded = g_utf8_casefold (str, -1);
+
+    if (part->type == RCD_QUERY_CONTAINS) {
+        return strstr (str_folded, part->query_str_folded) != NULL;
+    } else if (part->type == RCD_QUERY_NOT_CONTAINS) {
+        return strstr (str_folded, part->query_str_folded) == NULL;
+    } if (part->type == RCD_QUERY_CONTAINS_WORD) {
+        return strstr_word (str_folded, part->query_str_folded) != NULL;
+    } else if (part->type == RCD_QUERY_NOT_CONTAINS_WORD) {
+        return strstr_word (str_folded, part->query_str_folded) == NULL;
+    }
+
+    rv = rcd_query_type_int_compare (part->type,
+                                     strcmp (part->query_str_folded, str_folded),
+                                     0);
+
+    g_free (str_folded);
+
+    return rv;
 }
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
@@ -254,8 +326,9 @@ rcd_query_begin (RCDQueryPart *query_parts,
             }
         }
 
-        query_parts[i].engine = eng;
-        query_parts[i].processed = FALSE;
+        query_parts[i].query_str_folded = NULL;
+        query_parts[i].engine           = eng;
+        query_parts[i].processed        = FALSE;
     }
 
     if (or_depth > 0) {
@@ -268,7 +341,8 @@ rcd_query_begin (RCDQueryPart *query_parts,
         
         if (query_parts[i].engine && query_parts[i].engine->initialize)
             query_parts[i].engine->initialize (&query_parts[i]);
-        
+
+     
     }
 
     return TRUE;
@@ -346,6 +420,11 @@ rcd_query_end (RCDQueryPart *query_parts,
             query_parts[i].engine->finalize (&query_parts[i]);
 
         query_parts[i].engine = NULL;
+
+        if (query_parts[i].query_str_folded) {
+            g_free (query_parts[i].query_str_folded);
+            query_parts[i].query_str_folded = NULL;
+        }
     }
 }
 
