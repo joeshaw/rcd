@@ -119,6 +119,7 @@ rcdinclude_HEADERS = 		\
 	rcd-recurring.h		\
 	rcd-rpc.h		\
 	rcd-rpc-prefs.h		\
+	rcd-rpc-util.h		\
 	rcd-shutdown.h		\
 	rcd-transfer.h		\
 	rcd-transfer-file.h	\
@@ -127,7 +128,8 @@ rcdinclude_HEADERS = 		\
 rcd_moduledir = $(libdir)/rcd/modules
 rcd_module_LTLIBRARIES = 	\
 	librcd-sample.la	\
-	librcd-autopull.la
+	librcd-autopull.la	\
+	librcd-script.la
 
 rcd_buddydir = $(datadir)/rcd
 rcd_buddy_DATA = 		\
@@ -148,6 +150,10 @@ librcd_autopull_la_SOURCES =	\
 
 librcd_sample_la_LDFLAGS = -module -avoid-version
 librcd_autopull_la_LDFLAGS = -module -avoid-version
+
+librcd_script_la_SOURCES =	\
+	rcd-rpc-script.c
+librcd_script_la_LDFLAGS = -module -avoid-version
 
 ###
 ### Deal with auto-generating the signal marshallers

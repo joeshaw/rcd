@@ -1,3 +1,7 @@
+2003-05-20  Tambet Ingo  <tambet@ximian.com>
+
+	* Makefile.am (rcdinclude_HEADERS): Added rcd-rpc-util.h
+
 2003-05-16  Joe Shaw  <joe@ximian.com>
 
 	* rcd-transaction.c (run_transaction): The transaction might fail
