@@ -25,4 +25,11 @@ ltmain.sh
 intltool-*
 intl
 ABOUT-NLS
+autom4te-2.*.cache
+stamp-h1
 rcd.init
+rcd.init.debian
+rcd.init.redhat
+rcd.init.suse
+rcd.pc
+
