@@ -1,3 +1,9 @@
+2002-12-14  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-recurring.c (rcd_recurring_execute): If the RCDRecurring
+	doesn't have a 'next' method, treat it as a non-recurring
+	action.
+
 2002-12-12  Joe Shaw  <joe@ximian.com>
 
 	* rcd-autopull.c (rcd_module_load): Register an

@@ -45,11 +45,13 @@ rcd_recurring_execute (RCDRecurring *recurring)
     ++recurring->count;
     recurring->prev = recurring->when;
 
-    next = 0;
     if (recurring->next)
         recurring->when = recurring->next (recurring, recurring->when);
+    else
+        recurring->when = 0;
 
-    return recurring->when;
+    /* If we return FALSE, he action does not recur. */
+    return recurring->when > 0;
 }
 
 static void
@@ -148,8 +150,8 @@ rcd_recurring_setup_timeout (void)
             delay = 1;
 
         recurring_timeout_id = g_timeout_add (delay,
-                                               rcd_recurring_timeout_cb,
-                                               NULL);
+                                              rcd_recurring_timeout_cb,
+                                              NULL);
     }
 }
 
