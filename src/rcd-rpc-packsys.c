@@ -1389,6 +1389,12 @@ resolve_deps (xmlrpc_env         *env,
         rc_resolver_add_extra_dependency (resolver, dep);
     }
 
+    if (getenv ("RC_DEPS_TIME")) {
+        int timeout = atoi (getenv ("RC_DEPS_TIME"));
+
+        rc_resolver_set_timeout (resolver, timeout);
+    }
+
     if (verification)
         rc_resolver_verify_system (resolver);
     else

@@ -1,3 +1,8 @@
+2003-09-05  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-packsys.c (resolve_deps): Check the RC_DEPS_TIME
+	environment variable and set the dep resolver timeout to that.
+
 2003-09-05  Tambet Ingo  <tambet@ximian.com>
 
 	* rcd-world-remote.c (build_register_params): Use new activation
