@@ -1,9 +1,9 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
 /*
- * rcd-rpc.c
+ * rcd-rpc-system.c
  *
- * Copyright (C) 2002 Ximian, Inc.
+ * Copyright (C) 2002-2003 Ximian, Inc.
  *
  */
 
@@ -29,6 +29,7 @@
 #include <xmlrpc.h>
 
 #include "rcd-about.h"
+#include "rcd-cache.h"
 #include "rcd-fetch.h"
 #include "rcd-module.h"
 #include "rcd-pending.h"
@@ -411,7 +412,26 @@ system_get_recurring (xmlrpc_env   *env,
 
     return info.array;
 }
-	
+
+static xmlrpc_value *
+system_get_cache_size (xmlrpc_env   *env,
+                       xmlrpc_value *param_array,
+                       void         *user_data)
+{
+    return xmlrpc_build_value (env, "i",
+                               rcd_cache_size (rcd_cache_get_package_cache ()));
+}
+
+static xmlrpc_value *
+system_flush_cache (xmlrpc_env   *env,
+                    xmlrpc_value *param_array,
+                    void         *user_data)
+{
+    rcd_cache_expire_now (rcd_cache_get_package_cache ());
+
+    return xmlrpc_build_value (env, "i", 0);
+}
+
 void
 rcd_rpc_system_register_methods(void)
 {
@@ -439,6 +459,12 @@ rcd_rpc_system_register_methods(void)
     rcd_rpc_register_method ("rcd.system.get_recurring",
                              system_get_recurring,
                              NULL, NULL);
+    rcd_rpc_register_method ("rcd.system.get_cache_size",
+                             system_get_cache_size,
+                             "view", NULL);
+    rcd_rpc_register_method ("rcd.system.flush_cache",
+                             system_flush_cache,
+                             "superuser", NULL);
 
 } /* rcd_rpc_system_register_methods */
 

@@ -1,11 +1,10 @@
-/* This is -*- C -*- */
-/* vim: set sw=2: */
+/* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /* $Id$ */
 
 /*
  * rcd-expire.c
  *
- * Copyright (C) 2002 Ximian, Inc.
+ * Copyright (C) 2002-2003 Ximian, Inc.
  *
  */
 
@@ -36,11 +35,6 @@
 
 #include <libredcarpet.h>
 
-typedef void (*RCDExpireFn) (const char *full_path,
-			     int         size_in_bytes,
-			     double      age_in_secs,
-			     gpointer    user_data);
-
 /* Just a little wrapper around unlink. */
 static void
 rcd_expire_unlink (const char *file_name)
@@ -57,12 +51,12 @@ rcd_expire_unlink (const char *file_name)
   }
 }
 
-static void
+void
 rcd_expire_foreach (const char *base_path,
-		    const char *glob,
-		    gboolean    recursive,
-		    RCDExpireFn fn,
-		    gpointer    user_data)
+                    const char *glob,
+                    gboolean    recursive,
+                    RCDExpireFn fn,
+                    gpointer    user_data)
 {
   GDir *dir;
   GPatternSpec *pattern = NULL;
@@ -125,9 +119,9 @@ rcd_expire_foreach (const char *base_path,
 
 static void
 expire_by_age_cb (const char *file_name,
-		  int         size_in_bytes,
-		  double      age_in_secs,
-		  gpointer user_data)
+                  gsize       size_in_bytes,
+                  double      age_in_secs,
+                  gpointer user_data)
 {
   double max_age_in_days = *(double *) user_data;
   double age_in_days = age_in_secs / (24 * 60 * 60);
@@ -167,9 +161,9 @@ cache_item_cmp (CacheItem *a,
 
 static void
 build_list_cb (const char *file_name,
-	       int         size_in_bytes,
-	       double      age_in_secs,
-	       gpointer    user_data)
+               gsize       size_in_bytes,
+               double      age_in_secs,
+               gpointer    user_data)
 {
   CacheItem *ci = g_new0 (CacheItem, 1);
   GList **list = user_data;
@@ -226,6 +220,21 @@ rcd_expire_by_size (const char *base_path,
   g_list_free (list);
 }
 
+static void
+expire_cb (const char *file_name,
+           gsize       size_in_bytes,
+           double      age_in_secs,
+           gpointer user_data)
+{
+    rcd_expire_unlink (file_name);
+}
 
+void
+rcd_expire_all (const char *base_path,
+		const char *glob,
+		gboolean recursive)
+{
+    g_return_if_fail (base_path != NULL);
 
-
+    rcd_expire_foreach (base_path, glob, recursive, expire_cb, NULL);
+}

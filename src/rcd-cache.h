@@ -54,11 +54,14 @@ char *rcd_cache_get_local_filename       (RCDCache *cache, const char *url);
 void rcd_cache_expire (RCDCache *cache,
                        double    max_age_in_days,
                        double    max_size_in_mb);
+void rcd_cache_expire_now (RCDCache *cache);
 
 /*
   A convenience function that (possibly) calls rcd_cache_expire on the
   package cache using parameters pulled in from rcd-prefs */
 void rcd_cache_expire_package_cache (void);
+
+gsize rcd_cache_size (RCDCache *cache);
 
 RCDCache *rcd_cache_get_normal_cache  (void);
 RCDCache *rcd_cache_get_package_cache (void);

@@ -1,3 +1,16 @@
+2003-03-19  Joe Shaw  <joe@ximian.com>
+
+	* rcd-cache.c (rcd_cache_expire_now): Added.  Expires an entire
+	cache immediately.
+	(rcd_cache_size): Added.  Gets the total size of the cache in
+	bytes.
+
+	* rcd-expire.c (rcd_expire_all): Added.  Does the actual expiring.
+	(rcd_expire_foreach): Make this a publicly exported function.
+
+	* rcd-rpc-system.c (system_get_cache_size, system_flush_cache):
+	Added.  RPC wrappers around the above functions.
+
 2003-03-17  Ian Peters  <itp@ximian.com>
 
 	* rcd-prefs.c, rcd-prefs.h: add the ability to have settings not

@@ -435,3 +435,48 @@ rcd_cache_expire_package_cache (void)
                           rcd_prefs_get_cache_max_size_in_mb ());
     }
 }
+
+void
+rcd_cache_expire_now (RCDCache *cache)
+{
+    char *fake_path;
+    char *cache_dirname;
+
+    g_return_if_fail (cache != NULL);
+
+    fake_path = rcd_cache_get_local_filename (cache, "foo");
+    cache_dirname = g_path_get_dirname (fake_path);
+
+    rcd_expire_all (cache_dirname, NULL, FALSE);
+
+    g_free (fake_path);
+    g_free (cache_dirname);
+}
+
+static void
+accumulate_size_cb (const char *file_name,
+                    gsize       size_in_bytes,
+                    double      age_in_secs,
+                    gpointer    user_data)
+{
+    gsize *total_size = user_data;
+
+    *total_size += size_in_bytes;
+}
+
+gsize
+rcd_cache_size (RCDCache *cache)
+{
+    char *fake_path;
+    char *cache_dirname;
+    gsize size = 0;
+
+    g_return_val_if_fail (cache != NULL, 0);
+
+    fake_path = rcd_cache_get_local_filename (cache, "foo");
+    cache_dirname = g_path_get_dirname (fake_path);
+
+    rcd_expire_foreach (cache_dirname, NULL, FALSE, accumulate_size_cb, &size);
+
+    return size;
+}

@@ -30,6 +30,17 @@
 
 #include <glib.h>
 
+typedef void (*RCDExpireFn) (const char *full_path,
+			     gsize       size_in_bytes,
+			     double      age_in_secs,
+			     gpointer    user_data);
+
+void rcd_expire_foreach (const char *base_path,
+			 const char *glob,
+			 gboolean    recursive,
+			 RCDExpireFn fn,
+			 gpointer    user_data);
+
 void rcd_expire_by_age (const char *base_path,
 			const char *glob,
 			gboolean    recursive,
@@ -40,7 +51,10 @@ void rcd_expire_by_size (const char *base_path,
 			 gboolean    recursive,
 			 double      max_size_in_mb,
 			 double      min_age_in_days);
-			 
+
+void rcd_expire_all (const char *base_path,
+		     const char *glob,
+		     gboolean    recursive);
 
 #endif /* __RCD_EXPIRE_H__ */
 
