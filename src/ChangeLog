@@ -1,3 +1,10 @@
+2003-10-23  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-util.c (rcd_xmlrpc_to_rc_package_match): Add
+	XMLRPC_FAIL_IF_FAULT() after calls to xmlrpc_struct_has_key() so
+	that we don't get failed assertions if we get something we weren't
+	expecting.
+
 2003-10-21  Joe Shaw  <joe@ximian.com>
 
 	* rcd-transaction.c (transact_step_cb): Print out the action

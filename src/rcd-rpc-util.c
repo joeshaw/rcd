@@ -324,10 +324,13 @@ rcd_xmlrpc_to_rc_package_match (xmlrpc_value *value,
         XMLRPC_FAIL_IF_FAULT (env);
 
         dep = rcd_xmlrpc_to_rc_package_dep (dep_value, env);
+        XMLRPC_FAIL_IF_FAULT (env);
+
         rc_package_match_set_dep (match, dep);
         rc_package_dep_unref (dep);
         did_something = TRUE;
     }
+    XMLRPC_FAIL_IF_FAULT (env);
 
     if (xmlrpc_struct_has_key (env, value, "glob")) {
 
@@ -337,6 +340,7 @@ rcd_xmlrpc_to_rc_package_match (xmlrpc_value *value,
             did_something = TRUE;
         }
     }
+    XMLRPC_FAIL_IF_FAULT (env);
 
     if (xmlrpc_struct_has_key (env, value, "channel")) {
 
@@ -350,6 +354,7 @@ rcd_xmlrpc_to_rc_package_match (xmlrpc_value *value,
             rc_debug (RC_DEBUG_LEVEL_WARNING,
                       "Unknown channel '%s' in match", cid);
     }
+    XMLRPC_FAIL_IF_FAULT (env);
 
     if (xmlrpc_struct_has_key (env, value, "importance_str")
         || xmlrpc_struct_has_key (env, value, "importance_num")) {
@@ -376,6 +381,7 @@ rcd_xmlrpc_to_rc_package_match (xmlrpc_value *value,
 
         did_something = TRUE;
     }
+    XMLRPC_FAIL_IF_FAULT (env);
 
     if (! did_something) {
         rc_package_match_free (match);
