@@ -1,10 +1,3 @@
 (Maybe further down the road...) Allow modules to register prefs
 
-We are leaking all of the RCDPending objects that get created -- we
-should have a mechanism for cleaning them up after task-completion
-when a certain amount of time has passed
-
-Need to be able to add users, remove users, set passwords, etc. via
-the daemon.
-
 Need docs and a man page.
