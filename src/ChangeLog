@@ -1,3 +1,22 @@
+2002-07-19  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-rpc-packsys.c (packsys_package_dependency_info): Added.  A
+	new method that returns provides, requires, conflicts and
+	obsoletes information.
+	(rcd_rpc_packsys_register_methods): Register our new method.
+
+	* rcd-rpc-util.c (rcd_rc_package_dep_slist_to_xmlrpc): Added.
+	(assemble_spec): Moved most of the heavy lifting from
+	rcd_xmlrpc_to_rc_package_spec to here.
+	(rcd_xmlrpc_to_rc_package_spec): Added.  Basically a wrapper
+	around assemble_spec.
+	(rcd_xmlrpc_to_rc_package_dep): Now uses assemble_spec for most of
+	the work.
+
+	* rcd-rpc-users.c (users_get_valid_privileges): Added.  Returns a 
+	list of valid privileges.
+	(rcd_rpc_users_register_methods): Register our new method.
+
 2002-07-18  Joe Shaw  <joe@ximian.com>
 
 	* rcd-fetch.c (all_channels_cb): In the local case, if we have to

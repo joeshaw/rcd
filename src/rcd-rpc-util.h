@@ -56,6 +56,12 @@ void          rcd_rc_package_dep_to_xmlrpc(RCPackageDep *dep,
                                            xmlrpc_value *value,
                                            xmlrpc_env   *env);
 
+xmlrpc_value *rcd_rc_package_dep_slist_to_xmlrpc(RCPackageDepSList *rc_deps,
+                                                 xmlrpc_env        *env);
+
+RCPackageSpec *rcd_xmlrpc_to_rc_package_spec(xmlrpc_value *value,
+                                             xmlrpc_env   *env);
+
 RCPackageDep *rcd_xmlrpc_to_rc_package_dep(xmlrpc_value *value,
                                            xmlrpc_env   *env);
 

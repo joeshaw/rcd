@@ -30,6 +30,45 @@
 #include "rcd-rpc-util.h"
 #include "rcd-identity.h"
 
+struct GetPrivInfo {
+    xmlrpc_env *env;
+    xmlrpc_value *array;
+};
+
+static void
+get_priv_cb (RCDPrivileges priv,
+             const char   *priv_name,
+             gpointer      user_data)
+{
+    struct GetPrivInfo *info = user_data;
+    xmlrpc_value *value;
+
+    value = xmlrpc_build_value (info->env, "s", priv_name);
+    
+    xmlrpc_array_append_item (info->env, info->array, value);
+    XMLRPC_FAIL_IF_FAULT (info->env);
+
+ cleanup:
+    xmlrpc_DECREF (value);
+}
+
+static xmlrpc_value *
+users_get_valid_privileges (xmlrpc_env   *env,
+                            xmlrpc_value *param_array,
+                            void         *user_data)
+{
+    struct GetPrivInfo info;
+
+    info.env = env;
+    info.array = xmlrpc_build_value (env, "()");
+
+    rcd_privileges_foreach (get_priv_cb, &info);
+
+    return info.array;
+}
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
 struct GetAllInfo {
     xmlrpc_env *env;
     xmlrpc_value *array;
@@ -123,6 +162,11 @@ users_remove (xmlrpc_env   *env,
 void
 rcd_rpc_users_register_methods (void)
 {
+    rcd_rpc_register_method ("rcd.users.get_valid_privileges",
+                             users_get_valid_privileges,
+                             "view",
+                             NULL);
+
     rcd_rpc_register_method ("rcd.users.get_all",
                              users_get_all,
                              "view",

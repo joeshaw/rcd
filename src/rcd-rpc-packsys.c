@@ -756,6 +756,58 @@ cleanup:
     return result;
 } /* packsys_package_info */
 
+static xmlrpc_value *
+packsys_package_dependency_info (xmlrpc_env   *env,
+                                 xmlrpc_value *param_array,
+                                 void         *user_data)
+{
+    xmlrpc_value *xmlrpc_package;
+    RCPackage *package;
+    xmlrpc_value *result = NULL;
+    xmlrpc_value *provides, *requires, *conflicts, *obsoletes;
+
+    xmlrpc_parse_value (env, param_array, "(V)", &xmlrpc_package);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    package = rcd_xmlrpc_to_rc_package (
+        xmlrpc_package, env, RCD_PACKAGE_FROM_ANY);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    if (package) {
+
+        result = xmlrpc_struct_new (env);
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        provides  = rcd_rc_package_dep_slist_to_xmlrpc (package->provides, env);
+        xmlrpc_struct_set_value (env, result, "provides", provides);
+        XMLRPC_FAIL_IF_FAULT (env);
+        xmlrpc_DECREF (provides);
+        
+        requires  = rcd_rc_package_dep_slist_to_xmlrpc (package->requires, env);
+        xmlrpc_struct_set_value (env, result, "requires", requires);
+        XMLRPC_FAIL_IF_FAULT (env);
+        xmlrpc_DECREF (requires);
+        
+        conflicts = rcd_rc_package_dep_slist_to_xmlrpc (package->conflicts, env);
+        xmlrpc_struct_set_value (env, result, "conflicts", conflicts);
+        XMLRPC_FAIL_IF_FAULT (env);
+        xmlrpc_DECREF (conflicts);
+        
+        obsoletes = rcd_rc_package_dep_slist_to_xmlrpc (package->obsoletes, env);
+        xmlrpc_struct_set_value (env, result, "obsoletes", obsoletes);
+        XMLRPC_FAIL_IF_FAULT (env);
+        xmlrpc_DECREF (obsoletes);
+
+    } else {
+        xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PACKAGE_NOT_FOUND,
+                              "Couldn't get package");
+        return NULL;
+    }
+
+ cleanup:
+    return result;
+}
+
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 static void
@@ -1894,6 +1946,11 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
                             "view",
                             world);
 
+    rcd_rpc_register_method("rcd.packsys.package_dependency_info",
+                            packsys_package_dependency_info,
+                            "view",
+                            world);
+    
     rcd_rpc_register_method("rcd.packsys.get_updates",
                             packsys_get_updates,
                             "view",

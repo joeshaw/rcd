@@ -74,14 +74,38 @@ rcd_rc_package_dep_to_xmlrpc (RCPackageDep *dep,
  cleanup:
 }
 
-RCPackageDep *
-rcd_xmlrpc_to_rc_package_dep (xmlrpc_value *value,
-                              xmlrpc_env   *env)
+xmlrpc_value *
+rcd_rc_package_dep_slist_to_xmlrpc (RCPackageDepSList *rc_deps,
+                                    xmlrpc_env        *env)
 {
-    RCPackageDep *dep = NULL;
+    xmlrpc_value *dep_array;
+
+    dep_array = xmlrpc_build_value (env, "()");
+    
+    while (rc_deps) {
+        xmlrpc_value *dep_value;
+
+        dep_value = xmlrpc_struct_new (env);
+        rcd_rc_package_dep_to_xmlrpc (rc_deps->data, dep_value, env);
+        xmlrpc_array_append_item (env, dep_array, dep_value);
+        xmlrpc_DECREF (dep_value);
+
+        rc_deps = rc_deps->next;
+    }
+
+    return dep_array;
+}
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+static gboolean
+assemble_spec (xmlrpc_value  *value,
+               xmlrpc_env    *env,
+               RCPackageSpec *spec)
+{
+    gboolean success = FALSE;
     int has_epoch, epoch;
-    char *name = NULL, *version = NULL, *release = NULL, *relation_str = NULL;
-    RCPackageRelation relation;
+    char *name = NULL, *version = NULL, *release = NULL;
 
     if (! xmlrpc_struct_has_key (env, value, "name"))
         goto cleanup;
@@ -103,6 +127,44 @@ rcd_xmlrpc_to_rc_package_dep (xmlrpc_value *value,
         goto cleanup;
     RCD_XMLRPC_STRUCT_GET_STRING (env, value, "release", release);
 
+    rc_package_spec_init (spec, name, has_epoch, epoch, version, release);
+
+    success = TRUE;
+
+ cleanup:
+    g_free (name);
+    g_free (version);
+    g_free (release);
+
+    return success;
+}
+
+RCPackageSpec *
+rcd_xmlrpc_to_rc_package_spec (xmlrpc_value *value,
+                               xmlrpc_env   *env)
+{
+    RCPackageSpec *spec = g_new0 (RCPackageSpec, 1);
+
+    if (! assemble_spec (value, env, spec)) {
+        g_free (spec);
+        return NULL;
+    }
+
+    return spec;
+}
+
+RCPackageDep *
+rcd_xmlrpc_to_rc_package_dep (xmlrpc_value *value,
+                              xmlrpc_env   *env)
+{
+    RCPackageSpec spec;
+    RCPackageDep *dep = NULL;
+    char *relation_str = NULL;
+    RCPackageRelation relation;
+
+    if (! assemble_spec (value, env, &spec))
+        return NULL;
+
     if (! xmlrpc_struct_has_key (env, value, "relation"))
         goto cleanup;
     RCD_XMLRPC_STRUCT_GET_STRING (env, value, "relation", relation_str);
@@ -111,21 +173,15 @@ rcd_xmlrpc_to_rc_package_dep (xmlrpc_value *value,
     if (relation == RC_RELATION_INVALID)
         goto cleanup;
     
-    dep = rc_package_dep_new (name,
-                              has_epoch,
-                              epoch,
-                              version,
-                              release,
-                              relation);
+    dep = rc_package_dep_new_from_spec (&spec, relation);
 
  cleanup:
-    g_free (name);
-    g_free (version);
-    g_free (release);
     g_free (relation_str);
     
     return dep;
 }
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 RCPackageDepSList *
 rcd_xmlrpc_array_to_rc_package_dep_slist (xmlrpc_value *value,
