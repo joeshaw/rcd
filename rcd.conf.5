@@ -38,19 +38,19 @@ This key specifies whether the server is an enhanced server.  Set this to true w
 
 .TP 
 \fBorg\-id=<organization id>\fR
-When using an enhanced server, set this to the organization id so that the daemon can register the machine with the server.  This is unset and ignored by default; this key has no effect if .B enable\-premium is not true.
+When using an enhanced server, set this to the organization id so that the daemon can register the machine with the server.  This is unset and ignored by default; this key has no effect if \fBenable\-premium\fR is not true.
 
 .TP 
 \fBproxy=<url>\fR
 The URL for a proxy.  This should always begin with the protocol https://, http://, socks4://, or socks5://, and end with a colon and port number. For example, if you're running squid on your local machine, you'll want to set this to http://localhost:3128.  This is unset and ignored by default. Note that rc set proxy\-url is used to set this value, but that the value itself is "proxy" rather than "proxy\-url."
 
 .TP 
-\fBproxy\-username=<username>\fR
-For proxies requiring authentication, this is the username used. This is unset and ignored by default; this key has no effect if .B proxy is not set.  This key can be set with "rc set" or other rcd client settings tools.
+\fBproxy\-user=<username>\fR
+For proxies requiring authentication, this is the username used. This is unset and ignored by default; this key has no effect if \fBproxy\fR is not set.  This key can be set with "rc set" or other rcd client settings tools.
 
 .TP 
 \fBproxy\-password=<password>\fR
-For proxies requiring authentication, this is the password used. This is unset and ignored by default; this key has no effect if .B proxy is not set.  This key can be set with "rc set" or other rcd client settings tools.
+For proxies requiring authentication, this is the password used. This is unset and ignored by default; this key has no effect if \fBproxy\fR is not set.  This key can be set with "rc set" or other rcd client settings tools.
 .TP 
 
 .TP 
@@ -93,7 +93,7 @@ This section contains settings related to rcd behavior.
 
 .TP 
 \fBcache\-age\-in\-days=<number>\fR
-Specifies the number of days a package may be in the cache before it is removed.  This defaults to 30.  It has no effect if .B cache\-cleanup is not set.  This can be set with "rc set" or other rcd client settings tools.
+Specifies the number of days a package may be in the cache before it is removed.  This defaults to 30.  It has no effect if \fBcache\-cleanup\fR is not set.  This can be set with "rc set" or other rcd client settings tools.
 
 
 .TP 
@@ -102,7 +102,7 @@ Specifies whether the package cache should be cleaned up.  If this is off and ca
 
 .TP 
 \fBcache\-size\-in\-mb=<number>\fR
-Specifies the total size in megabytes that the package cache may be before it is cleaned up.  This defaults to 300.  It has no effect if .B cache\-cleanup is not set.  
+Specifies the total size in megabytes that the package cache may be before it is cleaned up.  This defaults to 300.  It has no effect if \fBcache\-cleanup\fR is not set.  
 
 .TP 
 \fBdebug\-level=<number>\fR
@@ -118,7 +118,7 @@ Specifies the interval at which rcd downloads new channel and package metadata. 
 Specifies whether to turn repackage and store the currently installed version of software as a backup, so that the "rc rollback" software reversion command can work (see rc(1) for more information). This option will cause a noticeable slowdown in upgrade and removal transactions, use a significant amount of disk space, and only works for RPM versions 4.0.4 and greater.
 
 .TP 
-.B require\-signatures=[true | false]
+\fBrequire\-signatures=[true | false]\fR
 Specifies whether packages being installed must pass a GPG signature
 check.  Packages which are inconclusive for whatever reason (gpg not
 installed, public key unavailable, etc.) are not installed.

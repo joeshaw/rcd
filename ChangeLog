@@ -1,3 +1,7 @@
+2003-01-27  Aaron Weber <aaron@ximian.com>
+
+	* rcd.conf.8: Fix proxy-user entry (from proxy-username) as per bug 36821
+
 2003-01-10  Joe Shaw  <joe@ximian.com>
 
 	* Makefile.am: Install rcd-ca-bundle.pem into $(datadir)/rcd and
