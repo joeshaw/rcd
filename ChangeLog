@@ -1,3 +1,7 @@
+2003-02-25  Joe Shaw  <joe@ximian.com>
+
+	* configure.in: 1.2.1
+
 2003-02-19  Joe Shaw  <joe@ximian.com>
 
 	* configure.in: Remove an errant 'd'
