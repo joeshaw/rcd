@@ -112,7 +112,7 @@ installed_match (RCDQueryPart *part,
                  gpointer      data)
 {
     RCPackage *pkg = data;
-    rcd_query_match_bool (part, pkg->channel == NULL);
+    return rcd_query_match_bool (part, pkg->channel == NULL);
 }
 
 static gboolean
@@ -120,7 +120,7 @@ needs_upgrade_match (RCDQueryPart *part,
                    gpointer      data)
 {
     RCPackage *pkg = data;
-    rcd_query_match_bool (part,
+    return rcd_query_match_bool (part,
                           pkg->channel == NULL /* must be installed */
                           && rc_world_get_best_upgrade (rc_get_world (), pkg) != NULL);
 }

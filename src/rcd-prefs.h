@@ -51,5 +51,11 @@ void         rcd_prefs_set_heartbeat_interval (guint32);
 
 gboolean     rcd_prefs_get_require_verified_packages (void);
 
+gint         rcd_prefs_get_debug_level        (void);
+void         rcd_prefs_set_debug_level        (gint);
+
+gint         rcd_prefs_get_syslog_level       (void);
+void         rcd_prefs_set_syslog_level       (gint);
+
 #endif /* __RCD_PREFS_H__ */
 

@@ -200,3 +200,33 @@ rcd_prefs_get_require_verified_packages (void)
     return gnome_config_get_bool (
         CONFIG_PATH "/System/require-verified=FALSE");
 } /* rcd_prefs_get_require_verified_packages */
+
+gint
+rcd_prefs_get_debug_level (void)
+{
+    return gnome_config_get_int (
+        CONFIG_PATH "/System/debug-level=5");
+} /* rcd_prefs_get_debug_level */
+
+void
+rcd_prefs_set_debug_level (gint level)
+{
+    gnome_config_set_int (
+        CONFIG_PATH "/System/debug-level", level);
+    SYNC_CONFIG;
+} /* rcd_prefs_set_debug_level */
+
+gint
+rcd_prefs_get_syslog_level (void)
+{
+    return gnome_config_get_int (
+        CONFIG_PATH "/System/syslog-level=4");
+} /* rcd_prefs_get_syslog_level */
+
+void
+rcd_prefs_set_syslog_level (gint level)
+{
+    gnome_config_set_int (
+        CONFIG_PATH "/System/syslog-level", level);
+    SYNC_CONFIG;
+} /* rcd_prefs_set_syslog_level */

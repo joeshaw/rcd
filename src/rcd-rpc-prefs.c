@@ -75,6 +75,14 @@ static RPCPrefTable pref_table[] = {
       get_int_func,     (PrefGetFunc) rcd_prefs_get_heartbeat_interval,
       set_int_func,     (PrefSetFunc) rcd_prefs_set_heartbeat_interval },
 
+    { "debug-level",
+      get_int_func,     (PrefGetFunc) rcd_prefs_get_debug_level,
+      set_int_func,     (PrefSetFunc) rcd_prefs_set_debug_level },
+
+    { "syslog-level",
+      get_int_func,     (PrefGetFunc) rcd_prefs_get_syslog_level,
+      set_int_func,     (PrefSetFunc) rcd_prefs_set_syslog_level },
+
     { 0 },
 };
 

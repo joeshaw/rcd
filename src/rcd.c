@@ -43,6 +43,7 @@
 #include "rcd-identity.h"
 #include "rcd-log.h"
 #include "rcd-module.h"
+#include "rcd-prefs.h"
 #include "rcd-privileges.h"
 #include "rcd-query.h"
 #include "rcd-rpc.h"
@@ -59,7 +60,6 @@
 
 static gboolean non_daemon_flag = FALSE;
 static gboolean non_root_flag = FALSE;
-static int debug_level = RC_DEBUG_LEVEL_INFO;
 static int remote_port = 0;
 static gboolean remote_disable = FALSE;
 static char *dump_file = NULL;
@@ -67,6 +67,8 @@ static char *dump_file = NULL;
 static void
 option_parsing (int argc, const char **argv)
 {
+    gint debug_level = -1, syslog_level = -1;
+
     const struct poptOption command_line_options[] = {
         POPT_AUTOHELP
         { "non-daemon", 'n', POPT_ARG_NONE, &non_daemon_flag, 0,
@@ -79,6 +81,8 @@ option_parsing (int argc, const char **argv)
           "Don't listen for remote connections", NULL },
         { "debug", 'd', POPT_ARG_INT, &debug_level, 0,
           "Set the verbosity of debugging output.", NULL },
+        { "syslog", 's', POPT_ARG_INT, &syslog_level, 0,
+          "Set the verbosity of syslog output.", NULL },
         { "undump", '\0', POPT_ARG_STRING, &dump_file, 0,
           "Initialize daemon from a dump file.", "filename" },
         POPT_TABLEEND
@@ -97,6 +101,11 @@ option_parsing (int argc, const char **argv)
         g_printerr ("rcd aborting\n");
         exit (-1);
     }
+
+    if (debug_level > -1)
+        rcd_prefs_set_debug_level (debug_level);
+    if (syslog_level > -1)
+        rcd_prefs_set_syslog_level (syslog_level);
 }
 
 static void
@@ -176,14 +185,16 @@ debug_message_handler (const char *str, RCDebugLevel level, gpointer user_data)
 
     log_msg = g_strdup_printf ("[%d] %s\n", pid, str);
 
-    /* If we've daemonized, stderr has been redirected to the
-       /tmp/rcd-messages file.  Since stderr might not actually
-       be stderr, we also fsync. */
-    write (STDERR_FILENO, log_msg, strlen (log_msg));
-    fsync (STDERR_FILENO);
+    if (level <= rcd_prefs_get_debug_level ()) {
+        /* If we've daemonized, stderr has been redirected to the
+           /tmp/rcd-messages file.  Since stderr might not actually
+           be stderr, we also fsync. */
+        write (STDERR_FILENO, log_msg, strlen (log_msg));
+        fsync (STDERR_FILENO);
+    }
 
     /* FIXME: Use RCDebug's display_level instead of hardcoding value here? */
-    if (!non_daemon_flag && level <= RC_DEBUG_LEVEL_MESSAGE) {
+    if (!non_daemon_flag && level <= rcd_prefs_get_syslog_level ()) {
         openlog ("rcd", 0, LOG_DAEMON);
         syslog (LOG_INFO, "%s", log_msg);
         closelog ();
@@ -197,8 +208,7 @@ initialize_logging (void)
 {
     rcd_log_init (NULL); /* use default path */
 
-    rc_debug_set_display_handler (debug_message_handler, NULL);
-    rc_debug_set_display_level (debug_level);
+    rc_debug_add_handler (debug_message_handler, RC_DEBUG_LEVEL_ALWAYS, NULL);
 
     rc_debug (RC_DEBUG_LEVEL_ALWAYS, "%s", rcd_about_name ());
     rc_debug (RC_DEBUG_LEVEL_ALWAYS, "%s", rcd_about_copyright ());

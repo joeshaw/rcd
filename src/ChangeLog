@@ -1,3 +1,19 @@
+2002-07-30  Ian Peters  <itp@ximian.com>
+
+	* rcd-prefs.h, rcd-prefs.c: added
+	rcd_prefs_[get|set]_[debug|syslog]_level
+
+	* rcd-query-packages.c (installed_match): return the result of the
+	rcd_query_match_bool
+	(needs_upgrade_match): ditto
+
+	* rcd-rpc-prefs.c (pref_table): expose debug-level and
+	syslog-level
+
+	* rcd.c (option_parsing): handle debug_ and syslog_level
+	(debug_message_handler): use rcd_prefs_get_[debug|syslog]_level
+	(initialize_logging): rc-debug changes
+
 2002-07-30  Frank Belew  <frb@ximian.com>
 
 	* Makefile.am: add support for linking rcd statically
