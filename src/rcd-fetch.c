@@ -1201,7 +1201,7 @@ rcd_fetch_refresh (char **err_msg)
        means refreshing the mounted channels only.  Otherwise it is
        not possible to refresh mounted channels if the network is
        unavailable. */
-    id_list = rcd_fetch_some_channels (RCD_FETCH_TRANSIENT, info->temp_world);
+    id_list = rcd_fetch_some_channels (RCD_FETCH_TRANSIENT, rc_get_world ());
     /* id_list should just be NULL, but we free it just in case */
     g_slist_free (id_list);
 
