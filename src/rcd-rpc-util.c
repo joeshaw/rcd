@@ -1094,3 +1094,71 @@ rcd_debug_serialize (xmlrpc_value *v)
     xmlrpc_mem_block_free (output);
     xmlrpc_env_clean (&env);
 } /* rcd_debug_serialize */
+
+typedef struct {
+    GSList *pending_list;
+    gboolean fail_if_any;
+    xmlrpc_env *env;
+    GMainLoop *inferior_loop;
+} BlockingInfo;
+
+static gboolean
+wait_for_pending_cb (gpointer user_data)
+{
+    BlockingInfo *info = user_data;
+    GSList *iter, *next;
+    gboolean exit_out = FALSE;
+ 
+    for (iter = info->pending_list; iter; iter = next) {
+        RCPending *pending = RC_PENDING (iter->data);
+ 
+        next = iter->next;
+
+        if (!rc_pending_is_active (pending)) {
+            info->pending_list = g_slist_delete_link (info->pending_list, 
+                                                      iter);
+        }
+
+        if (info->fail_if_any) {
+            const char *err_msg = rc_pending_get_error_msg (pending);
+
+            if (err_msg) {
+                xmlrpc_env_set_fault (info->env, RCD_RPC_FAULT_CANT_REFRESH,
+                                      (char *) err_msg);
+                exit_out = TRUE;
+                break;
+            }
+        }
+    }
+ 
+    if (exit_out || !info->pending_list) {
+        g_main_loop_quit (info->inferior_loop);
+        return FALSE;
+    }
+    else
+        return TRUE;
+}
+
+void
+rcd_rpc_block_on_pending_list (xmlrpc_env *env,
+                               GSList     *pending_list,
+                               gboolean    fail_if_any)
+{
+    BlockingInfo info;
+
+    info.pending_list = g_slist_copy (pending_list);
+    
+    /* Ref the pendings */
+    g_slist_foreach (info.pending_list, (GFunc) g_object_ref, NULL);
+
+    info.fail_if_any = fail_if_any;
+    info.env = env;
+    info.inferior_loop = g_main_loop_new (NULL, FALSE);
+
+    g_idle_add (wait_for_pending_cb, &info);
+    g_main_loop_run (info.inferior_loop);
+    g_main_loop_unref (info.inferior_loop);
+
+    g_slist_foreach (info.pending_list, (GFunc) g_object_unref, NULL);
+    g_slist_free (info.pending_list);
+}

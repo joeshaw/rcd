@@ -120,9 +120,9 @@ void rcd_transaction_set_client_info      (RCDTransaction *transaction,
 void rcd_transaction_set_id               (RCDTransaction *transaction,
                                            const char *id);
 
-int rcd_transaction_get_download_pending_id    (RCDTransaction *transaction);
-int rcd_transaction_get_transaction_pending_id (RCDTransaction *transaction);
-int rcd_transaction_get_step_pending_id        (RCDTransaction *transaction);
+RCPending *rcd_transaction_get_download_pending    (RCDTransaction *transaction);
+RCPending *rcd_transaction_get_transaction_pending (RCDTransaction *transaction);
+RCPending *rcd_transaction_get_step_pending        (RCDTransaction *transaction);
 
 /*
  * Begins the transaction.  Causes it to ref itself, so it is safe to unref

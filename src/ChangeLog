@@ -1,5 +1,21 @@
 2003-08-28  Joe Shaw  <joe@ximian.com>
 
+	* rcd-rpc-packsys.c: Move the blocking RPC call and channel
+	refresh stuff out of here.  Update for changes in the
+	rcd-transaction pending API.
+
+	* rcd-rpc-service.c: Move the channel refresh stuff into here.
+	RPC method changed to rcd.service.refresh(), and takes an optional
+	service name.
+
+	* rcd-rpc-util.c (rcd_rpc_block_on_pending_list): Added.  The
+	blocking RPC call stuff moved here and opaquified.
+
+	* rcd-transaction.c: Change all of the _get_pending_id functions
+	to _get_pending functions.
+
+2003-08-28  Joe Shaw  <joe@ximian.com>
+
 	* Makefile.am: Get rid of rcd-rpc-mirror.[ch] and add
 	rcd-rpc-service.[ch].
 

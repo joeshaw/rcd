@@ -212,6 +212,10 @@ xmlrpc_value *rcd_xmlrpc_package_file_list (RCPackage  *package,
 
 xmlrpc_value *rcd_xmlrpc_array_copy (xmlrpc_env *env, int n_params, ...);
 
+void rcd_rpc_block_on_pending_list (xmlrpc_env *env,
+                                    GSList     *pending_list,
+                                    gboolean    fail_if_any);
+
 /* For debugging purposes */
 void rcd_debug_serialize (xmlrpc_value *v);
 

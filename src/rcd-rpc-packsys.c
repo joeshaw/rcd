@@ -42,8 +42,6 @@
 #include "rcd-transaction.h"
 #include "rcd-world-remote.h"
 
-#define RCD_REFRESH_INVALID ((gpointer) 0xdeadbeef)
-
 static gboolean
 add_channel_cb (RCChannel *channel, gpointer user_data)
 {
@@ -93,51 +91,6 @@ packsys_get_channels (xmlrpc_env   *env,
     return channel_array;
 }
 
-typedef struct {
-    GSList *pending_id_list;
-    gboolean fail_if_any;
-    xmlrpc_env *env;
-    GMainLoop *inferior_loop;
-} BlockingInfo;
-
-static gboolean
-wait_for_pending_cb (gpointer user_data)
-{
-    BlockingInfo *info = user_data;
-    GSList *iter, *next;
-    gboolean exit_out = FALSE;
-
-    for (iter = info->pending_id_list; iter; iter = next) {
-        int pending_id = GPOINTER_TO_INT (iter->data);
-        RCPending *pending = rc_pending_lookup_by_id (pending_id);
-
-        next = iter->next;
-
-        if (!rc_pending_is_active (pending)) {
-            info->pending_id_list = g_slist_delete_link (info->pending_id_list,
-                                                         iter);
-        }
-
-        if (info->fail_if_any) {
-            const char *err_msg = rc_pending_get_error_msg (pending);
-
-            if (err_msg) {
-                xmlrpc_env_set_fault (info->env, RCD_RPC_FAULT_CANT_REFRESH,
-                                      (char *) err_msg);
-                exit_out = TRUE;
-                break;
-            }
-        }
-    }
-
-    if (exit_out || !info->pending_id_list) {
-        g_main_loop_quit (info->inferior_loop);
-        return FALSE;
-    }
-    else
-        return TRUE;
-}
-
 static xmlrpc_value *
 packsys_refresh_all_channels_blocking (xmlrpc_env   *env,
                                        xmlrpc_value *param_array,
@@ -145,8 +98,8 @@ packsys_refresh_all_channels_blocking (xmlrpc_env   *env,
 {
     RCWorld *world = user_data;
     RCPending *pending;
+    GSList *pending_list;
     char *err_msg = NULL;
-    BlockingInfo info;
 
     if (rcd_transaction_is_locked ()) {
         xmlrpc_env_set_fault (env, RCD_RPC_FAULT_LOCKED,
@@ -164,18 +117,10 @@ packsys_refresh_all_channels_blocking (xmlrpc_env   *env,
         goto cleanup;
     }
     
-    info.pending_id_list =
-        g_slist_prepend (NULL, GINT_TO_POINTER (rc_pending_get_id (pending)));
-    info.fail_if_any = FALSE;
-    info.env = env;
-    info.inferior_loop = g_main_loop_new (NULL, FALSE);
-
-    g_idle_add (wait_for_pending_cb, &info);
-    g_main_loop_run (info.inferior_loop);
-    g_main_loop_unref (info.inferior_loop);
-
-    g_slist_free (info.pending_id_list);
-
+    pending_list = g_slist_prepend (NULL, pending);
+    rcd_rpc_block_on_pending_list (env, pending_list, FALSE);
+    g_slist_free (pending_list);
+    
 cleanup:
     if (err_msg)
         g_free (err_msg);
@@ -1109,7 +1054,7 @@ packsys_transact(xmlrpc_env   *env,
                  void         *user_data)
 {
     RCDTransaction *transaction;
-    int download_id, transaction_id, step_id;
+    RCPending *download_pending, *transaction_pending, *step_pending;
     xmlrpc_value *result = NULL;
 
     transaction = setup_transaction (env, param_array, user_data);
@@ -1117,14 +1062,23 @@ packsys_transact(xmlrpc_env   *env,
 
     rcd_transaction_begin (transaction);
 
-    download_id = rcd_transaction_get_download_pending_id (transaction);
-    transaction_id = rcd_transaction_get_transaction_pending_id (transaction);
-    step_id = rcd_transaction_get_step_pending_id (transaction);
+    download_pending = rcd_transaction_get_download_pending (transaction);
+    transaction_pending =
+        rcd_transaction_get_transaction_pending (transaction);
+    step_pending = rcd_transaction_get_step_pending (transaction);
 
     g_object_unref (transaction);
 
     result = xmlrpc_build_value (env, "(iii)",
-                                 download_id, transaction_id, step_id);
+                                 download_pending != NULL ?
+                                 rc_pending_get_id (download_pending) : -1,
+
+                                 transaction_pending != NULL ?
+                                 rc_pending_get_id (transaction_pending) : -1,
+
+                                 step_pending != NULL ?
+                                 rc_pending_get_id (step_pending) : -1);
+
     XMLRPC_FAIL_IF_FAULT(env);
 
 cleanup:
@@ -1140,37 +1094,31 @@ packsys_transact_blocking (xmlrpc_env   *env,
                            void         *user_data)
 {
     RCDTransaction *transaction;
-    int download_id, transaction_id;
-    BlockingInfo info;
+    RCPending *download_pending, *transaction_pending;
+    GSList *pending_list;
 
     transaction = setup_transaction (env, param_array, user_data);
     XMLRPC_FAIL_IF_FAULT (env);
 
     rcd_transaction_begin (transaction);
 
-    download_id = rcd_transaction_get_download_pending_id (transaction);
-    transaction_id = rcd_transaction_get_transaction_pending_id (transaction);
+    download_pending = rcd_transaction_get_download_pending (transaction);
+    transaction_pending =
+        rcd_transaction_get_transaction_pending (transaction);
 
     g_object_unref (transaction);
 
-    info.pending_id_list = NULL;
-    if (download_id != -1) {
-        info.pending_id_list = g_slist_prepend (info.pending_id_list,
-                                                GINT_TO_POINTER (download_id));
-    }
-    if (transaction_id != -1) {
-        info.pending_id_list = g_slist_prepend (info.pending_id_list,
-                                                GINT_TO_POINTER (transaction_id));
-    }
+    pending_list = NULL;
+    if (download_pending)
+        pending_list = g_slist_prepend (pending_list, download_pending);
 
-    info.fail_if_any = TRUE;
-    info.env = env;
-    info.inferior_loop = g_main_loop_new (NULL, FALSE);
+    if (transaction_pending)
+        pending_list = g_slist_prepend (pending_list, transaction_pending);
 
-    g_idle_add (wait_for_pending_cb, &info);
-    g_main_loop_run (info.inferior_loop);
-    g_main_loop_unref (info.inferior_loop);
-    g_slist_free (info.pending_id_list);
+    if (pending_list)
+        rcd_rpc_block_on_pending_list (env, pending_list, TRUE);
+
+    g_slist_free (pending_list);
 
 cleanup:
     if (env->fault_occurred)
@@ -1886,7 +1834,7 @@ packsys_rollback (xmlrpc_env   *env,
                   void         *user_data)
 {
     RCDTransaction *transaction;
-    int download_id, transaction_id, step_id;
+    RCPending *download_pending, *transaction_pending, *step_pending;
     xmlrpc_value *result = NULL;
 
     transaction = setup_rollback (env, param_array, user_data);
@@ -1894,14 +1842,22 @@ packsys_rollback (xmlrpc_env   *env,
 
     rcd_transaction_begin (transaction);
 
-    download_id = rcd_transaction_get_download_pending_id (transaction);
-    transaction_id = rcd_transaction_get_transaction_pending_id (transaction);
-    step_id = rcd_transaction_get_step_pending_id (transaction);
+    download_pending = rcd_transaction_get_download_pending (transaction);
+    transaction_pending =
+        rcd_transaction_get_transaction_pending (transaction);
+    step_pending = rcd_transaction_get_step_pending (transaction);
 
     g_object_unref (transaction);
 
     result = xmlrpc_build_value (env, "(iii)",
-                                 download_id, transaction_id, step_id);
+                                 download_pending != NULL ?
+                                 rc_pending_get_id (download_pending) : -1,
+
+                                 transaction_pending != NULL ?
+                                 rc_pending_get_id (transaction_pending) : -1,
+
+                                 step_pending != NULL ?
+                                 rc_pending_get_id (step_pending) : -1);
     XMLRPC_FAIL_IF_FAULT(env);
 
 cleanup:
@@ -1917,35 +1873,31 @@ packsys_rollback_blocking (xmlrpc_env   *env,
                            void         *user_data)
 {
     RCDTransaction *transaction;
-    int download_id, transaction_id;
-    BlockingInfo info;
+    RCPending *download_pending, *transaction_pending;
+    GSList *pending_list;
 
     transaction = setup_rollback (env, param_array, user_data);
     XMLRPC_FAIL_IF_FAULT (env);
 
     rcd_transaction_begin (transaction);
 
-    download_id = rcd_transaction_get_download_pending_id (transaction);
-    transaction_id = rcd_transaction_get_transaction_pending_id (transaction);
+    download_pending = rcd_transaction_get_download_pending (transaction);
+    transaction_pending =
+        rcd_transaction_get_transaction_pending (transaction);
 
     g_object_unref (transaction);
 
-    info.pending_id_list = NULL;
-    if (download_id != -1)
-        info.pending_id_list = g_slist_prepend (info.pending_id_list,
-                                                GINT_TO_POINTER (download_id));
-    if (transaction_id != -1)
-        info.pending_id_list = g_slist_prepend (info.pending_id_list,
-                                                GINT_TO_POINTER (transaction_id));
+    pending_list = NULL;
+    if (download_pending)
+        pending_list = g_slist_prepend (pending_list, download_pending);
 
-    info.fail_if_any = TRUE;
-    info.env = env;
-    info.inferior_loop = g_main_loop_new (NULL, FALSE);
+    if (transaction_pending)
+        pending_list = g_slist_prepend (pending_list, transaction_pending);
 
-    g_idle_add (wait_for_pending_cb, &info);
-    g_main_loop_run (info.inferior_loop);
-    g_main_loop_unref (info.inferior_loop);
-    g_slist_free (info.pending_id_list);
+    if (pending_list)
+        rcd_rpc_block_on_pending_list (env, pending_list, TRUE);
+
+    g_slist_free (pending_list);
 
 cleanup:
     if (env->fault_occurred)
@@ -2680,16 +2632,6 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
 
     rcd_rpc_register_method("rcd.packsys.get_channels",
                             packsys_get_channels,
-                            "view",
-                            world);
-
-    rcd_rpc_register_method("rcd.packsys.refresh_all_channels",
-                            packsys_refresh_all_channels,
-                            "view",
-                            world);
-
-    rcd_rpc_register_method("rcd.packsys.refresh_all_channels_blocking",
-                            packsys_refresh_all_channels_blocking,
                             "view",
                             world);
 

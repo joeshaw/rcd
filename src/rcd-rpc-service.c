@@ -29,7 +29,22 @@
 #include "rcd-rpc.h"
 #include "rcd-rpc-util.h"
 #include "rcd-services.h"
+#include "rcd-transaction.h"
 #include "rcd-world-remote.h"
+
+static RCWorldService *
+service_lookup (const char *identifier)
+{
+    RCWorldMulti *multi = RC_WORLD_MULTI (rc_get_world ());
+    RCWorldService *service;
+
+    service = rc_world_multi_lookup_service (multi, identifier);
+
+    if (!service)
+        service = rc_world_multi_lookup_service_by_id (multi, identifier);
+
+    return service;
+}
 
 typedef struct {
     xmlrpc_env *env;
@@ -142,13 +157,7 @@ service_remove (xmlrpc_env   *env,
     xmlrpc_parse_value (env, param_array, "(s)", &service_identifier);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    service = rc_world_multi_lookup_service (RC_WORLD_MULTI (rc_get_world ()),
-                                             service_identifier);
-
-    if (!service) {
-        service = rc_world_multi_lookup_service_by_id (RC_WORLD_MULTI (rc_get_world ()),
-                                                       service_identifier);
-    }
+    service = service_lookup (service_identifier);
 
     if (!service) {
         xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_INVALID_SERVICE,
@@ -250,12 +259,7 @@ service_get_mirrors (xmlrpc_env   *env,
 
     multi = RC_WORLD_MULTI (rc_get_world ());
 
-    service = rc_world_multi_lookup_service (multi, service_identifier);
-
-    if (!service) {
-        service = rc_world_multi_lookup_service_by_id (multi,
-                                                       service_identifier);
-    }
+    service = service_lookup (service_identifier);
 
     if (!service || !g_type_is_a (G_TYPE_FROM_INSTANCE (service),
                                   RCD_TYPE_WORLD_REMOTE))
@@ -293,13 +297,7 @@ service_set_url (xmlrpc_env   *env,
                         &service_identifier, &new_url);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    service = rc_world_multi_lookup_service (RC_WORLD_MULTI (rc_get_world ()),
-                                             service_identifier);
-
-    if (!service) {
-        service = rc_world_multi_lookup_service_by_id (RC_WORLD_MULTI (rc_get_world ()),
-                                                       service_identifier);
-    }
+    service = service_lookup (service_identifier);
 
     if (!service) {
         xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_INVALID_SERVICE,
@@ -331,6 +329,132 @@ cleanup:
     return xmlrpc_build_value (env, "i", 0);
 }
 
+static xmlrpc_value *
+service_refresh_blocking (xmlrpc_env   *env,
+                          xmlrpc_value *param_array,
+                          void         *user_data)
+{
+    int size;
+    RCWorld *world;
+    RCPending *pending;
+    GSList *pending_list;
+    char *err_msg = NULL;
+
+    if (rcd_transaction_is_locked ()) {
+        xmlrpc_env_set_fault (env, RCD_RPC_FAULT_LOCKED,
+                              "Transaction lock in place");
+        return NULL;
+    }
+
+    size = xmlrpc_array_size (env, param_array);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    if (size > 0) {
+        char *service_identifier;
+
+        xmlrpc_parse_value (env, param_array, "(s)", &service_identifier);
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        world = RC_WORLD (service_lookup (service_identifier));
+
+        if (!world) {
+            xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_INVALID_SERVICE,
+                                            "Unable to find service '%s'",
+                                            service_identifier);
+            goto cleanup;
+        }
+    } else {
+        world = rc_get_world ();
+    }
+
+    /* FIXME: err_msg ? */
+    pending = rc_world_refresh (world);
+
+    if (err_msg) {
+        xmlrpc_env_set_fault_formatted (
+            env, RCD_RPC_FAULT_CANT_REFRESH,
+            "Unable to download channel data: %s", err_msg);
+        goto cleanup;
+    }
+    
+    pending_list = g_slist_prepend (NULL, pending);
+    rcd_rpc_block_on_pending_list (env, pending_list, FALSE);
+    g_slist_free (pending_list);
+    
+cleanup:
+    if (err_msg)
+        g_free (err_msg);
+
+    if (env->fault_occurred)
+        return NULL;
+
+    return xmlrpc_build_value (env, "i", 0);
+}
+
+static xmlrpc_value *
+service_refresh (xmlrpc_env   *env,
+                 xmlrpc_value *param_array,
+                 void         *user_data)
+{
+    int size;
+    RCWorld *world;
+    xmlrpc_value *value = NULL;
+    RCPending *pending;
+    char *err_msg = NULL;
+
+    if (rcd_transaction_is_locked ()) {
+        xmlrpc_env_set_fault (env, RCD_RPC_FAULT_LOCKED,
+                              "Transaction lock in place");
+        return NULL;
+    }
+
+    size = xmlrpc_array_size (env, param_array);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    if (size > 0) {
+        char *service_identifier;
+
+        xmlrpc_parse_value (env, param_array, "(s)", &service_identifier);
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        world = RC_WORLD (service_lookup (service_identifier));
+
+        if (!world) {
+            xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_INVALID_SERVICE,
+                                            "Unable to find service '%s'",
+                                            service_identifier);
+            goto cleanup;
+        }
+    } else {
+        world = rc_get_world ();
+    }
+
+    /* FIXME: err_msg ? */
+    pending = rc_world_refresh (world);
+
+    if (err_msg) {
+        xmlrpc_env_set_fault_formatted (
+            env, RCD_RPC_FAULT_CANT_REFRESH,
+            "Unable to download channel data: %s", err_msg);
+        goto cleanup;
+    }
+
+    if (pending)
+        value = xmlrpc_build_value (env, "(i)", rc_pending_get_id (pending));
+    else
+        value = xmlrpc_build_value (env, "()");
+    XMLRPC_FAIL_IF_FAULT (env);
+    
+ cleanup:
+    if (err_msg)
+        g_free (err_msg);
+
+    if (env->fault_occurred)
+        return NULL;
+
+    return value;
+}
+
 void
 rcd_rpc_service_register_methods (void)
 {
@@ -349,4 +473,10 @@ rcd_rpc_service_register_methods (void)
     rcd_rpc_register_method ("rcd.service.set_url",
                              service_set_url,
                              "superuser", NULL);
+    rcd_rpc_register_method ("rcd.service.refresh",
+                             service_refresh,
+                             "view", NULL);
+    rcd_rpc_register_method ("rcd.service.refresh_blocking",
+                             service_refresh_blocking,
+                             "view", NULL);
 }

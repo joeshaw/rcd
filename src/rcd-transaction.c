@@ -323,39 +323,41 @@ void rcd_transaction_set_id (RCDTransaction *transaction, const char *id)
     transaction->id = g_strdup (id);
 }
 
-int
-rcd_transaction_get_download_pending_id (RCDTransaction *transaction)
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+RCPending *
+rcd_transaction_get_download_pending (RCDTransaction *transaction)
 {
-    g_return_val_if_fail (RCD_IS_TRANSACTION (transaction), -1);
+    g_return_val_if_fail (RCD_IS_TRANSACTION (transaction), NULL);
 
     if (transaction->packages_to_download == NULL)
-        return -1;
+        return NULL;
 
-    return rc_pending_get_id (transaction->download_pending);
+    return transaction->download_pending;
 }
 
-int
-rcd_transaction_get_transaction_pending_id (RCDTransaction *transaction)
+RCPending *
+rcd_transaction_get_transaction_pending (RCDTransaction *transaction)
 {
-    g_return_val_if_fail (RCD_IS_TRANSACTION (transaction), -1);
+    g_return_val_if_fail (RCD_IS_TRANSACTION (transaction), NULL);
 
     /* There isn't a transaction component if we're only downloading */
     if (transaction->flags & RCD_TRANSACTION_FLAGS_DOWNLOAD_ONLY)
-        return -1;
+        return NULL;
 
-    return rc_pending_get_id (transaction->transaction_pending);
+    return transaction->transaction_pending;
 }
 
-int
-rcd_transaction_get_step_pending_id (RCDTransaction *transaction)
+RCPending *
+rcd_transaction_get_step_pending (RCDTransaction *transaction)
 {
-    g_return_val_if_fail (RCD_IS_TRANSACTION (transaction), -1);
+    g_return_val_if_fail (RCD_IS_TRANSACTION (transaction), NULL);
 
     /* There isn't a step component if we're only downloading */
     if (transaction->flags & RCD_TRANSACTION_FLAGS_DOWNLOAD_ONLY)
-        return -1;
+        return NULL;
 
-    return rc_pending_get_id (transaction->transaction_step_pending);
+    return transaction->transaction_step_pending;
 }
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
