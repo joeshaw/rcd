@@ -75,6 +75,7 @@ char *config_file = NULL;
 int debug_level = -1;
 int syslog_level = -1;
 gboolean no_network = FALSE;
+gboolean no_modules = FALSE;
 
 static void
 option_parsing (int argc, const char **argv)
@@ -92,6 +93,8 @@ option_parsing (int argc, const char **argv)
           "Allow the daemon to be run as a user other than root.", NULL },
         { "no-network", '\0', POPT_ARG_NONE, &no_network, 0,
           "Do not download any data from a server.", NULL },
+        { "no-modules", 'm', POPT_ARG_NONE, &no_modules, 0,
+          "Do not load any plugin modules.", NULL },
         { "port", 'p', POPT_ARG_INT, &remote_port, 0,
           "Listen for remote connections on a different port", NULL },
         { "no-remote", 'r', POPT_ARG_NONE, &remote_disable, 0,
@@ -702,7 +705,8 @@ main (int argc, const char **argv)
     initialize_rc_world ();
     initialize_rpc ();
 
-    rcd_module_init ();
+    if (!no_modules)
+        rcd_module_init ();
 
     initialize_data ();
     
