@@ -448,8 +448,10 @@ cleanup:
         g_free (parts);
     }
 
-    if (rc_packages)
-        rc_package_slist_unref(rc_packages);
+    if (rc_packages) {
+        rc_package_slist_unref (rc_packages);
+        g_slist_free (rc_packages);
+    }
 
     if (env->fault_occurred)
         return NULL;
@@ -487,6 +489,7 @@ packsys_search_by_package_match (xmlrpc_env   *env,
  cleanup:
     rc_package_match_free (match);
     rc_package_slist_unref (rc_packages);
+    g_slist_free (rc_packages);
     
     if (env->fault_occurred) {
         return NULL;
@@ -503,31 +506,32 @@ packsys_find_package_for_file (xmlrpc_env   *env,
                                void         *user_data)
 {
     char *filename;
-    RCPackage *rc_package;
-    xmlrpc_value *xmlrpc_package = NULL;
+    RCPackageSList *rc_packages;
+    xmlrpc_value *xmlrpc_packages = NULL;
 
     xmlrpc_parse_value (env, param_array, "(s)", &filename);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    rc_package = rc_packman_find_file (rc_packman_get_global (),
-                                       filename);
+    rc_packages = rc_packman_find_file (rc_packman_get_global (),
+                                        filename);
 
-    if (!rc_package) {
+    if (!rc_packages) {
         xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_PACKAGE_NOT_FOUND,
                                         "%s is not owned by any package",
                                         filename);
         return NULL;
     }
 
-    xmlrpc_package = rcd_rc_package_to_xmlrpc (rc_package, env);
+    xmlrpc_packages = rcd_rc_package_slist_to_xmlrpc_array (rc_packages, env);
     
-    rc_package_unref (rc_package);
+    rc_package_slist_unref (rc_packages);
+    g_slist_free (rc_packages);
 
 cleanup:
     if (env->fault_occurred)
         return NULL;
 
-    return xmlrpc_package;
+    return xmlrpc_packages;
 }
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
@@ -726,6 +730,8 @@ packsys_package_info (xmlrpc_env   *env,
                                    
         RCD_XMLRPC_STRUCT_SET_STRING (
             env, result, "description", package->description);
+
+        rc_package_unref (package);
     }
     else {
         xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PACKAGE_NOT_FOUND,
@@ -784,6 +790,7 @@ packsys_package_dependency_info (xmlrpc_env   *env,
         XMLRPC_FAIL_IF_FAULT (env);
         xmlrpc_DECREF (children);
         
+        rc_package_unref (package);
 
     } else {
         xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PACKAGE_NOT_FOUND,
@@ -811,9 +818,10 @@ packsys_file_list (xmlrpc_env   *env,
                                         RCD_PACKAGE_FROM_ANY);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    if (package)
+    if (package) {
         result = rcd_xmlrpc_package_file_list (package, env);
-    else {
+        rc_package_unref (package);
+    } else {
         xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PACKAGE_NOT_FOUND,
                               "Couldn't get package");
     }
@@ -952,11 +960,15 @@ setup_transaction (xmlrpc_env   *env,
                                      method_data->identity);
 
 cleanup:
-    if (install_packages)
+    if (install_packages) {
         rc_package_slist_unref (install_packages);
+        g_slist_free (install_packages);
+    }
 
-    if (remove_packages)
+    if (remove_packages) {
         rc_package_slist_unref (remove_packages);
+        g_slist_free (remove_packages);
+    }
 
     if (env->fault_occurred)
         return NULL;
@@ -1482,9 +1494,16 @@ cleanup:
         rc_resolver_free(resolver);
 
     rc_package_slist_unref (install_packages);
+    g_slist_free (install_packages);
+
     rc_package_slist_unref (remove_packages);
+    g_slist_free (remove_packages);
+
     rc_package_slist_unref (extra_install_packages);
+    g_slist_free (extra_install_packages);
+
     rc_package_slist_unref (extra_remove_packages);
+    g_slist_free (extra_remove_packages);
 
     if (install_hash)
         g_hash_table_destroy (install_hash);
@@ -2134,6 +2153,8 @@ packsys_remove_lock (xmlrpc_env   *env,
             rcd_package_locks_save (world);
             success = TRUE;
         }
+
+        rc_package_match_free (match);
     }
 
     if (success) {

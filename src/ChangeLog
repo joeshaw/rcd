@@ -1,4 +1,16 @@
-2003-09-16  Joe shaw  <joe@ximian.com>
+2003-09-17  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-packsys.c (packsys_find_package_for_file): Update to
+	accept multiple packages from the return of
+	rc_packman_find_file().
+	(packsys_search, packsys_search_by_package_match,
+	packsys_package_info, packsys_package_dependency_info,
+	packsys_file_list, setup_transaction): Call g_slist_free() on
+	various RCPackageSLists that were being unreffed.
+	(packsys_remove_lock): Free the matching lock after we're finished
+	with it.
+
+2003-09-16  Joe Shaw  <joe@ximian.com>
 
 	* rcd-world-remote.c (rcd_world_remote_fetch): Get
 	serviceinfo.xml, not .gz.
