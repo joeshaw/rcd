@@ -1,3 +1,31 @@
+2002-06-05  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-packsys.c (packsys_query_file): Call
+	rc_xmlrpc_to_rc_package() and pass in the types we accept.
+	(run_transaction): Re-get the system packages after a transaction.
+	(package_transact): Call rc_xmlrpc_to_rc_packagE() and pass in the
+	types we accept.
+	(packsys_transaction_get_status): Removed.  We can just use
+	rcd.system.poll_pending().
+	(rcd_rpc_packsys_register_methods): Don't register
+	transaction_get_status().
+
+	* rcd-rpc-util.c (rcd_rc_package_spec_to_xmlrpc):
+	XMLRPC_FAIL_IF_FAULT() after trying to get each element.
+	(rcd_rc_package_from_name, rcd_rc_package_from_file,
+	rcd_rc_package_from_streamed_package,
+	rcd_rc_package_from_xmlrpc_package): Added these functions which
+	take xmlrpc_values and somehow get RCPackage structures for them.
+	_from_name() is still broken.  Haven't decided if I like this API
+	yet.
+	(rcd_xmlrpc_to_rc_package): Added.  Calls a number of the above
+	functions depending on flags that were passed into it specifying
+	the types to accept.
+	(rcd_xmlrpc_array_to_rc_package_slist): Added.
+
+	* rcd-unix-server.c (rcd_unix_server_run_async): Make the socket
+	writable by all users.
+	
 2002-06-05  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-rpc-packsys.c (packsys_subscribe): Added.

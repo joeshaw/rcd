@@ -12,6 +12,8 @@
 
 #include <libredcarpet.h>
 
+#define SOCKET_PATH "/tmp/rcd"
+
 int
 substring_index (char *str, int len, char *substr)
 {
@@ -46,7 +48,7 @@ read_cred (GIOChannel *channel, RCDUnixServerHandle *handle)
         handle->gid = cred.gid;
 
         rc_debug (RC_DEBUG_LEVEL_MESSAGE,
-                  "PID: %d  UID: %d  GID: %d",
+                  "size: %d  PID: %d  UID: %d  GID: %d", size,
                   cred.pid, cred.uid, cred.gid);
     }
 } /* read_cred */
@@ -177,12 +179,13 @@ rcd_unix_server_run_async(RCDUnixServerCallback callback)
         return;
     }
 
-    unlink("/tmp/rcd");
+    unlink(SOCKET_PATH);
     bzero(&servaddr, sizeof(servaddr));
     servaddr.sun_family = AF_UNIX;
-    strcpy(servaddr.sun_path, "/tmp/rcd");
+    strcpy(servaddr.sun_path, SOCKET_PATH);
     
     bind(sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
+    chmod(SOCKET_PATH, 0777);
     listen(sockfd, 10);
 
     iochannel = g_io_channel_unix_new(sockfd);

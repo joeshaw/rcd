@@ -14,14 +14,17 @@ rcd_rc_package_spec_to_xmlrpc(RCPackageSpec *spec,
     RCD_XMLRPC_STRUCT_SET_STRING(
         env, value, "name",
         spec->name);
+    XMLRPC_FAIL_IF_FAULT (env);
 
     RCD_XMLRPC_STRUCT_SET_INT(
         env, value, "epoch",
         spec->epoch);
+    XMLRPC_FAIL_IF_FAULT (env);
 
     RCD_XMLRPC_STRUCT_SET_STRING(
         env, value, "version",
         spec->version);
+    XMLRPC_FAIL_IF_FAULT (env);
 
     RCD_XMLRPC_STRUCT_SET_STRING(
         env, value, "release",
@@ -93,60 +96,163 @@ cleanup:
 } /* rcd_rc_package_slist_to_xmlrpc_array */
 
 RCPackage *
-rcd_xmlrpc_streamed_to_rc_package (RCPackman    *packman,
-                                   xmlrpc_value *value,
-                                   xmlrpc_env   *env)
+rcd_rc_package_from_name (xmlrpc_value *value,
+                          xmlrpc_env   *env)
 {
-    xmlrpc_value *data;
-    char *file_name;
+    char *name;
+    RCWorld *world = rc_get_world ();
     RCPackage *package = NULL;
 
-    xmlrpc_parse_value(env, value, "V", &data);
-    XMLRPC_FAIL_IF_FAULT(env);
+    xmlrpc_parse_value (env, value, "s", &name);
+    XMLRPC_FAIL_IF_FAULT (env);
 
-    if (xmlrpc_value_type(data) == XMLRPC_TYPE_STRING) {
-        /* Filename */
-        xmlrpc_parse_value(env, data, "s", &file_name);
-        XMLRPC_FAIL_IF_FAULT(env);
+    package = rc_world_get_package (world, RC_WORLD_ANY_CHANNEL, name);
 
-        package = rc_packman_query_file(packman, file_name);
+    if (!package)
+        xmlrpc_env_set_fault (env, -613, "Unable to find package");
 
-        package->package_filename = g_strdup(file_name);
-    }
-    else if (xmlrpc_value_type(data) == XMLRPC_TYPE_BASE64) {
-        /* Inlined package */
-        char *package_file;
-        size_t package_size;
-        int fd;
+cleanup:
+    return package;
+} /* rcd_rc_package_from_name */
 
-        xmlrpc_parse_value(env, data, "6", &package_file, &package_size);
-        XMLRPC_FAIL_IF_FAULT(env);
+RCPackage *
+rcd_rc_package_from_file (xmlrpc_value *value,
+                          xmlrpc_env   *env)
+{
+    char *file_name;
+    RCWorld *world = rc_get_world ();
+    RCPackman *packman = rc_world_get_packman (world);
+    RCPackage *package = NULL;
 
-        fd = g_file_open_tmp("package-XXXXXX", &file_name, NULL);
-        rc_write(fd, package_file, package_size);
-        rc_close(fd);
+    xmlrpc_parse_value (env, value, "s", &file_name);
+    XMLRPC_FAIL_IF_FAULT (env);
 
-        package = rc_packman_query_file(packman, file_name);
+    package = rc_packman_query_file (packman, file_name);
 
-        /* FIXME: Should do some sort of intelligent caching here */
+    if (package)
+        package->package_filename = g_strdup (file_name);
+    else
+        xmlrpc_env_set_fault (env, -613, "Unable to find package");
 
+cleanup:
+    return package;
+} /* rcd_rc_package_from_file */
+
+RCPackage *
+rcd_rc_package_from_streamed_package (xmlrpc_value *value,
+                                      xmlrpc_env   *env)
+{
+    char *file_name;
+    char *package_file;
+    size_t package_size;
+    int fd;
+    RCWorld *world = rc_get_world ();
+    RCPackman *packman = rc_world_get_packman (world);
+    RCPackage *package = NULL;
+
+    xmlrpc_parse_value (env, value, "6", &package_file, &package_size);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    fd = g_file_open_tmp ("package-XXXXXX", &file_name, NULL);
+    rc_write (fd, package_file, package_size);
+    rc_close (fd);
+
+    package = rc_packman_query_file (packman, file_name);
+
+    if (package)
         package->package_filename = file_name;
-    }
     else {
-        xmlrpc_env_set_fault(env, -503, "Invalid package stream type");
+        xmlrpc_env_set_fault (env, -614, "Unable to read package");
+        g_free (file_name);
     }
 
 cleanup:
-    if (env->fault_occurred)
-        return NULL;
+    return package;
+} /* rcd_rc_package_from_streamed_package */
+
+RCPackage *
+rcd_rc_package_from_xmlrpc_package (xmlrpc_value *value,
+                                    xmlrpc_env   *env)
+{
+    char *name;
+    gboolean installed;
+    RCWorld *world = rc_get_world ();
+    RCPackage *package = NULL;
+
+    RCD_XMLRPC_STRUCT_GET_STRING (env, value, "name", name);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    RCD_XMLRPC_STRUCT_GET_INT (env, value, "installed", installed);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    if (installed) {
+        package = rc_world_get_package (world, RC_WORLD_SYSTEM_PACKAGES, name);
+
+        if (!package) {
+            xmlrpc_env_set_fault (env, -611, "Unable to find package");
+            return NULL;
+        }
+
+        return package;
+    }
+    else {
+        int channel_id;
+        RCChannel *channel;
+
+        RCD_XMLRPC_STRUCT_GET_INT (env, value, "channel", channel_id);
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        channel = rc_world_get_channel_by_id (world, channel_id);
+        if (!channel) {
+            xmlrpc_env_set_fault (env, -612, "Unable to find channel");
+            return NULL;
+        }
+
+        package = rc_world_get_package (world, channel, name);
+        if (!package) {
+            xmlrpc_env_set_fault (env, -611, "Unable to find package");
+            return NULL;
+        }
+    }
+
+cleanup:
+    return package;
+} /* rcd_rc_package_from_xmlrpc_package */
+
+RCPackage *
+rcd_xmlrpc_to_rc_package (xmlrpc_value *value,
+                          xmlrpc_env   *env,
+                          int           flags)
+{
+    RCPackage *package = NULL;
+
+    if (flags & RCD_PACKAGE_FROM_XMLRPC_PACKAGE &&
+        xmlrpc_value_type (value) == XMLRPC_TYPE_STRUCT)
+        package = rcd_rc_package_from_xmlrpc_package (value, env);
+    else if (flags & RCD_PACKAGE_FROM_STREAMED_PACKAGE &&
+             xmlrpc_value_type (value) == XMLRPC_TYPE_BASE64)
+        package = rcd_rc_package_from_streamed_package (value, env);
+    else if (xmlrpc_value_type (value) == XMLRPC_TYPE_STRING) {
+        if (flags & RCD_PACKAGE_FROM_NAME)
+            package = rcd_rc_package_from_name (value, env);
+
+        if (flags & RCD_PACKAGE_FROM_FILE && !package) {
+            xmlrpc_env_clean (env);
+            xmlrpc_env_init (env);
+            
+            package = rcd_rc_package_from_file (value, env);
+        }
+    }
+    else
+        xmlrpc_env_set_fault(env, -503, "Invalid package stream type");
 
     return package;
-} /* rcd_xmlrpc_streamed_to_rc_package */
+} /* rcd_xmlrpc_to_rc_package */
 
 RCPackageSList *
-rcd_xmlrpc_streamed_array_to_rc_package_slist (RCPackman    *packman,
-                                               xmlrpc_value *value,
-                                               xmlrpc_env   *env)
+rcd_xmlrpc_array_to_rc_package_slist (xmlrpc_value *value,
+                                      xmlrpc_env   *env,
+                                      int           flags)
 {
     RCPackageSList *package_list = NULL;
     int size = 0;
@@ -162,7 +268,7 @@ rcd_xmlrpc_streamed_array_to_rc_package_slist (RCPackman    *packman,
         v = xmlrpc_array_get_item (env, value, i);
         XMLRPC_FAIL_IF_FAULT (env);
 
-        package = rcd_xmlrpc_streamed_to_rc_package (packman, v, env);
+        package = rcd_xmlrpc_to_rc_package (v, env, flags);
         XMLRPC_FAIL_IF_FAULT (env);
 
         package_list = g_slist_prepend (package_list, package);
@@ -177,7 +283,7 @@ cleanup:
     }
 
     return package_list;
-} /* rcd_xmlrpc_streamed_array_to_rc_package_slist */
+} /* rcd_xmlrpc_array_to_rc_package_slist */
 
 xmlrpc_value *
 rcd_rc_channel_to_xmlrpc (RCChannel  *channel,

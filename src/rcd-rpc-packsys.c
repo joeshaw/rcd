@@ -227,18 +227,15 @@ packsys_query_file (xmlrpc_env   *env,
                     xmlrpc_value *param_array,
                     void         *user_data)
 {
-    RCWorld *world = (RCWorld *) user_data;
-    RCPackman *packman;
     RCPackage *rc_package;
     xmlrpc_value *value;
     xmlrpc_value *xmlrpc_package = NULL;
 
-    packman = rc_world_get_packman (world);
-
     xmlrpc_parse_value(env, param_array, "(V)", &value);
     XMLRPC_FAIL_IF_FAULT(env);
 
-    rc_package = rcd_xmlrpc_streamed_to_rc_package(packman, value, env);
+    rc_package = rcd_xmlrpc_to_rc_package (
+        value, env, RCD_PACKAGE_FROM_FILE | RCD_PACKAGE_FROM_STREAMED_PACKAGE);
     XMLRPC_FAIL_IF_FAULT(env);
 
     if (!rc_package) {
@@ -352,6 +349,8 @@ run_transaction(gpointer data)
                           rc_packman_get_reason (status->packman));
     }
 
+    rc_world_get_system_packages (rc_get_world ());
+
     return FALSE;
 } /* run_transaction */
 
@@ -432,7 +431,6 @@ packsys_transact(xmlrpc_env   *env,
                  void         *user_data)
 {
     RCWorld *world = (RCWorld *) user_data;
-    RCPackman *packman;
     xmlrpc_value *xmlrpc_install_packages;
     xmlrpc_value *xmlrpc_remove_packages;
     RCPackageSList *install_packages = NULL;
@@ -441,17 +439,20 @@ packsys_transact(xmlrpc_env   *env,
     RCDTransactionStatus *status;
     xmlrpc_value *result = NULL;
 
-    packman = rc_world_get_packman (world);
-
     xmlrpc_parse_value(
         env, param_array, "(AA)",
         &xmlrpc_install_packages, &xmlrpc_remove_packages);
     XMLRPC_FAIL_IF_FAULT(env);
 
-    install_packages = rcd_xmlrpc_streamed_array_to_rc_package_slist (
-        packman, xmlrpc_install_packages, env);
-    remove_packages = rcd_xmlrpc_streamed_array_to_rc_package_slist (
-        packman, xmlrpc_remove_packages, env);
+    install_packages = rcd_xmlrpc_array_to_rc_package_slist (
+        xmlrpc_install_packages, env,
+        RCD_PACKAGE_FROM_ANY);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    remove_packages = rcd_xmlrpc_array_to_rc_package_slist (
+        xmlrpc_remove_packages, env,
+        RCD_PACKAGE_FROM_NAME | RCD_PACKAGE_FROM_XMLRPC_PACKAGE);
+    XMLRPC_FAIL_IF_FAULT (env);
 
     if (getenv ("RCD_ENFORCE_AUTH")) {
         /* Check our permissions to install/upgrade/remove */
@@ -466,7 +467,7 @@ packsys_transact(xmlrpc_env   *env,
 
     /* Track our transaction */
     status = g_new0(RCDTransactionStatus, 1);
-    status->packman = packman;
+    status->packman = rc_world_get_packman (world);
     status->install_packages = install_packages;
     status->remove_packages = remove_packages;
     status->pending = rcd_pending_new ("Transaction status");
@@ -495,35 +496,6 @@ cleanup:
 
     return result;
 } /* packsys_transact */
-
-static xmlrpc_value *
-packsys_transaction_get_status(xmlrpc_env   *env,
-                               xmlrpc_value *param_array,
-                               void         *user_data)
-{
-    xmlrpc_int32 transaction_id;
-    RCDPending *pending;
-    xmlrpc_value *result;
-
-    xmlrpc_parse_value(
-        env, param_array, "(i)",
-        &transaction_id);
-
-    pending = rcd_pending_lookup_by_id (transaction_id);
-    if (!pending) {
-        xmlrpc_env_set_fault (env, -602, "Couldn't find transaction id");
-        return NULL;
-    }
-
-    result = xmlrpc_build_value (
-        env, "s",
-        rcd_pending_status_to_string (rcd_pending_get_status (pending)));
-
-    if (env->fault_occurred)
-        return NULL;
-
-    return result;
-} /* packman_transaction_get_status */
 
 #if 0
 static void
@@ -650,12 +622,6 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
         "rcd.packsys.transact",
         packsys_transact,
         rcd_auth_action_list_from_1 (RCD_AUTH_NONE),
-        world);
-
-    rcd_rpc_register_method(
-        "rcd.packsys.transaction_get_status",
-        packsys_transaction_get_status,
-        rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
         world);
 
     rcd_rpc_register_method("rcd.packsys.get_channels",
