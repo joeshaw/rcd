@@ -80,4 +80,7 @@ void rcd_transaction_log_to_server (const char         *name,
                                     gboolean            successful,
                                     const char         *message);
 
+/* Check the size and md5 integrity of a package. */
+gboolean rcd_transaction_check_package_integrity (const char *filename);
+
 #endif /* __RCD_TRANSACTION_H__ */

@@ -907,59 +907,60 @@ check_download_space (gsize download_size)
         return TRUE;
 } /* check_download_space */
 
-static gboolean
-check_package_integrity (RCPackage *package, RCDTransactionStatus *status)
+gboolean
+rcd_transaction_check_package_integrity (const char *filename)
 {
-    RCPackage *file_package;
-    RCVerificationSList *vers;
-    gboolean inconclusive = FALSE;
+    RCWorld *world;
+    RCPackman *packman;
+    RCPackage *file_package = NULL;
+    RCVerificationSList *vers = NULL, *iter;
+    gboolean ret = FALSE;
 
-    file_package = rc_packman_query_file (
-        status->packman, package->package_filename);
+    world = rc_get_world ();
+    packman = rc_world_get_packman (world);
+
+    file_package = rc_packman_query_file (packman, filename);
+    file_package->package_filename = g_strdup (filename);
 
     /* Query failed, so it is a very hosed package. */
     if (!file_package)
-        return FALSE;
+        goto out;
 
-    /* Verify file size and md5sum on package */
-    vers = rc_packman_verify (
-        status->packman, package,
-        RC_VERIFICATION_TYPE_SIZE | RC_VERIFICATION_TYPE_MD5);
+    /* Verify file size and md5sum */
+    vers = rc_packman_verify (packman, file_package,
+                              RC_VERIFICATION_TYPE_SIZE |
+                              RC_VERIFICATION_TYPE_MD5);
 
-    if (rc_packman_get_error (status->packman)) {
+    if (rc_packman_get_error (packman)) {
         rc_debug (RC_DEBUG_LEVEL_WARNING, "Can't verify integrity of '%s': %s",
-                  g_quark_to_string (RC_PACKAGE_SPEC (package)->nameq),
-                  rc_packman_get_reason (status->packman));
-        return FALSE;
+                  g_quark_to_string (RC_PACKAGE_SPEC (file_package)->nameq),
+                  rc_packman_get_reason (packman));
+        goto out;
     }
 
-    if (!vers) {
-        /* Nothing to verify?  Probably a repackaged RPM, so we're okay. */
-        return TRUE;
-    }
-    
-    for (; vers; vers = vers->next) {
-        RCVerification *ver = vers->data;
+    for (iter = vers; iter; iter = iter->next) {
+        RCVerification *ver = iter->data;
 
-        if (ver->status == RC_VERIFICATION_STATUS_FAIL)
-            return FALSE;
-        else if (ver->status == RC_VERIFICATION_STATUS_PASS)
-            inconclusive = FALSE;
+        if (ver->status != RC_VERIFICATION_STATUS_PASS) {
+            rc_debug (RC_DEBUG_LEVEL_WARNING,
+                      "Can't verify integrity of '%s', %s check failed",
+                      g_quark_to_string (file_package->spec.nameq),
+                      rc_verification_type_to_string (ver->type));
+     
+            goto out;
+        }
     }
 
-    /*
-     * The check was inconclusive, so if we can download it again, we're
-     * better safe than sorry and fail the thing.
-     */
-    if (inconclusive) {
-        if (rc_package_get_latest_update (package))
-            return FALSE;
-        else
-            return TRUE;
-    }
-    else
-        return TRUE;
-} /* check_package_integrity */
+    ret = TRUE;
+
+out:
+    if (file_package)
+        rc_package_unref (file_package);
+
+    rc_verification_slist_free (vers);
+
+    return ret;
+}
 
 static void
 transfer_done_cb (RCDTransferPool      *pool,
@@ -1000,7 +1001,9 @@ download_packages (RCPackageSList *packages, RCDTransactionStatus *status)
                 package->package_filename = NULL;
             }
             else {
-                if (!check_package_integrity (package, status)) {
+                if (!rcd_transaction_check_package_integrity (
+                        package->package_filename))
+                {
                     RCDCacheEntry *entry;
 
                     entry = rcd_cache_lookup (rcd_cache_get_package_cache (),

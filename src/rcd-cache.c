@@ -39,15 +39,18 @@
 #include "rcd-prefs.h"
 #include "rcd-expire.h"
 #include "rcd-shutdown.h"
+#include "rcd-transaction.h"
 
 #include <errno.h>
 
-typedef char *(*RCDCacheFilenameFunc) (RCDCache *cache, const char *url);
+typedef char *   (*RCDCacheFilenameFunc)  (RCDCache *cache, const char *url);
+typedef gboolean (*RCDCacheFileCheckFunc) (const char *filename);
 
 struct _RCDCache {
     GHashTable *entries;
 
     RCDCacheFilenameFunc filename_func;
+    RCDCacheFileCheckFunc file_check_func;
 
     gpointer user_data;
 };
@@ -234,6 +237,7 @@ rcd_cache_entry_invalidate (RCDCacheEntry *entry)
 {
     g_return_if_fail (entry);
 
+    unlink (entry->local_file);
     g_hash_table_remove (entry->cache->entries, entry->local_file);
     rcd_cache_entry_free (entry);
 } /* rcd_cache_entry_invalidate */
@@ -267,6 +271,13 @@ rcd_cache_lookup (RCDCache *cache, const char *url)
         return NULL;
 
     if (!g_file_test (entry->local_file, G_FILE_TEST_EXISTS)) {
+        rcd_cache_entry_invalidate (entry);
+        return NULL;
+    }
+
+    if (cache->file_check_func &&
+        !cache->file_check_func (entry->local_file))
+    {
         rcd_cache_entry_invalidate (entry);
         return NULL;
     }
@@ -369,6 +380,7 @@ rcd_cache_get_package_cache (void)
 
     if (cache == NULL) {
         cache = rcd_cache_new (package_cache_filename_func);
+        cache->file_check_func = rcd_transaction_check_package_integrity;
 
         rcd_shutdown_add_handler (shutdown_expire_package_cache,
                                   NULL);
