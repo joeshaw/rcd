@@ -69,6 +69,14 @@ rcd_recurring_execute_list (void)
         RCDRecurring *recurring = iter->data;
 
         if (recurring->when <= now && ! recurring->removed) {
+            char *label;
+
+            label = rcd_recurring_get_label (recurring);
+
+            rc_debug (RC_DEBUG_LEVEL_DEBUG, "Executing recurring action '%s'",
+                      label);
+
+            g_free (label);
             /* rcd_recurring_execute returns FALSE if the event shouldn't
                happen again. */
             if (! rcd_recurring_execute (recurring))
@@ -98,14 +106,30 @@ static time_t
 rcd_recurring_next_action (void)
 {
     time_t next = 0;
+    RCDRecurring *which = NULL;
     GList *iter;
 
     for (iter = recurring_list; iter != NULL; iter = iter->next) {
         RCDRecurring *recurring = iter->data;
         if (! recurring->removed) {
-            if (next == 0 || recurring->when < next)
+            if (next == 0 || recurring->when < next) {
                 next = recurring->when;
+                which = recurring;
+            }
         }
+    }
+
+    if (!which)
+        rc_debug (RC_DEBUG_LEVEL_DEBUG, "No next recurring action");
+    else {
+        char *label;
+
+        label = rcd_recurring_get_label (which);
+
+        rc_debug (RC_DEBUG_LEVEL_DEBUG, "Next recurring action will be "
+                  "'%s' at %s.", label, ctime (&next));
+
+        g_free (label);
     }
 
     return next;
@@ -115,6 +139,8 @@ static gboolean
 rcd_recurring_timeout_cb (gpointer execute_if_null)
 {
     static void rcd_recurring_setup_timeout (void);
+
+    rc_debug (RC_DEBUG_LEVEL_DEBUG, "Recurring timer hit");
 
     rcd_recurring_execute_list ();
 

@@ -1,3 +1,9 @@
+2003-03-28  Joe Shaw  <joe@ximian.com>
+
+	* rcd-recurring.c: Add a bunch of debugging code so we can see
+	what's going on when the heatbeats aren't running at regular
+	intervals.
+
 2003-03-27  Joe Shaw  <joe@ximian.com>
 
 	* rcd-autopull.c (rcd_autopull_find_targets): Update
