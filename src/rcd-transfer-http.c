@@ -336,7 +336,7 @@ http_read_data (SoupMessage *message,
     RCDTransferProtocolHTTP *protocol =
         (RCDTransferProtocolHTTP *) t->protocol;
 
-    if (protocol->entry) {
+    if (HTTP_RESPONSE_SUCCESSFUL (message->errorcode) && protocol->entry) {
         rcd_cache_entry_append (
             protocol->entry, message->response.body, message->response.length);
     }

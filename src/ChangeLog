@@ -1,3 +1,24 @@
+2002-08-21  Joe Shaw  <joe@ximian.com>
+
+	* rcd-fetch.c (rcd_fetch_channel_list): Return a gboolean
+	indicating success.  Before we add the channels from the XML,
+	remove all of the previous channels.  Before, this was done before
+	every call to rcd_fetch_channel_list().  Now, if we fail, we can
+	just continue using what we already had in memory.
+
+	* rcd-rpc-packsys.c (refresh_channels_cb): Don't remove the
+	channels from the world here, that's now done in
+	rcd_fetch_channel_list() on success.  If fetching the channel list
+	fails, set an invalid indicator.
+	(packsys_refresh_all_channels): If we get an invalid list back
+	from refresh_channels_cb(), set a fault.
+
+	* rcd-rpc-util.h: Added RCD_RPC_FAULT_CANT_REFRESH.
+
+	* rcd-transfer-http.c (http_read_data): If the HTTP response isn't
+	in the 200 class, don't try to append data to the (unopened) cache
+	entry.  Fixes a g_warning().
+
 2002-08-21  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-autopull.c: Further hacking.  We are now pretty close

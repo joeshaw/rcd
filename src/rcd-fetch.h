@@ -39,9 +39,9 @@ void     rcd_fetch_register (void);
 /* 
    Download the channel list from the server, then
    add the channels corresponding to our disto to the global
-   RCWorld. 
+   RCWorld.  Returns TRUE if successful.
 */
-void     rcd_fetch_channel_list       (void);
+gboolean rcd_fetch_channel_list       (void);
 gboolean rcd_fetch_channel_list_local (void);
 
 /* 

@@ -141,7 +141,13 @@ get_channel_list_url (void)
     return url;
 } /* get_channel_list_url */
 
-void
+static void
+remove_channel_cb (RCChannel *channel, gpointer user_data)
+{
+    rc_world_remove_channel (rc_get_world (), channel);
+} /* remove_channel_cb */
+
+gboolean
 rcd_fetch_channel_list (void)
 {
     RCDTransfer *t;
@@ -149,6 +155,7 @@ rcd_fetch_channel_list (void)
     GByteArray *data = NULL;
     xmlDoc *doc = NULL;
     xmlNode *root;
+    gboolean success = FALSE;
 
     url = get_channel_list_url ();
 
@@ -176,8 +183,11 @@ rcd_fetch_channel_list (void)
         goto cleanup;
     }
 
+    rc_world_foreach_channel (rc_get_world (), remove_channel_cb, NULL);
     rc_world_add_channels_from_xml (rc_get_world (), root->xmlChildrenNode);
     write_file_contents ("/var/lib/rcd/channels.xml.gz", data);
+
+    success = TRUE;
 
  cleanup:
 
@@ -192,6 +202,8 @@ rcd_fetch_channel_list (void)
     
     if (doc)
         xmlFreeDoc (doc);
+
+    return success;
 }
 
 gboolean

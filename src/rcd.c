@@ -390,7 +390,7 @@ initialize_data (void)
 
     if (!rcd_fetch_news_local ())
         rcd_fetch_news ();
-} /* initialze_data */
+} /* initialize_data */
 
 static void
 signal_handler (int sig_num)

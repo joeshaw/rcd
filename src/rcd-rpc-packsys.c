@@ -40,6 +40,8 @@
 #include "rcd-subscriptions.h"
 #include "rcd-transaction.h"
 
+#define RCD_REFRESH_INVALID ((gpointer) 0xdeadbeef)
+
 static void
 add_channel_cb (RCChannel *channel, gpointer user_data)
 {
@@ -116,12 +118,6 @@ packsys_refresh_channel (xmlrpc_env   *env,
     return value;
 }
 
-static void
-remove_channel_cb (RCChannel *channel, gpointer user_data)
-{
-    rc_world_remove_channel (rc_get_world (), channel);
-} /* remove_channel_cb */
-
 static gboolean
 check_pending_status_cb (gpointer user_data)
 {
@@ -154,9 +150,13 @@ refresh_channels_cb (gpointer user_data)
 
     rcd_transaction_lock ();
 
-    rc_world_foreach_channel (rc_get_world (), remove_channel_cb, NULL);
+    if (!rcd_fetch_channel_list ()) {
+        if (ret_list)
+            *ret_list = RCD_REFRESH_INVALID;
+        rcd_transaction_unlock ();
+        return;
+    }
 
-    rcd_fetch_channel_list ();
     rcd_subscriptions_load ();
 
     id_list = rcd_fetch_all_channels ();
@@ -175,7 +175,7 @@ packsys_refresh_all_channels (xmlrpc_env   *env,
                               xmlrpc_value *param_array,
                               void         *user_data)
 {
-    xmlrpc_value *value;
+    xmlrpc_value *value = NULL;
     GSList *ret_list = NULL, *iter;
 
     if (rcd_transaction_is_locked ()) {
@@ -185,6 +185,13 @@ packsys_refresh_all_channels (xmlrpc_env   *env,
     }
 
     refresh_channels_cb (&ret_list);
+
+    if (ret_list == RCD_REFRESH_INVALID) {
+        xmlrpc_env_set_fault (
+            env, RCD_RPC_FAULT_CANT_REFRESH,
+            "Unable to download channel data.  Using cached data");
+        goto cleanup;
+    }
 
     value = xmlrpc_build_value (env, "()");
     XMLRPC_FAIL_IF_FAULT (env);
