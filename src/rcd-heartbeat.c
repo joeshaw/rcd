@@ -77,6 +77,11 @@ heartbeat_next (RCDRecurring *recurring,
 void
 rcd_heartbeat_start (void)
 {
+    if (!rcd_prefs_get_heartbeat_interval ()) {
+        rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Heartbeat disabled");
+        return;
+    }
+
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Starting heartbeat");
 
     recurring_heartbeat.tag     = g_quark_from_static_string ("heartbeat");

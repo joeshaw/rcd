@@ -32,6 +32,7 @@
 #include <libsoup/soup-uri.h>
 
 #include "gnome-config.h"
+#include "rcd-heartbeat.h"
 
 #define DEFAULT_CONFIG_FILE SYSCONFDIR "/rcd.conf"
 #define SYNC_CONFIG (gnome_config_sync_file ((char *) get_config_path (NULL)))
@@ -341,18 +342,29 @@ rcd_prefs_get_heartbeat_interval (void)
 void
 rcd_prefs_set_heartbeat_interval (guint32 interval)
 {
-    if (interval < HEARTBEAT_MINIMUM) {
+    guint32 old_interval;
+
+    if (interval != 0 && interval < HEARTBEAT_MINIMUM) {
         rc_debug (RC_DEBUG_LEVEL_WARNING,
                   "Heartbeat frequencies less than %d are not allowed.",
                   HEARTBEAT_MINIMUM);
         return;
     }
 
+    old_interval = rcd_prefs_get_heartbeat_interval ();
+
+    if (old_interval && !interval)
+        rcd_heartbeat_stop ();
+
     gnome_config_set_int (
         get_config_path ("/System/heartbeat"), (int) interval);
-    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "heartbeat: %u", interval);
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Setting heartbeat to %u seconds",
+              interval);
 
     SYNC_CONFIG;
+
+    if (!old_interval && interval)
+        rcd_heartbeat_start ();
 }
 
 int

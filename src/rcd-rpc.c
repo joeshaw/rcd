@@ -224,7 +224,7 @@ soup_rpc_callback (SoupServerContext *context, SoupMessage *msg, gpointer data)
     xmlrpc_env env;
     xmlrpc_mem_block *output;
     const char *username;
-    RCDIdentity *identity;
+    RCDIdentity *identity = NULL;
     RCDRPCMethodData *method_data;
 
     xmlrpc_env_init (&env);
@@ -233,20 +233,54 @@ soup_rpc_callback (SoupServerContext *context, SoupMessage *msg, gpointer data)
 
     /* Authenticate the user's password */
     username = soup_server_auth_get_user (context->auth);
-    identity = rcd_identity_from_password_file (username);
 
-    if (! rcd_identity_password_file_is_secure ()
-        || !identity
-        || !soup_server_auth_check_passwd (context->auth,
-                                           identity->password)) {
-        rc_debug (RC_DEBUG_LEVEL_WARNING,
-                  "Couldn't authenticate %s", username);
+    /*
+     * Getting the MID as the username is special; it means that the
+     * server is connecting to us and telling us to do something.
+     */
+    if (strcmp (username, rcd_prefs_get_mid ()) == 0) {
+        char *pw, *password;
+
+        password = g_strdup_printf ("%s:Express:%s",
+                                    rcd_prefs_get_mid (),
+                                    rcd_prefs_get_secret ());
+        pw = rc_md5_digest_from_string (password);
+        g_free (password);
+
+        /*
+         * Yes, we have to hash this twice; the first is to generate the
+         * secret, which is a hash of the string above, and the second is
+         * because all passwords are hashed before they are sent for wire
+         * safety.
+         */
+        password = rc_md5_digest_from_string (pw);
+        g_free (pw);
+
+        if (soup_server_auth_check_passwd (context->auth, password)) {
+            identity = rcd_identity_new ();
+            identity->username = g_strdup ("server");
+            identity->privileges = rcd_privileges_from_string ("superuser");
+        }
+
+        g_free (password);
+    }
+
+    if (!identity) {
+        identity = rcd_identity_from_password_file (username);
+
+        if (! rcd_identity_password_file_is_secure ()
+            || !identity
+            || !soup_server_auth_check_passwd (context->auth,
+                                               identity->password)) {
+            rc_debug (RC_DEBUG_LEVEL_WARNING,
+                      "Couldn't authenticate %s", username);
         
-        rcd_identity_free (identity);
-        output = serialize_fault (RCD_RPC_FAULT_CANT_AUTHENTICATE,
-                                  "Couldn't authenticate user");
+            rcd_identity_free (identity);
+            output = serialize_fault (RCD_RPC_FAULT_CANT_AUTHENTICATE,
+                                      "Couldn't authenticate user");
         
-        goto finish_request;
+            goto finish_request;
+        }
     }
 
     method_data->host = soup_server_context_get_client_host (context);

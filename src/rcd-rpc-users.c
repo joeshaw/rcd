@@ -69,6 +69,33 @@ users_get_valid_privileges (xmlrpc_env   *env,
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
+static xmlrpc_value *
+users_has_privilege (xmlrpc_env   *env,
+                     xmlrpc_value *param_array,
+                     void         *user_data)
+{
+    char *privilege;
+    xmlrpc_value *result = NULL;
+    RCDRPCMethodData *method_data;
+
+    xmlrpc_parse_value (env, param_array, "(s)", &privilege);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    method_data = rcd_rpc_get_method_data ();
+    result = xmlrpc_build_value (
+        env, "i",
+        rcd_identity_approve_action (method_data->identity,
+                                     rcd_privileges_from_string (privilege)));
+
+cleanup:
+    if (env->fault_occurred)
+        return NULL;
+    else
+        return result;
+} /* users_has_privilege */
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
 struct GetAllInfo {
     xmlrpc_env *env;
     xmlrpc_value *array;
@@ -189,6 +216,11 @@ rcd_rpc_users_register_methods (void)
     rcd_rpc_register_method ("rcd.users.get_valid_privileges",
                              users_get_valid_privileges,
                              "view",
+                             NULL);
+
+    rcd_rpc_register_method ("rcd.users.has_privilege",
+                             users_has_privilege,
+                             NULL,
                              NULL);
 
     rcd_rpc_register_method ("rcd.users.get_all",

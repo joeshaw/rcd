@@ -1,3 +1,21 @@
+2002-10-15  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc.c (soup_rpc_callback): Allow the server to call to the
+	client by authenticating with the mid and the shared secret.
+
+2002-10-11  Joe Shaw  <joe@ximian.com>
+
+	* rcd-heartbeat.c (rcd_heartbeat_start): Don't start the heartbeat
+	if it's disabled.
+
+	* rcd-prefs.c (rcd_prefs_set_heartbeat_interval): Allow a value of
+	0, which means that the heartbeat is disabled.  Start or stop the
+	heartbeat if necessary.
+
+	* rcd-rpc-users.c (users_has_privilege): Add a
+	rcd.users.has_privilege() method which checks to see if the user
+	making the call has the specified privilege.
+
 2002-10-10  Joe Shaw  <joe@ximian.com>
 
 	* Makefile.am: Add rcd-rollback.[ch] to the build.
