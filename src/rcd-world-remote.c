@@ -1178,7 +1178,7 @@ rcd_world_remote_parse_serviceinfo (RCDWorldRemote  *remote,
                                     GError         **error)
 {
     RCPending *pending = NULL;
-    GError *tmp_error;
+    GError *tmp_error = NULL;
 
     if (!extract_service_info (remote, buffer, buffer_len)) {
         g_set_error (error, RC_ERROR, RC_ERROR,
