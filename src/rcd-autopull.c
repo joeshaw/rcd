@@ -210,6 +210,39 @@ get_dep_failure_info (RCResolver *resolver)
     return str;
 } /* get_dep_failure_info */
 
+static char *
+get_removal_failure_info (GSList *requested_removals,
+                          GSList *extra_removals)
+{
+    GString *info = g_string_new ("This transaction requires the removal of the following packages:");
+    GSList *req_iter, *ex_iter;
+    char *str;
+
+    for (ex_iter = extra_removals; ex_iter != NULL; ex_iter = ex_iter->next) {
+        RCPackage *ex_pkg = ex_iter->data;
+        gboolean found = FALSE;
+
+        for (req_iter = requested_removals;
+             req_iter && !found;
+             req_iter = req_iter->next) {
+            RCPackage *req_pkg = req_iter->data;
+
+            if (rc_package_spec_equal (RC_PACKAGE_SPEC (ex_pkg),
+                                       RC_PACKAGE_SPEC (req_pkg)))
+                found = TRUE;
+        }
+
+        if (! found) {
+            g_string_append_printf (info, "\n%s",
+                                    rc_package_spec_to_str_static (RC_PACKAGE_SPEC (ex_pkg)));
+        }
+    }
+
+    str = info->str;
+    g_string_free (info, FALSE);
+    return str;
+}
+
 static void
 rcd_autopull_resolve_and_transact (RCDAutopull *pull)
 {
@@ -241,6 +274,9 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
                                        VERSION,
                                        FALSE,
                                        dep_failure_info);
+
+        rc_debug (RC_DEBUG_LEVEL_WARNING, "%s", dep_failure_info);
+
         g_free (dep_failure_info);
                                        
         goto cleanup;
@@ -253,10 +289,34 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
     rc_resolver_context_foreach_uninstall (resolver->best_context,
                                            pkg_remove,
                                            &to_remove);
-
+    
     rc_resolver_context_foreach_upgrade (resolver->best_context,
                                          pkg_upgrade,
                                          &to_install);
+
+    /* If we need to uninstall more than just the packages we have
+       explicitly requested for removal, fail. */
+    if (g_slist_length (to_remove) != g_slist_length (pull->all_to_subtract)) {
+        char *removal_failure_info;
+
+        removal_failure_info = get_removal_failure_info (pull->all_to_subtract,
+                                                         to_remove);
+
+        rcd_transaction_log_to_server (to_install,
+                                       to_remove,
+                                       rcd_module->description,
+                                       VERSION,
+                                       FALSE,
+                                       removal_failure_info);
+
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "%s", removal_failure_info);
+
+        g_free (removal_failure_info);
+                                       
+        goto cleanup;
+    }
+
 
     if (to_install != NULL || to_remove != NULL) {
         GSList *iter;
@@ -592,6 +652,7 @@ autopull_from_session_xml_node (xmlNode *node)
         } else if (! g_strcasecmp (node->name, "package")) {
 
             RCPackage *package = package_from_xml_node (node);
+            char *remove_str;
             
             if (package) {
                 g_assert (pull != NULL);
@@ -609,7 +670,14 @@ autopull_from_session_xml_node (xmlNode *node)
                    be turned into a no-op by the dependency resolver.
                 */
 
-                if (rc_package_is_installed (package)) {
+                remove_str = xml_get_prop(node, "remove");
+
+                if (remove_str) {
+                    pull->packages_to_remove =
+                        g_slist_prepend (pull->packages_to_remove,
+                                         rc_package_ref (package));
+
+                } else if (rc_package_is_installed (package)) {
                     pull->packages_to_update =
                         g_slist_prepend (pull->packages_to_update,
                                          rc_package_ref (package));

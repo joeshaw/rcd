@@ -1,3 +1,15 @@
+2002-09-17  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-autopull.c (get_removal_failure_info): Added.  Generates an
+	error message if we need to remove more packages than those we
+	explicitly requested.
+	(rcd_autopull_resolve_and_transact): Write out the dependency
+	failure info using rc_debug.  Check to see if the number of
+	packages to be removed is greater than the number we explicitly
+	asked to have removed.  If so, fail.
+	(autopull_from_session_xml_node): If the 'remove' property is
+	set on a package tag, schedule it for removal.
+
 2002-09-17  Joe Shaw  <joe@ximian.com>
 
 	* rcd-fetch.c (rcd_fetch_packages_abort): Add a workaround for the
