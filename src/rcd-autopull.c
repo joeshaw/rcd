@@ -36,10 +36,113 @@ struct _RCDAutopull {
     time_t first_pull;
     guint interval;
 
-    GSList *channels_to_update;
-    GSList *packages_to_update;
-    GSList *packages_to_hold;
+    GSList *channels_to_update;  /* update whole channel if possible */
+    GSList *packages_to_update;  /* update if possible */
+    GSList *packages_to_hold;    /* DON'T update */
+    GSList *packages_to_install; /* extra installs */
+    GSList *packages_to_remove;  /* extra removals */
+
+    /* A place to store the total list of all to-be-added/subtracted
+       packages */
+    GSList *all_to_add;
+    GSList *all_to_subtract;
 };
+
+static void
+updates_cb (RCPackage *old,
+            RCPackage *nuevo,
+            gpointer   user_data)
+{
+    RCDAutopull *pull = user_data;
+    GSList *iter;
+
+    /* Make sure this isn't an excluded package. */
+    for (iter = pull->packages_to_hold; iter != NULL; iter = iter->next) {
+        RCPackage *pkg = iter->data;
+        if (rc_package_spec_equal (RC_PACKAGE_SPEC (pkg),
+                                   RC_PACKAGE_SPEC (old)))
+            return;
+    }
+
+    /* Check if this update is in the list of channels to update. */
+    for (iter = pull->channels_to_update; iter != NULL; iter = iter->next) {
+        RCChannel *channel = iter->data;
+        if (rc_channel_get_id (channel) == rc_channel_get_id (nuevo->channel))
+            goto update_me_harder;
+    }
+
+    /* Check if this update is in the list of packages to update. */
+    for (iter = pull->packages_to_update; iter != NULL; iter = iter->next) {
+        RCPackage *pkg = iter->data;
+        if (rc_package_spec_equal (RC_PACKAGE_SPEC (pkg),
+                                   RC_PACKAGE_SPEC (old)))
+            goto update_me_harder;
+    }
+
+    return;
+
+ update_me_harder:
+    pull->all_to_add = g_slist_prepend (pull->all_to_add,
+                                        rc_package_ref (nuevo));
+}
+
+static void
+rcd_autopull_find_targets (RCDAutopull *pull)
+{
+    GSList *iter;
+
+    g_return_if_fail (pull != NULL);
+
+    if (pull->all_to_add) {
+        rc_package_slist_unref (pull->all_to_add);
+        g_slist_free (pull->all_to_add);
+        pull->all_to_add = NULL;
+    }
+
+    if (pull->all_to_subtract) {
+        rc_package_slist_unref (pull->all_to_subtract);
+        g_slist_free (pull->all_to_subtract);
+        pull->all_to_subtract = NULL;
+    }
+
+    for (iter = pull->packages_to_install; iter != NULL; iter = iter->next) {
+        pull->all_to_add = g_slist_prepend (pull->all_to_add,
+                                            rc_package_ref (iter->data));
+    }
+
+    for (iter = pull->packages_to_remove; iter != NULL; iter = iter->next) {
+        pull->all_to_subtract = g_slist_prepend (pull->all_to_subtract,
+                                                 rc_package_ref (iter->data));
+    }
+
+    rc_world_foreach_system_upgrade (rc_get_world (),
+                                     updates_cb,
+                                     pull);
+}
+
+static void
+rcd_autopull_resolve (RCDAutopull *pull)
+{
+    RCResolver *resolver;
+
+    g_return_if_fail (pull != NULL);
+
+    resolver = rc_resolver_new ();
+
+    rc_resolver_add_packages_to_install_from_slist (resolver,
+                                                    pull->all_to_add);
+
+    rc_resolver_add_packages_to_remove_from_slist (resolver,
+                                                   pull->all_to_subtract);
+
+    rc_resolver_resolve_dependencies (resolver);
+
+    /* FIXME: do something */
+
+    rc_resolver_free (resolver);
+}
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 static void
 ap_rec_destroy (RCDRecurring *rec)
@@ -55,12 +158,22 @@ ap_rec_destroy (RCDRecurring *rec)
 
     rc_package_slist_unref (pull->packages_to_hold);
     g_slist_free (pull->packages_to_hold);
+
+    rc_package_slist_unref (pull->all_to_add);
+    g_slist_free (pull->all_to_add);
+
+    rc_package_slist_unref (pull->all_to_subtract);
+    g_slist_free (pull->all_to_subtract);
 }
 
 static void
 ap_rec_execute (RCDRecurring *rec)
 {
     RCDAutopull *pull = (RCDAutopull *) rec;
+
+    rcd_autopull_find_targets (pull);
+    rcd_autopull_resolve (pull);
+
 }
 
 static time_t
@@ -123,30 +236,65 @@ rcd_autopull_new (time_t first_pull, guint interval)
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
-/* We are liberal and allow channels to be specified by ID, name
-   or alias. */
+/*
+  Our autopull XML looks like this:
+
+<autopull>
+  <session>
+    <starttime>1029775674</starttime>
+    <interval>7200</interval>
+    <channel bid="2" />
+    <channel bid="20769" />
+    <package bid="418" name="evolution" />
+    <package bid="20769" name="perl" />
+  </session>
+  <session>
+    <starttime>1029775000</starttime>
+    <interval>0</interval>
+    <package bid="20769" name="evolution" />
+    <package name="python" />
+    <package name="libgal19" remove="1" />
+  </session>
+  <session>
+    <starttime>0</starttime>
+    <interval>0</interval>
+    <package bid="598" name="kernel-utils" />
+  </session>
+</autopull>
+*/
+
+
 static RCChannel *
-channel_from_str (const char *str)
+channel_from_xml_node (xmlNode *node)
 {
     RCWorld *world;
-    RCChannel *channel;
-    guint32 cid;
+    RCChannel *channel = NULL;
+    char *bid_str = NULL;
+    guint32 bid;
 
-    if (str == NULL)
-        return NULL;
+    if (g_strcasecmp (node->name, "channel"))
+        goto finished;
+    
+    bid_str = xml_get_prop (node, "bid");
+    if (bid_str == NULL) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Ignoring channel tag without base ID.");
+        goto finished;
+    }
 
+    bid = atol (bid_str);
     world = rc_get_world ();
 
-    cid = atol (str);
-    if (cid) {
-        channel = rc_world_get_channel_by_id (world, cid);
-    } else {
-        channel = rc_world_get_channel_by_name (world, str);
-        if (channel == NULL) {
-            channel = rc_world_get_channel_by_alias (world, str);
-        }
+    channel = rc_world_get_channel_by_base_id (world, bid);
+    if (channel == NULL) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Unknown channel base ID '%s' in channel tag.", bid_str);
+        goto finished;
     }
-    
+
+ finished:
+    g_free (bid_str);
+
     return channel;
 }
 
@@ -155,27 +303,30 @@ package_from_xml_node (xmlNode *node)
 {
     RCWorld *world;
     RCPackage *pkg = NULL;
-    char *channel_str = NULL;
+    char *bid_str = NULL;
+    guint32 bid;
     char *pkg_name = NULL;
     RCChannel *channel;
 
     if (g_strcasecmp (node->name, "package"))
         goto finished;
 
-    channel_str = xml_get_prop (node, "channel");
-    if (channel_str == NULL) {
+    bid_str = xml_get_prop (node, "bid");
+    if (bid_str == NULL) {
         /* FIXME: a better warning would be nice */
         rc_debug (RC_DEBUG_LEVEL_WARNING,
-                  "Ignoring package tag without channel.");
+                  "Ignoring package tag without channel base ID.");
         goto finished;
     }
 
+    bid = atol (bid_str);
+
     world = rc_get_world ();
 
-    channel = channel_from_str (channel_str);
+    channel = rc_world_get_channel_by_base_id (world, bid);
     if (channel == NULL) {
         rc_debug (RC_DEBUG_LEVEL_WARNING,
-                  "Unknown channel '%s' in package tag.", channel_str);
+                  "Unknown channel base ID '%s' in package tag.", bid_str);
         goto finished;
     }
 
@@ -186,123 +337,105 @@ package_from_xml_node (xmlNode *node)
     if (pkg == NULL) {
         rc_debug (RC_DEBUG_LEVEL_WARNING,
                   "Can't find package '%s' in channel '%s'.",
-                  pkg_name, channel_str);
+                  pkg_name, rc_channel_get_name (channel));
     }
 
  finished:
-    g_free (channel_str);
+    g_free (bid_str);
     g_free (pkg_name);
 
     return pkg;
 }
 
-/*
-  rcd_autopull_from_xml_node processes XML that looks like this:
-
-  <autopull when="1028480640" interval="86400">
-    <channels>
-      <channel>123</channel>
-      <channel>456</channel>
-    </channels>
-    <packages>
-      <package channel="789">frobnicator</package>
-      <package channel="666">satan</package>
-    </packages>
-    <hold>
-      <package channel="123">glibc</package>
-      <package channel="456">pr0n-o-matic</package>
-    </hold>
-  </autopull>
-*/
-
 static RCDAutopull *
-rcd_autopull_from_xml_node (xmlNode *node)
+autopull_from_session_xml_node (xmlNode *node)
 {
     RCDAutopull *pull = NULL;
-    xmlNode *iter;
-    char *when_str = NULL;
+    char *starttime_str = NULL;
     char *interval_str = NULL;
-    time_t when;
-    guint32 interval;
     
-    if (g_strcasecmp (node->name, "autopull"))
+    if (g_strcasecmp (node->name, "session"))
         return NULL;
 
-    when_str = xml_get_prop (node, "when");
-    interval_str = xml_get_prop (node, "interval");
+    for (node = node->xmlChildrenNode; node != NULL; node = node->next) {
 
-    when = when_str ? atol (when_str) : 0;
-    interval = interval_str ? atol (interval_str) : 0;
+        if (! g_strcasecmp (node->name, "starttime")) {
 
-    g_free (when_str);
-    g_free (interval_str);
+            if (starttime_str == NULL)
+                starttime_str = xml_get_content (node);
+            else
+                rc_debug (RC_DEBUG_LEVEL_WARNING,
+                          "Extra starttime tag ignored.");
 
-    pull = rcd_autopull_new (when, interval);
+        } else if (! g_strcasecmp (node->name, "interval")) {
 
-    for (node = node->xmlChildrenNode; node; node = node->next) {
+            if (interval_str == NULL)
+                interval_str = xml_get_content (node);
+            else
+                rc_debug (RC_DEBUG_LEVEL_WARNING,
+                          "Extra interval tag ignored.");
+            
+        } else if (! g_strcasecmp (node->name, "channel")) {
+            
+            RCChannel *channel = channel_from_xml_node (node);
 
-        if (! g_strcasecmp (node->name, "channels")) {
-
-            for (iter = node->xmlChildrenNode; iter; iter = iter->next) {
-                
-                if (! g_strcasecmp (node->name, "channel")) {
-                    char *channel_str = xml_get_content (node);
-                    RCChannel *channel = channel_from_str (channel_str);
-
-                    if (channel) {
-                        pull->channels_to_update =
-                            g_slist_prepend (pull->channels_to_update,
-                                             rc_channel_ref (channel));
-                    } else {
-                        rc_debug (RC_DEBUG_LEVEL_WARNING,
-                                  "Unknown channel '%s'.", channel_str);
-                    }
-
-                    g_free (channel_str);
-                }
+            if (channel) {
+                g_assert (pull != NULL);
+                pull->channels_to_update =
+                    g_slist_prepend (pull->channels_to_update,
+                                     rc_channel_ref (channel));
             }
 
-        } else if (! g_strcasecmp (node->name, "packages")) {
+        } else if (! g_strcasecmp (node->name, "package")) {
 
-            for (iter = node->xmlChildrenNode; iter; iter = iter->next) {
-
-                if (! g_strcasecmp (node->name, "package")) {
-                    RCPackage *package = package_from_xml_node (node);
-                    /* package_from_xml_node prints a warning
-                       if it returns NULL, so we don't have to do anything
-                       in that case. */
-                    if (package) {
-                        pull->packages_to_update =
-                            g_slist_prepend (pull->packages_to_update,
-                                             rc_package_ref (package));
-                    }
-                }
-            }
-
-        } else if (! g_strcasecmp (node->name, "hold")) {
-
-            for (iter = node->xmlChildrenNode; iter; iter = iter->next) {
-
-                if (! g_strcasecmp (node->name, "package")) {
-                    RCPackage *package = package_from_xml_node (node);
-                    /* package_from_xml_node prints a warning
-                       if it returns NULL, so we don't have to do anything
-                       in that case. */
-                    if (package) {
-                        pull->packages_to_update =
-                            g_slist_prepend (pull->packages_to_update,
-                                             rc_package_ref (package));
-                    }
-                }
+            RCPackage *package = package_from_xml_node (node);
+            
+            if (package) {
+                g_assert (pull != NULL);
+                pull->packages_to_update =
+                    g_slist_prepend (pull->packages_to_update,
+                                     rc_package_ref (package));
             }
         }
 
-        node = node->next;
+        /* Construct our pull object after we have the starttime
+           and interval. */
+        if (starttime_str != NULL && interval_str != NULL && pull == NULL) {
+            time_t starttime;
+            guint32 interval;
+            
+            starttime = (time_t) atol (starttime_str);
+            interval = atol (interval_str);
+
+            pull = rcd_autopull_new (starttime, interval);
+        }
     }
+
+    g_free (starttime_str);
+    g_free (interval_str);
 
     return pull;
 }
 
+static void
+rcd_autopull_process_xml (xmlNode *node)
+{
+    g_return_if_fail (node != NULL);
+
+    if (g_strcasecmp (node->name, "autopull")) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "This doesn't look like autopull XML!");
+        return;
+    }
+
+    for (node = node->xmlChildrenNode; node != NULL; node = node->next) {
+        if (! g_strcasecmp (node->name, "session")) {
+            RCDAutopull *pull = autopull_from_session_xml_node (node);
+            if (pull)
+                rcd_recurring_add ((RCDRecurring *) pull);
+        }
+    }
+}
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
