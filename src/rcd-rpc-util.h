@@ -51,6 +51,7 @@
 #define RCD_RPC_FAULT_LICENSE_NOT_FOUND      -615
 #define RCD_RPC_FAULT_CANT_SET_PREFERENCE    -616
 #define RCD_RPC_FAULT_INVALID_SERVICE        -617
+#define RCD_RPC_FAULT_TRANSACTION_FAILED     -618
 
 #define is_empty_string(x)     (!(x) || !(*(x)))
 #define RC_STRING_TO_XMLRPC(x) ((x) == NULL ? "" : (x))
@@ -214,7 +215,8 @@ xmlrpc_value *rcd_xmlrpc_array_copy (xmlrpc_env *env, int n_params, ...);
 
 void rcd_rpc_block_on_pending_list (xmlrpc_env *env,
                                     GSList     *pending_list,
-                                    gboolean    fail_if_any);
+                                    gboolean    fail_if_any,
+                                    int         fault_to_throw);
 
 /* For debugging purposes */
 void rcd_debug_serialize (xmlrpc_value *v);

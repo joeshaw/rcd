@@ -383,7 +383,8 @@ service_refresh_blocking (xmlrpc_env   *env,
     }
     
     pending_list = g_slist_prepend (NULL, pending);
-    rcd_rpc_block_on_pending_list (env, pending_list, FALSE);
+    rcd_rpc_block_on_pending_list (env, pending_list, FALSE,
+                                   RCD_RPC_FAULT_CANT_REFRESH);
     g_slist_free (pending_list);
     
 cleanup:

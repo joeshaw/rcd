@@ -1098,6 +1098,7 @@ rcd_debug_serialize (xmlrpc_value *v)
 typedef struct {
     GSList *pending_list;
     gboolean fail_if_any;
+    int fault_to_throw;
     xmlrpc_env *env;
     GMainLoop *inferior_loop;
 } BlockingInfo;
@@ -1123,7 +1124,7 @@ wait_for_pending_cb (gpointer user_data)
             const char *err_msg = rc_pending_get_error_msg (pending);
 
             if (err_msg) {
-                xmlrpc_env_set_fault (info->env, RCD_RPC_FAULT_CANT_REFRESH,
+                xmlrpc_env_set_fault (info->env, info->fault_to_throw,
                                       (char *) err_msg);
                 exit_out = TRUE;
                 break;
@@ -1142,7 +1143,8 @@ wait_for_pending_cb (gpointer user_data)
 void
 rcd_rpc_block_on_pending_list (xmlrpc_env *env,
                                GSList     *pending_list,
-                               gboolean    fail_if_any)
+                               gboolean    fail_if_any,
+                               int         fault_to_throw)
 {
     BlockingInfo info;
 
@@ -1152,6 +1154,7 @@ rcd_rpc_block_on_pending_list (xmlrpc_env *env,
     g_slist_foreach (info.pending_list, (GFunc) g_object_ref, NULL);
 
     info.fail_if_any = fail_if_any;
+    info.fault_to_throw = fault_to_throw;
     info.env = env;
     info.inferior_loop = g_main_loop_new (NULL, FALSE);
 

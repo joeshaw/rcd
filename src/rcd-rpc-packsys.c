@@ -92,88 +92,6 @@ packsys_get_channels (xmlrpc_env   *env,
 }
 
 static xmlrpc_value *
-packsys_refresh_all_channels_blocking (xmlrpc_env   *env,
-                                       xmlrpc_value *param_array,
-                                       void         *user_data)
-{
-    RCWorld *world = user_data;
-    RCPending *pending;
-    GSList *pending_list;
-    char *err_msg = NULL;
-
-    if (rcd_transaction_is_locked ()) {
-        xmlrpc_env_set_fault (env, RCD_RPC_FAULT_LOCKED,
-                              "Transaction lock in place");
-        return NULL;
-    }
-
-    /* FIXME: err_msg ? */
-    pending = rc_world_refresh (world);
-
-    if (err_msg) {
-        xmlrpc_env_set_fault_formatted (
-            env, RCD_RPC_FAULT_CANT_REFRESH,
-            "Unable to download channel data: %s", err_msg);
-        goto cleanup;
-    }
-    
-    pending_list = g_slist_prepend (NULL, pending);
-    rcd_rpc_block_on_pending_list (env, pending_list, FALSE);
-    g_slist_free (pending_list);
-    
-cleanup:
-    if (err_msg)
-        g_free (err_msg);
-
-    if (env->fault_occurred)
-        return NULL;
-
-    return xmlrpc_build_value (env, "i", 0);
-}
-
-static xmlrpc_value *
-packsys_refresh_all_channels (xmlrpc_env   *env,
-                              xmlrpc_value *param_array,
-                              void         *user_data)
-{
-    RCWorld *world = user_data;
-    xmlrpc_value *value = NULL;
-    RCPending *pending;
-    char *err_msg = NULL;
-
-    if (rcd_transaction_is_locked ()) {
-        xmlrpc_env_set_fault (env, RCD_RPC_FAULT_LOCKED,
-                              "Transaction lock in place");
-        return NULL;
-    }
-
-    /* FIXME: err_msg ? */
-    pending = rc_world_refresh (world);
-
-    if (err_msg) {
-        xmlrpc_env_set_fault_formatted (
-            env, RCD_RPC_FAULT_CANT_REFRESH,
-            "Unable to download channel data: %s", err_msg);
-        goto cleanup;
-    }
-
-    if (pending)
-        value = xmlrpc_build_value (env, "(i)", rc_pending_get_id (pending));
-    else
-        value = xmlrpc_build_value (env, "()");
-    XMLRPC_FAIL_IF_FAULT (env);
-    
- cleanup:
-    if (err_msg)
-        g_free (err_msg);
-
-    if (env->fault_occurred)
-        return NULL;
-
-    return value;
-} /* packsys_refresh_all_channels */
-
-static xmlrpc_value *
 packsys_get_channel_icon (xmlrpc_env   *env,
                           xmlrpc_value *param_array,
                           void         *user_data)
@@ -1115,8 +1033,10 @@ packsys_transact_blocking (xmlrpc_env   *env,
     if (transaction_pending)
         pending_list = g_slist_prepend (pending_list, transaction_pending);
 
-    if (pending_list)
-        rcd_rpc_block_on_pending_list (env, pending_list, TRUE);
+    if (pending_list) {
+        rcd_rpc_block_on_pending_list (env, pending_list, TRUE,
+                                       RCD_RPC_FAULT_TRANSACTION_FAILED);
+    }
 
     g_slist_free (pending_list);
 
@@ -1894,8 +1814,10 @@ packsys_rollback_blocking (xmlrpc_env   *env,
     if (transaction_pending)
         pending_list = g_slist_prepend (pending_list, transaction_pending);
 
-    if (pending_list)
-        rcd_rpc_block_on_pending_list (env, pending_list, TRUE);
+    if (pending_list) {
+        rcd_rpc_block_on_pending_list (env, pending_list, TRUE,
+                                       RCD_RPC_FAULT_TRANSACTION_FAILED);
+    }
 
     g_slist_free (pending_list);
 

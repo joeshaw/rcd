@@ -1,3 +1,19 @@
+2003-09-03  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-packsys.c (packsys_refresh_all_channels,
+	packsys_refresh_all_channels_blocking): Remove dead code.
+	(packsys_transact_blocking, packsys_rollback_blocking): Throw
+	RCD_RPC_FAULT_TRANSACTION_FAILED if the transaction fails.
+
+	* rcd-rpc-service.c (service_refresh_blocking): Throw
+	RCD_RPC_FAULT_CANT_REFRESH if the refresh fails.
+
+	* rcd-rpc-util.c (rcd_rpc_block_on_pending_list): Add a
+	fault_to_throw argument, and throw it if the blocking fails
+	instead of always throwing CANT_REFRESH.
+
+	* rcd-rpc-util.h: Add RCD_RPC_FAULT_TRANSACTION_FAILED (-618).
+
 2003-09-02  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-news.c (rcd_news_to_xmlrpc): Change server to
