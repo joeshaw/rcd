@@ -1,3 +1,8 @@
+2004-08-25  Tambet Ingo  <tambet@ximian.com>
+
+	* rcd-rpc-util.c (rcd_rc_package_from_xmlrpc_package): Free channel_id
+	when done with it.
+
 2004-06-19  Tambet Ingo  <tambet@ximian.com>
 
 	* rcd-rpc-prefs.c (rcd_rpc_prefs_register_methods): Don't require

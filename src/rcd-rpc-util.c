@@ -738,6 +738,8 @@ rcd_rc_package_from_xmlrpc_package (xmlrpc_value *value,
         RCChannel *channel;
         
         channel = rc_world_get_channel_by_id (world, channel_id);
+        g_free (channel_id);
+
         if (!channel) {
             xmlrpc_env_set_fault (env, RCD_RPC_FAULT_INVALID_CHANNEL,
                                   "Unable to find channel");
