@@ -737,8 +737,6 @@ verify_packages (RCDTransactionStatus *status)
 
     rcd_transaction_lock ();
 
-    rc_verification_set_keyring (SHAREDIR "/rcd.gpg");
-
     for (iter = status->install_packages; iter; iter = iter->next) {
         RCPackage *package = iter->data;
         char *msg;

@@ -1,3 +1,10 @@
+2003-04-02  Ian Peters  <itp@ximian.com>
+
+	* rcd-transaction.c (verify_packages): don't set the gpg keyring
+	here
+
+	* rcd.c (main): set it here
+
 2003-03-31  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-mirror.c: Added.  Basic code for dealing with mirrors.

@@ -730,6 +730,9 @@ main (int argc, const char **argv)
        If it isn't, a big warning will go out to the log file. */
     rcd_identity_password_file_is_secure ();
 
+    /* Set the GPG keyring for package verification */
+    rc_verification_set_keyring (SHAREDIR "/rcd.gpg");
+
     /* Set up the CA verification dir if we're requiring it */
     if (rcd_prefs_get_require_verified_certificates ())
         soup_set_ssl_ca_file (SHAREDIR "/rcd-ca-bundle.pem");
