@@ -417,8 +417,9 @@ rcd_rpc_remote_server_start (void)
     int port = rcd_prefs_get_remote_server_port ();
     const char *bind_ip;
 
+    /* Server's already running... */
     if (soup_server != NULL)
-        return TRUE; /* FIXME? */
+        return TRUE;
 
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Starting remote server");
 

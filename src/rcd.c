@@ -239,6 +239,15 @@ daemonize (void)
 }
 
 static void
+initialize_rc_services (void)
+{
+    rc_world_system_register_service ();
+    rc_world_synthetic_register_service ();
+    rc_world_local_dir_register_service ();
+    rcd_world_remote_register_service ();
+}
+
+static void
 shutdown_world (gpointer user_data)
 {
     rc_set_world (NULL);
@@ -277,50 +286,41 @@ initialize_rc_packman (void)
 }
 
 static void
-initialize_rc_services (void)
-{
-    rc_world_system_register_service ();
-    rc_world_synthetic_register_service ();
-    rc_world_local_dir_register_service ();
-    rcd_world_remote_register_service ();
-}
-
-static void
 initialize_rc_world (void)
 {
 
     RCWorld *world;
     const char *dump_file;
 
+    /* Construct a multi-world */
+    world = rc_world_multi_new ();
+
     /* If we are undumping, create and register an undump world. */
     dump_file = rcd_options_get_dump_file ();
     if (dump_file != NULL) {
+        RCWorld *undump_world;
+
         rc_debug (RC_DEBUG_LEVEL_MESSAGE,
                   "Loading dump file '%s'",
                   dump_file);
 
-        world = rc_world_undump_new (dump_file);
+        undump_world = rc_world_undump_new (dump_file);
         
-        /* FIXME: terminate w/ an error if we can't load dump_file */
-        if (world == NULL) {
+        if (undump_world == NULL) {
             rc_debug (RC_DEBUG_LEVEL_ERROR,
                       "Unable to load dump file '%s'",
                       dump_file);
             exit (-1);
         }
 
-    } else {
-        /* Construct a multi-world */
-        world = rc_world_multi_new ();
-
-        rcd_services_load (RC_WORLD_MULTI (world));
+        rc_world_multi_add_subworld (RC_WORLD_MULTI (world), undump_world);
+        g_object_unref (undump_world);
     } 
 
     rcd_shutdown_add_handler (shutdown_world, world);
     rc_set_world (world);
     g_object_unref (world);
-
-} /* initialize_rc_world */
+}
 
 static void
 initialize_rpc (void)
@@ -333,6 +333,25 @@ initialize_rpc (void)
     rcd_rpc_prefs_register_methods ();
     rcd_rpc_users_register_methods ();
 } /* initialize_rpc */
+
+static void
+initialize_data (void)
+{
+    /* If we have loaded a dump file, we don't want to initialize
+       any of this stuff. */
+    if (rcd_options_get_dump_file () != NULL)
+        return;
+
+    /* Load the channel data from the services */
+    rcd_services_load (RC_WORLD_MULTI (rc_get_world ()));
+
+    /* This forces the subscriptions to be loaded from disk. */
+    rc_subscription_get_status (NULL);
+
+    /* We don't want to read in the locks until after we have fetched the
+       list of channels. */
+    rcd_package_locks_load (rc_get_world ());
+} /* initialize_data */
 
 static void
 rcd_create_uuid (const char *file)
@@ -363,113 +382,6 @@ rcd_create_uuid (const char *file)
 
     chmod (file, 0600);
 } /* rcd_create_uuid */
-
-#if 0
-static gboolean
-is_supported_distro (void)
-{
-    RCDistroStatus status = rc_distro_get_status ();
-    const char *distro_name;
-    time_t death_date = rc_distro_get_death_date ();
-    char *death_str = NULL;
-    gboolean supported = FALSE;
-
-    {
-        char *ctime_sucks;
-        int len;
-
-        ctime_sucks = ctime (&death_date);
-        len = strlen (ctime_sucks);
-        death_str = g_strndup (ctime_sucks, len - 1);
-    }
-
-    if (status != RC_DISTRO_STATUS_SUPPORTED) {
-        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "*** NOTICE ***");
-        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "");
-    }
-
-    distro_name = rc_distro_get_target ();
-    if (!distro_name)
-        distro_name = "unknown";
-
-    switch (status) {
-    case RC_DISTRO_STATUS_UNSUPPORTED:
-        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
-                  "The distribution you are running (%s) is not",
-                  distro_name);
-        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
-                  "supported.  Channel data will not be downloaded.");
-        break;
-    case RC_DISTRO_STATUS_PRESUPPORTED:
-        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
-                  "The distribution you are running (%s) is not",
-                  distro_name);
-        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
-                  "yet supported.  Channel data will not be downloaded.");
-        break;
-    case RC_DISTRO_STATUS_SUPPORTED:
-        supported = TRUE;
-        break;
-    case RC_DISTRO_STATUS_DEPRECATED:
-        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
-                  "Support for the distribution you are running (%s) has ",
-                  distro_name);
-        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
-                  "been deprecated and will be discontinued on %s.",
-                  death_str);
-        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
-                  "After that date you will need to upgrade your "
-                  "distribution to continue");
-        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
-                  "using channels for package installations and upgrades.");
-        supported = TRUE;
-        break;
-    case RC_DISTRO_STATUS_RETIRED:
-        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
-                  "As of %s, support for the distribution you are",
-                  death_str);
-        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
-                  "running (%s) has been discontinued.  You must upgrade",
-                  distro_name);
-        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
-                  "your distribution to use channels for package "
-                  "installations and");
-        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
-                  "upgrades.  Channel data will not be downloaded.");
-        break;
-    }
-
-    if (status != RC_DISTRO_STATUS_SUPPORTED) {
-        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "");
-    }
-
-    g_free (death_str);
-
-    return supported;
-} /* is_supported_distro */
-#endif
-
-static void
-initialize_data (void)
-{
-    /* If we have loaded a dump file, we don't want to initialize
-       any of this stuff. */
-    if (rcd_options_get_dump_file () != NULL)
-        return;
-
-    /* This forces the subscriptions to be loaded from disk. */
-    rc_subscription_get_status (NULL);
-
-    if (!g_file_test (SYSCONFDIR "/mcookie", G_FILE_TEST_EXISTS))
-        rcd_create_uuid (SYSCONFDIR "/mcookie");
-
-    if (!g_file_test (SYSCONFDIR "/partnernet", G_FILE_TEST_EXISTS))
-        rcd_create_uuid (SYSCONFDIR "/partnernet");
-
-    /* We don't want to read in the locks until after we have fetched the
-       list of channels. */
-    rcd_package_locks_load (rc_get_world ());
-} /* initialize_data */
 
 static void
 signal_handler (int sig_num)
@@ -644,6 +556,14 @@ main (int argc, const char **argv)
     /* Set up the CA verification dir if we're requiring it */
     if (rcd_prefs_get_require_verified_certificates ())
         soup_set_ssl_ca_file (SHAREDIR "/rcd-ca-bundle.pem");
+
+    /* Create mid and secret */
+    if (!g_file_test (SYSCONFDIR "/mcookie", G_FILE_TEST_EXISTS))
+        rcd_create_uuid (SYSCONFDIR "/mcookie");
+
+    if (!g_file_test (SYSCONFDIR "/partnernet", G_FILE_TEST_EXISTS))
+        rcd_create_uuid (SYSCONFDIR "/partnernet");
+    
 
     initialize_rc_packman ();
     initialize_rc_services ();

@@ -1,3 +1,23 @@
+2003-08-25  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc.c (rcd_rpc_remote_server_start): Remove a FIXME.
+
+	* rcd-world-remote.c (rcd-world_remote_fetch_distributions):
+	remove a FIXME.
+	(is_supported_distro): Moved here from rcd.c.  Checks whether
+	we're on a supported distro and whether we should download channel
+	data.
+	(rcd_world_remote_parse_channels_xml): Check whether we're on a
+	supported distro.
+
+	* rcd.c (initialize_rc_world): Always create a multi world for
+	simplicity, and add an undump world to that if we're loading from
+	a dump file.  Move the loading of serivces out of here.
+	(initialize_data): Move loading of services here, after the server
+	has started up and listening.  Move the creation of mid and secret
+	out of here.
+	(main): Move them here, before we start initializing anything.
+
 2003-08-22  Joe Shaw  <joe@ximian.com>
 
 	* rcd-fetch.c (register_cb): Fix an errant xmlrpc decref.

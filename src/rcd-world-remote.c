@@ -31,8 +31,10 @@
 
 #include <libredcarpet.h>
 
+#include "rcd-fetch.h"
 #include "rcd-license.h"
 #include "rcd-news.h"
+#include "rcd-prefs.h"
 #include "rcd-transfer-pool.h"
 
 #define RCD_WORLD_REMOTE_FETCH_FAILED ((gpointer) 0xdeadbeef)
@@ -179,7 +181,7 @@ rcd_world_remote_fetch_distributions (RCDWorldRemote *remote)
         rc_debug (RC_DEBUG_LEVEL_CRITICAL,
                   "Unable to downloaded distribution info: %s",
                   rcd_transfer_get_error_string (t));
-        goto cleanup; /* FIXME? */
+        goto cleanup;
     }
 
     remote->distro = rc_distro_parse_xml (data->data, data->len);
@@ -585,6 +587,96 @@ extract_service_info (RCDWorldRemote *remote,
     xmlFreeDoc (doc);
 }
 
+static gboolean
+is_supported_distro (RCDistro *distro)
+{
+    RCDistroStatus status = rc_distro_get_status (distro);
+    const char *distro_name;
+    time_t death_date = rc_distro_get_death_date (distro);
+    char *death_str = NULL;
+    gboolean download_data = FALSE;
+
+    {
+        char *ctime_sucks;
+        int len;
+
+        ctime_sucks = ctime (&death_date);
+        len = strlen (ctime_sucks);
+        death_str = g_strndup (ctime_sucks, len - 1);
+    }
+
+    if (status != RC_DISTRO_STATUS_SUPPORTED) {
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "*** NOTICE ***");
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "");
+    }
+
+    distro_name = rc_distro_get_target (distro);
+    if (!distro_name)
+        distro_name = "unknown";
+
+    switch (status) {
+    case RC_DISTRO_STATUS_UNSUPPORTED:
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
+                  "The distribution you are running (%s) is not",
+                  distro_name);
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
+                  "supported by this server.  Channel data will not be "
+                  "downloaded.");
+        break;
+
+    case RC_DISTRO_STATUS_PRESUPPORTED:
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
+                  "The distribution you are running (%s) is not",
+                  distro_name);
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
+                  "yet supported by this server.  Channel data will not be "
+                  "downloaded.");
+        break;
+
+    case RC_DISTRO_STATUS_SUPPORTED:
+        download_data = TRUE;
+        break;
+
+    case RC_DISTRO_STATUS_DEPRECATED:
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
+                  "Support for the distribution you are running (%s) has ",
+                  distro_name);
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
+                  "been deprecated on this server and will be discontinued "
+                  "on %s.",
+                  death_str);
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
+                  "After that date you will need to upgrade your "
+                  "distribution to continue");
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
+                  "using this server for package installations and upgrades.");
+        download_data = TRUE;
+        break;
+
+    case RC_DISTRO_STATUS_RETIRED:
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
+                  "As of %s, support for the distribution you are",
+                  death_str);
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
+                  "running (%s) has been discontinued on this server.  You ",
+                  distro_name);
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
+                  "must upgrade your distribution to use channels for package "
+                  "installations");
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
+                  "and upgrades.  Channel data will not be downloaded.");
+        break;
+    }
+
+    if (status != RC_DISTRO_STATUS_SUPPORTED) {
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "");
+    }
+
+    g_free (death_str);
+
+    return download_data;
+}
+
 static void
 pending_complete_cb (RCPending *pending, gpointer user_data)
 {
@@ -616,7 +708,6 @@ rcd_world_remote_parse_channels_xml (RCDWorldRemote *remote,
     else
         remote->distro = rc_distro_parse_xml (NULL, 0);
 
-    /* FIXME: Handle unsupported distros */
     /*
      * We can't go on without distro info, so if it failed for some reason,
      * print and error and just ignore this service
@@ -627,6 +718,9 @@ rcd_world_remote_parse_channels_xml (RCDWorldRemote *remote,
                   "channel data", RC_WORLD_SERVICE (remote)->name,
                   RC_WORLD_SERVICE (remote)->unique_id);
         return NULL;
+    } else {
+        if (!is_supported_distro (remote->distro))
+            return NULL;
     }
 
     if (remote->mirrors_file)
