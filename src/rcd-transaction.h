@@ -55,6 +55,8 @@ struct _RCDTransaction {
 
     RCPackageSList *packages_to_download;
 
+    GHashTable *old_packages; /* For tracking upgrades */
+
     RCDTransactionFlags flags;
     gboolean rollback;
 

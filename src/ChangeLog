@@ -1,3 +1,20 @@
+2003-09-29  Joe Shaw  <joe@ximian.com>
+
+	* rcd-transaction.c: It's no longer sufficient to assume that the
+	system packages won't have changed between transaction-time and
+	logging-time (in fact, they always change immediately after
+	transaction now), so we need to cache the old packages so we can
+	determine if something was an install or an upgrade.
+	(rcd_transaction_finalize): Destroy the old package hash.
+	(rcd_transaction_finished_handler): Don't need to bother sync'ing
+	the world.
+	(update_log): Look up the old package in the old package hash, not
+	on the world.
+	(save_old_packages): Added.  Builds the old package hash from
+	system packages before the transaction.
+	(rcd_transaction_transaction): Call save_old_packages() before
+	running the transaction.
+
 2003-09-26  Joe Shaw  <joe@ximian.com>
 
 	* rcd-world-remote.c (rcd_world_remote_activate): Get a string as

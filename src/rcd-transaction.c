@@ -93,6 +93,9 @@ rcd_transaction_finalize (GObject *obj)
     rc_package_slist_unref (transaction->packages_to_download);
     g_slist_free (transaction->packages_to_download);
 
+    if (transaction->old_packages)
+        g_hash_table_destroy (transaction->old_packages);
+
     g_object_unref (transaction->download_pending);
     g_object_unref (transaction->transaction_pending);
     g_object_unref (transaction->transaction_step_pending);
@@ -122,9 +125,6 @@ rcd_transaction_started_handler (RCDTransaction *transaction)
 static void
 rcd_transaction_finished_handler (RCDTransaction *transaction)
 {
-    /* Sync the world.  This will reload the system packages */
-    rc_world_sync (transaction->world);
-
     /*
      * If caching is turned off, we don't want to keep around the package
      * files on disk.
@@ -376,15 +376,16 @@ update_log (RCDTransaction *transaction)
 
     for (iter = transaction->install_packages; iter; iter = iter->next) {
         RCPackage *new_p = iter->data;
-        RCPackage *old_p;
+        RCPackage *old_p = NULL;
         RCDLogEntry *log_entry;
 
         log_entry = rcd_log_entry_new (transaction->client_host,
                                        transaction->client_identity->username);
 
-        old_p = rc_world_get_package (rc_get_world (),
-                                      RC_CHANNEL_SYSTEM,
-                                      g_quark_to_string (new_p->spec.nameq));
+        if (transaction->old_packages) {
+            old_p = g_hash_table_lookup (transaction->old_packages,
+                                         GINT_TO_POINTER (new_p->spec.nameq));
+        }
 
         if (old_p)
             rcd_log_entry_set_upgrade (log_entry, old_p, new_p);
@@ -531,6 +532,34 @@ transact_done_cb(RCPackman *packman,
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Transaction done");
 } /* transact_done_cb */
 
+static void
+save_old_packages (RCDTransaction *transaction)
+{
+    GSList *iter;
+
+    g_assert (transaction->old_packages == NULL);
+
+    for (iter = transaction->install_packages; iter; iter = iter->next) {
+        RCPackage *new_package = iter->data;
+        RCPackage *old_package;
+
+        old_package = rc_world_get_package (transaction->world,
+                                            RC_CHANNEL_SYSTEM,
+                                            g_quark_to_string (new_package->spec.nameq));
+
+        if (old_package) {
+            if (!transaction->old_packages) {
+                transaction->old_packages = g_hash_table_new_full (NULL, NULL,
+                                                                   NULL, (GDestroyNotify) rc_package_unref);
+            }
+            
+            g_hash_table_insert (transaction->old_packages,
+                                 GINT_TO_POINTER (old_package->spec.nameq),
+                                 rc_package_ref (old_package));
+        }
+    }
+}
+
 /* Ahem */
 static void
 rcd_transaction_transaction (RCDTransaction *transaction)
@@ -553,6 +582,8 @@ rcd_transaction_transaction (RCDTransaction *transaction)
                       G_CALLBACK (transact_progress_cb), transaction);
     g_signal_connect (packman, "transact_done",
                       G_CALLBACK (transact_done_cb), transaction);
+
+    save_old_packages (transaction);
 
     rc_packman_set_rollback_enabled (packman, rcd_prefs_get_rollback ());
 
