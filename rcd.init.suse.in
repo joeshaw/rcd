@@ -15,6 +15,12 @@ fi
 		
 . /etc/rc.status
 
+if [ -f /etc/sysconfig/rcd ]; then
+  . /etc/sysconfig/rcd
+else
+  OPTIONS=
+fi
+
 RCD_BIN=@prefix@/sbin/rcd
 test -x $RCD_BIN || exit 5
 
@@ -49,7 +55,7 @@ case "$1" in
         echo -n "Starting Red Carpet Daemon"
         ## Start daemon with startproc(8). If this fails
         ## the echo return value is set appropriate.
-        startproc $RCD_BIN
+        startproc $RCD_BIN $OPTIONS
 
         # Remember status and be verbose
         rc_status -v

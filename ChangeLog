@@ -1,3 +1,8 @@
+2003-04-11  Joe Shaw  <joe@ximian.com>
+
+	* rcd.init.suse.in: Source in /etc/sysconfig/rcd if we have it.
+	Fixes #41106.
+
 2003-04-09  Frank Belew  <frb@ximian.com>
 
 	* configure.in: AC_PREREQ(2.52)
@@ -328,109 +333,4 @@
 
 2002-08-02  Frank Belew  <frb@ximian.com>
 
-	* configure.in: add libxml-2.0 to the pkg-config checks to work around
-			soup-magic
-
-2002-08-02  Joe Shaw  <joe@ximian.com>
-
-	* configure.in: Check for uuid/uuid.h, and add -luuid to the
-	RCD_LIBS.
-
-2002-08-01  Frank Belew  <frb@ximian.com>
-
-	* configure.in: fixed formatting on 2 configure options
-			added --with-soup magic
-			
-2002-07-31  Joe Shaw  <joe@ximian.com>
-
-	* configure.in: Drop gthread from the libraries.
-
-	* rcd.in: Change @prefix@/bin/rcd to @prefix@/sbin/rcd
-
-2002-07-30  Frank Belew  <frb@ximian.com>
-
-	* configure.in: cleaned up xmlrpc comment
-			added argument for static build
-			ported static-magic from red-carpet
-
-2002-07-26  Joe Shaw  <joe@ximian.com>
-
-	* configure.in: Link against libutil to get openpty() for Debian.
-
-2002-07-25  Frank Belew  <frb@ximian.com>
-
-	* Makefile.am: add libredcarpet to SUBDIRS (order matters)
-		       add final newline to get diff to stop complaining
-
-	* configure.in: remove check for libredcarpet, add check for gobject
-			clean up xmlrpc-c-config check
-			add libredcarpet configure stuff
-
-2002-07-24  Joe Shaw  <joe@ximian.com>
-
-	* rcd.pem: Added a generic certificate for the daemon.
-
-	* Makefile.am: Install and dist the certificate.  Install the
-	rc-passwd file mode 0600 and try to chown it to root if we can.
-
-2002-07-22  Joe Shaw  <joe@ximian.com>
-
-	* Makefile.am: Make sure to chmod 0755 rcd when we install it.
-
-2002-07-22  Joe Shaw  <joe@ximian.com>
-
-	* Makefile.am: Added the init.d file to be disted.
-
-	* configure.in: Run rcd.in through configure to set the prefix.
-
-	* rcd.in: Added.  chkconfig-compatible init.d file, shamelessly
-	copied from Aidan's postgres-replicator, which was shamelessly
-	copied from the httpd one in Red Hat.
-
-2002-07-17  Aaron Weber <aaron@ximian.com>
-
-	* rcd.8: slight expansion.
-	
-2002-07-16  Frank Belew  <frb@ximian.com>
-
-	* Makefile.am: added rcd.8 to EXTRA_DIST to fix compiles
-
-2002-07-16 Aaron Weber <aaron@ximian.com>
-	* Makefile.am: added man page
-	* rcd.8: new file. Man page.
-	* README: added some generic content.
-	
-2002-07-11  Frank Belew  <frb@ximian.com>
-
-	* configure.in: remove leftover gettext junk
-	* Makefile.am: remove po from subdirs
-
-2002-07-11  Frank Belew  <frb@ximian.com>
-
-	* configure.in: remove intltool junk
-
-2002-07-11  Joe Shaw  <joe@ximian.com>
-
-	* configure.in: Remove gettext junk
-
-2002-07-07  Joe Shaw  <joe@ximian.com>
-
-	* rc-passwd: Added; the default rc-passwd file that the daemon
-	reads for authentication data.
-
-	* Makefile.am: Install the rc-passwd file.
-
-2002-07-05  Jon Trowbridge  <trow@ximian.com>
-
-	* configure.in: Added -lpopt to RCD_LIBS.
-
-2002-06-19  Joe Shaw  <joe@ximian.com>
-
-	* configure.in: Require Soup 0.7.5.
-
-2002-05-24  Joe Shaw  <joe@ximian.com>
-
-	* configure.in: Added pkg-config checks for glib-2.0, gthread-2.0,
-	gmodule-2.0 and soup.  Added a check for the xmlrpc-c library.
-
-	* HACKING: How in God's name do we build this thing.
+	* configure.i
