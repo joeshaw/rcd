@@ -377,7 +377,7 @@ write_you_file (RCYouFile *file, const gchar *dest_dir)
 }
 
 static void
-write_patches (RCYouPatchSList *patches, GError **error)
+write_patches (RCYouPatchSList *patches)
 {
     GSList *iter, *pkg_iter;
 
@@ -387,9 +387,9 @@ write_patches (RCYouPatchSList *patches, GError **error)
         write_you_file (patch->file,
                         suse_product_get_patchdir (patch->product));
         write_you_file (patch->pre_script,
-                        suse_product_get_patchdir (patch->product));
+                        suse_product_get_scriptdir (patch->product));
         write_you_file (patch->post_script,
-                        suse_product_get_patchdir (patch->product));
+                        suse_product_get_scriptdir (patch->product));
 
         for (pkg_iter = patch->packages; pkg_iter; pkg_iter = pkg_iter->next) {
             RCYouPackage *pkg = pkg_iter->data;
@@ -419,7 +419,7 @@ create_you_directory_structure (RCYouPatchSList *patches, GError **error)
     if (*error)
         return;
 
-    write_patches (patches, error);
+    write_patches (patches);
 }
 
 void

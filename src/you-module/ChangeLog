@@ -1,3 +1,7 @@
+2004-08-30  Tambet Ingo  <tambet@ximian.com>
+
+	* you-util.c (write_patches): Write scripts to script directory.
+
 2004-08-27  Tambet Ingo  <tambet@ximian.com>
 
 	* you-util.c (parser_patch_end): Oops, forgot the "product" tag
