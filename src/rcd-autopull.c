@@ -279,7 +279,8 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
         rc_debug (RC_DEBUG_LEVEL_WARNING, "Resolution failed!");
 
         dep_failure_info = get_dep_failure_info (resolver);
-        rcd_transaction_log_to_server (pull->all_to_add,
+        rcd_transaction_log_to_server (pull->name,
+                                       pull->all_to_add,
                                        pull->all_to_subtract,
                                        rcd_module->description,
                                        VERSION,
@@ -313,7 +314,8 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
         removal_failure_info = get_removal_failure_info (pull->all_to_subtract,
                                                          to_remove);
 
-        rcd_transaction_log_to_server (to_install,
+        rcd_transaction_log_to_server (pull->name,
+                                       to_install,
                                        to_remove,
                                        rcd_module->description,
                                        VERSION,
@@ -351,7 +353,8 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
         dummy_identity->privileges = rcd_privileges_from_string (
             "install, remove, upgrade");
 
-        rcd_transaction_begin (rc_get_world (),
+        rcd_transaction_begin (pull->name,
+                               rc_get_world (),
                                to_install,
                                to_remove,
                                RCD_TRANSACTION_FLAGS_NONE,

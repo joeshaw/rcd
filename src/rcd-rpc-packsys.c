@@ -971,7 +971,8 @@ packsys_transact(xmlrpc_env   *env,
         env, remove_packages, method_data->identity);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    rcd_transaction_begin (world,
+    rcd_transaction_begin (NULL,
+                           world,
                            install_packages,
                            remove_packages,
                            flags,

@@ -45,6 +45,8 @@ typedef struct _RCDTransactionStatus RCDTransactionStatus;
 struct _RCDTransactionStatus {
     int refs;
 
+    char *name;
+
     RCWorld *world;
     RCPackman *packman;
 
@@ -94,6 +96,7 @@ rcd_transaction_status_unref (RCDTransactionStatus *status)
     status->refs--;
 
     if (status->refs == 0) {
+        g_free (status->name);
         rc_package_slist_unref (status->install_packages);
         rc_package_slist_unref (status->remove_packages);
         rc_package_slist_unref (status->packages_to_download);
@@ -199,6 +202,9 @@ transaction_xml (RCDTransactionStatus *status,
     doc = xmlNewDoc ("1.0");
     root = xmlNewNode (NULL, "transaction");
     xmlDocSetRootElement (doc, root);
+
+    if (status->name)
+        xmlNewTextChild (root, NULL, "name", status->name);
 
     xmlNewTextChild (root, NULL, "client_id", status->client_id);
     xmlNewTextChild (root, NULL, "client_version", status->client_version);
@@ -316,7 +322,8 @@ rcd_transaction_send_log (RCDTransactionStatus *status,
  * where we don't have one of these structures.
  */
 void
-rcd_transaction_log_to_server (RCPackageSList *install_packages,
+rcd_transaction_log_to_server (const char     *name,
+                               RCPackageSList *install_packages,
                                RCPackageSList *remove_packages,
                                const char     *client_id,
                                const char     *client_version,
@@ -330,6 +337,7 @@ rcd_transaction_log_to_server (RCPackageSList *install_packages,
 
     status = g_new0 (RCDTransactionStatus, 1);
     status->refs = 1;
+    status->name = g_strdup (name);
     status->install_packages = rc_package_slist_ref (install_packages);
     status->remove_packages = rc_package_slist_ref (remove_packages);
     status->client_id = g_strdup (client_id);
@@ -936,7 +944,8 @@ download_packages (RCPackageSList *packages, RCDTransactionStatus *status)
 } /* download_packages */
 
 void
-rcd_transaction_begin (RCWorld             *world,
+rcd_transaction_begin (const char          *name,
+                       RCWorld             *world,
                        RCPackageSList      *install_packages,
                        RCPackageSList      *remove_packages,
                        RCDTransactionFlags  flags,
@@ -953,6 +962,7 @@ rcd_transaction_begin (RCWorld             *world,
 
     status = g_new0 (RCDTransactionStatus, 1);
     status->refs = 1;
+    status->name = g_strdup (name);
     status->world = world;
     status->packman = rc_world_get_packman (world);
     status->install_packages = rc_package_slist_ref (install_packages);

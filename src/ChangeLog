@@ -1,3 +1,21 @@
+2002-09-20  Joe Shaw  <joe@ximian.com>
+
+	* rcd-autopull.c (rcd_autopull_resolve_and_transact): Call
+	rcd_transaction_log_to_server() and rcd_transaction_begin() with
+	the autopull session name.
+
+	* rcd-rpc-packsys.c (packsys_transact): Send along a NULL
+	transaction name to rcd_transaction_begin().
+
+	* rcd-transaction.c: Add a "name" field to the
+	RCDTransactionStatus struct.
+	(rcd_transaction_unref): Free it here.
+	(transaction_xml): Serialize the name, if it's set, for the
+	logging.
+	(rcd_transaction_log_to_server, rcd_transaction_begin): Take the
+	transaction name as the first argument and copy it into the
+	struct.
+
 2002-09-20  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-autopull.c (rcd_autopull_fetch_all_channels): Added.

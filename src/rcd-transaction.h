@@ -36,7 +36,8 @@ typedef enum {
     RCD_TRANSACTION_FLAGS_DOWNLOAD_ONLY = 2
 } RCDTransactionFlags;
 
-void rcd_transaction_begin (RCWorld             *world,
+void rcd_transaction_begin (const char          *name,
+                            RCWorld             *world,
                             RCPackageSList      *install_packages,
                             RCPackageSList      *remove_packages,
                             RCDTransactionFlags  flags,
@@ -70,7 +71,8 @@ gboolean rcd_transaction_is_locked (void);
  * Most of the time this is handled internally by rcd_transaction_begin().
  */
 
-void rcd_transaction_log_to_server (RCPackageSList *install_packages,
+void rcd_transaction_log_to_server (const char     *name,
+                                    RCPackageSList *install_packages,
                                     RCPackageSList *remove_packages,
                                     const char     *client_id,
                                     const char     *client_version,
