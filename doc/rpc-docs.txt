@@ -40,7 +40,7 @@ multicall APIs.  Look at www.xmlrpc.com for more info.
 Types
 -----
 Most of the types used in this document are the primitive XML-RPC
-types.  They include int, bool, string, and double.
+types.  They include int, bool, string, double, and base64.
 
 In addition, there are compound types for arrays and structs.
 
@@ -67,10 +67,10 @@ If a method takes a variable type argument, or the member of an array
 or struct is a variable type, we'll use "variable type" as the type
 argument.
 
-The only "special" type we'll use is for a package.  A package is
-actually a struct, but it's such a large struct and used so
-frequently that we'll just define it once here and use it later on for
-things such as "array [package]".
+For simplicity's sake we'll use a few "special" types.  These are
+actually structs, but they're such large structs and used so
+frequently that we'll just define them one here and use it later on
+for things such as "array [package"].
 
 package = struct {
 	name : string,
@@ -102,6 +102,30 @@ from.  This is for installed packages.
 "name_installed" indicates whether another package with this name is installed.
 "locked" indicates whether this package is locked.
 
+package_dep = struct {
+	name : string,
+	has_epoch : int,
+	epoch : int,
+	version : string,
+	release : string,
+	relation : string }
+
+"relation" is the relationship: "(any)", "=", "<", "<=", ">", ">=", "!=".
+
+package_match = struct {
+	dep : package_dep,
+	glob : string [optional],
+	channel : string [optional],
+	importance_num : int [optional],
+	importance_str : string [optional],
+	importance_gteq : int [optional] }
+
+"glob" is an optional package name glob to match.
+"channel" is an optional channel to match.
+"importance_num" and "importance_str" are optional importances to match.
+"importance_gteq" is an optional importance to be greater than or
+equal to, to match.
+
 List of faults
 --------------
 type_mismatch          = -501
@@ -111,7 +135,11 @@ type_mismatch          = -501
 
 invalid_stream_type    = -503
 		      
-	FIXME
+	If the daemon is expecting a certain type for a package search
+	and gets a different one (ie, passing in a filename when a
+	package structure was expected), this fault will be thrown.
+
+	LAMESPEC: AKA "parse error".  why not just throw type mismatch?
 
 undefined_method       = -506
 
@@ -128,7 +156,8 @@ package_not_found      = -601
 
 package_is_newest      = -602
 
-	FIXME
+	Indicates that an installed package is the newest version
+	available.  See rcd.packsys.find_latest_version().
 
 failed_dependencies    = -603
 
@@ -195,6 +224,10 @@ cant_set_preference    = -616
 invalid_service        = -617
 
 	The specified service is invalid.
+
+transaction_failed     = -618
+
+	A blocking transaction has failed.
 
 Query syntax
 ------------
@@ -350,6 +383,8 @@ rcd.system.activate(string activation_code, string email,
 	Faults: cant_activate
 
 	Activates the daemon against Red Carpet Enterprise servers.
+
+	LAMESPEC: this should be per-service
 
 rcd.system.get_recurring()
 
@@ -549,71 +584,505 @@ rcd.service.refresh_blocking(string identifier [optional])
 
 Packaging system methods
 ------------------------
-rcd.packsys.search()
-
-rcd.packsys.search_by_package_match()
-
-rcd.packsys.find_package_for_file()
-
-rcd.packsys.query_file()
-
-rcd.packsys.find_latest_version()
-
-rcd.packsys.package_info()
-
-rcd.packsys.package_dependency_info()
-
-rcd.packsys.file_list()
-
-rcd.packsys.get_updates()
-
-rcd.packsys.update_summary()
-
-rcd.packsys.resolve_dependencies()
-
-rcd.packsys.verify_dependencies()
-
-rcd.packsys.get_rollback_actions()
-
-rcd.packsys.rollback()
-
-rcd.packsys.rollback_blocking()
-
-rcd.packsys.transact()
-
-rcd.packsys.transact_blocking()
-
-rcd.packsys.abort_download()
-
-rcd.packsys.what_provides()
-
-rcd.packsys.what_requires()
-
-rcd.packsys.what_conflicts()
-
-rcd.packsys.get_locks()
-
-rcd.packsys.add_lock()
-
-rcd.packsys.remote_lock()
-
-rcd.packsys.dump()
-
 rcd.packsys.get_channels()
 
-rcd.packsys.get_channel_icon()
+	Returns: array [struct {
+		 id : string,
+		 name : string,
+		 alias : string,
+		 subscribed : int,
+		 description : string,
+		 hidden : int }]
+	Faults: none
 
-rcd.packsys.subscribe()
+	Gets the current list of all channels on the system.  If the
+	"hidden" element is set, this channel should not be presented
+	to the user.
+
+rcd.packsys.get_channel_icon(string channel_id)
+
+	Returns: base64
+	Faults: invalid_channel, no_icon
+
+	Returns base64 encoded data of this channel's icon.  If the
+	channel ID is not valid, an invalid_channel fault is thrown.
+	If this channel has no icon, a no_icon fault is thrown.
+
+rcd.packsys.subscribe(string channel_id)
+
+	Returns: int
+	Faults: none
+
+	Subscribes to the channel specified by "channel_id".  Returns
+	1 on success, 0 on failure.
 
 rcd.packsys.unsubscribe()
 
-rcd.packsys.mount_directory()
+	Returns: int
+	Faults: none
 
-rcd.packsys.unmount_directory()
+	Unsubscribes from the channel specified by "channel_id".
+	Returns 1 on success, 0 on failure.
+
+rcd.packsys.search(array [(string key, string type, string query)])
+
+	Returns: array [package]
+	Faults: invalid_search_type
+
+	Searches for packages meeting the criteria passed in.  See the
+	section on query syntax for more info on the parameter syntax.
+
+	Valid query keys:
+	"name" - package name
+
+	"summary" - package summary
+
+	"description" - package description
+
+	"text" - name, summary or description
+
+	"channel" - package channel
+
+	"installed" - packages that are installed
+
+	"name-installed" - packages which have a package by this name
+	installed
+
+	"package-installed" - an installed package or appears to be
+	the in-channel version of an installed package
+
+	"needs_upgrade" - packages which have updates available
+
+	"importance" - update importance
+
+rcd.packsys.search_by_package_match(package_match match)
+
+	Returns: array [package]
+	Faults: FIXME
+
+	Searches for packages matching the passed in structure.  This
+	is mainly used for looking up packages which match a package
+	lock.  If either of the optional elements are not present,
+	they are not used in the search.
+
+rcd.packsys.find_package_for_file(string filename)
+
+	Returns: package
+	Faults: package_not_found
+
+	Returns the package which contains "filename".  If no package
+	is found, a package_not_found fault is thrown.
+
+rcd.packsys.query_file(variable type package_info)
+
+	Returns: package
+	Faults: package_not_found, invalid_package, invalid_stream_type
+
+	Returns a package structure based on information passed in as
+	"package_info".  "package_info" may either be a string
+	indicating a file on the local system, or may be a base64
+	encoded package file.  If it is anything else, an
+	invalid_stream_type fault is thrown.  If the file does not
+	exit, a package_not_found fault is thrown.  If "package_info"
+	does not point to a valid package, an invalid_package fault is
+	thrown.
+
+rcd.packsys.find_latest_version(string name, bool subscribed_only)
+
+	Returns: package
+	Faults: package_is_newest, package_not_found
+
+	Returns the latest package available in a channel for the
+	given "name".  If "subscribed_only" is true, then the daemon
+	will only look in subscribed channels.  If the latest version
+	of the package is already installed, a package_is_newest fault
+	is thrown.  If there is no package by that name, a
+	package_not_found fault is thrown.
+
+rcd.packsys.package_info(variable type package_info)
+
+	Returns: struct {
+		 section : string,
+		 file_size : int [optional],
+		 installed_size : int [optional],
+		 summary : string,
+		 description : string }
+	Faults: package_not_found, invalid_package, invalid_stream_type
+
+	Gets more in-depth information about a package.
+	"package_info" can be any representation of a package: a
+	filename on the local system (string), a streamed package file
+	(base64), a package (struct), or a package name (string).
+
+	If the package passed in cannot be found, a package_not_found
+	fault is thrown.  If the package passed in is not valid, an
+	invalid_package fault is thrown.  If the package passed in is
+	not a valid package stream type, an invalid_stream_type fault
+	is thrown.
+
+rcd.packsys.package_dependency_info(variable type package_info)
+
+	Returns: struct {
+		 provides : array [package_dep],
+		 requires : array [package_dep],
+		 conflicts : array [package_dep],
+		 obsoletes : array [package_dep],
+		 children : array [package_dep] }
+	Faults: package_not_found, invalid_package, invalid_stream_type
+
+	Gets dependency information about a package.  "package_info"
+	can be any representation of a package: a filename on the
+	local system (string), a streamed package file (base64), a
+	package (struct), or a package name (string).
+
+	If the package passed in cannot be found, a package_not_found
+	fault is thrown.  If the package passed in is not valid, an
+	invalid_package fault is thrown.  If the package passed in is
+	not a valid package stream type, an invalid_stream_type fault
+	is thrown.
+
+rcd.packsys.file_list(variable type package_info)
+
+	Returns: array [string]
+	Faults: package_not_found, invalid_package, invalid_stream_type
+
+	Returns a list of files contained in a package.
+	"package_info" can be any representation of a package: a
+	filename on the local system (string), a streamed package file
+	(base64), a package (struct), or a package name (string).
+	Important to note, though, is that package file information is
+	not stored in channel packages, so this will only really work
+	for system packages, packages from a file, or streamed
+	packages.
+
+	If the package passed in cannot be found, a package_not_found
+	fault is thrown.  If the package passed in is not valid, an
+	invalid_package fault is thrown.  If the package passed in is
+	not a valid package stream type, an invalid_stream_type fault
+	is thrown.
+
+rcd.packsys.what_provides(package_dep dep)
+
+	Returns: array [(package pkg, struct {
+				 name : string,
+				 has_epoch : int,
+				 epoch : int,
+				 version : string,
+				 release : string })]
+	Faults: none
+
+	Get a list of packages which provide the "dep" dependency
+	token.
+
+	LAMESPEC: Why isn't this just a package array.  What's the
+	spec for?
+
+rcd.packsys.what_requires()
+
+	Returns: array [(package pkg, struct {
+				 name : string,
+				 has_epoch : int,
+				 epoch : int,
+				 version : string,
+				 release : string })]
+	Faults: none
+
+	Get a list of packages which require the "dep" dependency
+	token.
+
+	LAMESPEC: Why isn't this just a package array.  What's the
+	spec for?
+
+rcd.packsys.what_conflicts()
+
+	Returns: array [(package pkg, struct {
+				 name : string,
+				 has_epoch : int,
+				 epoch : int,
+				 version : string,
+				 release : string })]
+	Faults: none
+
+	Get a list of packages which conflict with the "dep" dependency
+	token.
+
+	LAMESPEC: Why isn't this just a package array.  What's the
+	spec for?
+
+rcd.packsys.find_dangling_requires()
+
+	Returns: array [(package pkg, package_dep missing_req)]
+	Faults: none
+
+	Returns a list of all packages which have a requirement which
+	is not met by some package on the system.  "pkg" is the
+	package, and "missing_req" is the requirement that it is
+	missing.
+
+rcd.packsys.mount_directory(string path)
+
+	Returns: string
+	Faults: none
+
+	Mounts a directory on the local system as a channel, so
+	packages can be installed off a local filesystem with full
+	dependency analysis.  This will return the channel ID on
+	success, or an empty string on failure.
+
+rcd.packsys.unmount_directory(string channel_id)
+
+	Returns: int
+	Faults: none
+
+	Unmounts a mounted directory.  Returns 1 on success, and 0 on
+	failure.
+
+rcd.packsys.get_updates()
+
+	Returns: array [(package old_package, package new_package,
+		         array [string] history)]
+	Faults: none
+
+	This method returns information about available updates.
+	Updates only come from subscribed channels.  The "old_package"
+	element is the currently installed version of the package.
+	The "new_package" is the newest available package from some
+	channel, and (FIXME) "history" is a varible length array of
+	strings with the update descriptions in all versions between
+	"old_package" and "new_package".
+
+	LAMESPEC: we don't need history anymore
+
+rcd.packsys.update_summary()
+
+	Returns: struct {
+		 total : int,
+		 necessary : int [optional],
+		 urgent : int [optional],
+		 suggested : int [optional],
+		 feature : int [optional],
+		 minor : int [optional] }
+	Faults: none
+
+	Returns a summary of available updates.  If any of the
+	optional elements are not present, it means that there are no
+	updates in that importance level.
+
+rcd.packsys.get_locks()
+
+	Returns: array [package_match]
+	Faults: none
+
+	Returns the current list of locks.
+
+rcd.packsys.add_lock(package_match match)
+
+	Returns: int
+	Faults: none
+
+	Adds the lock specified in "match" to the list of locks.
+	Returns 1 on success, 0 on failure.
+
+rcd.packsys.remove_lock(package_match match)
+
+	Returns: int
+	Faults: none
+
+	Removes the lock specified in "match" from the list of locks.
+	Returns 1 on success, 0 on failure.
+
+rcd.packsys.resolve_dependencies(array [package] install_packages,
+				 array [package] remove_packages,
+				 array [package_dep] extra_deps)
+
+	Returns: (array [struct {
+			operation : string,
+			package : package,
+			details : array [string] }],
+		  array [struct {
+			operation : string,
+			package : package,
+			details : array [string] }],
+		  array [struct {
+			type : string,
+			package : package [optional],
+			priority : int,
+			package_list : array [package],
+			message : string [optional],
+			action : string [optional],
+			trigger : string [optional],
+			is_error : int,
+			is_important : int }])
+	Faults: package_not_found, invalid_package, failed_dependencies
+
+	Runs the dependency resolver on the provided set of packages
+	and additional requirements.  
+
+	If dependency resolution succeeds, the first two arrays
+	contain information on additional packages that must be
+	installed and removed, respectively.  "operation" is either
+	"install" or "remove".  "details" is an array of strings
+	indicating additional information about why that package must
+	be installed or removed.  The third array contains additional
+	dependency resolution info.
+
+	If resolution fails, a failed_dependencies fault is thrown,
+	and the text of the fault contains info as to why resolution
+	failed.
+
+	LAMESPEC: The third return argument is heavyweight and unused.
+
+rcd.packsys.verify_dependencies()
+
+	Returns: (array [struct {
+			operation : string,
+			package : package,
+			details : array [string] }],
+		  array [struct {
+			operation : string,
+			package : package,
+			details : array [string] }],
+		  array [struct {
+			type : string,
+			package : package [optional],
+			priority : int,
+			package_list : array [package],
+			message : string [optional],
+			action : string [optional],
+			trigger : string [optional],
+			is_error : int,
+			is_important : int }])
+	Faults: failed_dependencies
+
+	Does an internal verification of the dependency tree and
+	returns a resolution to correct it.  If the tree cannot be
+	fixed, then a failed_dependencies fault is thrown.  After
+	doing a transaction with this set, find_dangling_requires()
+	should be empty.  For more info on the return values, see
+	rcd.packsys.resolve_dependencies().
+
+	LAMESPEC: The third return argument is heavyweight and unused.
+
+rcd.packsys.get_rollback_actions(int when)
+
+	Returns: (array [struct {
+		        operation : string,
+		        package : package }] install_operations,
+		  array [struct {
+			operation : string,
+			pacakge : package }] remove_operations)
+	Faults: none
+
+	Returns the list of actions that must be taken to roll back
+	the system to the state specified in "when".
+
+	LAMESPEC: Why not just return packages?
+
+rcd.packsys.rollback(int when, int flags, string transaction_id,
+		     string client_id, string client_version)
+
+	Returns: (int download_id, int transaction_id, int step_id)
+	Faults: none
+
+	Rolls back the system to the state specified in "when".
+	"flags" can be 0 (none), 1 (dry run), or 2 (download only).
+	"transaction_id" is an ID to log to the server after the
+	transaction has finished.  It's only used for Red Carpet
+	Enterprise servers.  "client_id" and "client_version" are
+	identifiers for determining what client initiated the
+	transaction.
+
+	The return value is a fixed-length array of pending IDs that
+	can be polled on.  "download_id" is -1 if no packages need to
+	be downloaded.  Otherwise it is the overall download
+	progress.  "transaction_id" is -1 if the download only flag is
+	set.  Otherwise it is the overall transaction progress.
+	"step_id" is the progress within a transaction step.  Usually
+	this is indicates progress as each individual package is
+	installed.
+
+rcd.packsys.rollback_blocking(int when, int flags, string transaction_id,
+			      string client_id, string client_version)
+
+	Returns: 0 on success
+	Faults: transaction_failed
+
+	Runs a rollback in a blocking fashion, so this method will
+	return when the whole transaction has finished.  It will
+	return 0 if it succeeds, or throw a transaction_failed fault
+	if it fails.  For information on the parameters, see the
+	rcd.packsys.rollback() method.
+
+rcd.packsys.transact(array [package] install_packages,
+		     array [package] remove_packages,
+		     int flags, string transaction_id,
+		     string client_id, string client_version)
+
+	Returns: (int download_id, int transaction_id, int step_id)
+	Faults: none
+
+	Runs a package transaction on the system.  "flags" can be 0
+	(none), 1 (dry run), or 2 (download only).  "transaction_id"
+	is an ID to log to the server after the transaction has
+	finished.  It's only used for Red Carpet Enterprise servers.
+	"client_id" and "client_version" are identifiers for
+	determining what client initiated the transaction.
+
+	The return value is a fixed-length array of pending IDs that
+	can be polled on.  "download_id" is -1 if no packages need to
+	be downloaded.  Otherwise it is the overall download
+	progress.  "transaction_id" is -1 if the download only flag is
+	set.  Otherwise it is the overall transaction progress.
+	"step_id" is the progress within a transaction step.  Usually
+	this is indicates progress as each individual package is
+	installed.
+
+rcd.packsys.transact_blocking(array [package] install_packages,
+			      array [package] remove_packages,
+		              int flags, string transaction_id,
+		              string client_id, string client_version)
+
+	Returns: 0 on success
+	Faults: transaction_failed
+
+	Runs a package transaction in a blocking fashion, so this
+	method will return when the whole transaction has finished.
+	It will return 0 if it succeeds, or throw a transaction_failed
+	fault if it fails.  For information on the parameters, see the
+	rcd.packsys.transact() method.
+
+rcd.packsys.abort_download(int download_id)
+
+	Returns: 1 on success, 0 on failure.
+	Faults: invalid_transaction_id
+
+	Tries to cancel a package download.  "download_id" is the
+	download pending ID returned from either the
+	rcd.packsys.transact() or rcd.packsys.rollback() methods.  If
+	the ID passed in is invalid, an invalid_transaction_id fault
+	is thrown.
 
 rcd.packsys.world_sequence_numbers()
 
-rcd.packsys.find_dangling_requires()
+	Returns: (int package_seqno, int channel_seqno,
+		  int subscription_seqno, int lock_seqno)
+	Faults: none
+
+	Returns sequence numbers for various rcd subsystems.  These
+	can be used to track whether the current client has the latest
+	package, channel, subscription and lock information by polling
+	in lieu of a notification mechanism.
+
+rcd.packsys.dump()
+
+	Returns: base64
+	Faults: none
+
+	Dumps out all of the information about the daemon, including
+	services, channels, packages, locks, and other information
+	into an XML format which can later be loaded into the daemon
+	using the --undump option for debugging purposes.  The data is
+	base64-encoded gzipped data.
 
 Licences methods
 ----------------
@@ -625,6 +1094,9 @@ rcd.license.lookup_from_packages(array [package] packages)
 
 	Returns an array of license texts associated with the array of
 	packages passed in.
+
+	LAMESPEC: This doesn't need its own namespace, probably should
+	go on rcd.packsys
 
 News methods
 ------------
@@ -676,7 +1148,7 @@ rcd.log.query_log(array [(string key, string type, string query)])
 			 release : string } [optional] }]
 	Faults: none
 
-	Queries the package transaction log for the query pass in as
+	Queries the package transaction log for the query passed in as
 	the arguments.  See the section on query syntax for more
 	info.  "host" is the hostname that performed that action.  
 	"user" is the username that performed that action.  "action"
