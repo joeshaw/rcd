@@ -1,0 +1,55 @@
+.TH "rcd" "8" "1.0" "Ximian, Inc. 2002" "Software management daemon"
+.SH "NAME"
+.LP 
+rcd \- The backend daemon for rc, the command\-line version of the Ximian Red Carpet software management tool.
+.SH "SYNTAX"
+.LP 
+/etc/init.d/rcd [\fIstart|stop|restart\fR] \fI<options>\fR
+.br 
+rcd \fI<options>\fR
+.SH "DESCRIPTION"
+.LP 
+This daemon performs the Red Carpet software management functions that are asked of it by the rc software management tool, including the updating, installation, and removal of software, in addition to basic queries of the system's package management database. In general, you will not need to interact directly with rcd.
+.SH "OPTIONS"
+.LP 
+.TP 
+\fB\-allow\-non\-root\fR <\fIdirectory\fP>
+Allows rcd to be run by non\-root users.  This is likely to cause errors when rc users attempt to do anything other than query the package database.
+.TP 
+\fB\-\-help, \-?\fR
+Output help information and exit.
+.TP 
+\fB\-n, \-\-nodaemon\fR
+Do not run the daemon in the background.
+.TP 
+\fB\-\-usage\fR
+Output usage message and then exit.
+.TP 
+\fB\-\-version\fR
+Output version information and exit.
+.SH "FILES"
+.TP 
+\fI/etc/init.d/rcd\fP 
+Initialization script. It is recommended that you use this script to start and stop rcd, rather than running it directly.
+
+.TP 
+\fI/var/log/rcd.log\fP 
+Log file. This may be in another location if specified otherwise at compile time.
+.SH "EXAMPLES"
+This program normally runs as root.
+
+.TP 
+To run this program the standard way type:
+\fB/etc/init.d/rcd start\fR
+.TP 
+Alternately, run the program directly:
+\fBrcd\fR
+.SH "AUTHORS"
+.LP 
+Copyright Ximian, Inc. 2002
+http://www.ximian.com
+.SH "SEE ALSO"
+.LP 
+rc(1) red\-carpet(1)
+.LP 
+Visit http://ximian.com for more information about rcd, Ximian Red Carpet Enterprise, and other software from Ximian.
