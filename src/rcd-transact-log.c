@@ -204,7 +204,20 @@ transaction_sent (RCDTransfer *t, gpointer user_data)
 
     protocol = (RCDTransferProtocolHTTP *) t->protocol;
 
-    tid_string = rcd_transfer_protocol_http_get_response_header (protocol, "X-TID");
+    /* FIXME: This is such a disgusting hack */
+    if (*tid == (gpointer) 0xdeadbeef) {
+        /*
+         * We've already tried to send the success information for
+         * this transaction, so there's no point storing the TID; we'll
+         * just end up leaking it.
+         */
+        g_free (tid);
+
+        goto cleanup;
+    }
+
+    tid_string = rcd_transfer_protocol_http_get_response_header (protocol,
+                                                                 "X-TID");
 
     if (tid_string) {
         *tid = g_strdup (tid_string);
@@ -214,22 +227,23 @@ transaction_sent (RCDTransfer *t, gpointer user_data)
     else
         g_warning("No X-TID response");
 
+cleanup:
     /* Not a g_free() because this is an xmlChar * */
     free (protocol->request_body);
 
     g_object_unref (t);
 } /* transaction_sent */
 
-void
+char **
 rcd_transact_log_send_transaction (RCPackageSList  *install_packages,
-                                   RCPackageSList  *remove_packages,
-                                   char           **tid)
+                                   RCPackageSList  *remove_packages)
 {
     xmlChar *xml_string;
     int bytes;
     char *url;
     RCDTransfer *t;
     RCDTransferProtocolHTTP *protocol;
+    char **tid;
     
     url = g_strdup_printf ("%s/log.php", rcd_prefs_get_host ());
 
@@ -240,7 +254,7 @@ rcd_transact_log_send_transaction (RCPackageSList  *install_packages,
     if (!t->protocol || strcmp (t->protocol->name, "http") != 0) {
         rc_debug (RC_DEBUG_LEVEL_WARNING, "Invalid log URL: %s", url);
         g_object_unref (t);
-        return;
+        return NULL;
     }
 
     protocol = (RCDTransferProtocolHTTP *) t->protocol;
@@ -251,10 +265,14 @@ rcd_transact_log_send_transaction (RCPackageSList  *install_packages,
     rcd_transfer_protocol_http_set_request_body (
         protocol, xml_string, bytes);
 
+    tid = g_new0 (char *, 1);
+
     g_signal_connect (t, "file_done", 
                       G_CALLBACK (transaction_sent), tid);
 
     rcd_transfer_begin (t);
+
+    return tid;
 } /* rcd_transact_log_send_transaction */
 
 static xmlChar *
@@ -293,13 +311,14 @@ success_xml(const char *tid,
 static void
 success_sent (RCDTransfer *t, gpointer user_data)
 {
-    char *tid = user_data;
+    char **tid = user_data;
     RCDTransferProtocolHTTP *protocol;
 
     if (rcd_transfer_get_error (t)) {
         rc_debug (RC_DEBUG_LEVEL_WARNING, 
                   "An error occurred trying to send success for TID '%s': %s",
-                  tid, rcd_transfer_get_error_string (t));
+                  *tid, rcd_transfer_get_error_string (t));
+        g_free (*tid);
         g_free (tid);
         return;
     }
@@ -308,8 +327,9 @@ success_sent (RCDTransfer *t, gpointer user_data)
 
     protocol = (RCDTransferProtocolHTTP *) t->protocol;
 
-    rc_debug (RC_DEBUG_LEVEL_DEBUG, "Sent response for tid %s", tid);
+    rc_debug (RC_DEBUG_LEVEL_DEBUG, "Sent response for tid %s", *tid);
 
+    g_free (*tid);
     g_free (tid);
 
     /* Not a g_free() because it's an xmlChar * */
@@ -319,9 +339,9 @@ success_sent (RCDTransfer *t, gpointer user_data)
 } /* success_sent */
 
 void
-rcd_transact_log_send_success (char       *tid,
-                               gboolean    successful, 
-                               const char *msg)
+rcd_transact_log_send_success (char       **tid,
+                               gboolean     successful, 
+                               const char  *msg)
 {
     xmlChar *xml_string;
     int bytes;
@@ -329,8 +349,12 @@ rcd_transact_log_send_success (char       *tid,
     RCDTransfer *t;
     RCDTransferProtocolHTTP *protocol;
 
-    if (!tid) {
+    g_return_if_fail (tid);
+
+    if (!*tid) {
         /* There's no tid available, so we can't send a success code */
+        /* FIXME: This is such a disgusting hack. */
+        *tid = (gpointer) 0xdeadbeef;
         return;
     }
 
@@ -350,7 +374,7 @@ rcd_transact_log_send_success (char       *tid,
 
     rcd_transfer_protocol_http_set_method (protocol, SOUP_METHOD_POST);
 
-    xml_string = success_xml (tid, successful, msg, &bytes);
+    xml_string = success_xml (*tid, successful, msg, &bytes);
     rcd_transfer_protocol_http_set_request_body (
         protocol, xml_string, bytes);
 

@@ -225,6 +225,7 @@ rcd_cache_lookup (RCDCache *cache, const char *url)
         return NULL;
 
     if (!g_file_test (entry->local_file, G_FILE_TEST_EXISTS)) {
+        g_hash_table_remove (cache->entries, entry);
         rcd_cache_entry_free (entry);
         return NULL;
     }

@@ -60,7 +60,7 @@ struct _RCDTransactionStatus {
     char *client_host;
     char *client_user;
 
-    char *log_tid;
+    char **log_tid;
 };
 
 static gboolean transaction_lock = FALSE;
@@ -171,9 +171,9 @@ cleanup_after_transaction (RCDTransactionStatus *status)
     g_object_unref (status->pending);
     g_free (status->client_host);
     g_free (status->client_user);
-
+    
     g_free (status);
-
+        
     /* Allow shutdowns again. */
     rcd_shutdown_allow ();
 } /* cleanup_after_transaction */    
@@ -506,9 +506,9 @@ rcd_transaction_begin (RCWorld        *world,
 
     /* If we're in premium mode, send a log of the transaction to the server */
     if (rcd_prefs_get_premium ()) {
-        rcd_transact_log_send_transaction (status->install_packages,
-                                           status->remove_packages,
-                                           &status->log_tid);
+        status->log_tid = rcd_transact_log_send_transaction (
+            status->install_packages,
+            status->remove_packages);
     }
 
     /*

@@ -1,3 +1,25 @@
+2002-08-09  Joe Shaw  <joe@ximian.com>
+
+	* rcd-cache.c (rcd_cache_lookup): If the file isn't there anymore,
+	remove the cache entry from the cache before freeing it.  Duh.
+
+	* rcd-transact-log.c (rcd_transact_log_send_transaction): Since
+	it's very possible for a transaction to finish before the
+	transaction manifest is even sent to the server, we need to
+	allocate the transaction id slot on the heap.  Change this
+	function to return a newly allocated slot for it.  God, this code
+	is really nasty.  It should be integrated with rcd-transaction.c.
+	(transaction_sent): If rcd_transact_log_send_success() got called
+	before we did, free the tid slot.
+	(success_sent): Free the tid and the slot.
+	(rcd_transact_log_send_success): If there's no tid available,
+	don't send the success info, set a special value so we don't leak.
+
+	* rcd-transaction.c (RCDTransactionStatus): log_tid is a char **
+	now.
+	(rcd_transaction_begin): Assign status->log_tid to the result of
+	rcd_transact_log_send_transaction().
+
 2002-08-09  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-fetch.c (download_package_file): Fixed memory leak.
