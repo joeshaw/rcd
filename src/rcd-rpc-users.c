@@ -211,6 +211,14 @@ users_remove (xmlrpc_env   *env,
     return value;
 }
 
+static xmlrpc_value *
+users_sequence_number (xmlrpc_env   *env,
+                       xmlrpc_value *param_array,
+                       void         *user_data)
+{
+    return xmlrpc_build_value (env, "i", rcd_identity_get_sequence_number ());
+}
+
 void
 rcd_rpc_users_register_methods (void)
 {
@@ -237,6 +245,11 @@ rcd_rpc_users_register_methods (void)
     rcd_rpc_register_method ("rcd.users.remove",
                              users_remove,
                              "superuser",
+                             NULL);
+
+    rcd_rpc_register_method ("rcd.users.sequence_number",
+                             users_sequence_number,
+                             NULL,
                              NULL);
 
 }

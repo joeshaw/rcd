@@ -67,5 +67,7 @@ gboolean     rcd_identity_update_password_file (RCDIdentity *id);
 
 gboolean     rcd_identity_remove_from_password_file (const char *username);
 
+guint        rcd_identity_get_sequence_number (void);
+
 #endif /* __RCD_IDENTITY_H__ */
 

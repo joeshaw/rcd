@@ -36,6 +36,8 @@
 
 #define PASSWORD_FILE SYSCONFDIR "/rcd.passwd"
 
+static guint identity_seqno = 1;
+
 RCDIdentity *
 rcd_identity_new (void)
 {
@@ -392,6 +394,8 @@ rcd_identity_update_password_file (RCDIdentity *id)
     if (info.out && ! info.failed)
         fclose (info.out);
 
+    ++identity_seqno;
+
     return ! info.failed;
 }
 
@@ -430,5 +434,13 @@ rcd_identity_remove_from_password_file (const char *username)
     fclose (in);
     fclose (out);
 
+    ++identity_seqno;
+
     return TRUE;
+}
+
+guint
+rcd_identity_get_sequence_number (void)
+{
+    return identity_seqno;
 }

@@ -1,3 +1,20 @@
+2003-01-24  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-rpc-users.c (users_sequence_number): Added.  A method for
+	returning the identity sequence number.
+	(rcd_rpc_users_register_methods): Register the
+	rcd.users_sequence_number method.
+
+	* rcd-identity.c: Added a static guint for storing the
+	identity-change sequence number, which can be used to detect
+	changes to users and permissions.
+	(rcd_identity_update_password_file): Increment the identity
+	sequence number.
+	(rcd_identity_remove_from_password_file): Increment the identity
+	sequence number.
+	(rcd_identity_get_sequence_number): Added.  Returns the identity
+	sequence number.
+
 2003-01-23  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-identity.c (write_identity): Oops!  -1 (aka
