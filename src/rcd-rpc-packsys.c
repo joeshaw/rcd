@@ -1202,8 +1202,14 @@ dep_get_package_info_cb (RCResolverInfo *info, gpointer user_data)
         pkgs = rc_resolver_info_packages_to_string (info, FALSE);
         info_str = g_strconcat ("part of: ", pkgs, NULL);
         g_free (pkgs);
-        break;
+        break;    
 
+    case RC_RESOLVER_INFO_TYPE_MISSING_REQ:
+        info_str = g_strconcat ("missing requirement: ",
+                                rc_package_dep_to_string_static (info->missing_req),
+                                NULL);
+        break;
+ 
     default:
         info_str = rc_resolver_info_to_string (info);
         break;
