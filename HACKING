@@ -1,9 +1,12 @@
 CONTRIBUTING
 ------------
-Contributors to rcd are more than welcome.  Patches should be sent to
-rc-devel@lists.ximian.com.  Patches should follow the existing
-stylistic conventions in rcd, should be accompanied with a ChangeLog,
-and should be sent in GNU unified diff format (diff -u).
+Contributors to rcd are more than welcome.  rcd is written in C and
+heavily uses the glib library.
+
+Discussion takes place on the rc-devel@lists.ximian.com mailing list.
+Patches should be sent there, and should follow the existing stylistic
+conventions, be accompanied with a ChangeLog entry, and sent in GNU
+unified diff format (diff -u).
 
 Please DO NOT commit to CVS without approval from one of the
 maintainers.
