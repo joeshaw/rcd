@@ -36,363 +36,230 @@
 
 #include <errno.h>
 
-/* Generic interface stuff here */
-typedef char *(*RCDCacheMungeFunc)(RCDCache *cache, const char *filename);
+typedef char *(*RCDCacheFilenameFunc) (RCDCache *cache, const char *url);
 
 struct _RCDCache {
-    const char *path;
+    GHashTable *entries;
 
-    GHashTable *handles;
-
-    RCDCacheMungeFunc munge_func;
-
-    gpointer user_data;
+    RCDCacheFilenameFunc filename_func;
 };
 
-void
-rcd_cache_set_user_data(RCDCache *cache, gpointer user_data)
+struct _RCDCacheEntry {
+    char *url;
+    char *local_file;
+
+    gboolean complete;
+
+    int fd;
+
+    char *entity_tag;
+    char *last_modified;
+};
+
+static void
+rcd_cache_entry_free (RCDCacheEntry *entry)
 {
-    g_return_if_fail(cache);
-
-    cache->user_data = user_data;
-} /* rcd_cache_set_user_data */
-
-gpointer
-rcd_cache_get_user_data(RCDCache *cache)
-{
-    g_return_val_if_fail(cache, NULL);
-
-    return cache->user_data;
-} /* rcd_cache_get_user_data */
+    g_free (entry->url);
+    g_free (entry->local_file);
+    g_free (entry->entity_tag);
+    g_free (entry->last_modified);
+    g_free (entry);
+} /* rcd_cache_entry_free */
 
 char *
-rcd_cache_get_cache_directory(RCDCache *cache)
+rcd_cache_get_local_filename (RCDCache *cache, const char *url)
 {
-    const char *cache_dir;
-    char *dir;
-
-    cache_dir = rcd_prefs_get_cache_dir ();
-
-    if (!cache_dir)
-        return NULL;
-    
-    if (cache->path) {
-        dir = g_strdup_printf("%s/%s", cache_dir, cache->path);
-    }
-    else
-        dir = g_strdup(cache_dir);
-
-    return dir;
-} /* rcd_cache_get_cache_directory */
-
-char *
-rcd_cache_get_cache_filename(RCDCache *cache, const char *filename)
-{
-    char *munged;
-    const char *cache_dir;
     char *cache_fn;
+    char *local_filename;
 
-    if (cache->munge_func)
-        munged = cache->munge_func(cache, filename);
-    else
-        munged = NULL;
+    cache_fn = cache->filename_func (cache, url);
 
-    cache_dir = rcd_prefs_get_cache_dir ();
+    local_filename = g_strconcat (rcd_prefs_get_cache_dir (), "/", cache_fn, NULL);
 
-    if (cache->path) {
-        cache_fn = g_strdup_printf(
-            "%s/%s/%s", cache_dir, cache->path, munged ? munged : filename);
-    }
-    else {
-        cache_fn = g_strdup_printf(
-            "%s/%s", cache_dir, munged ? munged : filename);
-    }
+    g_free (cache_fn);
 
-    g_free(munged);
-    
-    return cache_fn;
-} /* rcd_cache_get_cache_filename */
+    return local_filename;
+} /* rcd_cache_get_local_filename */
+
+char *
+rcd_cache_entry_get_local_filename (RCDCacheEntry *entry)
+{
+    return g_strdup (entry->local_file);
+} /* rcd_cache_entry_get_local_filename */
 
 const char *
-rcd_cache_get_modification_time(RCDCache *cache, const char *filename)
+rcd_cache_entry_get_modification_time (RCDCacheEntry *entry)
 {
-    char *cache_fn;
     struct stat st;
     struct tm *tm;
     static char *time_string = NULL;
 
-    g_return_val_if_fail(cache, NULL);
-    g_return_val_if_fail(filename, NULL);
+    if (entry->last_modified)
+        return entry->last_modified;
 
-    cache_fn = rcd_cache_get_cache_filename(cache, filename);
-
-    if (!g_file_test(cache_fn, G_FILE_TEST_EXISTS))
+    /* This is less than exact, but is better than nothing at all. */
+    if (!g_file_test (entry->local_file, G_FILE_TEST_EXISTS))
         return NULL;
 
-    stat(cache_fn, &st);
-    tm = gmtime(&st.st_mtime);
+    stat (entry->local_file, &st);
+    tm = gmtime (&st.st_mtime);
 
     if (!time_string)
-        time_string = g_malloc(40);
+        time_string = g_malloc (40);
 
     /* Create a time string that conforms to RFC 1123 */
     strftime(time_string, 40, "%a, %d %b %Y %H:%M:%S %z", tm);
 
-    g_free(cache_fn);
-
     return time_string;
-} /* rcd_cache_get_modification_time */
+} /* rcd_cache_entry_get_modification_time */
 
-gboolean
-rcd_cache_is_active(RCDCache *cache, const char *filename)
+const char *
+rcd_cache_entry_get_entity_tag (RCDCacheEntry *entry)
 {
-    return (g_hash_table_lookup(cache->handles, filename) != NULL);
-} /* rcd_cache_is_active */
+    return entry->entity_tag;
+} /* rcd_cache_entry_get_entity_tag */
 
 void
-rcd_cache_open(RCDCache *cache, const char *filename, gboolean append)
+rcd_cache_entry_set_modification_time (RCDCacheEntry *entry, const char *modtime)
+{
+    entry->last_modified = g_strdup (modtime);
+} /* rcd_cache_entry_set_modification_time */
+
+void
+rcd_cache_entry_set_entity_tag (RCDCacheEntry *entry, const char *etag)
+{
+    entry->entity_tag = g_strdup (etag);
+} /* rcd_cache_entry_set_entity_tag */
+
+void
+rcd_cache_entry_close (RCDCacheEntry *entry)
+{
+    char *tmp_fn;
+
+    rc_close (entry->fd);
+
+    tmp_fn = g_strdup_printf("%s.tmp", entry->local_file);
+    rename(tmp_fn, entry->local_file);
+    g_free(tmp_fn);
+} /* rcd_cache_entry_close */
+
+void
+rcd_cache_entry_append (RCDCacheEntry *entry, const char *data, gsize size)
+{
+    rc_write (entry->fd, data, size);
+} /* rcd_cache_entry_append */
+
+void
+rcd_cache_entry_open (RCDCacheEntry *entry)
 {
     char *cache_dir;
-    char *cache_fn;
     char *tmp_fn;
-    int flags;
-    int fd;
 
-    cache_dir = rcd_cache_get_cache_directory(cache);
-
-    g_return_if_fail(cache_dir);
-
-    if (!g_file_test(cache_dir, G_FILE_TEST_EXISTS)) {
-        rc_mkdir(cache_dir, 0755);
+    cache_dir = g_path_get_dirname (entry->local_file);
+    if (!g_file_test (cache_dir, G_FILE_TEST_EXISTS)) {
+        rc_mkdir (cache_dir, 0755);
     }
-    g_free(cache_dir);
+    g_free (cache_dir);
 
-    cache_fn = rcd_cache_get_cache_filename(cache, filename);
-    tmp_fn = g_strdup_printf("%s.tmp", cache_fn);
+    tmp_fn = g_strconcat (entry->local_file, ".tmp", NULL);
+    entry->fd = open (tmp_fn, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+
+    if (entry->fd < 0) {
+        g_warning ("Couldn't open %s for writing", tmp_fn);
+        g_free (tmp_fn);
+
+        return;
+    }
+
+    g_free (tmp_fn);
+} /* rcd_cache_entry_open */
+
+RCDCacheEntry *
+rcd_cache_entry_new (RCDCache *cache, const char *url)
+{
+    RCDCacheEntry *entry;
+
+    g_return_val_if_fail (cache, NULL);
+    g_return_val_if_fail (url, NULL);
+
+    if ((entry = g_hash_table_lookup (cache->entries, url))) {
+        g_warning ("Cache entry already exists for %s", url);
+        return entry;
+    }
+
+    entry = g_new0 (RCDCacheEntry, 1);
     
-    flags = O_WRONLY | O_CREAT;
-    if (append)
-        flags |= O_APPEND;
-    else
-        flags |= O_TRUNC;
+    entry->url = g_strdup (url);
+    entry->local_file = rcd_cache_get_local_filename (cache, url);
 
-    fd = open(tmp_fn, flags, 0644);
+    g_hash_table_insert (cache->entries, entry->url, entry);
 
-    if (fd < 0) {
-        g_warning("Couldn't open %s (%s) for writing", cache_fn, filename);
-        goto finished;
+    return entry;
+} /* rcd_cache_entry_new */
+
+RCDCacheEntry *
+rcd_cache_lookup (RCDCache *cache, const char *url)
+{
+    RCDCacheEntry *entry;
+
+    g_return_val_if_fail (cache, NULL);
+    g_return_val_if_fail (url, NULL);
+
+    entry = g_hash_table_lookup (cache->entries, url);
+
+    if (!entry)
+        return NULL;
+
+    if (!g_file_test (entry->local_file, G_FILE_TEST_EXISTS)) {
+        rcd_cache_entry_free (entry);
+        return NULL;
     }
 
-    g_hash_table_insert(
-        cache->handles, g_strdup(filename), GINT_TO_POINTER(fd));
-
- finished:
-    g_free(cache_fn);
-    g_free(tmp_fn);
-
-} /* rcd_cache_open */
-
-void
-rcd_cache_append(RCDCache *cache, const char *filename, 
-                 const char *data, guint32 size)
-{
-    gpointer handle;
-    int fd;
-
-    handle = g_hash_table_lookup(cache->handles, filename);
-
-    if (!handle) {
-        g_warning("Couldn't find %s in active cache", filename);
-        return;
-    }
-
-    fd = GPOINTER_TO_INT(handle);
-
-    rc_write(fd, data, size);
-} /* rcd_cache_append */
-
-static void
-cache_close(RCDCache *cache, const char *filename)
-{
-    gpointer handle;
-    gpointer filename_copy;
-    int fd;
-
-    if (!g_hash_table_lookup_extended(
-            cache->handles, filename, &filename_copy, &handle)) {
-        g_warning("Couldn't find %s in active cache", filename);
-        return;
-    }
-
-    fd = GPOINTER_TO_INT(handle);
-    rc_close(fd);
-
-    g_hash_table_remove(cache->handles, filename);
-    g_free(filename_copy);
-} /* cache_close */
-
-void
-rcd_cache_close(RCDCache *cache, const char *filename)
-{
-    char *cache_fn;
-    char *tmp_fn;
-
-    cache_close(cache, filename);
-
-    cache_fn = rcd_cache_get_cache_filename(cache, filename);
-    tmp_fn = g_strdup_printf("%s.tmp", cache_fn);
-    rename(tmp_fn, cache_fn);
-    g_free(cache_fn);
-    g_free(tmp_fn);
-} /* rcd_cache_close */
-
-void
-rcd_cache_invalidate(RCDCache *cache, const char *filename)
-{
-    char *cache_fn;
-
-    if (rcd_cache_is_active(cache, filename))
-        cache_close(cache, filename);
-
-    cache_fn = rcd_cache_get_cache_filename(cache, filename);
-    unlink(cache_fn);
-    g_free(cache_fn);
-} /* rcd_cache_invalidate */
-
-void
-rcd_cache_invalidate_all(RCDCache *cache)
-{
-    char *cache_dir;
-
-    cache_dir = rcd_cache_get_cache_directory(cache);
-
-    if (!cache_dir)
-        return;
-
-    rc_rmdir(cache_dir);
-    g_free(cache_dir);
-} /* rcd_cache_invalidate_all */
-
-void
-rcd_cache_invalidate_all_older(RCDCache *cache, time_t seconds)
-{
-    char *cache_dir;
-    DIR *dir;
-    time_t now;
-    struct dirent *dir_entry;
-
-    cache_dir = rcd_cache_get_cache_directory(cache);
-
-    if (!cache_dir)
-        return;
-
-    dir = opendir(cache_dir);
-    g_return_if_fail(dir);
-
-    now = time(NULL);
-
-    while ((dir_entry = readdir(dir))) {
-        char *filename;
-        struct stat s;
-
-        filename = g_strdup_printf("%s/%s", cache_dir, dir_entry->d_name);
-
-        stat(filename, &s);
-
-        if (s.st_mtime + seconds < now) {
-            rc_debug(
-                RC_DEBUG_LEVEL_DEBUG, "Deleting from cache: %s\n", filename);
-            unlink(filename);
-        }
-
-        g_free(filename);
-    }
-
-    closedir(dir);
-    g_free(cache_dir);
-} /* rcd_cache_invalidate_all_older */
+    return entry;
+} /* rcd_cache_lookup */
 
 static RCDCache *
-rcd_cache_new(const char *path, RCDCacheMungeFunc munge_func)
+rcd_cache_new (RCDCacheFilenameFunc filename_func)
 {
     RCDCache *cache;
 
-    cache = g_new0(RCDCache, 1);
-
-    cache->path = path;
-    cache->munge_func = munge_func;
-
-    cache->handles = g_hash_table_new(g_str_hash, g_str_equal);
+    cache = g_new0 (RCDCache, 1);
+    cache->entries = g_hash_table_new (g_str_hash, g_str_equal);
+    cache->filename_func = filename_func;
 
     return cache;
 } /* rcd_cache_new */
 
-/* Actual implementation of RC's caches below here. */
 static char *
-munge_filename(RCDCache *cache, const char *filename)
+normal_cache_filename_func (RCDCache *cache, const char *url)
 {
+    SoupUri *uri = soup_uri_new (url);
+    const char *filename;
+
+    filename = uri->path;
+
     if (*filename == '/')
         filename++;
 
     if (!*filename)
-        return g_strdup("index");
-    
-    return g_strdelimit(g_strdup(filename), "/", '-');
-} /* munge_filename */
+        filename = "index";
+
+    return g_strdup_printf ("%s:%d/%s", uri->host, uri->port,
+                            g_strdelimit (g_strdup (filename), "/", '-'));
+} /* normal_cache_filename_func */
 
 static char *
-munge_package(RCDCache *cache, const char *filename)
+package_cache_filename_func (RCDCache *cache, const char *url)
 {
-    char *munge;
+    char *package_file;
+    char *full_path;
 
-    munge = strrchr(filename, '/');
+    package_file = g_path_get_basename (url);
+    full_path = g_strconcat ("packages/", package_file, NULL);
+    g_free (package_file);
 
-    if (munge)
-        return g_strdup(munge + 1);
-    else
-        return g_strdup(filename);
-} /* munge_package */
-
-static char *
-munge_icon(RCDCache *cache, const char *filename)
-{
-    int channel_id;
-    char *extension;
-    char *munge;
-
-    channel_id = GPOINTER_TO_INT(rcd_cache_get_user_data(cache));
-    
-    extension = strrchr(filename, '.');
-
-    munge = g_strdup_printf(
-        "channel-%d%s", channel_id, extension ? extension : "");
-
-    return munge;
-} /* munge_icon */
-
-RCDCache *
-rcd_cache_get_package_cache (void)
-{
-    static RCDCache *cache = NULL;
-
-    if (cache == NULL) {
-        cache = rcd_cache_new ("packages", munge_package);
-    }
-
-    return cache;
-}
-
-RCDCache *
-rcd_cache_get_icon_cache (void)
-{
-    static RCDCache *cache = NULL;
-
-    if (cache == NULL) {
-        cache = rcd_cache_new ("icons", munge_icon);
-    }
-
-    return cache;
-}
+    return full_path;
+} /* package_cache_filename_func */
 
 RCDCache *
 rcd_cache_get_normal_cache (void)
@@ -400,20 +267,20 @@ rcd_cache_get_normal_cache (void)
     static RCDCache *cache = NULL;
 
     if (cache == NULL) {
-        const char *url = rcd_prefs_get_host ();
-        SoupUri *uri = soup_uri_new(url);
-        char *normal_path;
-
-        /* Assert that rc_rcd_get_host() must always return a valid URI */
-        g_assert(uri);
-
-        normal_path = g_strdup_printf("%s:%d", uri->host, uri->port);
-
-        soup_uri_free(uri);
-
-        cache = rcd_cache_new (normal_path, munge_filename);
+        cache = rcd_cache_new (normal_cache_filename_func);
     }
 
     return cache;
-}
+} /* rcd_cache_get_normal_cache */
 
+RCDCache *
+rcd_cache_get_package_cache (void)
+{
+    static RCDCache *cache = NULL;
+
+    if (cache == NULL) {
+        cache = rcd_cache_new (package_cache_filename_func);
+    }
+
+    return cache;
+} /* rcd_cache_get_package_cache */

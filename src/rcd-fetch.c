@@ -52,8 +52,7 @@ rcd_fetch_channel_list (void)
         rc_debug (RC_DEBUG_LEVEL_INFO, "Distro is %s", dt->unique_name);
     }
 
-    t = rcd_transfer_new (RCD_TRANSFER_FLAGS_BLOCK,
-                          rcd_cache_get_normal_cache ());
+    t = rcd_transfer_new (0, rcd_cache_get_normal_cache ());
 
     if (rcd_prefs_get_priority ()) {
         url = g_strdup_printf ("%s/channels.php?distro_target=%s",
@@ -87,11 +86,25 @@ rcd_fetch_channel_list (void)
     xmlFreeDoc (doc);
 }
 
+typedef struct {
+    GByteArray *data;
+    RCChannel  *channel;
+} ChannelFetchClosure;
+
+static void
+channel_data_cb (RCDTransfer *t, char *buf, gsize size, gpointer user_data)
+{
+    ChannelFetchClosure *closure = user_data;
+
+    closure->data = g_byte_array_append (closure->data, buf, size);
+} /* channel_data_cb */
+
 static void
 process_channel_cb (RCDTransfer *t, gpointer user_data)
 {
-    GByteArray *data = t->data;
-    RCChannel *channel = user_data;
+    ChannelFetchClosure *closure = user_data;
+    GByteArray *data = closure->data;
+    RCChannel *channel = closure->channel;
 
     g_assert (data != NULL); /* FIXME? */
 
@@ -123,24 +136,34 @@ process_channel_cb (RCDTransfer *t, gpointer user_data)
               "Loaded channel '%s'",
               rc_channel_get_name (channel));
 
+    g_byte_array_free (data, TRUE);
+    g_free (closure);
 }
 
 gint
 rcd_fetch_channel (RCChannel *channel)
 {
     RCDTransfer *t;
+    ChannelFetchClosure *closure;
     gchar *url, *desc;
     RCDPending *pending;
 
     g_return_val_if_fail (channel != NULL, RCD_INVALID_PENDING_ID);
 
-    t = rcd_transfer_new (0,
-                          rcd_cache_get_normal_cache ());
+    t = rcd_transfer_new (0, rcd_cache_get_normal_cache ());
 
-    g_signal_connect(t,
-                     "file_done",
-                     (GCallback) process_channel_cb,
-                     channel);
+    closure = g_new0 (ChannelFetchClosure, 1);
+    closure->data = g_byte_array_new ();
+    closure->channel = channel;
+
+    g_signal_connect (t,
+                      "file_data",
+                      (GCallback) channel_data_cb,
+                      closure);
+    g_signal_connect (t,
+                      "file_done",
+                      (GCallback) process_channel_cb,
+                      closure);
 
     /* FIXME: deal with mirrors */
     url = g_strdup_printf ("%s/%s",
@@ -202,8 +225,7 @@ package_completed_cb (RCDTransfer *t, gpointer user_data)
     rc_debug (RC_DEBUG_LEVEL_INFO, "Download of %s complete", t->url);
     
     package = g_object_get_data (G_OBJECT (t), "package");
-    package->package_filename = rcd_cache_get_cache_filename (
-        t->cache, t->filename);
+    package->package_filename = rcd_transfer_get_local_filename (t);
 
     closure->running_transfers = g_slist_remove (
         closure->running_transfers, t);
@@ -242,7 +264,10 @@ rcd_fetch_packages (RCPackageSList       *packages,
         
         /* FIXME: We need to download signatures too */
 
-        t = rcd_transfer_new (0, rcd_cache_get_package_cache ());
+        t = rcd_transfer_new (
+            RCD_TRANSFER_FLAGS_FORCE_CACHE |
+            RCD_TRANSFER_FLAGS_RESUME_PARTIAL,
+            rcd_cache_get_package_cache ());
         g_object_set_data (G_OBJECT (t), "package", package);
 
         closure->running_transfers = g_slist_append (

@@ -79,7 +79,8 @@ read_data(GIOChannel *iochannel,
                              &bytes_read);
 
     if (bytes_read) {
-        g_byte_array_append(handle->data, read_buf, bytes_read);
+        handle->data = g_byte_array_append (
+            handle->data, read_buf, bytes_read);
         total_read += bytes_read;
     }
 
@@ -194,9 +195,17 @@ rcd_unix_server_run_async(RCDUnixServerCallback callback)
     servaddr.sun_family = AF_UNIX;
     strcpy(servaddr.sun_path, SOCKET_PATH);
     
-    bind(sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
+    if (bind (sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0) {
+        g_warning ("Unable to bind to domain socket");
+        return;
+    }
+
     chmod(SOCKET_PATH, 0777);
-    listen(sockfd, 10);
+
+    if (listen (sockfd, 10) < 0) {
+        g_warning ("Unable to listen to domain socket");
+        return;
+    }
 
     iochannel = g_io_channel_unix_new(sockfd);
     g_io_add_watch(iochannel, G_IO_IN, conn_accept, callback);

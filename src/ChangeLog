@@ -1,3 +1,33 @@
+2002-06-14  Joe Shaw  <joe@ximian.com>
+
+	* rcd-cache.c: Mostly redone.  Most actions are now performed on a
+	per-transfer RCDCacheEntry.  Entity tag and modification data are
+	now kept in a in-memory cache.
+
+	* rcd-transfer.c: Clean this up a ton, and make it more generic
+	for protocol handlers.  Split out the file and http protocol
+	handlers into their own files.
+
+	* rcd-transfer-file.c, rcd-transfer-http.c: Added.
+
+	* rcd-fetch.c: Update for all the cache and transfer API changes.
+
+	* rcd-rpc-packsys.c (run_transaction): If caching is turned off,
+	clean up the recently downloaded package files.
+	(download_packages): Check to make sure the package_filename set
+	in the package exists... if not, download the file again.
+
+	* rcd-unix-server.c (rcd_unix_server_run_async): Check the return
+	values from bind () and listen () and throw a warning about not
+	being able to start the Unix server.
+
+2002-06-13  Joe Shaw  <joe@ximian.com>
+
+	* rcd-transfer.c (rcd_transfer_class_init): Change the marshal's
+	arguments from STRING:INT to POINTER:UINT.  Since the data being
+	passed through isn't null-terminated, it can't be passed around as
+	a string.
+
 2002-06-13  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd.c (initialize_logging): Initialize our logfile.

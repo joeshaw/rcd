@@ -19,29 +19,34 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#ifndef _RCD_CACHE_H
-#define _RCD_CACHE_H
+#ifndef __RCD_CACHE_H__
+#define __RCD_CACHE_H__
 
 #include <glib.h>
-#include <time.h>
 
-typedef struct _RCDCache RCDCache;
+typedef struct _RCDCache      RCDCache;
+typedef struct _RCDCacheEntry RCDCacheEntry;
 
-void rcd_cache_set_user_data(RCDCache *cache, gpointer user_data);
-gpointer rcd_cache_get_user_data(RCDCache *cache);
-char *rcd_cache_get_cache_directory(RCDCache *cache);
-char *rcd_cache_get_cache_filename(RCDCache *cache, const char *filename);
-const char *rcd_cache_get_modification_time(RCDCache *cache, const char *filename);
-void rcd_cache_open(RCDCache *cache, const char *filename, gboolean append);
-void rcd_cache_append(RCDCache *cache, const char *filename, const char *data, guint32 size);
-void rcd_cache_close(RCDCache *cache, const char *filename);
-void rcd_cache_invalidate(RCDCache *cache, const char *filename);
-void rcd_cache_invalidate_all(RCDCache *cache);
-void rcd_cache_invalidate_all_older(RCDCache *cache, time_t seconds);
-gboolean rcd_cache_is_active(RCDCache *cache, const char *filename);
+RCDCacheEntry *rcd_cache_entry_new (RCDCache *cache, const char *url);
+RCDCacheEntry *rcd_cache_lookup    (RCDCache *cache, const char *url);
 
-RCDCache *rcd_cache_get_package_cache (void);
-RCDCache *rcd_cache_get_icon_cache    (void);
+void rcd_cache_entry_open   (RCDCacheEntry *entry);
+void rcd_cache_entry_append (RCDCacheEntry *entry,
+                             const char    *data, 
+                             gsize          size);
+void rcd_cache_entry_close  (RCDCacheEntry *entry);
+
+const char *rcd_cache_entry_get_modification_time (RCDCacheEntry *entry);
+const char *rcd_cache_entry_get_entity_tag        (RCDCacheEntry *entry);
+void        rcd_cache_entry_set_modification_time (RCDCacheEntry *entry,
+                                                   const char    *modtime);
+void        rcd_cache_entry_set_entity_tag        (RCDCacheEntry *entry,
+                                                   const char    *etag);
+
+char *rcd_cache_entry_get_local_filename (RCDCacheEntry *entry);
+char *rcd_cache_get_local_filename       (RCDCache *cache, const char *url);
+
 RCDCache *rcd_cache_get_normal_cache  (void);
+RCDCache *rcd_cache_get_package_cache (void);
 
-#endif /* _RCD_CACHE_H */
+#endif /* __RCD_CACHE_H__ */

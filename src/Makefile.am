@@ -52,6 +52,10 @@ rcd_SOURCES = 			\
 	rcd-subscriptions.h	\
 	rcd-transfer.c		\
 	rcd-transfer.h		\
+	rcd-transfer-file.c	\
+	rcd-transfer-file.h	\
+	rcd-transfer-http.c	\
+	rcd-transfer-http.h	\
 	rcd-rpc-util.c		\
 	rcd-rpc-util.h		\
 	rcd-unix-server.c	\

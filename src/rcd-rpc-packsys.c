@@ -11,6 +11,7 @@
 
 #include "rcd-fetch.h"
 #include "rcd-pending.h"
+#include "rcd-prefs.h"
 #include "rcd-query-packages.h"
 #include "rcd-rpc.h"
 #include "rcd-rpc-util.h"
@@ -21,6 +22,8 @@ typedef struct {
 
     RCPackageSList *install_packages;
     RCPackageSList *remove_packages;
+
+    RCPackageSList *packages_to_download;
 
     RCDPending *pending;
 
@@ -509,6 +512,20 @@ transact_done_cb(RCPackman *packman,
     rcd_pending_finished (status->pending, 0);
 } /* transact_done_cb */
 
+static void
+cleanup_temp_package_files (RCPackageSList *packages)
+{
+    RCPackageSList *iter;
+
+    for (iter = packages; iter; iter = iter->next) {
+        RCPackage *p = iter->data;
+
+        unlink (p->package_filename);
+        g_free (p->package_filename);
+        p->package_filename = NULL;
+    }
+} /* cleanup_temp_package_files */
+
 static gboolean
 run_transaction(gpointer user_data)
 {
@@ -561,6 +578,13 @@ run_transaction(gpointer user_data)
                           rc_packman_get_reason (status->packman));
     }
 
+    /*
+     * If caching is turned off, we don't want to keep around the package
+     * files on disk.
+     */
+    if (!rcd_prefs_get_cache_enabled ())
+        cleanup_temp_package_files (status->packages_to_download);
+
     rc_world_get_system_packages (rc_get_world ());
 
     return FALSE;
@@ -583,31 +607,38 @@ update_download_progress (gsize size, gpointer user_data)
 static gboolean
 download_packages (RCPackageSList *packages, RCDTransactionStatus *status)
 {
-    RCPackageSList *packages_to_download = NULL;
     RCPackageSList *iter;
 
     status->total_download_size = 0;
+    status->packages_to_download = NULL;
 
     for (iter = packages; iter; iter = iter->next) {
         RCPackage *package = iter->data;
 
+        if (!g_file_test (package->package_filename, G_FILE_TEST_EXISTS)) {
+            g_free (package->package_filename);
+            package->package_filename = NULL;
+        }
+
         if (!package->package_filename) {
-            packages_to_download = g_slist_prepend (
-                packages_to_download, package);
+            status->packages_to_download = g_slist_prepend (
+                status->packages_to_download, package);
             status->total_download_size +=
                 rc_package_get_latest_update (package)->package_size;
         }
     }
 
-    if (!packages_to_download)
+    if (!status->packages_to_download)
         return FALSE;
 
     rcd_pending_add_message (status->pending, "Downloading packages");
     rcd_pending_update (status->pending, 0.0);
 
-    packages_to_download = g_slist_reverse (packages_to_download);
+    status->packages_to_download =
+        g_slist_reverse (status->packages_to_download);
+
     rcd_fetch_packages (
-        packages_to_download, 
+        status->packages_to_download, 
         update_download_progress,
         run_transaction,
         status);

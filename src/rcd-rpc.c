@@ -181,10 +181,11 @@ unix_rpc_callback (RCDUnixServerHandle *handle)
         return NULL;
     }
 
-    out_data = g_byte_array_new();
-    g_byte_array_append(out_data, 
-                        XMLRPC_TYPED_MEM_BLOCK_CONTENTS(char, output),
-                        XMLRPC_TYPED_MEM_BLOCK_SIZE(char, output));
+    out_data = g_byte_array_new ();
+    out_data = g_byte_array_append (
+        out_data, 
+        XMLRPC_TYPED_MEM_BLOCK_CONTENTS(char, output),
+        XMLRPC_TYPED_MEM_BLOCK_SIZE(char, output));
 
     xmlrpc_mem_block_free(output);
 
