@@ -415,7 +415,7 @@ rcd_rpc_prefs_register_methods (void)
 
     rcd_rpc_prefs_register_pref (
         "require-verified-certificates", RCD_PREF_BOOLEAN,
-        "Require server SSL certificates verify against a certificate authority",
+        "Verify server SSL certificates",
         "Server",
         (RCDPrefGetFunc) rcd_prefs_get_require_verified_certificates, "superuser",
         (RCDPrefSetFunc) rcd_prefs_set_require_verified_certificates, "superuser");
@@ -495,7 +495,7 @@ rcd_rpc_prefs_register_methods (void)
     if (rc_packman_get_capabilities (packman) & RC_PACKMAN_CAP_REPACKAGING) {
         rcd_rpc_prefs_register_pref (
             "repackage", RCD_PREF_BOOLEAN,
-            "Repackage installed packages on upgrade or removal for rollback",
+            "Repackage old software on upgrade or removal, allowing undo/rollback",
             "Advanced",
             (RCDPrefGetFunc) rcd_prefs_get_repackage, "view",
             (RCDPrefSetFunc) rcd_prefs_set_repackage, "superuser");
