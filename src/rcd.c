@@ -251,9 +251,6 @@ static void
 shutdown_world (gpointer user_data)
 {
     rc_set_world (NULL);
-
-    /* FIXME: Remove for release */
-    rc_package_spew_leaks ();
 }
 
 static void

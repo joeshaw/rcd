@@ -1,3 +1,8 @@
+2003-10-30  Joe Shaw  <joe@ximian.com>
+
+	* rcd.c (shutdown_world): Remove some debugging spew for the
+	release.
+
 2003-10-29  Joe Shaw  <joe@ximian.com>
 
 	* rcd-options.c (rcd_options_get_config_file): If the config file
