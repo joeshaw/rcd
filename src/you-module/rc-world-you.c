@@ -130,15 +130,21 @@ rc_world_multi_get_patch (RCWorldMulti *world,
 static const char *
 rc_channel_get_patchinfo_file (RCChannel *channel)
 {
+    gchar *sufix;
+    RCDistro *distro;
     static char *info_file = NULL;
 
     g_return_val_if_fail (channel != NULL, NULL);
 
     g_free (info_file);
 
-    /* FIXME: use rc_distro_get_target (); */
-    info_file = rc_maybe_merge_paths (rc_channel_get_path (channel),
-                                      "getPatchList/suse-91-i586");
+    distro = rc_distro_get_current ();
+
+    sufix = rc_maybe_merge_paths ("getPatchList/", rc_distro_get_target (distro));
+    info_file = rc_maybe_merge_paths (rc_channel_get_path (channel), sufix);
+
+    g_free (sufix);
+    rc_distro_free (distro);
 
     return info_file;
 }
@@ -228,9 +234,11 @@ rc_world_add_patches (RCWorld *world, gpointer user_data)
 {
     RCYouPatchSList *patches = NULL;
 
-    if (RC_IS_WORLD_SYSTEM (world))
-        patches = rc_you_wrapper_get_installed_patches ();
-    else if (RC_IS_WORLD_SERVICE (world)) {
+    if (RC_IS_WORLD_SYSTEM (world)) {
+        RCChannel *channel = RC_WORLD_SYSTEM (world)->system_channel;
+
+        patches = rc_you_wrapper_get_installed_patches (channel);
+    } else if (RC_IS_WORLD_SERVICE (world)) {
         FetchPatchesInfo info;
 
         info.world = RC_WORLD_SERVICE (world);

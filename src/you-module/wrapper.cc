@@ -215,7 +215,7 @@ rc_you_wrapper_install_patches (RCYouPatchSList  *list,
 }
 
 RCYouPatchSList *
-rc_you_wrapper_get_installed_patches (void)
+rc_you_wrapper_get_installed_patches (RCChannel *channel)
 {
     RCYouPatchSList *list = NULL;
     PMYouSettingsPtr settings = new PMYouSettings ();
@@ -245,8 +245,13 @@ rc_you_wrapper_get_installed_patches (void)
          it != Y2PM::youPatchManager().end(); it++) {
         RCYouPatch *patch = rc_you_patch_from_selectable (*it);
 
-        if (patch && (*it)->has_installed ())
-            list = g_slist_prepend (list, patch);
+        if (patch) {
+            if ((*it)->has_installed ()) {
+                patch->channel = rc_channel_ref (channel);
+                list = g_slist_prepend (list, patch);
+            } else
+                rc_you_patch_unref (patch);
+        }
     }
 
     list = g_slist_reverse (list);

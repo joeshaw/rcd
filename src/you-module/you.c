@@ -42,6 +42,7 @@
 
 #include "rc-you-patch.h"
 #include "rc-world-you.h"
+#include "rc-you-query.h"
 #include "you-util.h"
 #include "rc-you-transaction.h"
 
@@ -73,90 +74,88 @@ subworld_added_cb (RCWorldMulti *multi,
 /*****************************************************************************/
 
 static xmlrpc_value *
+you_ping (xmlrpc_env   *env,
+          xmlrpc_value *param_array,
+          void         *user_data)
+{
+    return xmlrpc_build_value (env, "i", 1);
+}
+
+static gboolean
+add_patch_cb (RCYouPatch *patch, gpointer user_data)
+{
+    RCYouPatchSList **patches = (RCYouPatchSList **) user_data;
+
+    *patches = g_slist_prepend (*patches, rc_you_patch_ref (patch));
+    return TRUE;
+} /* add_patch_cb */
+
+static xmlrpc_value *
 you_search (xmlrpc_env   *env,
             xmlrpc_value *param_array,
             void         *user_data)
 {
-    RCChannel *channel;
-    RCWorld *world;
-    RCYouPatch *patch;
-    xmlrpc_value *value;
-    xmlrpc_value *param_struct = NULL;
-    gchar *name = NULL;
-    gchar *channel_id = NULL;
+    RCWorld *world = (RCWorld *) user_data;
+    xmlrpc_value *value = NULL;
+    int size = 0;
+    RCDQueryPart *parts = NULL;
+    int i;
+    RCYouPatchSList *rc_you_patches = NULL;
+    xmlrpc_value *xmlrpc_patches = NULL;
 
-    xmlrpc_parse_value (env, param_array, "(S)",
-                        &param_struct);
+    xmlrpc_parse_value (env, param_array, "(V)", &value);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    RCD_XMLRPC_STRUCT_GET_STRING (env, param_struct, "name", name);
+    size = xmlrpc_array_size (env, value);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    world = rc_get_world ();
+    parts = g_new0 (RCDQueryPart, size + 1);
+    for (i = 0; i < size; i++) {
+        xmlrpc_value *v;
 
-    if (xmlrpc_struct_has_key (env, param_struct, "channel")) {
-        RCD_XMLRPC_STRUCT_GET_STRING (env, param_struct, "channel", channel_id);
+        v = xmlrpc_array_get_item (env, value, i);
         XMLRPC_FAIL_IF_FAULT (env);
 
-        channel = rc_world_get_channel_by_id (world, channel_id);
-        if (!channel) {
-            xmlrpc_env_set_fault (env, RCD_RPC_FAULT_INVALID_CHANNEL,
-                                  "Unable to find channel");
+        parts[i] = rcd_xmlrpc_tuple_to_query_part (v, env);
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        if (parts[i].type == RCD_QUERY_INVALID) {
+            xmlrpc_env_set_fault (env, RCD_RPC_FAULT_INVALID_SEARCH_TYPE,
+                                  "Invalid search type");
             goto cleanup;
         }
-    } else
-        channel = RC_CHANNEL_ANY;
+    }
 
-    patch = rc_world_multi_get_patch (RC_WORLD_MULTI (world),
-                                      channel,
-                                      name);
+    parts[i].type = RCD_QUERY_LAST;
+    
+    rc_you_query_patches (world, parts, add_patch_cb, &rc_you_patches);
 
-    if (patch) {
-        value = rc_you_patch_to_xmlrpc (patch, env);
-        XMLRPC_FAIL_IF_FAULT (env);
+    xmlrpc_patches = rc_you_patch_slist_to_xmlrpc_array (rc_you_patches, env);
 
-        return value;
-    } 
+cleanup:
+    if (parts) {
+        for (i = 0; i < size; i++) {
+            g_free (parts[i].key);
+            g_free (parts[i].query_str);
+        }
+        g_free (parts);
+    }
 
-    xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PACKAGE_NOT_FOUND,
-                          "Patch not found");
- cleanup:
-    return NULL;
-}
+    if (rc_you_patches) {
+        rc_you_patch_slist_unref (rc_you_patches);
+        g_slist_free (rc_you_patches);
+    }
 
-static gboolean
-patch_list_cb (RCYouPatch *patch, gpointer user_data)
-{
-    RCYouPatchSList **patches = user_data;
+    if (env->fault_occurred)
+        return NULL;
 
-    *patches = g_slist_prepend (*patches, rc_you_patch_ref (patch));
-    return TRUE;
-}
-
-static xmlrpc_value *
-you_list (xmlrpc_env   *env,
-          xmlrpc_value *param_array,
-          void         *user_data)
-{
-    RCYouPatchSList *patches = NULL;
-    xmlrpc_value *value;
-
-    rc_world_multi_foreach_patch (RC_WORLD_MULTI (rc_get_world ()),
-                                  patch_list_cb,
-                                  &patches);
-
-    value = rc_you_patch_slist_to_xmlrpc_array (patches, env);
-
-    rc_you_patch_slist_unref (patches);
-    g_slist_free (patches);
-
-    return value;
-}
+    return xmlrpc_patches;
+} /* you_search */
 
 static xmlrpc_value *
-you_install (xmlrpc_env   *env,
-             xmlrpc_value *param_array,
-             void         *user_data)
+you_transaction (xmlrpc_env   *env,
+                 xmlrpc_value *param_array,
+                 void         *user_data)
 {
     xmlrpc_value *xmlrpc_install_patches;
     RCDTransactionFlags flags;
@@ -164,7 +163,7 @@ you_install (xmlrpc_env   *env,
     RCYouPatchSList *install_patches = NULL;
     RCDRPCMethodData *method_data;
     RCYouTransaction *transaction;
-    RCPending *download_pending, *transaction_pending;
+    RCPending *download_pending, *transaction_pending, *step_pending;
     xmlrpc_value *result = NULL;
 
     /* Before we begin any transaction, expire the package cache. */
@@ -195,21 +194,115 @@ you_install (xmlrpc_env   *env,
     download_pending = rc_you_transaction_get_download_pending (transaction);
     transaction_pending =
         rc_you_transaction_get_transaction_pending (transaction);
+    step_pending = rc_you_transaction_get_step_pending (transaction);
 
     g_object_unref (transaction);
 
-    result = xmlrpc_build_value (env, "(ii)",
+    result = xmlrpc_build_value (env, "(iii)",
                                  download_pending != NULL ?
                                  rc_pending_get_id (download_pending) : -1,
 
                                  transaction_pending != NULL ?
-                                 rc_pending_get_id (transaction_pending) : -1);
+                                 rc_pending_get_id (transaction_pending) : -1,
+
+                                 step_pending != NULL ?
+                                 rc_pending_get_id (step_pending) : -1);
+
     XMLRPC_FAIL_IF_FAULT (env);
 
 cleanup:
     if (install_patches) {
         rc_you_patch_slist_unref (install_patches);
         g_slist_free (install_patches);
+    }
+
+    return result;
+}
+
+static xmlrpc_value *
+you_license (xmlrpc_env   *env,
+             xmlrpc_value *param_array,
+             void         *user_data)
+{
+    xmlrpc_value *xmlrpc_patches = NULL;
+    RCYouPatchSList *patches = NULL;
+    GSList *licenses = NULL;
+    xmlrpc_value *xmlrpc_licenses = NULL;
+    GSList *iter;
+
+    xmlrpc_parse_value (env, param_array, "(A)", &xmlrpc_patches);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    patches = rc_xmlrpc_array_to_rc_you_patch_slist
+        (xmlrpc_patches, env, RC_YOU_PATCH_FROM_XMLRPC_PATCH);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    licenses = rc_you_patch_slist_lookup_licenses (patches);
+
+    xmlrpc_licenses = xmlrpc_build_value (env, "()");
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    for (iter = licenses; iter; iter = iter->next) {
+        xmlrpc_value *xmlrpc_text;
+
+        xmlrpc_text = xmlrpc_build_value (env, "s", (char *) iter->data);
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        xmlrpc_array_append_item (env, xmlrpc_licenses, xmlrpc_text);
+        XMLRPC_FAIL_IF_FAULT (env);
+        xmlrpc_DECREF (xmlrpc_text);
+    }
+
+ cleanup:
+
+    if (patches) {
+        rc_you_patch_slist_unref (patches);
+        g_slist_free (patches);
+    }
+
+    g_slist_free (licenses);
+
+    if (env->fault_occurred)
+        return NULL;
+
+    return xmlrpc_licenses;
+}
+
+static xmlrpc_value *
+you_info (xmlrpc_env   *env,
+          xmlrpc_value *param_array,
+          void         *user_data)
+{
+    xmlrpc_value *xmlrpc_patch = NULL;
+    RCYouPatch *patch = NULL;
+    xmlrpc_value *result = NULL;
+
+    xmlrpc_parse_value (env, param_array, "(V)", &xmlrpc_patch);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    patch = rc_xmlrpc_to_rc_you_patch (xmlrpc_patch, env,
+                                       RC_YOU_PATCH_FROM_XMLRPC_PATCH);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    g_assert (patch != NULL);
+    
+    result = xmlrpc_struct_new (env);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    RCD_XMLRPC_STRUCT_SET_STRING (env, result, "summary", patch->summary);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    RCD_XMLRPC_STRUCT_SET_STRING (env, result, "description",
+                                  patch->description);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+ cleanup:
+    if (env->fault_occurred) {
+        if (patch)
+            rc_you_patch_unref (patch);
+        if (result)
+            xmlrpc_DECREF (result);
+        return NULL;
     }
 
     return result;
@@ -222,6 +315,8 @@ void rcd_module_load (RCDModule *);
 void
 rcd_module_load (RCDModule *module)
 {
+    RCWorld *world;
+
     module->name = "rcd.you";
     module->description = "Module for Yast Online Update";
     module->version = 0;
@@ -229,17 +324,22 @@ rcd_module_load (RCDModule *module)
     module->interface_minor = 0;
 
     rcd_module = module;
+    world = rc_get_world ();
 
-    g_signal_connect (RC_WORLD_MULTI (rc_get_world ()),
+    g_signal_connect (RC_WORLD_MULTI (world),
                       "subworld_added",
                       G_CALLBACK (subworld_added_cb),
                       NULL);
 
-    rcd_rpc_register_method ("rcd.you.list", you_list,
+    rcd_rpc_register_method ("rcd.you.ping", you_ping,
                              "view", NULL);
     rcd_rpc_register_method ("rcd.you.search", you_search,
-                             "view", NULL);
-    rcd_rpc_register_method ("rcd.you.install", you_install,
+                             "view", world);
+    rcd_rpc_register_method ("rcd.you.transact", you_transaction,
                              "superuser", NULL);
+    rcd_rpc_register_method ("rcd.you.licenses", you_license,
+                             "view", NULL);
+    rcd_rpc_register_method ("rcd.you.patch_info", you_info,
+                             "view", NULL);
 
 } /* rcd_module_load */

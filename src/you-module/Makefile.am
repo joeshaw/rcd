@@ -22,6 +22,8 @@ librcd_you_la_SOURCES =	\
 	rc-you-patch.h		\
 	rc-world-you.c		\
 	rc-world-you.h		\
+	rc-you-query.c		\
+	rc-you-query.h		\
 	rc-you-transaction.c	\
 	rc-you-transaction.h	\
 	you-util.c		\

@@ -52,6 +52,7 @@ struct _RCYouTransaction {
 
     RCPending *download_pending;
     RCPending *transaction_pending;
+    RCPending *transaction_step_pending;
 
     gsize total_download_size;
     gsize current_download_size;
@@ -110,6 +111,8 @@ void rc_you_transaction_set_id          (RCYouTransaction *transaction,
 
 RCPending *rc_you_transaction_get_download_pending    (RCYouTransaction *transaction);
 RCPending *rc_you_transaction_get_transaction_pending (RCYouTransaction *transaction);
+RCPending *rc_you_transaction_get_step_pending        (RCYouTransaction *transaction);
+
 
 /*
  * Begins the transaction.  Causes it to ref itself, so it is safe to unref

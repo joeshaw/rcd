@@ -1,3 +1,40 @@
+2004-06-11  Tambet Ingo  <tambet@ximian.com>
+
+	* rc-you-query.[ch]: New files. Implement patch querying,
+	similary to package querying.
+
+	* you.c (you_ping): Implement. The gui uses it to figure out
+	whether to add patch support.
+	(add_patch_cb): Implement.
+	(you_search): Rewrite, using RCDQuery.
+	(you_list): Remove, you_search does that too.
+	(you_transaction): Return pending step too.
+	(you_license): Implement.
+	(you_info): Implement.
+	(rcd_module_load): Rename rcd.you.install to rcd.you.transact.
+
+	* you-util.c (rc_you_patch_to_xmlrpc): Don't send license,
+	summary and description fields. Usually noone cares about
+	those, and if someone cares, there's new methods
+	rcd.you.patch_info and rcd.you.licenses for that.
+
+	* wrapper.cc (rc_you_wrapper_get_installed_patches): Assign
+	system channel to installed patches.
+
+	* rc-you-transaction.c (rc_you_transaction_get_step_pending):
+	Implement.
+	(rc_you_transaction_finalize): Free pending step as well.
+	(rc_you_transaction_transaction): Use transaction pending step,
+	so in future it could be hooked up to get transaction updates.
+
+	* rc-you-patch.c (rc_you_patch_slist_lookup_licenses): Implement.
+
+	* rc-world-you.c (rc_channel_get_patchinfo_file): Remove hardcoded
+	distro target.
+	(rc_world_add_patches): Pass system channel to wrapper.
+
+	* Makefile.am (rcd_moduledir): Build rc-you-query.[ch]
+
 2004-06-10  Tambet Ingo  <tambet@ximian.com>
 
 	* rc-you-transaction.c (rc_you_transaction_transaction):

@@ -76,6 +76,7 @@ void             rc_you_patch_unref       (RCYouPatch *patch);
 RCYouPatchSList *rc_you_patch_slist_ref   (RCYouPatchSList *list);
 void             rc_you_patch_slist_unref (RCYouPatchSList *list);
 
+GSList          *rc_you_patch_slist_lookup_licenses (RCYouPatchSList *list);
          
 #ifdef __cplusplus
 }

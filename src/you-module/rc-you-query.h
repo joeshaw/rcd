@@ -1,7 +1,7 @@
 /* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 
 /*
- * wrapper.h
+ * rc-you-query.h
  *
  * Copyright (C) 2004 Novell, Inc.
  *
@@ -23,22 +23,16 @@
  * USA.
  */
 
-#ifndef _RC_YOU_WRAPPER_H
-#define _RC_YOU_WRAPPER_H
+#ifndef __RC_YOU_QUERY_H__
+#define __RC_YOU_QUERY_H__
 
-#include <glib.h>
-#include "rc-you-patch.h"
+#include <libredcarpet.h>
+#include "rcd-query.h"
+#include "rc-world-you.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
+gint rc_you_query_patches (RCWorld      *world,
+                           RCDQueryPart *query_parts,
+                           RCPatchFn     matching_patch_cb,
+                           gpointer      user_data);
 
-RCYouPatchSList *rc_you_wrapper_get_installed_patches (RCChannel *channel);
-void rc_you_wrapper_install_patches (RCYouPatchSList  *list,
-                                     GError          **error);
-
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
-
-#endif /* _RC_YOU_WRAPPER_H */
+#endif /* __RC_YOU_QUERY_H__ */

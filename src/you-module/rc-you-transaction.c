@@ -94,7 +94,8 @@ rc_you_transaction_finalize (GObject *obj)
 
     g_object_unref (transaction->download_pending);
     g_object_unref (transaction->transaction_pending);
-    
+    g_object_unref (transaction->transaction_step_pending);
+
     g_free (transaction->client_id);
     g_free (transaction->client_version);
     g_free (transaction->client_host);
@@ -195,6 +196,9 @@ rc_you_transaction_init (RCYouTransaction *transaction)
 
     transaction->transaction_pending =
         rc_pending_new ("Patch transaction");
+
+    transaction->transaction_step_pending =
+        rc_pending_new ("Patch transaction step");
 }
 
 GType
@@ -345,6 +349,18 @@ rc_you_transaction_get_transaction_pending (RCYouTransaction *transaction)
     return transaction->transaction_pending;
 }
 
+RCPending *
+rc_you_transaction_get_step_pending (RCYouTransaction *transaction)
+{
+    g_return_val_if_fail (RC_IS_YOU_TRANSACTION (transaction), NULL);
+
+    /* There isn't a step component if we're only downloading */
+    if (transaction->flags & RCD_TRANSACTION_FLAGS_DOWNLOAD_ONLY)
+        return NULL;
+
+    return transaction->transaction_step_pending;
+}
+
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 static void
@@ -423,6 +439,7 @@ rc_you_transaction_transaction (RCYouTransaction *transaction)
     GError *error = NULL;
 
     rc_pending_begin (transaction->transaction_pending);
+    rc_pending_begin (transaction->transaction_step_pending);
 
     create_you_directory_structure (transaction->patches, &error);
     if (error)
@@ -435,6 +452,7 @@ rc_you_transaction_transaction (RCYouTransaction *transaction)
 
     refresh_installed_patches ();
 
+    rc_pending_finished (transaction->transaction_step_pending, 0);
     rc_pending_finished (transaction->transaction_pending, 0);
     rc_you_transaction_finished (transaction, NULL);
 

@@ -99,3 +99,19 @@ rc_you_patch_slist_unref (RCYouPatchSList *list)
     for (iter = list; iter; iter = iter->next)
         rc_you_patch_unref ((RCYouPatch *) iter->data);
 }
+
+GSList *
+rc_you_patch_slist_lookup_licenses (RCYouPatchSList *list)
+{
+    RCYouPatchSList *iter;
+    GSList *licenses = NULL;
+
+    for (iter = list; iter; iter = iter->next) {
+        RCYouPatch *patch = iter->data;
+
+        if (patch->license)
+            licenses = g_slist_prepend (licenses, patch->license);
+    }
+
+    return licenses;
+}

@@ -55,18 +55,6 @@ rc_you_patch_to_xmlrpc (RCYouPatch *patch, xmlrpc_env *env)
                                       rc_package_importance_to_string (patch->importance));
     }
 
-    RCD_XMLRPC_STRUCT_SET_STRING (env, value, "summary", patch->summary);
-    XMLRPC_FAIL_IF_FAULT (env);
-
-    if (patch->license) {
-        RCD_XMLRPC_STRUCT_SET_STRING (env, value,
-                                      "license", patch->license);
-        XMLRPC_FAIL_IF_FAULT (env);
-    }
-
-    RCD_XMLRPC_STRUCT_SET_STRING (env, value, "description", patch->description);
-    XMLRPC_FAIL_IF_FAULT (env);
-
     RCD_XMLRPC_STRUCT_SET_INT (env, value, "installed", patch->installed);
     XMLRPC_FAIL_IF_FAULT (env);
 
