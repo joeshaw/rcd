@@ -1,4 +1,10 @@
-2003-02-25  Joe Shaw  <joe@ximian.com>
+2003-02-28  Aaron Weber <aaron@ximian.com>
+
+	* rcd.8: Add --no-network, -i, --no-modules, -f, -p, and fix
+	--non-daemon (was --nodaemon) and syslog (expand description of
+	verbose levels)
+
+2003-01-31  Joe Shaw  <joe@ximian.com>
 
 	* configure.in: 1.2.1
 
@@ -16,7 +22,7 @@
 
 2003-01-27  Aaron Weber <aaron@ximian.com>
 
-	* rcd.conf.8: Fix proxy-user entry (from proxy-username) as per
+	* rcd.conf.5: Fix proxy-user entry (from proxy-username) as per
 	bug 36821 and also the bind-ip.
 
 2003-01-10  Joe Shaw  <joe@ximian.com>
