@@ -1196,8 +1196,8 @@ manifest_xml_node(xmlrpc_env *env,
     xmanifest = xmlrpc_struct_new (env);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    RCD_XMLRPC_STRUCT_SET_STRING(
-        env, xmanifest, "cid",
+    RCD_XMLRPC_STRUCT_SET_STRING (
+        env, xmanifest, "bid",
         new_pkg->channel ? rc_channel_get_id (new_pkg->channel) : "");
     XMLRPC_FAIL_IF_FAULT (env);
 
@@ -1233,6 +1233,7 @@ manifest_xml_node(xmlrpc_env *env,
         new_pkg->spec.release);
     XMLRPC_FAIL_IF_FAULT (env);
 
+#if 0
     update = rc_package_get_latest_update (new_pkg);
     if (update) {
         RCD_XMLRPC_STRUCT_SET_INT(
@@ -1259,6 +1260,7 @@ manifest_xml_node(xmlrpc_env *env,
             XMLRPC_FAIL_IF_FAULT (env);
         }
     }
+#endif
 
     if (old_pkg) {
         xpkg = xmlrpc_struct_new (env);
@@ -1304,38 +1306,41 @@ transaction_xml (xmlrpc_env     *env,
     xmlrpc_value *xmanifests;
     RCPackageSList *iter;
 
+    /* Common part for all logs */
     xtrans = xmlrpc_struct_new (env);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    if (transaction->name) {
-        RCD_XMLRPC_STRUCT_SET_STRING(
-            env, xtrans, "name",
-            transaction->name);
-        XMLRPC_FAIL_IF_FAULT (env);
-    }
-
     if (transaction->id) {
-        RCD_XMLRPC_STRUCT_SET_STRING(
-            env, xtrans, "trid",
-            transaction->id);
+        RCD_XMLRPC_STRUCT_SET_STRING (env, xtrans, "trid", transaction->id);
         XMLRPC_FAIL_IF_FAULT (env);
     }
 
-    RCD_XMLRPC_STRUCT_SET_STRING(
-            env, xtrans, "client_id",
-            transaction->client_id);
+    RCD_XMLRPC_STRUCT_SET_DOUBLE (env, xtrans, "endtime", time (NULL));
     XMLRPC_FAIL_IF_FAULT (env);
 
-    RCD_XMLRPC_STRUCT_SET_STRING(
-            env, xtrans, "client_version",
-            transaction->client_version);
+    RCD_XMLRPC_STRUCT_SET_STRING (env, xtrans, "client",
+                                  transaction->client_id);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    RCD_XMLRPC_STRUCT_SET_STRING(
-            env, xtrans, "mid",
-            rcd_prefs_get_mid());
+    RCD_XMLRPC_STRUCT_SET_STRING (env, xtrans, "version",
+                                  transaction->client_version);
     XMLRPC_FAIL_IF_FAULT (env);
 
+    RCD_XMLRPC_STRUCT_SET_INT (env, xtrans, "status",
+                               successful ? 1 : 0);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    if (message) {
+        RCD_XMLRPC_STRUCT_SET_STRING (env, xtrans, "message", message);
+        XMLRPC_FAIL_IF_FAULT (env);
+    }
+
+    /* Transaction part */
+
+    RCD_XMLRPC_STRUCT_SET_STRING (env, xtrans, "log_type", "package");
+    XMLRPC_FAIL_IF_FAULT (env);
+
+#if 0
     RCD_XMLRPC_STRUCT_SET_INT(
             env, xtrans, "dry_run",
             transaction->flags & RCD_TRANSACTION_FLAGS_DRY_RUN ? 1 : 0);
@@ -1345,33 +1350,11 @@ transaction_xml (xmlrpc_env     *env,
             env, xtrans, "pre_position",
             transaction->flags & RCD_TRANSACTION_FLAGS_DOWNLOAD_ONLY ? 1 : 0);
     XMLRPC_FAIL_IF_FAULT (env);
-
-    RCD_XMLRPC_STRUCT_SET_DOUBLE(
-            env, xtrans, "start_time",
-            transaction->start_time);
-    XMLRPC_FAIL_IF_FAULT (env);
-
-    RCD_XMLRPC_STRUCT_SET_DOUBLE(
-            env, xtrans, "end_time",
-            time (NULL));
-    XMLRPC_FAIL_IF_FAULT (env);
-
-    RCD_XMLRPC_STRUCT_SET_INT(
-            env, xtrans, "successful",
-            successful ? 1 : 0);
-    XMLRPC_FAIL_IF_FAULT (env);
-
-    if (message) {
-        RCD_XMLRPC_STRUCT_SET_STRING(
-            env, xtrans, "message",
-            message);
-        XMLRPC_FAIL_IF_FAULT (env);
-    }
+#endif
 
     xmanifests = xmlrpc_build_value (env, "()");
     XMLRPC_FAIL_IF_FAULT (env);
-    xmlrpc_struct_set_value (env, xtrans,
-                             "manifests", xmanifests);
+    xmlrpc_struct_set_value (env, xtrans, "packages", xmanifests);
     XMLRPC_FAIL_IF_FAULT (env);
     xmlrpc_DECREF (xmanifests);
 
@@ -1443,7 +1426,7 @@ rcd_transaction_send_log (RCDTransaction *transaction,
     params = xmlrpc_build_value (&env, "(V)", transaction_log);
     XMLRPC_FAIL_IF_FAULT (&env);
 
-    rcd_xmlrpc_client_foreach_host (TRUE, "rcserver.transaction.new",
+    rcd_xmlrpc_client_foreach_host (TRUE, "rcserver.transaction.log",
                                     log_sent_cb, NULL,
                                     params);
     xmlrpc_DECREF (params);
