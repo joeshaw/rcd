@@ -667,10 +667,12 @@ channel_data_file_done_cb (RCDTransfer *t, gpointer user_data)
 {
     PerChannelData *data = user_data;
 
-    rcd_world_remote_parse_channel_data (data->remote,
-                                         data->channel,
-                                         t->data->data,
-                                         t->data->len);
+    if (!rcd_transfer_get_error (t)) {
+        rcd_world_remote_parse_channel_data (data->remote,
+                                             data->channel,
+                                             t->data->data,
+                                             t->data->len);
+    }
 
     g_object_unref (data->remote);
     rc_channel_unref (data->channel);
