@@ -1,5 +1,14 @@
 2002-07-08  Joe Shaw  <joe@ximian.com>
 
+	* rcd-rpc-system.c (system_ping): Send distribution information
+	over the wire.
+
+	* rcd-unix-server.c (read_cred): Add some debugging output in the
+	(supposedly impossible) case where getsockopt() returns a valid
+	value, but the credentials passed through aren't there.
+
+2002-07-08  Joe Shaw  <joe@ximian.com>
+
 	* rcd-fetch.c (rcd_fetch_channel, download_package_file): Use
 	rc_maybe_merge_paths() to build the correct paths for downloading
 	channel data and packages not on the host server.

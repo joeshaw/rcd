@@ -62,21 +62,20 @@ read_cred (GIOChannel *channel, RCDUnixServerHandle *handle)
         rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Couldn't get credentials");
     }
     else {
+        if (!size) {
+            rc_debug (RC_DEBUG_LEVEL_MESSAGE, "@@@@@@@@@ getsockopt() returned okay, but size is 0.  errno: %d (%s)", errno, strerror(errno));
+            handle->cred_available = FALSE;
+            return;
+        }
+
         handle->cred_available = TRUE;
         handle->pid = cred.pid;
         handle->uid = cred.uid;
         handle->gid = cred.gid;
 
-#if 0
         rc_debug (RC_DEBUG_LEVEL_MESSAGE,
                   "size: %d  PID: %d  UID: %d  GID: %d", size,
                   cred.pid, cred.uid, cred.gid);
-#else
-        rc_debug (RC_DEBUG_LEVEL_MESSAGE, "size: %d", size);
-        rc_debug (RC_DEBUG_LEVEL_MESSAGE, "PID: %d", cred.pid);
-        rc_debug (RC_DEBUG_LEVEL_MESSAGE, "UID: %d", cred.uid);
-        rc_debug (RC_DEBUG_LEVEL_MESSAGE, "GID: %d", cred.gid);
-#endif
     }
 } /* read_cred */
 
