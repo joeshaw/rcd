@@ -1,3 +1,8 @@
+2003-09-12  Tambet Ingo  <tambet@ximian.com>
+
+	* rcd-rpc.[ch] (rcd_rpc_get_xmlrpc_registry): Remove. There's no
+	reason to export this anymore.
+
 2003-09-11  Joe Shaw  <joe@ximian.com>
 
 	* rcd-xmlrpc.c (soup_request_done): Don't check for a fault

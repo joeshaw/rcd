@@ -348,12 +348,6 @@ rcd_rpc_get_method_data (void)
     return current_method_data;
 } /* rcd_rpc_get_method_data */
 
-xmlrpc_registry *
-rcd_rpc_get_xmlrpc_registry (void)
-{
-    return registry;
-}
-
 int
 rcd_rpc_register_method(const char   *method_name,
                         xmlrpc_method method,

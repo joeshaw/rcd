@@ -39,8 +39,6 @@ typedef struct {
 
 RCDRPCMethodData *rcd_rpc_get_method_data (void);
 
-xmlrpc_registry *rcd_rpc_get_xmlrpc_registry (void);
-
 int rcd_rpc_register_method (const char        *method_name,
                              xmlrpc_method      method,
                              const char        *privilege_string,
