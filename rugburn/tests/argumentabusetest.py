@@ -76,6 +76,35 @@ class ArgumentAbuseTest(burntest.BurnTest):
             args = args + (x * 3.14159,)
             self.call_method(server, method, args)
 
+        args = ()
+        for x in range(1,5):
+            args = args + ([],)
+            self.call_method(server, method, args)
+
+        args = ()
+        for x in range(1,5):
+            list = []
+            args = args + (list,)
+            for y in range(1,5):
+                list.append(y)
+                self.call_method(server, method, args)
+
+        args = ()
+        for x in range(1,5):
+            list = []
+            args = args + (list,)
+            for y in range(1,5):
+                list.append(str(y))
+                self.call_method(server, method, args)
+
+        args = ()
+        for x in range(1,5):
+            list = []
+            args = args + (list,)
+            for y in range(1,5):
+                list.append(y * 3.14159)
+                self.call_method(server, method, args)
+
     def test(self, server):
 
         # System methods
@@ -119,7 +148,7 @@ class ArgumentAbuseTest(burntest.BurnTest):
                   "get_channel_icon",
                   "subscribe",
                   "unsubscribe",
-                  "world_sequence_number"):
+                  "world_sequence_numbers"):
             self.abuse(server, "server.rcd.packsys." + x)
 
 

@@ -88,8 +88,10 @@ for test in burntest.get_all():
     name = test.name()
     errors = test.run_test(sys.stdout, server)
 
-    # FIXME: We should try to ping the server after every test
-    # to make sure that it hasn't crashed or gotten wedged.
+    # Ping the server after every test to ensure that it hasn't crashed
+    # or gotten wedged.
+
+    ping = server.rcd.system.ping()
 
     if test.short_circuit:
         print "Short-circuiting!"

@@ -1,5 +1,12 @@
 2002-09-23  Joe Shaw  <joe@ximian.com>
 
+	* rugburn/rugburn: Ping the server after every test to make sure
+	it hasn't crashed or gotten wedged.
+
+	* rugburn/tests/argumentabusetest.py: Heavily increase the abuse.
+
+2002-09-23  Joe Shaw  <joe@ximian.com>
+
 	* configure.in: 0.9.1
 
 2002-09-18  Joe Shaw  <joe@ximian.com>
