@@ -2288,6 +2288,8 @@ packsys_mount_directory(xmlrpc_env   *env,
 
     xmlrpc_parse_value (env, param_array, "(sssi)",
                         &path, &name, &alias, &recursive);
+    if (env->fault_occurred)
+        return NULL;
 
     url = g_strdup_printf ("%s%s?name=%s;alias=%s;recursive=%d",
                            path[0] == '/' ? "file://" : "",

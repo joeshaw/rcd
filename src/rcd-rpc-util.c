@@ -818,9 +818,11 @@ rcd_rc_channel_to_xmlrpc (RCChannel  *channel,
     value = xmlrpc_struct_new (env);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    RCD_XMLRPC_STRUCT_SET_STRING (env, value, "id", rc_channel_get_id (channel));
+    RCD_XMLRPC_STRUCT_SET_STRING (env, value, "id",
+                                  rc_channel_get_id (channel));
     
-    RCD_XMLRPC_STRUCT_SET_STRING (env, value, "name", rc_channel_get_name (channel));
+    RCD_XMLRPC_STRUCT_SET_STRING (env, value, "name",
+                                  rc_channel_get_name (channel));
 
     alias = rc_channel_get_alias (channel);
     RCD_XMLRPC_STRUCT_SET_STRING (env, value, "alias", alias ? alias : "");
@@ -835,10 +837,19 @@ rcd_rc_channel_to_xmlrpc (RCChannel  *channel,
                                rc_channel_is_hidden (channel) ? 1 : 0);
 
     world = rc_channel_get_world (channel);
-    if (world && g_type_is_a (G_TYPE_FROM_INSTANCE (world),
-                              RC_TYPE_WORLD_SERVICE)) {
-        RCD_XMLRPC_STRUCT_SET_STRING (env, value, "service",
-                                      RC_WORLD_SERVICE (world)->unique_id);
+    
+    if (world) {
+        GType world_type = G_TYPE_FROM_INSTANCE (world);
+
+        if (g_type_is_a (world_type, RC_TYPE_WORLD_SERVICE)) {
+            RCD_XMLRPC_STRUCT_SET_STRING (env, value, "service",
+                                          RC_WORLD_SERVICE (world)->unique_id);
+        }
+
+        RCD_XMLRPC_STRUCT_SET_INT (env, value, "mounted",
+                                   g_type_is_a (world_type,
+                                                RC_TYPE_WORLD_LOCAL_DIR)
+                                   ? 1 : 0);
     }
 
     if (env->fault_occurred) {

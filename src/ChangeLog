@@ -1,5 +1,13 @@
 2003-09-18  Joe Shaw  <joe@ximian.com>
 
+	* rcd-rpc-packsys.c (packsys_mount_directory): Check for faults
+	after parsing arguments, otherwise we assert later.
+
+	* rcd-rpc-util.c (rcd_rc_channel_to_xmlrpc): If the channel is in
+	a locally mounted directory, set the mounted bit.
+
+2003-09-18  Joe Shaw  <joe@ximian.com>
+
 	* rcd-rpc-util.c (rcd_rc_channel_to_xmlrpc): Include the service
 	id in the channel structure if there is one.
 
