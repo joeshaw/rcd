@@ -1,3 +1,16 @@
+2002-07-30  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd.c (initialize_rc_world): Added a shutdown handler that frees
+	the world.  This keeps all of the world memory from showing up as
+	reachable when we are using valgrind.
+
+	* rcd-rpc-packsys.c (packsys_dump): Assemble extra information
+	about the system (rcd version, time of day, hostname, etc.) and
+	stick in into our world dump.
+	(append_dep_info): Tiny simplication: error info items are always
+	automatically flagged as important.  Also show which items are
+	errors or important when RCD_DEBUG_DEPS is set.
+
 2002-07-30  Joe Shaw  <joe@ximian.com>
 
 	* Makefile.am: Add rcd-transact-log.[ch]

@@ -205,6 +205,13 @@ initialize_logging (void)
 } /* initialize_logging */
 
 static void
+shutdown_world (gpointer user_data)
+{
+    RCWorld *world = user_data;
+    rc_world_free (world);
+}
+
+static void
 initialize_rc_world (void)
 {
     RCPackman *packman;
@@ -228,6 +235,8 @@ initialize_rc_world (void)
 
     world = rc_get_world ();
     rc_world_register_packman (world, packman);
+    
+    rcd_shutdown_add_handler (shutdown_world, world);
 
     if (dump_file != NULL) {
         char *dump_file_contents;

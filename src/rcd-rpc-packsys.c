@@ -28,6 +28,7 @@
 
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/utsname.h>
 
 #include <xmlrpc.h>
 
@@ -1400,12 +1401,13 @@ append_dep_info (RCResolverInfo *info, gpointer user_data)
     if (getenv ("RCD_DEBUG_DEPS"))
         debug = TRUE;
 
-    if (debug ||
-        rc_resolver_info_is_error (info) ||
-        rc_resolver_info_is_important (info)) {
+    if (debug || rc_resolver_info_is_important (info)) {
         char *msg = rc_resolver_info_to_str (info);
 
-        new_info = g_strconcat (*dep_failure_info, "\n", msg, NULL);
+        new_info = g_strconcat (*dep_failure_info, "\n",
+                                (debug && rc_resolver_info_is_error (info)) ? "ERR " : "",
+                                (debug && rc_resolver_info_is_important (info)) ? "IMP " : "",
+                                msg, NULL);
 
         g_free (*dep_failure_info);
         *dep_failure_info = new_info;
@@ -1962,6 +1964,56 @@ packsys_what_conflicts (xmlrpc_env   *env,
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
+static xmlNode *
+extra_dump_info (void)
+{
+    xmlNode *info;
+    time_t now;
+    char *tmp_str;
+    struct utsname uname_buf;
+    RCDistroType *distro;
+    xmlNode *distro_node;
+
+    info = xmlNewNode (NULL, "general_information");
+
+    xmlNewTextChild (info, NULL, "rcd_version", VERSION);
+
+    distro = rc_figure_distro ();
+    if (distro) {
+        distro_node = xmlNewNode (NULL, "distro");
+        xmlAddChild (info, distro_node);
+        if (distro->unique_name)
+            xmlNewTextChild (distro_node, NULL, "unique_name", distro->unique_name);
+        if (distro->pretend_name)
+            xmlNewTextChild (distro_node, NULL, "pretend_name", distro->pretend_name);
+        if (distro->full_name)
+            xmlNewTextChild (distro_node, NULL, "full_name", distro->full_name);
+        if (distro->ver_string)
+            xmlNewTextChild (distro_node, NULL, "version", distro->ver_string);
+    }
+
+    time (&now);
+    xmlNewTextChild (info, NULL, "time", ctime (&now));
+
+    tmp_str = getenv ("LOGNAME");
+    if (tmp_str)
+        xmlNewTextChild (info, NULL, "logname", tmp_str);
+
+    if (uname (&uname_buf) == 0) {
+        xmlNewTextChild (info, NULL, "nodename", uname_buf.nodename);
+        xmlNewTextChild (info, NULL, "sysname", uname_buf.sysname);
+        xmlNewTextChild (info, NULL, "release", uname_buf.release);
+        xmlNewTextChild (info, NULL, "version", uname_buf.version);
+        xmlNewTextChild (info, NULL, "machine", uname_buf.machine);
+#ifdef GNU_SOURCE
+        xmlNewTextChild (info, NULL, "domainname", uname_buf.domainname);
+#endif
+    }
+
+    return info;
+
+}
+
 static xmlrpc_value *
 packsys_dump(xmlrpc_env   *env,
              xmlrpc_value *param_array,
@@ -1972,7 +2024,7 @@ packsys_dump(xmlrpc_env   *env,
     GByteArray *ba;
     xmlrpc_value *value = NULL;
 
-    xml = rc_world_dump (world);
+    xml = rc_world_dump (world, extra_dump_info ());
     rc_compress_memory (xml, strlen (xml), &ba);
     g_free (xml);
 
@@ -1981,6 +2033,8 @@ packsys_dump(xmlrpc_env   *env,
 
     return value;
 } /* packsys_dump */
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 void
 rcd_rpc_packsys_register_methods(RCWorld *world)
