@@ -134,6 +134,7 @@ map_soup_error_to_rcd_transfer_error (SoupMessage *message, RCDTransfer *t)
 {
     const char *soup_err;
     const char *url = NULL;
+    const char *display_url = NULL;
     char *err;
 
     soup_err = soup_error_get_phrase (message->errorcode);
@@ -143,33 +144,29 @@ map_soup_error_to_rcd_transfer_error (SoupMessage *message, RCDTransfer *t)
         rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_CANCELLED, NULL);
         break;
     case SOUP_ERROR_CANT_CONNECT:
-        url = t->url;
+        url = display_url = t->url;
     case SOUP_ERROR_CANT_CONNECT_PROXY:
-        if (!url)
+        if (!url) {
             url = rcd_prefs_get_proxy ();
+            /* We can't use 'url' because it may contain users's password */
+            display_url = rcd_prefs_get_proxy_url ();
+        }
 
-        /* 
-         * We can't use 'url' above because it may contain the user's
-         * password.
-         */
-        err = g_strdup_printf ("%s (%s)", soup_err,
-                               rcd_prefs_get_proxy_url ());
+        err = g_strdup_printf ("%s (%s)", soup_err, display_url);
         rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_CANT_CONNECT, err);
         g_free (err);
         break;
 
     case SOUP_ERROR_CANT_AUTHENTICATE:
-        url = t->url;
+        url = display_url = t->url;
     case SOUP_ERROR_CANT_AUTHENTICATE_PROXY:
-        if (!url)
+        if (!url) {
             url = rcd_prefs_get_proxy ();
+            /* We can't use 'url' because it may contain users's password */
+            display_url = rcd_prefs_get_proxy_url ();
+        }
 
-        /* 
-         * We can't use 'url' above because it may contain the user's
-         * password.
-         */
-        err = g_strdup_printf ("%s (%s)", soup_err,
-                               rcd_prefs_get_proxy_url ());
+        err = g_strdup_printf ("%s (%s)", soup_err, display_url);
         rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_CANT_AUTHENTICATE, err);
         g_free (err);
         break;
