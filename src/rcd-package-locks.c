@@ -57,13 +57,12 @@ rcd_package_locks_load (RCWorld *world)
     rc_debug (RC_DEBUG_LEVEL_WARNING,
 	      "'" PACKAGE_LOCK_FILE "' doesn't look like it "
 	      "actually contains lock XML.");
-    return;
-  }
-
-  for (iter = root->xmlChildrenNode; iter != NULL; iter = iter->next) {
-    RCPackageMatch *match = rc_package_match_from_xml_node (iter);
-    if (match)
-      rc_world_add_lock (world, match);
+  } else {
+	  for (iter = root->xmlChildrenNode; iter != NULL; iter = iter->next) {
+		  RCPackageMatch *match = rc_package_match_from_xml_node (iter);
+		  if (match)
+			  rc_world_add_lock (world, match);
+	  }
   }
 
   xmlFreeDoc (doc);

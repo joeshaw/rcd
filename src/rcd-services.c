@@ -137,6 +137,8 @@ rcd_services_load (RCWorldMulti *multi)
 
         g_free (url);
     }
+
+    xmlFreeDoc (doc);
 }
 
 static gboolean

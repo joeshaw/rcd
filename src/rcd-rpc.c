@@ -556,6 +556,8 @@ rcd_rpc_init(void)
         exit (-1);
     }
 
+    rcd_shutdown_add_handler ((RCDShutdownFn) xmlrpc_registry_free, registry);
+
     /* The xmlrpc-c limit for XML size is 512k.  Bump it up to 10 megs */
     xmlrpc_limit_set (XMLRPC_XML_SIZE_LIMIT_ID, 10*1024*1024);
 
