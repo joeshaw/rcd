@@ -417,17 +417,14 @@ static void
 crash_handler (int sig_num)
 {
     char cmd[128];
-    struct stat buf;
 
     write (2, "Crash!\n", 7);
     
     /* FIXME: Just to be sure, we should drop privileges before doing
        this. */
-    if (stat (SHAREDIR "/rcd-buddy", &buf) == 0) {
-        sprintf (cmd, SHAREDIR "/rcd-buddy %d", getpid ());
-        system (cmd);
-    }
-
+    sprintf (cmd, "python " SHAREDIR "/rcd-buddy %d", getpid ());
+    system (cmd);
+    
     exit (1);
 }
 
@@ -464,7 +461,8 @@ main (int argc, const char **argv)
     
     /* If it looks like rcd-buddy is in the right place, set up
        handlers for crashes */
-    if (g_file_test (SHAREDIR "/rcd-buddy", G_FILE_TEST_EXISTS)) {
+    if (g_file_test (SHAREDIR "/rcd-buddy", G_FILE_TEST_EXISTS)
+        && g_find_program_in_path ("python")) {
         sig_action.sa_handler = crash_handler;
         sigaction (SIGSEGV, &sig_action, NULL);
         sigaction (SIGFPE,  &sig_action, NULL);
