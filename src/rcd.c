@@ -430,15 +430,6 @@ initialize_data (void)
     if (dump_file != NULL)
         return;
 
-    supported_distro = is_supported_distro ();
-
-    if (supported_distro) {
-        if (!rcd_fetch_channel_list_local ())
-            rcd_fetch_channel_list ();
-    }
-    
-    rcd_subscriptions_load ();
-    
     if (!g_file_test (SYSCONFDIR "/mcookie", G_FILE_TEST_EXISTS))
         rcd_create_uuid (SYSCONFDIR "/mcookie");
 
@@ -455,6 +446,15 @@ initialize_data (void)
         rcd_prefs_get_org_id ())
         rcd_fetch_register ();
 
+    supported_distro = is_supported_distro ();
+
+    if (supported_distro) {
+        if (!rcd_fetch_channel_list_local ())
+            rcd_fetch_channel_list ();
+    }
+    
+    rcd_subscriptions_load ();
+    
     if (supported_distro) {
         /* This will fall back and download from the net if necessary */
         rcd_fetch_all_channels_local ();
