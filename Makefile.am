@@ -16,8 +16,8 @@ pkgconfig_DATA = rcd.pc
 man_MANS = rcd.8 rcd.conf.5
 
 EXTRA_DIST = rcd.passwd rcd.init.redhat rcd.init.suse rcd.init.debian    \
-             rcd.console.in rcd.pam.rh7 rcd.pam.rh8 rcd.logrotate        \
-             rcd.pc.in $(cert_DATA) $(gpg_DATA) $(man_MANS)
+             rcd.console.in rcd.pam.rh7 rcd.pam.rh8 rcd-wrapper          \
+             rcd.logrotate rcd.pc.in $(cert_DATA) $(gpg_DATA) $(man_MANS)
 
 if INIT_REDHAT
 init_file = rcd.init.redhat
@@ -91,7 +91,16 @@ if USERMODE
 	fi
 
 	$(INSTALL_DATA) $(srcdir)/$(console_file) $(DESTDIR)$(consoledir)/rcd-wrapper
-	ln -sf /usr/bin/consolehelper $(DESTDIR)$(sbindir)/rcd-wrapper
+
+	if test '!' -d $(DESTDIR)$(bindir); then \
+		$(mkinstalldirs) $(DESTDIR)$(bindir); \
+		chmod 0755 $(DESTDIR)$(bindir); \
+	fi
+
+	ln -sf /usr/bin/consolehelper $(DESTDIR)$(bindir)/rcd-wrapper
+
+	$(INSTALL_DATA) $(srcdir)/rcd-wrapper $(DESTDIR)$(sbindir)/rcd-wrapper
+	chmod 0755 $(DESTDIR)$(sbindir)/rcd-wrapper
 endif
 
 uninstall-hook:
@@ -102,5 +111,6 @@ uninstall-hook:
 if USERMODE
 	rm -f $(DESTDIR)$(pamdir)/rcd-wrapper
 	rm -f $(DESTDIR)$(consoledir)/rcd-wrapper
+	rm -f $(DESTDIR)$(bindir)/rcd-wrapper
 	rm -f $(DESTDIR)$(sbindir)/rcd-wrapper
 endif

@@ -1,5 +1,16 @@
 2003-02-13  Joe Shaw  <joe@ximian.com>
 
+	* rcd-wrapper: Added; this is a shell script which wraps
+	"/sbin/service rcd start".
+
+	* Makefile.am: Add rcd-wrapper to EXTRA_DIST.  Create the
+	consolhelper symlink in $prefix/bin and install the wrapper script
+	into $prefix/sbin.
+
+	* configure.in: Fix an errant 'd'
+
+2003-02-13  Joe Shaw  <joe@ximian.com>
+
 	This commit adds support for consolehelper, so we can start rcd as
 	a regular user (with sufficient privileges).
 
