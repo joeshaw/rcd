@@ -1387,11 +1387,12 @@ resolve_deps (xmlrpc_env         *env,
             RCPackage *package, *installed_package;
 
             package = iter->data;
-            if (! rc_package_is_installed (package)) {
+            if (package != NULL
+                && ! rc_package_is_installed (package)) {
                 installed_package = \
                     rc_world_find_installed_version (world, package);
             
-                if (rc_package_spec_equal (package, installed_package)) {
+                if (installed_package != NULL) {
                     iter->data = rc_package_ref (installed_package);
                     rc_package_unref (package);
                 }
