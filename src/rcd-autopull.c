@@ -27,6 +27,9 @@
 
 #include "rcd-module.h"
 #include "rcd-recurring.h"
+#include "rcd-transaction.h"
+#include "rcd-transfer.h"
+#include "rcd-prefs.h"
 
 typedef struct _RCDAutopull RCDAutopull;
 
@@ -47,6 +50,16 @@ struct _RCDAutopull {
     GSList *all_to_add;
     GSList *all_to_subtract;
 };
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+#define AUTOPULL_CHECKIN_MIN     3600    /* 1 hours */
+#define AUTOPULL_CHECKIN_MAX     172800  /* 48 hours */
+#define AUTOPULL_CHECKIN_DEFAULT 7200    /* 2 hours */
+
+static int autopull_checkin_interval = AUTOPULL_CHECKIN_DEFAULT;
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 static void
 updates_cb (RCPackage *old,
@@ -121,9 +134,44 @@ rcd_autopull_find_targets (RCDAutopull *pull)
 }
 
 static void
-rcd_autopull_resolve (RCDAutopull *pull)
+pkg_install (RCPackage *pkg, RCPackageStatus status, gpointer user_data)
+{
+    GSList **slist = user_data;
+
+    if (status == RC_PACKAGE_STATUS_TO_BE_INSTALLED)
+        *slist = g_slist_prepend (*slist,
+                                  rc_package_ref (pkg));
+}
+
+static void
+pkg_remove (RCPackage *pkg, RCPackageStatus status, gpointer user_data)
+{
+    GSList **slist = user_data;
+
+    if (rc_package_status_is_to_be_uninstalled (status)
+        && rc_package_is_installed (pkg))
+        *slist = g_slist_prepend (*slist, 
+                                  rc_package_ref (pkg));
+}
+
+static void
+pkg_upgrade (RCPackage *pkg_new, RCPackageStatus status_new,
+             RCPackage *pkg_old, RCPackageStatus status_old,
+             gpointer user_data)
+{
+    GSList **slist = user_data;
+
+    *slist = g_slist_prepend (*slist,
+                              rc_package_ref (pkg_new));
+}
+
+static void
+rcd_autopull_resolve_and_transact (RCDAutopull *pull)
 {
     RCResolver *resolver;
+    GSList *to_install = NULL;
+    GSList *to_remove = NULL;
+    int tid;
 
     g_return_if_fail (pull != NULL);
 
@@ -137,14 +185,36 @@ rcd_autopull_resolve (RCDAutopull *pull)
 
     rc_resolver_resolve_dependencies (resolver);
 
-    if (resolver->best_context)
-        rc_resolver_context_spew (resolver->best_context);
-    else
-        rc_debug (RC_DEBUG_LEVEL_WARNING,
-                  "Resolution failed!");
-    
-    /* FIXME: do something */
+    if (resolver->best_context == NULL) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING, "Resolution failed!");
+        /* FIXME: do something clever here */
+        goto cleanup;
+    }
 
+    rc_resolver_context_foreach_install (resolver->best_context,
+                                         pkg_install,
+                                         &to_install);
+
+    rc_resolver_context_foreach_uninstall (resolver->best_context,
+                                           pkg_remove,
+                                           &to_remove);
+
+    rc_resolver_context_foreach_upgrade (resolver->best_context,
+                                         pkg_upgrade,
+                                         &to_install);
+
+    tid = rcd_transaction_begin (rc_get_world (),
+                                 to_install,
+                                 to_remove,
+                                 FALSE,
+                                 "localhost",
+                                 "autopull " VERSION);
+
+    /* FIXME: Do we want to use the transaction ID for anything? */
+
+ cleanup:
+    rc_package_slist_unref (to_install);
+    rc_package_slist_unref (to_remove);
     rc_resolver_free (resolver);
 }
 
@@ -177,12 +247,8 @@ ap_rec_execute (RCDRecurring *rec)
 {
     RCDAutopull *pull = (RCDAutopull *) rec;
 
-    rc_debug (RC_DEBUG_LEVEL_INFO,
-              "Executing autopull!!!");
-
     rcd_autopull_find_targets (pull);
-    rcd_autopull_resolve (pull);
-
+    rcd_autopull_resolve_and_transact (pull);
 }
 
 static time_t
@@ -487,9 +553,33 @@ rcd_autopull_process_xml (xmlNode *node)
         return;
     }
 
+    /* We reset the check-in interval to the default every time. */
+    autopull_checkin_interval = AUTOPULL_CHECKIN_DEFAULT;
+
     for (node = node->xmlChildrenNode; node != NULL; node = node->next) {
-        if (! g_strcasecmp (node->name, "session")) {
+
+        if (! g_strcasecmp (node->name, "checkin_interval")) {
+
+            char *ci_str = xml_get_content (node);
+
+            if (ci_str && *ci_str) {
+                autopull_checkin_interval = atoi (ci_str);
+                
+                /* Make sure that the check-in interval doesn't get
+                   set to some strange, extreme value. */
+                if (autopull_checkin_interval <= 0)
+                    autopull_checkin_interval = AUTOPULL_CHECKIN_DEFAULT;
+                else if (autopull_checkin_interval < AUTOPULL_CHECKIN_MIN)
+                    autopull_checkin_interval = AUTOPULL_CHECKIN_MIN;
+                else if (autopull_checkin_interval > AUTOPULL_CHECKIN_MAX)
+                    autopull_checkin_interval = AUTOPULL_CHECKIN_MAX;
+            }
+            g_free (ci_str);
+
+        } else if (! g_strcasecmp (node->name, "session")) {
+        
             RCDAutopull *pull = autopull_from_session_xml_node (node);
+            
             if (pull)
                 rcd_recurring_add ((RCDRecurring *) pull);
         }
@@ -529,11 +619,54 @@ rcd_autopull_get_xml_from_file (const char *filename)
 static void
 rcd_autopull_download_xml (void)
 {
-    /* FIXME! FIXME! FIXME! */
+    RCDTransfer *t = NULL;
+    char *url = NULL;
+    GByteArray *data = NULL;
+    xmlDoc *doc = NULL;
 
-    rc_debug (RC_DEBUG_LEVEL_WARNING,
-              "This is where we would download autopull.xml, if that code "
-              " had been written.  But it hasn't.");
+    /* Disable autopull if we aren't in premium mode. */
+    if (! rcd_prefs_get_premium ())
+        return;
+
+    url = g_strdup_printf ("%s/autopull.php",
+                           rcd_prefs_get_host ());
+
+    t = rcd_transfer_new (url, 0, NULL);
+    data = rcd_transfer_begin_blocking (t);
+    
+    if (rcd_transfer_get_error (t)) {
+        rc_debug (RC_DEBUG_LEVEL_ERROR,
+                  "Attempt to download autopull data failed: %s",
+                  rcd_transfer_get_error_string (t));
+        goto cleanup;
+    }
+
+    doc = rc_uncompress_xml (data->data, data->len);
+    if (doc == NULL) {
+        rc_debug (RC_DEBUG_LEVEL_ERROR,
+                  "Unable to uncompress or parse autopull data.");
+        goto cleanup;
+    }
+
+    /* Remove any existing recurring autopull items. */
+    rcd_recurring_foreach (g_quark_from_static_string ("autopull"),
+                           (RCDRecurringFn) rcd_recurring_remove,
+                           NULL);
+
+    rcd_autopull_process_xml (xmlDocGetRootElement (doc));
+
+ cleanup:
+
+    g_free (url);
+
+    if (t)
+        g_object_unref (t);
+
+    if (data)
+        g_byte_array_free (data, TRUE);
+
+    if (doc)
+        xmlFreeDoc (doc);
 }
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
@@ -570,16 +703,17 @@ xml_fetch_execute (RCDRecurring *recur)
 time_t
 xml_fetch_first (RCDRecurring *recur, time_t now)
 {
-    /* We do our first download of the autopull XML right away. */
+    /* We do our first download of the autopull XML in 60 seconds.
+       This allows other modules to load and gives the system time to
+       "settle" before we start autopulling. */
     /* FIXME: Is this really what we want to do? */
-    return 0;
+    return now + 60;
 }
 
 time_t
 xml_fetch_next (RCDRecurring *recur, time_t previous)
 {
-    /* FIXME: download the autopull XML once per hour. */
-    return previous + 60*60;
+    return previous + autopull_checkin_interval;
 }
 
 static void
