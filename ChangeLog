@@ -1,4 +1,8 @@
-2003-01-23  Joe Shaw  <joe@ximian.com>
+2004-02-03  Joe Shaw  <joe@ximian.com>
+
+	* rcd.gpg: Import the Fedora public key
+
+2004-01-23  Joe Shaw  <joe@ximian.com>
 
 	* rcd.pc.in: Fix to require libsoup-2.2.
 
