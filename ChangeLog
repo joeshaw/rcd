@@ -1,3 +1,8 @@
+2003-07-17  Aaron Weber  <aaron@ximian.com>
+
+	* rcd.conf.5: note that heartbeat=0 causes no refresh ever.
+	* rcd.8: note that the config file is covered in rcd.conf(5)
+	
 2003-07-01  Aaron Weber  <aaron@ximian.com>
 
 	* rcd.init.redhat.in (ARGS): update the description in RH and SuSE versions of this file. Not changing others.

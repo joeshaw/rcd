@@ -123,8 +123,7 @@ The level at which to log to standard error.  This can range from 0 to 6, where 
 
 .TP 
 \fBheartbeat=<number>\fR
-Specifies the interval at which rcd downloads new channel and package metadata.  This defaults to 21600 (6 hours) and can be set through rcd's preferences mechanism.
-
+Specifies the interval at which rcd downloads new channel and package metadata.  This defaults to 21600 (6 hours) and can be set through rcd's preferences mechanism.  If the heartbeat is set to 0, the daemon will not refresh unless told to do so with the "rug refresh" command.
 
 .TP 
 \fBrepackage=[true | false]\fR
