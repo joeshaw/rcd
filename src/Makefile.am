@@ -99,7 +99,7 @@ rcd_SOURCES = 			\
 	rcd.c
 
 rcd_LDADD =	\
-	$(LINK_BEGIN) $(RCD_LIBS) $(LINK_END) $(SHARED_ONLY)
+	$(LINK_BEGIN) $(RCD_LIBS) $(LIBSOUP_LIBS) $(LINK_END) $(SHARED_ONLY)
 
 rcd$(EXEEXT): $(rcd_OBJECTS) $(rcd_DEPENDENCIES)
 	@rm -f rcd$(EXEEXT)

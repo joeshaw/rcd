@@ -171,6 +171,10 @@ AC_SUBST(SHARED_ONLY)
 AC_SUBST(RCD_CFLAGS)
 AC_SUBST(RCD_LIBS)
 
+AC_SUBST(LIBSOUP_CFLAGS)
+AC_SUBST(LIBSOUP_LIBS)
+
+
 # Put the datadir into the rcd-buddy.in file.
 DDIR=`echo $datadir | sed -e "s,"'${prefix}'",$prefix,"`
 AC_SUBST(DDIR)

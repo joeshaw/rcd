@@ -1,5 +1,9 @@
 2004-02-11  Tambet Ingo  <tambet@ximian.com>
 
+	* Makefile.am: Add libsoup libs to link line. These are already in
+	RCD_LIBS, but for static linking and circular dependencies, they
+	apparently need to be there twice.
+
 	* rcd-shutdown.c (shutdown_idle_cb): Handle execv failures. Fixes
 	bug #51716.
 
