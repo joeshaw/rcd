@@ -33,8 +33,21 @@
  * file and return FALSE if unable to load from it.
  */
 
-/* Register the daemon against the server, if we're in premium mode */
-void     rcd_fetch_register (void);
+/*
+ * Registers the daemon with the server.  This is done automatically at
+ * startup when in premium services mode and an org id is set, with a
+ * NULL activation code and email.  This is the "new" automatic style.
+ *
+ * "Old", RCX-style activation with an activation code and email address
+ * is also possible, by passing in non-NULL values for activation_code
+ * and email.  If in premium services mode, this will connect to the
+ * currently set host.  Otherwise, it will connect to the default
+ * activation host.
+ *
+ * Returns TRUE on success.
+ */
+gboolean rcd_fetch_register (const char *activation_code,
+                             const char *email);
 
 /*
  * Download the (un)supported/deprecated distro information from the server.

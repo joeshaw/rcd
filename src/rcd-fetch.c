@@ -38,9 +38,12 @@
 #include "rcd-transfer.h"
 #include "rcd-transfer-http.h"
 
-void
-rcd_fetch_register (void)
+#define RCX_ACTIVATION_ROOT "http://activation.rc.ximian.com"
+
+gboolean
+rcd_fetch_register (const char *activation_code, const char *email)
 {
+    const char *server;
     char *url;
     struct utsname uname_buf;
     const char *hostname;
@@ -48,6 +51,7 @@ rcd_fetch_register (void)
     RCDTransferProtocolHTTP *protocol;
     const char *status;
     GByteArray *data;
+    gboolean success = TRUE;
 
     if (uname (&uname_buf) < 0) {
         rc_debug (RC_DEBUG_LEVEL_WARNING,
@@ -57,9 +61,34 @@ rcd_fetch_register (void)
     else
         hostname = uname_buf.nodename;
 
-    url = g_strdup_printf ("%s/register.php?orgtoken=%s&hostname=%s",
-                           rcd_prefs_get_host (),
-                           rcd_prefs_get_org_id (), hostname);
+    server = getenv ("RCD_ACTIVATION_ROOT");
+    if (!server) {
+        /*
+         * If premium services are enabled, we want to activate against our
+         * running server.  If not, then the user is using the Red Carpet free
+         * service and wants to activate to get RCX service, and we use that
+         * URL.
+         */
+
+        if (rcd_prefs_get_premium ())
+            server = rcd_prefs_get_host ();
+        else
+            server = RCX_ACTIVATION_ROOT;
+    }
+
+    /*
+     * If we're activating, we don't have an orgtoken; that information is
+     * tied to the activation code.
+     */
+    if (!activation_code) {
+        g_assert (rcd_prefs_get_org_id ());
+        url = g_strdup_printf ("%s/register.php?orgtoken=%s&hostname=%s",
+                               server, rcd_prefs_get_org_id (), hostname);
+    }
+    else {
+        url = g_strdup_printf ("%s/register.php?hostname=%s",
+                               server, hostname);
+    }
 
     t = rcd_transfer_new (url, 0, NULL);
     g_free (url);
@@ -67,7 +96,7 @@ rcd_fetch_register (void)
     /* If the protocol isn't HTTP, forget about it */
     /* FIXME: Should we send out a warning here? */
     if (!t->protocol || strcmp (t->protocol->name, "http") != 0)
-        return;
+        return FALSE;
 
     protocol = (RCDTransferProtocolHTTP *) t->protocol;
 
@@ -76,6 +105,16 @@ rcd_fetch_register (void)
 
     rcd_transfer_protocol_http_set_request_header (
         protocol, "X-RC-Secret", rcd_prefs_get_secret ());
+
+    if (activation_code) {
+        rcd_transfer_protocol_http_set_request_header (
+            protocol, "X-RC-Activation", activation_code);
+    }
+
+    if (email) {
+        rcd_transfer_protocol_http_set_request_header (
+            protocol, "X-RC-Email", email);
+    }
 
     data = rcd_transfer_begin_blocking (t);
 
@@ -93,6 +132,8 @@ rcd_fetch_register (void)
                   "Unable to register with server: %s", msg);
 
         g_free (msg);
+
+        success = FALSE;
     }
     else
         rc_debug (RC_DEBUG_LEVEL_INFO, "System registered successfully");
@@ -100,6 +141,8 @@ rcd_fetch_register (void)
     g_byte_array_free (data, TRUE);
 
     g_object_unref (t);
+
+    return success;
 } /* rcd_fetch_register */
 
 gboolean

@@ -1,5 +1,22 @@
 2002-10-15  Joe Shaw  <joe@ximian.com>
 
+	* rcd-fetch.c (rcd_fetch_register): Make this return a gboolean,
+	TRUE on success.  Take two arguments: the activation code and
+	email address for handling activation as well as registration.
+	If we're already in premium mode, connect to the current server.
+	Otherwise connect to activation.rc.ximian.com.  Don't send out a
+	(nonexistent) org id if we're activating.  Do send out the
+	activation code and email, however.
+
+	* rcd-rpc-system.c (system_activate): Added.  Takes an activation
+	code and email and activates the system with them.
+	(rcd_rpc_system_register_methods): Register rcd.system.activate.
+
+	* rcd.c (initialize_data): Call rcd_fetch_register() with NULL for
+	the activation code and email.
+
+2002-10-15  Joe Shaw  <joe@ximian.com>
+
 	* rcd-rpc.c (soup_rpc_callback): Allow the server to call to the
 	client by authenticating with the mid and the shared secret.
 

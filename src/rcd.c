@@ -449,14 +449,14 @@ initialize_data (void)
         rcd_create_uuid (SYSCONFDIR "/partnernet");
 
     /*
-     * We only want to do this when:
+     * We only want to register with the server when:
      *
      *    - We are in premium mode.
      *    - We have an organization ID set in our config file.
      */
     if (rcd_prefs_get_premium () &&
         rcd_prefs_get_org_id ())
-        rcd_fetch_register ();
+        rcd_fetch_register (NULL, NULL);
 
     supported_distro = is_supported_distro ();
 

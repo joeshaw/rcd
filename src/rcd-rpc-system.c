@@ -29,6 +29,7 @@
 #include <xmlrpc.h>
 
 #include "rcd-about.h"
+#include "rcd-fetch.h"
 #include "rcd-module.h"
 #include "rcd-pending.h"
 #include "rcd-prefs.h"
@@ -284,6 +285,26 @@ system_shutdown (xmlrpc_env   *env,
     rcd_shutdown ();
     return xmlrpc_build_value (env, "i", 1);
 }
+
+static xmlrpc_value *
+system_activate (xmlrpc_env   *env,
+                 xmlrpc_value *param_array,
+                 void         *user_data)
+{
+    char *activation_code, *email;
+    gboolean success = FALSE;
+
+    xmlrpc_parse_value (env, param_array, "(ss)", &activation_code, &email);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    success = rcd_fetch_register (activation_code, email);
+
+cleanup:
+    if (env->fault_occurred)
+        return NULL;
+
+    return xmlrpc_build_value (env, "i", success);
+}
 	
 void
 rcd_rpc_system_register_methods(void)
@@ -296,10 +317,10 @@ rcd_rpc_system_register_methods(void)
         "rcd.system.poll_pending", system_poll_pending, NULL, NULL);
 	rcd_rpc_register_method(
         "rcd.system.get_all_pending", system_get_all_pending, NULL, NULL);
-
 	rcd_rpc_register_method(
-        "rcd.system.shutdown",
-        system_shutdown, "superuser", NULL);
+        "rcd.system.shutdown", system_shutdown, "superuser", NULL);
+    rcd_rpc_register_method(
+        "rcd.system.activate", system_activate, "superuser", NULL);
 
 } /* rcd_rpc_system_register_methods */
 
