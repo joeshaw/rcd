@@ -739,8 +739,10 @@ packsys_package_info (xmlrpc_env   *env,
                 env, result, "file_size", update->package_size);
         }
 
-        RCD_XMLRPC_STRUCT_SET_INT (
-            env, result, "installed_size", package->installed_size);
+        if (package->installed_size) {
+            RCD_XMLRPC_STRUCT_SET_INT (
+                env, result, "installed_size", package->installed_size);
+        }
 
         RCD_XMLRPC_STRUCT_SET_STRING (
             env, result, "summary", package->summary);

@@ -1,3 +1,11 @@
+2002-07-29  Joe Shaw  <joe@ximian.com>
+
+	* Makefile.am: Install the daemon into $prefix/sbin, like a good
+	little daemon should.
+
+	* rcd-rpc-packsys.c (packsys_package_info): Don't send down the
+	installed size if it's zero.
+
 2002-07-28  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-recurring.c: Added.  This is a slightly over-engineered

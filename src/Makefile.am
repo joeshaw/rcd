@@ -9,7 +9,7 @@ INCLUDES =						\
 	-DG_LOG_DOMAIN=\"rcd\"				\
 	-Wall
 
-bin_PROGRAMS = rcd
+sbin_PROGRAMS = rcd
 
 BUILT_SOURCES =			\
 	rcd-marshal.h		\
