@@ -76,7 +76,7 @@ gboolean rcd_fetch_licenses_local (void);
    add the channels corresponding to our disto to the global
    RCWorld.  Returns TRUE if successful.
 */
-gboolean rcd_fetch_channel_list       (RCWorld *world);
+gboolean rcd_fetch_channel_list       (RCWorld *world, char **err_msg);
 gboolean rcd_fetch_channel_list_local (RCWorld *world);
 
 /* 

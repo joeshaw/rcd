@@ -119,6 +119,9 @@ rcd_fetch_register (const char  *activation_code,
     GByteArray *data;
     gboolean success = TRUE;
 
+    if (err_msg)
+        *err_msg = NULL;
+
     if (uname (&uname_buf) < 0) {
         rc_debug (RC_DEBUG_LEVEL_WARNING,
                   "Couldn't get hostname from uname()");
@@ -340,14 +343,26 @@ remove_channel_cb (RCChannel *channel, gpointer user_data)
 } /* remove_channel_cb */
 
 gboolean
-rcd_fetch_channel_list (RCWorld *world)
+rcd_fetch_channel_list (RCWorld *world, char **err_msg)
 {
-    RCDTransfer *t;
+    RCDistroStatus status;
+    char *err = NULL;
+    RCDTransfer *t = NULL;
     gchar *url = NULL;
     GByteArray *data = NULL;
     xmlDoc *doc = NULL;
     xmlNode *root;
     gboolean success = FALSE;
+
+    /* Don't download channel list if we're on an unsupported distro */
+    status = rc_distro_get_status ();
+    if (status != RC_DISTRO_STATUS_SUPPORTED &&
+        status != RC_DISTRO_STATUS_DEPRECATED)
+    {
+        err = g_strdup ("Unsupported distribution");
+
+        goto cleanup;
+    }
 
     if (!world)
         world = rc_get_world ();
@@ -358,23 +373,26 @@ rcd_fetch_channel_list (RCWorld *world)
     data = rcd_transfer_begin_blocking (t);
 
     if (rcd_transfer_get_error (t)) {
-        rc_debug (RC_DEBUG_LEVEL_CRITICAL,
-                  "Attempt to download the channel list failed: %s",
-                  rcd_transfer_get_error_string (t));
+        err = g_strconcat ("Attempt to download the channel list failed: ",
+                           rcd_transfer_get_error_string (t), NULL);
+        rc_debug (RC_DEBUG_LEVEL_CRITICAL, err);
+
         goto cleanup;
     }
 
     doc = rc_uncompress_xml (data->data, data->len);
     if (doc == NULL) {
-        rc_debug (RC_DEBUG_LEVEL_CRITICAL,
-                  "Unable to uncompress or parse channel list.");
+        err = g_strdup ("Unable to uncompress or parse channel list.");
+        rc_debug (RC_DEBUG_LEVEL_CRITICAL, err);
+
         goto cleanup;
     }
 
     root = xmlDocGetRootElement (doc);
     if (root == NULL) {
-        rc_debug (RC_DEBUG_LEVEL_CRITICAL,
-                  "Channel list is empty.");
+        err = g_strdup ("Channel list is invalid");
+        rc_debug (RC_DEBUG_LEVEL_CRITICAL, err);
+
         goto cleanup;
     }
 
@@ -385,6 +403,11 @@ rcd_fetch_channel_list (RCWorld *world)
     success = TRUE;
 
  cleanup:
+
+    if (err_msg)
+        *err_msg = err;
+    else
+        g_free (err);
 
     if (url)
         g_free (url);

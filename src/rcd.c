@@ -454,7 +454,7 @@ initialize_data (void)
 
     if (!rcd_options_get_no_network_flag () && supported_distro) {
         if (!rcd_fetch_channel_list_local (NULL))
-            rcd_fetch_channel_list (NULL);
+            rcd_fetch_channel_list (NULL, NULL);
     }
     
     rcd_subscriptions_load ();

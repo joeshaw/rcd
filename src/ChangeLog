@@ -1,5 +1,26 @@
 2003-04-08  Joe Shaw  <joe@ximian.com>
 
+	* rcd-autopull.c (rcd_autopull_fetch_channel_list): Update for
+	rcd_fetch_channel_list() parameter change.
+
+	* rcd.c (initialize_data): Ditto.
+
+	* rcd-fetch.c (rcd_fetch_register): Always initialize err_msg to
+	NULL if passed in a valid address.
+	(rcd_fetch_channel_list): Added an out "err_msg" parameter which
+	will contain an error string if downloading the channel list
+	fails.  Also check that we're on a supported distribution here.
+
+	* rcd-rpc-packsys.c (refresh_all_channels): Added.  Most of
+	refresh_channels_cb() was moved here, and it has a saner API.
+	(refresh_channels_cb): Make this mostly a wrapper around
+	refresh_all_channels().
+	(packsys_refresh_all_channels): Call refresh_all_channels()
+	instead of refresh_channels_cb().  Pass the error message through
+	the fault so the user can see it.
+
+2003-04-08  Joe Shaw  <joe@ximian.com>
+
 	* Makefile.am: Add rcd-license.[ch], rcd-options.[ch],
 	rcd-rpc-license.[ch].
 

@@ -181,30 +181,25 @@ check_pending_status_cb (gpointer user_data)
     return FALSE;
 } /* check_pending_status_cb */
 
-static void
-refresh_channels_cb (gpointer user_data)
+static GSList *
+refresh_all_channels (char **err_msg)
 {
     ChannelRefreshInfo *info;
     RCDistroStatus status;
     GSList *id_list;
-    GSList **ret_list = user_data;
+
+    if (err_msg)
+        *err_msg = NULL;
 
     if (rcd_transaction_is_locked ()) {
-        rc_debug (RC_DEBUG_LEVEL_WARNING,
-                  "Can't refresh channels while a transaction is running");
-        if (ret_list)
-            *ret_list = NULL;
-        return;
-    }
+        char *err = "Can't refresh channels while a transaction is running";
 
-    /* If we're on an unsupported distro, don't refresh channels. */
-    status = rc_distro_get_status ();
-    if (status != RC_DISTRO_STATUS_SUPPORTED &&
-        status != RC_DISTRO_STATUS_DEPRECATED)
-    {
-        if (ret_list)
-            *ret_list = NULL;
-        return;
+        rc_debug (RC_DEBUG_LEVEL_WARNING, err);
+
+        if (err_msg)
+            *err_msg = g_strdup (err);
+
+        return NULL;
     }
 
     rcd_transaction_lock ();
@@ -225,13 +220,11 @@ refresh_channels_cb (gpointer user_data)
     /* id_list should just be NULL, but we free it just in case */
     g_slist_free (id_list);
 
-    if (!rcd_fetch_channel_list (info->temp_world)) {
-        if (ret_list)
-            *ret_list = RCD_REFRESH_INVALID;
+    if (!rcd_fetch_channel_list (info->temp_world, err_msg)) {
         migrate_world_data (info->temp_world, rc_get_world ());
         g_free (info);
         rcd_transaction_unlock ();
-        return;
+        return NULL;
     }
 
     rcd_fetch_licenses ();
@@ -244,12 +237,20 @@ refresh_channels_cb (gpointer user_data)
        non-mounted ones). */
     id_list = rcd_fetch_some_channels (RCD_FETCH_PERSISTENT, info->temp_world);
 
-    if (ret_list)
-        *ret_list = id_list;
-
     info->id_list = id_list;
 
     g_idle_add (check_pending_status_cb, info);
+
+    return id_list;
+}    
+
+/* Called by the heartbeat function */
+static void
+refresh_channels_cb (gpointer user_data)
+{
+    GSList **ret_list = user_data;
+
+    *ret_list = refresh_all_channels (NULL);
 } /* refresh_channels_cb */
 
 static xmlrpc_value *
@@ -259,6 +260,7 @@ packsys_refresh_all_channels (xmlrpc_env   *env,
 {
     xmlrpc_value *value = NULL;
     GSList *ret_list = NULL, *iter;
+    char *err_msg;
 
     if (rcd_transaction_is_locked ()) {
         xmlrpc_env_set_fault (env, RCD_RPC_FAULT_LOCKED,
@@ -266,12 +268,12 @@ packsys_refresh_all_channels (xmlrpc_env   *env,
         return NULL;
     }
 
-    refresh_channels_cb (&ret_list);
+    ret_list = refresh_all_channels (&err_msg);
 
-    if (ret_list == RCD_REFRESH_INVALID) {
-        xmlrpc_env_set_fault (
+    if (err_msg) {
+        xmlrpc_env_set_fault_formatted (
             env, RCD_RPC_FAULT_CANT_REFRESH,
-            "Unable to download channel data.  Using cached data");
+            "Unable to download channel data: %s", err_msg);
         goto cleanup;
     }
 

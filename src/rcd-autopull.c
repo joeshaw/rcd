@@ -492,7 +492,7 @@ static gboolean
 rcd_autopull_fetch_channel_list (void (*finished_cb) (gpointer),
                                  gpointer user_data)
 {
-    if (! rcd_fetch_channel_list (NULL)) 
+    if (! rcd_fetch_channel_list (NULL, NULL)) 
         return FALSE;
 
     /* Calling rcd_fetch_channel_list blows away our subscriptions,
