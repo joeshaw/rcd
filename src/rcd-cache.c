@@ -35,7 +35,9 @@
 
 #include <libredcarpet.h>
 #include <libsoup/soup-uri.h>
+
 #include "rcd-prefs.h"
+#include "rcd-expire.h"
 
 #include <errno.h>
 
