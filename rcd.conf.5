@@ -1,9 +1,9 @@
 .\" To report problems with this software, visit http://bugzilla.ximian.com
 .TH "rcd.config" "5" "1.0" "Ximian, Inc. 2002" "RCD Configuration File"
 .SH "NAME"
-rcd.conf \- RCD configuration file
+rcd.conf \- Red Carpet Daemon (rcd) configuration file.
 .SH "DESCRIPTION"
-.B rcd uses a system\-wide configuration file for setting various options related to its operation. Options can be set by rcd clients; the most common mechanism for doing so is the \fIrc set<fr> command. See the rc man page for more information.
+The Red Carpet Daemon, rcd, uses a system\-wide configuration file for setting various options related to its operation. You may edit the configuration file directly, or set options using one of the rcd clients. The most obvious mechanism for doing so is the \fIrc set\fR command. See the rc man page for more information.
 .SH "CONFIGURATION FILE FORMAT"
 .LP 
 The configuration file is in the GNOME config file format, similar to
@@ -26,67 +26,43 @@ should be enclosed in double quotes.
 .LP 
 .B [Network]
 .TP 
-This section contains settings for rcd's network options, including
-what server to connect to, what proxy to use, and how many concurrent
-downloads are permitted.
+This section contains settings for rcd's network options, including what server to connect to, what proxy to use, and how many concurrent downloads are permitted.
 
 .TP 
 .B host=<url>
 .br 
-This key specifies the server that rcd should connect to.  This is a
-URL.  By default rcd contacts
-.I http://red\-carpet.ximian.com.
-This key can be set through rcd's preferences mechanism.
+This key specifies the server that rcd should connect to.  This is a URL.  By default rcd contacts \fIhttp://red\-carpet.ximian.com.\fR This key can be set with "rc set" or other rcd client settings tools.
 
 .TP 
 .B enable\-premium=[true | false]
 .br 
-This key specifies whether the server is an enhanced server.  Set this
-to true when connecting to a Red Carpet Express or Red Carpet
-Corporate Connect server.  This defaults to false.  This key can be
-set through rcd's preferences mechanism.
+This key specifies whether the server is an enhanced server.  Set this to true when connecting to a Red Carpet Express or Red Carpet Corporate Connect server.  This defaults to false.  This key can be set through rcd's preferences mechanism.
 
 .TP 
 .B org\-id=<organization id>
 .br 
-When using an enhanced server, set this to the organization id so that
-the daemon can register the machine with the server.  This is unset
-and ignored by default; this key has no effect if
-.B enable\-premium
-is not true.
+When using an enhanced server, set this to the organization id so that the daemon can register the machine with the server.  This is unset and ignored by default; this key has no effect if .B enable\-premium is not true.
 
 .TP 
 .B proxy=<url>
 .br 
-The URL for a proxy.  Valid protocols are "http", "https", "socks4",
-and "socks5."  For example, if you're running squid on your local
-machine, you'll want to set this to http://localhost:3128.  This is
-unset and ignored by default.
+The URL for a proxy.  Valid protocols are "http", "https", "socks4", and "socks5."  For example, if you're running squid on your local machine, you'll want to set this to http://localhost:3128.  This is unset and ignored by default.
 
 .TP 
 .B proxy\-username=<username>
 .br 
-For proxies requiring authentication, this is the username used.
-This is unset and ignored by default; this key has no effect if
-.B proxy
-is not set.  This key can be set through rcd's preferences mechanism.
+For proxies requiring authentication, this is the username used. This is unset and ignored by default; this key has no effect if .B proxy is not set.  This key can be set with "rc set" or other rcd client settings tools.
 
 .TP 
 .B proxy\-password=<password>
 .br 
-For proxies requiring authentication, this is the password used.
-This is unset and ignored by default; this key has no effect if
-.B proxy
-is not set.  This key can be set through rcd's preferences mechanism.
+For proxies requiring authentication, this is the password used. This is unset and ignored by default; this key has no effect if .B proxy is not set.  This key can be set with "rc set" or other rcd client settings tools.
 .TP 
 
 .TP 
 .B http10=[true | false]
 .br 
-This option determines whether or not rcd uses HTTP 1.0 or 1.1 to
-connect to servers.  This setting may be helpful with some
-uncooperative proxies.  This defaults to false.  This key can be set
-through rcd's preferences mechanism.
+This option determines whether or not rcd uses HTTP 1.0 or 1.1 to connect to servers.  This setting may be helpful with some uncooperative proxies.  This defaults to false.  This key can be set with "rc set" or other rcd client settings tools.
 
 .TP 
 .B max\-downloads=<number>
@@ -124,7 +100,7 @@ This section contains settings related to rcd's download caches.
 .B enabled=[true | false]
 .br 
 Specifies whether rcd should cache downloaded data.  This defaults to
-true.  This key can be set through rcd's preferences mechanism.
+true.  This key can be set with "rc set" or other rcd client settings tools.
 
 .TP 
 .B directory=<directory>
@@ -184,7 +160,7 @@ can be set through rcd's preferences mechanism.
 Specifies the number of days a package may be in the cache before it
 is removed.  This defaults to 30.  It has no effect if
 .B cache\-cleanup
-is not set.  This can be set through rcd's preferences mechanism.
+is not set.  This can be set with "rc set" or other rcd client settings tools.
 
 .TP 
 .B cache\-size\-in\-mb=<number>
@@ -192,7 +168,7 @@ is not set.  This can be set through rcd's preferences mechanism.
 Specifies the total size in megabytes that the package cache may be
 before it is cleaned up.  This defaults to 300.  It has no effect if
 .B cache\-cleanup
-is not set.  This can be set through rcd's preferences mechanism.
+is not set.  
 
 .SH "AUTHORS"
 .LP 
@@ -201,10 +177,9 @@ http://www.ximian.com
 
 .SH "SEE ALSO"
 .LP 
-rcd(8), rc(1), rcman(1), rcreports(1), rc\-dump, rc\-restore, rce\-getchannels(1), red\-carpet(GNOME application),
+rcd(8), rc(1), rcman(1), rcreports(1), rce\-dump, rce\-restore, rce\-getchannels(1), rcmirror(1)
 
 .LP 
-
 The graphical Red Carpet client, red\-carpet, has a manual accessible through the GNOME help system; select items from the Help menu within the application to read it.  Visit http://ximian.com for more information about rcd and the full family of Ximian Red Carpet products and servies, as well as Evolution and other software from Ximian.
 To report problems with this software or its documentation, visit http://bugzilla.ximian.com
 
