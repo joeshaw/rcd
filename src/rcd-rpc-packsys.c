@@ -264,6 +264,9 @@ packsys_get_channel_icon (xmlrpc_env   *env,
     }
 
     value = xmlrpc_build_value (env, "6", buf->data, buf->size);
+
+    rc_buffer_unmap_file (buf);
+
     XMLRPC_FAIL_IF_FAULT (env);
 
 cleanup:
