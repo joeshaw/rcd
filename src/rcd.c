@@ -92,6 +92,7 @@ refresh_channels_cb (gpointer user_data)
     rc_world_foreach_channel (rc_get_world (), remove_channel_cb, NULL);
 
     rcd_fetch_channel_list ();
+    rcd_subscriptions_load ();
     rcd_fetch_all_channels ();
 } /* refresh_channels_cb */
 

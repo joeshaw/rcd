@@ -101,6 +101,23 @@ packsys_refresh_channel (xmlrpc_env   *env,
 }
 
 static xmlrpc_value *
+packsys_refresh_all_channels (xmlrpc_env   *env,
+                              xmlrpc_value *param_array,
+                              void         *user_data)
+{
+    RCWorld *world = user_data;
+    xmlrpc_value *value;
+
+    rcd_fetch_channel_list ();
+    rcd_subscriptions_load ();
+    rcd_fetch_all_channels ();
+
+    value = xmlrpc_build_value (env, "i", 0);
+
+    return value;
+} /* packsys_refresh_all_channels */
+
+static xmlrpc_value *
 packsys_subscribe (xmlrpc_env   *env,
                    xmlrpc_value *param_array,
                    void         *user_data)
@@ -632,6 +649,11 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
 
     rcd_rpc_register_method("rcd.packsys.refresh_channel",
                             packsys_refresh_channel,
+                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            world);
+
+    rcd_rpc_register_method("rcd.packsys.refresh_all_channels",
+                            packsys_refresh_all_channels,
                             rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
                             world);
 
