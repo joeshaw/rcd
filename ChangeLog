@@ -1,3 +1,7 @@
+2002-12-11  Joe Shaw  <joe@ximian.com>
+
+	* configure.in: 1.1.90
+
 2002-12-10  Frank Belew  <frb@ximian.com>
 
 	* configure.in: added AC_ARG_ENABLE for the kernel workaround, it 
