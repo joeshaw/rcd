@@ -491,10 +491,6 @@ main (int argc, const char **argv)
 
     rcd_executable_name = g_strdup (argv[0]);
 
-    main_loop = g_main_loop_new (NULL, TRUE);
-    rcd_shutdown_add_handler ((RCDShutdownFn) g_main_loop_quit,
-                              main_loop);
-
     rcd_options_parse (argc, argv);
 
     if (rcd_options_get_show_version ()) {
@@ -600,9 +596,14 @@ main (int argc, const char **argv)
     if (rcd_options_get_dump_file () == NULL)
         rcd_heartbeat_start ();
 
-    g_main_run (main_loop);
+    main_loop = g_main_loop_new (NULL, TRUE);
+    g_main_loop_run (main_loop);
 
-    rc_debug (RC_DEBUG_LEVEL_ALWAYS, "Exited out of main loop");
+    /*
+     * We'll never reach here, because we'll exit() out in
+     * rcd-shutdown.c.
+     */
+    g_assert_not_reached ();
 
     return 0;
 } /* main */

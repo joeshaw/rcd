@@ -111,6 +111,7 @@ shutdown_idle_cb (gpointer user_data)
     }
 
     /* We should never reach here... */
+    g_assert_not_reached ();
     return FALSE;
 }
 
