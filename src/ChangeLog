@@ -1,3 +1,7 @@
+2005-03-11  James Willcox  <james@ximian.com>
+
+	* rcd-buddy.in: write the time of the crash
+
 2005-03-09  James Willcox  <james@ximian.com>
 
 	* Makefile.am:

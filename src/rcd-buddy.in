@@ -43,7 +43,7 @@ except:
 bt_filename = "/tmp/rcd-crash.%d" % os.getpid()
 out = open(bt_filename, "w")
 
-sys.stderr.write("rcd has crashed.\n")
+sys.stderr.write("[%s] rcd has crashed.\n" % time.strftime("%a %d %H:%M:%S %p"))
 sys.stderr.write("Attempting to write backtrace to " + bt_filename + "\n")
 
 out.write("\n")
