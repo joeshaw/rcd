@@ -40,7 +40,7 @@ static char *
 get_channel_list_url (void)
 {
     RCDistroType *dt;
-    char *url;
+    char *url = NULL;
 
     dt = rc_figure_distro ();
 
@@ -126,42 +126,55 @@ rcd_fetch_channel_list (void)
 gboolean
 rcd_fetch_channel_list_local (void)
 {
-    gchar *url;
-    gchar *local_file;
-    RCBuffer *buf;
-    xmlDoc *doc;
+    gchar *url = NULL;
+    gchar *local_file = NULL;
+    RCBuffer *buf = NULL;
+    xmlDoc *doc = NULL;
     xmlNode *root;
+    gboolean success = FALSE;
 
     url = get_channel_list_url ();
     local_file = rcd_cache_get_local_filename (
         rcd_cache_get_normal_cache (), url);
-    g_free (url);
-
+    
     if (!g_file_test (local_file, G_FILE_TEST_EXISTS))
-        return FALSE;
+        goto cleanup;
         
     buf = rc_buffer_map_file (local_file);
-    g_free (local_file);
 
     if (!buf)
-        return FALSE;
+        goto cleanup;
 
     doc = rc_uncompress_xml (buf->data, buf->size);
 
-    rc_buffer_unmap_file (buf);
-
     if (!doc)
-        return FALSE;
+        goto cleanup;
 
     root = xmlDocGetRootElement (doc);
     if (!root)
-        return FALSE;
+        goto cleanup;
 
     rc_world_add_channels_from_xml (rc_get_world (), root->xmlChildrenNode);
-    
-    xmlFreeDoc (doc);
 
-    return TRUE;
+    xmlDocDump (stdout, doc);
+
+    success = TRUE;
+
+ cleanup:
+
+    if (url)
+        g_free (url);
+
+    if (local_file)
+        g_free (local_file);
+    
+    if (buf)
+        rc_buffer_unmap_file (buf);
+    
+    if (doc)
+        xmlFreeDoc (doc);
+
+    return success;
 }    
 
 typedef struct {
@@ -403,7 +416,6 @@ rcd_fetch_news (void)
 
     t = rcd_transfer_new (0, rcd_cache_get_normal_cache ());
     data = rcd_transfer_begin_blocking (t, url);
-    g_free (url);
 
     if (data == NULL || rcd_transfer_get_error (t)) {
 
@@ -438,7 +450,7 @@ rcd_fetch_news (void)
 
     if (url)
         g_free (url);
-
+    
     if (t)
         g_object_unref (t);
 
