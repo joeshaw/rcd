@@ -1,10 +1,10 @@
+2004-02-11  Joe Shaw  <joe@ximian.com>
+                                                                                
+        * configure.in: 2.0.2
+
 2004-02-11  Tambet Ingo  <tambet@ximian.com>
 
 	* configure.in: AC_SUBST libsoup flags.
-
-2004-02-11  Joe Shaw  <joe@ximian.com>
-
-	* configure.in: 2.0.2
 
 2004-02-05 Aaron Weber <aaron@ximian.com>
 
