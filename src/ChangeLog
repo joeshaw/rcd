@@ -1,5 +1,7 @@
 2002-08-04  Jon Trowbridge  <trow@ximian.com>
 
+	* rcd-buddy: Also write the backtrace to stderr.
+
 	* Makefile.am: Install rcd-buddy into PREFIX/share/rcd and make it
 	executable.
 
