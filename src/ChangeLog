@@ -1,3 +1,21 @@
+2003-08-27  Joe Shaw  <joe@ximian.com>
+
+	* rcd-cache.c (normal_cache_base_dir_func): Put the data in the
+	toplevel cache directory.
+	(package_cache_filename_func): Just use the filename, don't bother
+	with the host, as the packages will probably be the same if there
+	is a name conflict.
+
+	* rcd-prefs.c (rcd_prefs_get_cache_dir): Change the default cache
+	directory to /var/cache/rcd.
+
+	* rcd-rpc-util.c (rcd_rc_package_to_xmlrpc): Change the package
+	set flag to "package_set" from "is_package_set" to match up with
+	the packageinfo.xml.gz tag.
+
+	* rcd-world-remote.c (rcd_world_remote_fetch): Store the service
+	info in the service_info cache directory instead of per-url.
+
 2003-08-27  Tambet Ingo  <tambet@ximian.com>
 
 	* rcd-xmlrpc.c (xmlrpc_server_info_set_auth): g_free is smart

@@ -848,15 +848,24 @@ static RCPending *
 rcd_world_remote_fetch (RCDWorldRemote *remote, gboolean local)
 {
     char *url;
+    char *cache_entry_str;
     RCDCacheEntry *entry;
     RCDTransfer *t;
     const GByteArray *data;
     RCPending *pending;
 
-    url = g_strconcat (RC_WORLD_SERVICE (remote)->url,
-                       "/serviceinfo.xml.gz", NULL);
-    entry = rcd_cache_lookup_by_url (rcd_cache_get_normal_cache (),
-                                     url, TRUE);
+    if (!strncmp (RC_WORLD_SERVICE (remote)->url, "http://", 7))
+        cache_entry_str = g_strdup (RC_WORLD_SERVICE (remote)->url + 7);
+    else if (!strncmp (RC_WORLD_SERVICE (remote)->url, "https://", 8)) {
+        cache_entry_str = g_strconcat ("s:",
+                                       RC_WORLD_SERVICE (remote)->url + 8,
+                                       NULL);
+    } else
+        g_assert_not_reached ();
+                       
+    entry = rcd_cache_lookup (rcd_cache_get_normal_cache (),
+                              "service_info", cache_entry_str, TRUE);
+    g_free (cache_entry_str);
 
     if (local) {
         RCBuffer *buf;
@@ -873,12 +882,13 @@ rcd_world_remote_fetch (RCDWorldRemote *remote, gboolean local)
             rc_buffer_unmap_file (buf);
 
             if (pending != RCD_WORLD_REMOTE_FETCH_FAILED) {
-                g_free (url);
                 return pending;
             }
         }
     }
 
+    url = g_strconcat (RC_WORLD_SERVICE (remote)->url,
+                       "/serviceinfo.xml.gz", NULL);
     t = rcd_transfer_new (url, RCD_TRANSFER_FLAGS_NONE, entry);
     g_free (url);
 

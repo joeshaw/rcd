@@ -552,7 +552,7 @@ clean_str (const char *raw)
 static char *
 normal_cache_base_dir_func (RCDCache *cache)
 {
-    return g_strconcat (rcd_prefs_get_cache_dir (), "/data", NULL);
+    return g_strconcat (rcd_prefs_get_cache_dir (), NULL);
 }
 
 static char *
@@ -586,19 +586,7 @@ package_cache_filename_func (RCDCache *cache,
                              const char *source_id,
                              const char *file_tag)
 {
-    char *clean_source_id;
-    char *clean_file_tag;
-    char *filename;
-
-    clean_source_id = clean_str (source_id);
-    clean_file_tag = clean_str (file_tag);
-
-    filename = g_strconcat (clean_source_id, "/", clean_file_tag, NULL);
-
-    g_free (clean_source_id);
-    g_free (clean_file_tag);
-
-    return filename;
+    return clean_str (file_tag);
 } /* package_cache_filename_func */
 
 RCDCache *

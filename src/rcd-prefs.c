@@ -251,7 +251,7 @@ rcd_prefs_get_cache_dir (void)
     g_free (cache_dir);
 
     cache_dir = gnome_config_get_string (
-        get_config_path ("/Cache/directory=/var/cache/redcarpet"));
+        get_config_path ("/Cache/directory=/var/cache/rcd"));
 
     return cache_dir;
 }
