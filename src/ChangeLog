@@ -1,3 +1,30 @@
+2003-04-18  Joe Shaw  <joe@ximian.com>
+
+	* Makefile.am: Add rcd-transfer-pool.[ch].
+
+	* rcd-fetch.c: Kill off almost all of the ugly package download
+	code in favor of the new, cleaner RCDTransferPool.
+	(rcd_fetch_packages): Signature changed to take in only the list
+	of packages to download and return an RCDTransferPool.
+	(rcd_fetch_packages_abort): Nuke this, we no longer need it.
+
+	* rcd-transaction.c (RCDTransactionStatus): Add an RCDTransferPool
+	to the struct.
+	(rcd_transaction_status_unref): Unref it.
+	(download_packages): Call rcd_fetch_packages() with the new
+	signature, connect to the transfer pool's done signal and start
+	the download when we're ready.
+	(rcd_transaction_abort): Call rcd_transfer_pool_abort() instead of
+	rcd_fetch_packages_abort().
+
+	* rcd-transfer-pool.[ch]: Added.  Implements an accumulator for
+	RCDTransfer objects, which can all be tracked with one RCDPending
+	object, respects the max_downloads setting, and can optionally
+	cancel the whole pool of downloads if one fails or is aborted.
+
+	* rcd-transfer.c (error_to_string): Rename this to
+	rcd_transfer_error_to_string() and make it public.
+
 2003-04-17  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-subscriptions.c (SUBSCRIPTIONS_PATH): Store subscription

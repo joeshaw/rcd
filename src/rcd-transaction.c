@@ -38,6 +38,7 @@
 #include "rcd-shutdown.h"
 #include "rcd-transfer.h"
 #include "rcd-transfer-http.h"
+#include "rcd-transfer-pool.h"
 
 typedef struct _RCDTransactionStatus RCDTransactionStatus;
 
@@ -55,6 +56,8 @@ struct _RCDTransactionStatus {
     RCDTransactionFlags flags;
 
     RCPackageSList *packages_to_download;
+
+    RCDTransferPool *pool;
 
     RCDPending *download_pending;
     RCDPending *transaction_pending;
@@ -123,6 +126,9 @@ rcd_transaction_status_unref (RCDTransactionStatus *status)
 
         if (status->transaction_step_pending)
             g_object_unref (status->transaction_step_pending);
+
+        if (status->pool)
+            g_object_unref (status->pool);
     
         g_free (status);
     }
@@ -852,57 +858,6 @@ failure:
     rcd_transaction_unlock ();
 } /* verify_packages */
 
-static void
-download_completed (gboolean    successful,
-                    const char *error_message,
-                    gpointer    user_data)
-{
-    RCDTransactionStatus *status = user_data;
-    char *msg;
-
-    if (successful) {
-        rcd_pending_finished (status->download_pending, 0);
-        if (status->flags != RCD_TRANSACTION_FLAGS_DOWNLOAD_ONLY)
-            verify_packages (user_data);
-        else
-            cleanup_after_transaction (status);
-
-        return;
-    }
-
-    /* A NULL error message indicates that it was cancelled, not a failure */
-    if (!error_message) {
-        rcd_pending_abort (status->download_pending, -1);
-        error_message = "Cancelled by user";
-    }
-    else {
-        msg = g_strdup_printf ("failed:Download failed - %s", error_message);
-        rcd_pending_fail (status->download_pending, -1, error_message);
-        g_free (msg);
-    }
-
-    if (rcd_prefs_get_premium ())
-    {
-        msg = g_strdup_printf ("Download failed - %s", error_message);
-        rcd_transaction_send_log (status, FALSE, msg);
-        g_free (msg);
-    }
-
-    cleanup_after_transaction (status);
-} /* download_completed */
-
-static void
-update_download_progress (gsize size, gpointer user_data)
-{
-    RCDTransactionStatus *status = user_data;
-
-    status->current_download_size += size;
-
-    rcd_pending_update_by_size (status->download_pending,
-                                status->current_download_size,
-                                status->total_download_size);    
-} /* update_download_progress */
-
 static const char *
 format_size (gsize size)
 {
@@ -1002,6 +957,23 @@ check_package_integrity (RCPackage *package, RCDTransactionStatus *status)
         return TRUE;
 } /* check_package_integrity */
 
+static void
+transfer_done_cb (RCDTransferPool      *pool,
+                  RCDTransferError      err,
+                  RCDTransactionStatus *status)
+{
+    if (!err) {
+        if (status->flags != RCD_TRANSACTION_FLAGS_DOWNLOAD_ONLY)
+            verify_packages (status);
+        else
+            cleanup_after_transaction (status);
+    }
+    else if (rcd_prefs_get_premium ()) {
+        rcd_transaction_send_log (status, FALSE,
+                                  rcd_transfer_error_to_string (err));
+    }
+}
+
 static int
 download_packages (RCPackageSList *packages, RCDTransactionStatus *status)
 {
@@ -1090,32 +1062,32 @@ download_packages (RCPackageSList *packages, RCDTransactionStatus *status)
     if (!status->packages_to_download)
         return 0;
 
-    status->download_pending = rcd_pending_new ("Package download");
-    g_object_set_data (G_OBJECT (status->download_pending), "status", status);
-
-    rcd_pending_begin (status->download_pending);
-
     if (!check_download_space (status->total_download_size)) {
         char *msg;
 
         msg = g_strdup_printf ("Insufficient disk space: %s needed in %s",
                                format_size (status->total_download_size),
                                rcd_prefs_get_cache_dir ());
+        /* FIXME: Create a download pending just to fail it.  Ugh. */
+        status->download_pending = rcd_pending_new ("Package download");
+        g_object_set_data (G_OBJECT (status->download_pending),
+                           "status", status);
+        rcd_pending_begin (status->download_pending);
         fail_transaction (status, status->download_pending, msg);
         g_free (msg);
 
         return -1;
     }
-    
-    status->packages_to_download =
-        g_slist_reverse (status->packages_to_download);
 
-    rcd_fetch_packages (
-        status->packages_to_download,
-        rcd_pending_get_id (status->download_pending),
-        update_download_progress,
-        download_completed,
-        status);
+    status->pool = rcd_fetch_packages (status->packages_to_download);
+    rcd_transfer_pool_set_expected_size (status->pool,
+                                         status->total_download_size);
+    g_signal_connect (status->pool, "transfer_done",
+                      G_CALLBACK (transfer_done_cb), status);
+    status->download_pending = rcd_transfer_pool_get_pending (status->pool);
+    rcd_pending_set_description (status->download_pending, "Package download");
+    g_object_set_data (G_OBJECT (status->download_pending), "status", status);
+    rcd_transfer_pool_begin (status->pool);
 
     return g_slist_length (status->packages_to_download);
 } /* download_packages */
@@ -1328,7 +1300,7 @@ rcd_transaction_abort (int download_id, RCDIdentity *identity)
     if (!check_install_auth (status, identity))
         return -1;
 
-    rcd_fetch_packages_abort (download_id);
+    rcd_transfer_pool_abort (status->pool);
 
     return 1;
 } /* rcd_transaction_abort */

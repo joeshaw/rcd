@@ -42,8 +42,6 @@
 #include "rcd-transfer-file.h"
 #include "rcd-transfer-http.h"
 
-#define _(x) x
-
 static GObjectClass *parent_class;
 
 enum {
@@ -205,44 +203,44 @@ rcd_transfer_get_error_string(RCDTransfer *t)
     return t->error_string;
 } /* rcd_transfer_get_error_string */
 
-static const char *
-error_to_string(RCDTransfer *t)
+const char *
+rcd_transfer_error_to_string (RCDTransferError err)
 {
-    char *err;
+    char *err_str;
 
-    switch (t->error) {
+    switch (err) {
     case RCD_TRANSFER_ERROR_NONE:
-        err = "(no error)";
+        err_str = "(no error)";
         break;
     case RCD_TRANSFER_ERROR_CANCELLED:
-        err = "Cancelled";
+        err_str = "Cancelled";
         break;
     case RCD_TRANSFER_ERROR_CANT_CONNECT:
-        err = "Can't connect";
+        err_str = "Can't connect";
         break;
     case RCD_TRANSFER_ERROR_FILE_NOT_FOUND:
-        err = "File not found";
+        err_str = "File not found";
         break;
     case RCD_TRANSFER_ERROR_IO:
-        err = "IO error";
+        err_str = "IO error";
         break;
     case RCD_TRANSFER_ERROR_CANT_AUTHENTICATE:
-        err = "Unable to authenticate";
+        err_str = "Unable to authenticate";
         break;
     case RCD_TRANSFER_ERROR_INVALID_URI:
-        err = "Invalid URI";
+        err_str = "Invalid URI";
         break;
     case RCD_TRANSFER_ERROR_NETWORK_DISABLED:
-        err = "Networking disabled";
+        err_str = "Networking disabled";
         break;
     default:
-        err = NULL;
+        err_str = NULL;
         g_assert_not_reached();
         break;
     }
       
-    return err;
-} /* error_to_string */
+    return err_str;
+}
 
 void
 rcd_transfer_set_error(RCDTransfer *t, RCDTransferError err,
@@ -253,7 +251,7 @@ rcd_transfer_set_error(RCDTransfer *t, RCDTransferError err,
     t->error = err;
     g_free(t->error_string);
 
-    e = error_to_string(t);
+    e = rcd_transfer_error_to_string (t->error);
 
     if (err_string)
         t->error_string = g_strdup_printf("%s - %s", e, err_string);

@@ -28,6 +28,8 @@
 
 #include <libredcarpet.h>
 
+#include "rcd-transfer-pool.h"
+
 /*
  * Functions marked "local" try to read the data from a last known good
  * file and return FALSE if unable to load from it.
@@ -125,22 +127,9 @@ void     rcd_fetch_mirrors       (void);
 gboolean rcd_fetch_mirrors_local (void);
 
 /*
- * Download a list of packages and call the specified callback when they
- * all finish.
+ * Set up an RCDTransferPool to download all of the packages specified.
  */
-typedef void (*RCDFetchProgressFunc)  (gsize size, gpointer user_data);
-typedef void (*RCDFetchCompletedFunc) (gboolean    successful,
-                                       const char *error_string,
-                                       gpointer    user_data);
-
-void rcd_fetch_packages (RCPackageSList        *packages,
-                         int                    pending_id,
-                         RCDFetchProgressFunc   progress_callback,
-                         RCDFetchCompletedFunc  completed_callback,
-                         gpointer               user_data);
-
-void rcd_fetch_packages_abort (int pending_id);
-
+RCDTransferPool *rcd_fetch_packages (RCPackageSList *packages);
 
 #endif /* __RCD_FETCH_H__ */
 

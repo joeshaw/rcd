@@ -39,6 +39,7 @@
 #include "rcd-prefs.h"
 #include "rcd-transfer.h"
 #include "rcd-transfer-http.h"
+#include "rcd-transfer-pool.h"
 
 #define RCX_ACTIVATION_ROOT "https://activation.rc.ximian.com"
 
@@ -1124,257 +1125,64 @@ rcd_fetch_mirrors_local (void)
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
-static GHashTable *package_transfer_table = NULL;
-
-typedef struct {
-    int transfer_id;
-    int refs;
-
-    GSList *running_transfers;
-    GSList *queued_transfers;
-
-    RCDFetchProgressFunc  progress_callback;
-    RCDFetchCompletedFunc completed_callback;
-    gpointer user_data;
-
-    gboolean successful;
-    char *error_message;
-} PackageFetchClosure;
-
 static void
-begin_package_download (RCDTransfer *t, PackageFetchClosure *closure)
+package_completed_cb (RCDTransfer *t, RCPackage *package)
 {
-    rc_debug (RC_DEBUG_LEVEL_INFO, "Beginning download of package %s", t->url);
-
-    closure->running_transfers = g_slist_append (
-        closure->running_transfers, t);
-
-    rcd_transfer_begin (t);
-
-    if (!rcd_transfer_get_error (t)) {
-        RCDPending *pending;
-        char *desc;
-
-        /* Attach a more meaningful description to our pending object. */
-        pending = rcd_transfer_get_pending (t);
-        desc = g_strdup_printf ("Downloading package %s", t->url);
-        rcd_pending_set_description (pending, desc);
-        g_free (desc);
-    }
-    else {
-        rc_debug (RC_DEBUG_LEVEL_CRITICAL,
-                  "Attempt to download package failed: %s",
-                  rcd_transfer_get_error_string (t));
-
-        closure->successful = FALSE;
-        closure->error_message = g_strdup (rcd_transfer_get_error_string (t));
-
-        rcd_fetch_packages_abort (closure->transfer_id);
-    }
-} /* begin_package_download */
-
-static void
-begin_queued_package_download (PackageFetchClosure *closure)
-{
-    RCDTransfer *t;
-
-    if (!closure->queued_transfers)
-        return;
-
-    t = (RCDTransfer *) closure->queued_transfers->data;
-
-    closure->queued_transfers = g_slist_remove (closure->queued_transfers, t);
-
-    begin_package_download (t, closure);
-} /* begin_queued_package_download */
-
-static void
-queue_package_download (RCDTransfer *t, PackageFetchClosure *closure)
-{
-    rc_debug (RC_DEBUG_LEVEL_INFO, "Queuing up package %s", t->url);
-
-    closure->queued_transfers = g_slist_append (closure->queued_transfers, t);
-} /* queue_package_download */
-
-static void
-package_progress_cb (RCDTransfer *t,
-                     char        *buffer,
-                     gsize        size,
-                     gpointer     user_data)
-{
-    PackageFetchClosure *closure = user_data;
-
-    closure->progress_callback (size, closure->user_data);
-} /* package_progress_cb */
-
-static void
-package_completed_cb (RCDTransfer *t, gpointer user_data)
-{
-    PackageFetchClosure *closure = user_data;
-    RCPackage *package;
-
-    closure->running_transfers = g_slist_remove (
-        closure->running_transfers, t);
-
-    if (rcd_transfer_get_error (t) == RCD_TRANSFER_ERROR_CANCELLED) {
-        rc_debug (RC_DEBUG_LEVEL_INFO, "Download of %s cancelled", t->url);
-
-        if (!closure->running_transfers) {
-            closure->completed_callback (
-                FALSE, closure->error_message, closure->user_data);
-            g_free (closure->error_message);
-        }
-    }
-    else if (rcd_transfer_get_error (t)) {
-        rc_debug (RC_DEBUG_LEVEL_INFO, "Download of %s failed", t->url);
-
-        if (closure->running_transfers) {
-            closure->successful = FALSE;
-            closure->error_message = g_strdup (
-                rcd_transfer_get_error_string (t));
-
-            rcd_fetch_packages_abort (closure->transfer_id);
-        }
-        else {
-            closure->completed_callback (
-                FALSE, rcd_transfer_get_error_string (t), closure->user_data);
-        }
-    }
-    else {
-        rc_debug (RC_DEBUG_LEVEL_INFO, "Download of %s complete", t->url);
-    
-        package = g_object_get_data (G_OBJECT (t), "package");
-        if (g_object_get_data (G_OBJECT (t), "is_signature"))
-            package->signature_filename = rcd_transfer_get_local_filename (t);
-        else
-            package->package_filename = rcd_transfer_get_local_filename (t);
-
-        /* Fire off a queued transfer if there are any */
-        begin_queued_package_download (closure);
-
-        if (!closure->running_transfers) {
-            rc_debug (RC_DEBUG_LEVEL_INFO,
-                      "No more pending transfers, calling callback");
-
-            if (closure->successful)
-                closure->completed_callback (TRUE, NULL, closure->user_data);
-            else {
-                closure->completed_callback (
-                    FALSE, closure->error_message, closure->user_data);
-                g_free (closure->error_message);
-            }
-        }
-    }
-
-    if (!closure->running_transfers && !closure->queued_transfers) {
-        g_hash_table_remove (package_transfer_table,
-                             GINT_TO_POINTER (closure->transfer_id));
-        g_free (closure);
-    }
-
-    g_object_unref (t);
-} /* package_completed_cb */
-
-static void
-download_package_file (RCPackage           *package,
-                       const char          *file_url,
-                       PackageFetchClosure *closure,
-                       gboolean             is_signature)
-{
-    RCDTransfer *t;
-    char *url;
-    int max_downloads;
-
-    url = merge_paths (rcd_prefs_get_host (), file_url);
-
-    t = rcd_transfer_new (
-        url,
-        RCD_TRANSFER_FLAGS_FORCE_CACHE |
-        RCD_TRANSFER_FLAGS_RESUME_PARTIAL,
-        rcd_cache_get_package_cache ());
-    g_object_set_data (G_OBJECT (t), "package", package);
-
-    if (is_signature)
-        g_object_set_data (G_OBJECT (t), "is_signature", GINT_TO_POINTER (1));
-
-    g_free (url);
-
-    g_signal_connect (t,
-                      "file_data",
-                      (GCallback) package_progress_cb,
-                      closure);
-
-    g_signal_connect (t,
-                      "file_done",
-                      (GCallback) package_completed_cb,
-                      closure);
-
-    max_downloads = rcd_prefs_get_max_downloads ();
-
-    if (max_downloads &&
-        g_slist_length (closure->running_transfers) >= max_downloads)
-        queue_package_download (t, closure);
+    /* Ew. */
+    if (g_object_get_data (G_OBJECT (t), "is_signature"))
+        package->signature_filename = rcd_transfer_get_local_filename (t);
     else
-        begin_package_download (t, closure);
-} /* download_package_file */
+        package->package_filename = rcd_transfer_get_local_filename (t);
+}
 
-void
-rcd_fetch_packages (RCPackageSList        *packages,
-                    int                    pending_id,
-                    RCDFetchProgressFunc   progress_callback,
-                    RCDFetchCompletedFunc  completed_callback,
-                    gpointer               user_data)
+RCDTransferPool *
+rcd_fetch_packages (RCPackageSList *packages)
 {
-    PackageFetchClosure *closure;
+    RCDTransferPool *pool;
     RCPackageSList *iter;
 
-    g_return_if_fail (packages != NULL);
+    g_return_val_if_fail (packages != NULL, NULL);
 
-    closure = g_new0 (PackageFetchClosure, 1);
-    closure->transfer_id = pending_id;
-    closure->progress_callback = progress_callback;
-    closure->completed_callback = completed_callback;
-    closure->user_data = user_data;
-    closure->successful = TRUE;
+    pool = rcd_transfer_pool_new (TRUE);
 
-    if (!package_transfer_table)
-        package_transfer_table = g_hash_table_new (NULL, NULL);
-
-    g_hash_table_insert (package_transfer_table,
-                         GINT_TO_POINTER (closure->transfer_id),
-                         closure);
-    
     for (iter = packages; iter; iter = iter->next) {
         RCPackage *package = iter->data;
         RCPackageUpdate *update = rc_package_get_latest_update (package);
-        
-        download_package_file (package, update->package_url, closure, FALSE);
+        char *url;
+        RCDTransfer *t;
+
+        url = merge_paths (rcd_prefs_get_host (), update->package_url);
+
+        t = rcd_transfer_new (url,
+                              RCD_TRANSFER_FLAGS_FORCE_CACHE |
+                              RCD_TRANSFER_FLAGS_RESUME_PARTIAL,
+                              rcd_cache_get_package_cache ());
+
+        g_signal_connect (t, "file_done",
+                          G_CALLBACK (package_completed_cb), package);
+
+        rcd_transfer_pool_add_transfer (pool, t);
+        g_object_unref (t);
 
         if (update->signature_url) {
-            download_package_file (package, update->signature_url,
-                                   closure, TRUE);
+            url = merge_paths (rcd_prefs_get_host (), update->signature_url);
+
+            t = rcd_transfer_new (url,
+                                  RCD_TRANSFER_FLAGS_FORCE_CACHE |
+                                  RCD_TRANSFER_FLAGS_RESUME_PARTIAL,
+                                  rcd_cache_get_package_cache ());
+
+            /* Ew. */
+            g_object_set_data (G_OBJECT (t), "is_signature",
+                               GINT_TO_POINTER (TRUE));
+
+            g_signal_connect (t, "file_done",
+                              G_CALLBACK (package_completed_cb), package);
+
+            rcd_transfer_pool_add_transfer (pool, t);
+            g_object_unref (t);
         }
     }
+
+    return pool;
 }
-
-void
-rcd_fetch_packages_abort (int transfer_id)
-{
-    PackageFetchClosure *closure;
-    GSList *iter;
-    GSList *next;
-
-    closure = g_hash_table_lookup (package_transfer_table,
-                                   GINT_TO_POINTER (transfer_id));
-
-    g_return_if_fail (closure);
-
-    for (iter = closure->queued_transfers; iter; iter = iter->next)
-        g_object_unref (iter->data);
-
-    for (iter = closure->running_transfers; iter; iter = next) {
-        next = iter->next;
-
-        rcd_transfer_abort (iter->data);
-    }
-} /* rcd_fetch_packages_abort */

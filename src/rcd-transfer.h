@@ -129,6 +129,7 @@ char             *rcd_transfer_get_local_filename (RCDTransfer *t);
 
 RCDTransferError  rcd_transfer_get_error          (RCDTransfer *t);
 const char       *rcd_transfer_get_error_string   (RCDTransfer *t);
+const char       *rcd_transfer_error_to_string    (RCDTransferError err);
 
 void              rcd_transfer_set_error          (RCDTransfer *t,
                                                    RCDTransferError err,

@@ -94,6 +94,8 @@ rcd_SOURCES = 			\
 	rcd-transfer-file.h	\
 	rcd-transfer-http.c	\
 	rcd-transfer-http.h	\
+	rcd-transfer-pool.c	\
+	rcd-transfer-pool.h	\
 	rcd-unix-server.c	\
 	rcd-unix-server.h	\
 	rcd.c
