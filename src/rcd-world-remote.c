@@ -1010,13 +1010,10 @@ rcd_world_remote_fetch_channels (RCDWorldRemote *remote, gboolean local,
         g_object_unref (channel_data.pool);
     }
 
-    if (rc_world_is_refreshing (RC_WORLD (remote))) {
-        if (pending != NULL) {
-            g_signal_connect (pending, "complete",
-                              (GCallback) pending_complete_cb,
-                              g_object_ref (remote));
-        } else
-            rc_world_refresh_complete (RC_WORLD (remote));
+    if (rc_world_is_refreshing (RC_WORLD (remote)) && pending != NULL) {
+        g_signal_connect (pending, "complete",
+                          (GCallback) pending_complete_cb,
+                          g_object_ref (remote));
     }
 
 cleanup:

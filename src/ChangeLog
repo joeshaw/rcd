@@ -1,3 +1,10 @@
+2003-12-03  Joe Shaw  <joe@ximian.com>
+
+	* rcd-world-remote.c (rcd_world_remote_fetch_channels): Don't call
+	rc_world_refresh_complete() on channel data download error, since
+	it's already called in rcd_world_remote_refresh().  Fixes a failed
+	assertion.
+
 2003-11-20  Tambet Ingo  <tambet@ximian.com>
 
 	* rcd-services.c (rcd_services_load): Don't load services when
