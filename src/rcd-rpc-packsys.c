@@ -978,7 +978,7 @@ packsys_transact(xmlrpc_env   *env,
                                             client_id,
                                             client_version,
                                             method_data->host,
-                                            method_data->identity->username);
+                                            method_data->identity);
 
     result = xmlrpc_build_value (env, "i", transaction_id);
     XMLRPC_FAIL_IF_FAULT(env);

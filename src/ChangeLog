@@ -1,3 +1,37 @@
+2002-09-06  Joe Shaw  <joe@ximian.com>
+
+	* rcd-cache.c: Key all cache entries by the local cache filename,
+	not the URL.  This way we can do lookups based on the local
+	filename, and files should be cached across hosts in the same
+	session.
+	(rcd_cache_entry_invalidate): Added.  Invalidates a cache entry.
+
+	* rcd-privileges.c (rcd_privileges_init): Added a "trusted"
+	privilege to the base privileges.
+
+	* rcd-transaction.c (RCDTransactionStatus): Replace a client_user
+	field with an RCDIdentity field.
+	(verify_packages): Check to see if we have the trusted privilege
+	before we install packages without (or with an inconclusive) GPG
+	signature.
+	(rcd_transaction_begin): We need to call verify_packages() even if
+	we're not downloading anything.  Take an RCDIdentity argument
+	instead of a const char * for the username.
+	(check_package_integrity): Added.  Runs a size and md5sum
+	verification on a package in the attempt to see if it's a valid
+	package file.
+	(dowwnload_packages): If the file already exists on the local
+	filesystem, run a integrity check on it.  If it fails, invalidate
+	it from the cache (if appropriate) and require it be downloaded
+	again.
+
+	* rcd-rpc-packsys.c (packsys_transact): Pass in the identity
+	instead of just the identity's username to
+	rcd_transaction_begin().
+
+	* rcd-autopull.c (rcd_autopull_resolve_and_transact): Create a
+	dummy identity to pass into rcd_transaction_begin().
+
 2002-09-05  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc.c (rcd_rpc_server_start): Use HTTP digest authentication

@@ -67,7 +67,7 @@ struct _RCDTransactionStatus {
     char *client_id;
     char *client_version;
     char *client_host;
-    char *client_user;
+    RCDIdentity *identity;
 
     time_t start_time;
 };
@@ -99,7 +99,7 @@ rcd_transaction_status_unref (RCDTransactionStatus *status)
         g_free (status->client_id);
         g_free (status->client_version);
         g_free (status->client_host);
-        g_free (status->client_user);
+        rcd_identity_free (status->identity);
     
         g_free (status);
     }
@@ -450,7 +450,7 @@ update_log (RCDTransactionStatus *status)
         RCDLogEntry *log_entry;
 
         log_entry = rcd_log_entry_new (status->client_host,
-                                       status->client_user);
+                                       status->identity->username);
 
         old_p = rc_world_get_package (rc_get_world (),
                                       RC_WORLD_SYSTEM_PACKAGES,
@@ -470,7 +470,7 @@ update_log (RCDTransactionStatus *status)
         RCDLogEntry *log_entry;
 
         log_entry = rcd_log_entry_new (status->client_host,
-                                       status->client_user);
+                                       status->identity->username);
         rcd_log_entry_set_remove (log_entry, p);
         rcd_log (log_entry);
         rcd_log_entry_free (log_entry);
@@ -620,7 +620,11 @@ verify_packages (RCDTransactionStatus *status)
                       "Verification of '%s' was inconclusive",
                       g_quark_to_string (package->spec.nameq));
 
-            if (rcd_prefs_get_require_verified_packages ()) {
+            if (rcd_prefs_get_require_verified_packages () ||
+                !rcd_identity_approve_action (
+                    status->identity,
+                    rcd_privileges_from_string ("trusted")))
+            {
                 msg = g_strdup_printf (
                     "failed:Verification of '%s' was inconclusive",
                     g_quark_to_string (package->spec.nameq));
@@ -740,6 +744,46 @@ check_download_space (gsize download_size)
         return TRUE;
 } /* check_download_space */
 
+static gboolean
+check_package_integrity (RCPackage *package, RCDTransactionStatus *status)
+{
+    RCPackage *file_package;
+    RCVerificationSList *vers;
+    gboolean inconclusive = TRUE;
+
+    file_package = rc_packman_query_file (
+        status->packman, package->package_filename);
+
+    /* Query failed, so it is a very hosed package. */
+    if (!file_package)
+        return FALSE;
+
+    /* Verify file size and md5sum on package */
+    vers = rc_packman_verify (
+        status->packman, package,
+        RC_VERIFICATION_TYPE_SIZE | RC_VERIFICATION_TYPE_MD5);
+    
+    for (; vers; vers = vers->next) {
+        RCVerification *ver = vers->data;
+
+        if (ver->status == RC_VERIFICATION_STATUS_FAIL)
+            return FALSE;
+        else if (ver->status == RC_VERIFICATION_STATUS_PASS)
+            inconclusive = FALSE;
+    }
+
+    /*
+     * RPM has a bug where if it can't read the header with the signatures,
+     * it'll just pretend it doesn't have any.  If we get UNDEF for all
+     * of the verifications we do, it's better safe than sorry and fail
+     * the thing.
+     */
+    if (inconclusive)
+        return FALSE;
+    else
+        return TRUE;
+} /* check_package_integrity */
+
 static int
 download_packages (RCPackageSList *packages, RCDTransactionStatus *status)
 {
@@ -755,6 +799,19 @@ download_packages (RCPackageSList *packages, RCDTransactionStatus *status)
             if (!g_file_test (package->package_filename, G_FILE_TEST_EXISTS)) {
                 g_free (package->package_filename);
                 package->package_filename = NULL;
+            }
+            else {
+                if (!check_package_integrity (package, status)) {
+                    RCDCacheEntry *entry;
+
+                    entry = rcd_cache_lookup (rcd_cache_get_package_cache (),
+                                              package->package_filename);
+                    if (entry)
+                        rcd_cache_entry_invalidate (entry);
+
+                    g_free (package->package_filename);
+                    package->package_filename = NULL;
+                }
             }
         }
 
@@ -804,7 +861,7 @@ rcd_transaction_begin (RCWorld        *world,
                        const char     *client_id,
                        const char     *client_version,
                        const char     *client_host,
-                       const char     *client_user)
+                       RCDIdentity    *identity)
 {
     RCDTransactionStatus *status;
 
@@ -818,7 +875,7 @@ rcd_transaction_begin (RCWorld        *world,
     status->client_id = g_strdup (client_id);
     status->client_version = g_strdup (client_version);
     status->client_host = g_strdup (client_host);
-    status->client_user = g_strdup (client_user);
+    status->identity = rcd_identity_copy (identity);
     status->start_time = time (NULL);
 
     status->pending = rcd_pending_new ("Package Transaction");
@@ -840,7 +897,7 @@ rcd_transaction_begin (RCWorld        *world,
      * call).
      */
     if (!download_packages (status->install_packages, status))
-        g_idle_add (run_transaction, status);
+        verify_packages (status);
 
     return rcd_pending_get_id (status->pending);
 } /* rcd_transaction_begin */

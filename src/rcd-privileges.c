@@ -193,7 +193,8 @@ void
 rcd_privileges_init (void)
 {
     const char *base_privileges[] = 
-        { "view", "install", "remove", "upgrade", "subscribe", NULL };
+        { "view", "install", "remove", "upgrade",
+          "trusted", "subscribe", NULL };
     int i;
 
     static gboolean inited = FALSE;

@@ -28,6 +28,8 @@
 
 #include <libredcarpet.h>
 
+#include "rcd-identity.h"
+
 int rcd_transaction_begin (RCWorld        *world,
                            RCPackageSList *install_packages,
                            RCPackageSList *remove_packages,
@@ -35,7 +37,7 @@ int rcd_transaction_begin (RCWorld        *world,
                            const char     *client_id,
                            const char     *client_version,
                            const char     *client_host,
-                           const char     *client_user);
+                           RCDIdentity    *client_identity);
 
 gboolean rcd_transaction_is_valid (int transaction_id);
 

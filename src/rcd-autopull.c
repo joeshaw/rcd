@@ -259,6 +259,7 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
 
     if (to_install != NULL || to_remove != NULL) {
         GSList *iter;
+        RCDIdentity *dummy_identity;
 
         rc_debug (RC_DEBUG_LEVEL_INFO,
                   "Beginning Autopull");
@@ -273,6 +274,11 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
                       rc_package_to_str_static (iter->data));
         }
 
+        dummy_identity = rcd_identity_new ();
+        dummy_identity->username = g_strdup ("autopull " VERSION);
+        dummy_identity->privileges = rcd_privileges_from_string (
+            "install, remove, upgrade, trusted");
+
         tid = rcd_transaction_begin (rc_get_world (),
                                      to_install,
                                      to_remove,
@@ -280,7 +286,9 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
                                      rcd_module->description,
                                      VERSION,
                                      "localhost",
-                                     "autopull " VERSION);
+                                     dummy_identity);
+        
+        rcd_identity_free (dummy_identity);
 
     } else {
         rc_debug (RC_DEBUG_LEVEL_INFO,

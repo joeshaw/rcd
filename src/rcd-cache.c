@@ -150,7 +150,7 @@ rcd_cache_entry_close (RCDCacheEntry *entry)
     g_free (entry->tmp_file);
     entry->tmp_file = NULL;
 
-    g_hash_table_insert (entry->cache->entries, entry->url, entry);
+    g_hash_table_insert (entry->cache->entries, entry->local_file, entry);
 } /* rcd_cache_entry_close */
 
 void
@@ -196,13 +196,17 @@ RCDCacheEntry *
 rcd_cache_entry_new (RCDCache *cache, const char *url)
 {
     RCDCacheEntry *entry;
+    char *local_file;
 
     g_return_val_if_fail (cache, NULL);
     g_return_val_if_fail (url, NULL);
 
-    if ((entry = g_hash_table_lookup (cache->entries, url))) {
+    local_file = rcd_cache_get_local_filename (cache, url);
+
+    if ((entry = g_hash_table_lookup (cache->entries, local_file))) {
         rc_debug (RC_DEBUG_LEVEL_WARNING,
-                  "Cache entry already exists for %s", url);
+                  "Cache entry already exists for %s", local_file);
+        g_free (local_file);
         return entry;
     }
 
@@ -210,21 +214,33 @@ rcd_cache_entry_new (RCDCache *cache, const char *url)
     
     entry->cache = cache;
     entry->url = g_strdup (url);
-    entry->local_file = rcd_cache_get_local_filename (cache, url);
+    entry->local_file = local_file;
     entry->fd = -1;
 
     return entry;
 } /* rcd_cache_entry_new */
 
+void
+rcd_cache_entry_invalidate (RCDCacheEntry *entry)
+{
+    g_return_if_fail (entry);
+
+    g_hash_table_remove (entry->cache->entries, entry);
+    rcd_cache_entry_free (entry);
+} /* rcd_cache_entry_invalidate */
+
 RCDCacheEntry *
 rcd_cache_lookup (RCDCache *cache, const char *url)
 {
     RCDCacheEntry *entry;
+    char *local_file;
 
     g_return_val_if_fail (cache, NULL);
     g_return_val_if_fail (url, NULL);
 
-    entry = g_hash_table_lookup (cache->entries, url);
+    local_file = rcd_cache_get_local_filename (cache, url);
+    entry = g_hash_table_lookup (cache->entries, local_file);
+    g_free (local_file);
 
     if (!entry)
         return NULL;
