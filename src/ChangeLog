@@ -1,3 +1,12 @@
+2002-08-27  Joe Shaw  <joe@ximian.com>
+
+	* rcd-autopull.c (rcd_autopull_resolve_and_transact): If we had
+	failed deps, stringify the failure and send it as the reason
+	instead of a generic "resolution failed" message.
+
+	* rcd-rpc-packsys.c (append_dep_info, dep_get_failure_info): Use a
+	GString instead of allocating a bunch of temporary strings.
+
 2002-08-26  Joe Shaw  <joe@ximian.com>
 
 	* rcd-fetch.c (rcd_fetch_distro): Added.  Downloads

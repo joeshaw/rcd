@@ -168,6 +168,47 @@ pkg_upgrade (RCPackage *pkg_new, RCPackageStatus status_new,
 }
 
 static void
+append_dep_info (RCResolverInfo *info, gpointer user_data)
+{
+    GString *dep_failure_info = user_data;
+    gboolean debug = FALSE;
+
+    if (getenv ("RCD_DEBUG_DEPS"))
+        debug = TRUE;
+
+    if (debug || rc_resolver_info_is_important (info)) {
+        char *msg = rc_resolver_info_to_string (info);
+
+        g_string_append_printf (
+            dep_failure_info, "\n%s%s%s",
+            (debug && rc_resolver_info_is_error (info)) ? "ERR " : "",
+            (debug && rc_resolver_info_is_important (info)) ? "IMP " : "",
+            msg);
+        g_free (msg);
+    }
+} /* append_dep_info */
+        
+static char *
+get_dep_failure_info (RCResolver *resolver)
+{
+    RCResolverQueue *queue;
+    GString *dep_failure_info = g_string_new ("Unresolved dependencies:\n");
+    char *str;
+
+    /* FIXME: Choose a best invalid queue */
+    queue = (RCResolverQueue *) resolver->invalid_queues->data;
+
+    rc_resolver_context_foreach_info (queue->context, NULL, -1,
+                                      append_dep_info, dep_failure_info);
+
+    str = dep_failure_info->str;
+
+    g_string_free (dep_failure_info, FALSE);
+
+    return str;
+} /* get_dep_failure_info */
+
+static void
 rcd_autopull_resolve_and_transact (RCDAutopull *pull)
 {
     RCResolver *resolver;
@@ -188,18 +229,18 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
     rc_resolver_resolve_dependencies (resolver);
 
     if (resolver->best_context == NULL) {
-        rc_debug (RC_DEBUG_LEVEL_WARNING, "Resolution failed!");
-        /*
-         * FIXME: Stringify the resolution failure and send it instead
-         * of "Resolution failed"
-         */
+        char *dep_failure_info;
 
+        rc_debug (RC_DEBUG_LEVEL_WARNING, "Resolution failed!");
+
+        dep_failure_info = get_dep_failure_info (resolver);
         rcd_transaction_log_to_server (pull->all_to_add,
                                        pull->all_to_subtract,
                                        rcd_module->description,
                                        VERSION,
                                        FALSE,
-                                       "Resolution failed");
+                                       dep_failure_info);
+        g_free (dep_failure_info);
                                        
         goto cleanup;
     }

@@ -1044,11 +1044,10 @@ cleanup:
 static void
 append_dep_info (RCResolverInfo *info, gpointer user_data)
 {
-    char **dep_failure_info = user_data;
+    GString *dep_failure_info = user_data;
     gboolean debug = FALSE;
-    char *new_info;
 
-    g_assert (dep_failure_info && *dep_failure_info);
+    g_assert (dep_failure_info);
 
     if (getenv ("RCD_DEBUG_DEPS"))
         debug = TRUE;
@@ -1056,15 +1055,12 @@ append_dep_info (RCResolverInfo *info, gpointer user_data)
     if (debug || rc_resolver_info_is_important (info)) {
         char *msg = rc_resolver_info_to_string (info);
 
-        new_info = g_strconcat (*dep_failure_info, "\n",
-                                (debug && rc_resolver_info_is_error (info)) ? "ERR " : "",
-                                (debug && rc_resolver_info_is_important (info)) ? "IMP " : "",
-                                msg, NULL);
-
+        g_string_append_printf (
+            dep_failure_info, "\n%s%s%s",
+            (debug && rc_resolver_info_is_error (info)) ? "ERR " : "",
+            (debug && rc_resolver_info_is_important (info)) ? "IMP " : "",
+            msg);
         g_free (msg);
-
-        g_free (*dep_failure_info);
-        *dep_failure_info = new_info;
     }
 } /* append_dep_info */
 
@@ -1072,15 +1068,20 @@ static char *
 dep_get_failure_info (RCResolver *resolver)
 {
     RCResolverQueue *queue;
-    char *dep_failure_info = g_strdup ("Unresolved dependencies:\n");
+    GString *dep_failure_info = g_string_new ("Unresolved dependencies:\n");
+    char *str;
 
     /* FIXME: Choose a best invalid queue */
     queue = (RCResolverQueue *) resolver->invalid_queues->data;
 
     rc_resolver_context_foreach_info (queue->context, NULL, -1,
-                                      append_dep_info, &dep_failure_info);
+                                      append_dep_info, dep_failure_info);
 
-    return dep_failure_info;
+    str = dep_failure_info->str;
+
+    g_string_free (dep_failure_info, FALSE);
+
+    return str;
 } /* dep_get_failure_info */
 
 static void
