@@ -85,7 +85,7 @@ red_carpet_libs = 		\
 rcd_LDADD =	\
 	$(red_carpet_libs) $(RCD_LIBS)
 
-rcd_moduledir = $(libdir)/rcd
+rcd_moduledir = $(libdir)/rcd/modules
 rcd_module_LTLIBRARIES = librcd-sample.la
 
 EXTRA_DIST =			\

@@ -94,9 +94,11 @@ access_control_check (xmlrpc_env   *env,
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, 
               "Method being called: %s", method_name);
 
-    rc_debug (RC_DEBUG_LEVEL_MESSAGE,
-              "Requires Privileges: %s",
-              rcd_privileges_to_string (method_info->req_privs));
+    if (method_info) {
+        rc_debug (RC_DEBUG_LEVEL_MESSAGE,
+                  "Requires Privileges: %s",
+                  rcd_privileges_to_string (method_info->req_privs));
+    }
 
     rc_debug (RC_DEBUG_LEVEL_MESSAGE,
               "    User Privileges: %s",
