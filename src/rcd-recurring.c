@@ -33,7 +33,7 @@ static guint  recurring_timeout_id = 0;
 static gint   recurring_lock = 0;
 
 static gboolean
-rcd_recurring_execute (RCDRecurring *recurring)
+rcd_recurring_execute (RCDRecurring *recurring, time_t now)
 {
     g_return_val_if_fail (recurring != NULL, FALSE);
 
@@ -43,9 +43,23 @@ rcd_recurring_execute (RCDRecurring *recurring)
     ++recurring->count;
     recurring->prev = recurring->when;
 
-    if (recurring->next)
+    if (recurring->next) {
         recurring->when = recurring->next (recurring, recurring->when);
-    else
+
+        if (recurring->when < now) {
+            /*
+             * The next scheduled event is supposed to happen at some
+             * time in the past.  This usually happens due to clock
+             * skew.
+             *
+             * We don't want to keep executing the same thing over
+             * and over again until we catch up to the present time, so
+             * just figure out when next to run in terms of the current
+             * time.
+             */
+            recurring->when = recurring->next (recurring, now);
+        }
+    } else
         recurring->when = 0;
 
     /* If we return FALSE, he action does not recur. */
@@ -99,7 +113,7 @@ rcd_recurring_execute_list (void)
             g_free (label);
             /* rcd_recurring_execute returns FALSE if the event shouldn't
                happen again. */
-            if (! rcd_recurring_execute (recurring))
+            if (! rcd_recurring_execute (recurring, now))
                 recurring->removed = TRUE;
         }
     }

@@ -1,3 +1,9 @@
+2003-09-30  Joe Shaw  <joe@ximian.com>
+
+	* rcd-recurring.c (rcd_recurring_execute): If the next event is
+	scheduled to occur at some point in the past, get the next event
+	in terms of the current time, instead.
+
 2003-09-29  Tambet Ingo  <tambet@ximian.com>
 
 	* rcd-xmlrpc.c (rcd_xmlrpc_foreach_cb): Free server_info when done.
