@@ -39,6 +39,8 @@
 #include "rcd-transfer.h"
 #include "rcd-transfer-http.h"
 #include "rcd-transfer-pool.h"
+#include "rcd-rpc-util.h"
+#include "xmlrpc_soup.h"
 
 static GObjectClass *parent_class;
 
@@ -53,6 +55,9 @@ static guint signals[LAST_SIGNAL] = { 0 };
 static gboolean transaction_lock = FALSE;
 static GHashTable *abortable_transactions = NULL;
 
+static void rcd_transaction_send_log (RCDTransaction *transaction,
+                                      gboolean        successful,
+                                      const char     *message);
 
 #define RCD_TRANSACTION_ERROR_DOMAIN rcd_transaction_error_quark()
 
@@ -391,10 +396,8 @@ rcd_transaction_finished (RCDTransaction *transaction, const char *msg)
     if (transaction->flags != RCD_TRANSACTION_FLAGS_DRY_RUN)
         update_log (transaction);
 
-#if 0
     if (rcd_prefs_get_premium ())
         rcd_transaction_send_log (transaction, TRUE, msg);
-#endif
 
     rcd_transaction_emit_transaction_finished (transaction);
 }
@@ -416,10 +419,8 @@ rcd_transaction_failed (RCDTransaction *transaction,
         rcd_pending_fail (pending_to_fail, 0, msg);
     }
 
-#if 0
     if (rcd_prefs_get_premium ())
         rcd_transaction_send_log (transaction, FALSE, msg);
-#endif
 
     rcd_transaction_emit_transaction_finished (transaction);
 }
@@ -1099,122 +1100,201 @@ rcd_transaction_abort (int download_id, RCDIdentity *identity)
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
-#if 0
-static xmlNode *
-manifest_xml_node(RCPackage  *new_pkg,
+static xmlrpc_value *
+manifest_xml_node(xmlrpc_env *env,
+                  RCPackage  *new_pkg,
                   RCPackage  *old_pkg,
                   const char *action)
 {
-    xmlNode *node, *pkgnode;
-    char *tmp = NULL;
+    xmlrpc_value *xmanifest;
+    xmlrpc_value *xpkg;
     RCPackageUpdate *update;
 
-    node = xmlNewNode (NULL, "manifest");
+    xmanifest = xmlrpc_struct_new (env);
+    XMLRPC_FAIL_IF_FAULT (env);
 
-    tmp = g_strdup_printf (
-        "%s", new_pkg->channel ? rc_channel_get_id (new_pkg->channel) : "");
-    xmlNewTextChild (node, NULL, "cid", tmp);
-    g_free (tmp);
+    RCD_XMLRPC_STRUCT_SET_STRING(
+        env, xmanifest, "cid",
+        new_pkg->channel ? rc_channel_get_id (new_pkg->channel) : "");
+    XMLRPC_FAIL_IF_FAULT (env);
 
-    xmlNewTextChild (node, NULL, "action", action);
+    RCD_XMLRPC_STRUCT_SET_STRING(
+        env, xmanifest, "action",
+        action);
+    XMLRPC_FAIL_IF_FAULT (env);
 
-    pkgnode = xmlNewChild (node, NULL, "package", NULL);
+    xpkg = xmlrpc_struct_new (env);
+    XMLRPC_FAIL_IF_FAULT (env);
+    xmlrpc_struct_set_value (env, xmanifest,
+                             "package", xpkg);
+    XMLRPC_FAIL_IF_FAULT (env);
+    xmlrpc_DECREF (xpkg);
 
-    xmlNewTextChild (pkgnode, NULL, "name",
-                     g_quark_to_string (new_pkg->spec.nameq));
+    RCD_XMLRPC_STRUCT_SET_STRING(
+        env, xpkg, "name",
+        g_quark_to_string (new_pkg->spec.nameq));
+    XMLRPC_FAIL_IF_FAULT (env);
 
-    tmp = g_strdup_printf ("%d", new_pkg->spec.epoch);
-    xmlNewTextChild (pkgnode, NULL, "epoch", tmp);
-    g_free (tmp);
+    RCD_XMLRPC_STRUCT_SET_INT(
+        env, xpkg, "epoch",
+        new_pkg->spec.epoch);
+    XMLRPC_FAIL_IF_FAULT (env);
 
-    xmlNewTextChild(pkgnode, NULL, "version", new_pkg->spec.version);
-    xmlNewTextChild(pkgnode, NULL, "release", new_pkg->spec.release);
+    RCD_XMLRPC_STRUCT_SET_STRING(
+        env, xpkg, "version",
+        new_pkg->spec.version);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    RCD_XMLRPC_STRUCT_SET_STRING(
+        env, xpkg, "release",
+        new_pkg->spec.release);
+    XMLRPC_FAIL_IF_FAULT (env);
 
     update = rc_package_get_latest_update (new_pkg);
     if (update) {
-        tmp = g_strdup_printf ("%d", update->package_size);
-        xmlNewTextChild (pkgnode, NULL, "size", tmp);
-        g_free (tmp);
+        RCD_XMLRPC_STRUCT_SET_INT(
+            env, xpkg, "size",
+            update->package_size);
+        XMLRPC_FAIL_IF_FAULT (env);
 
-        tmp = g_strdup_printf ("%d", update->hid);
-        xmlNewTextChild (pkgnode, NULL, "hid", tmp);
-        g_free (tmp);
+        RCD_XMLRPC_STRUCT_SET_INT(
+            env, xpkg, "hid",
+            update->hid);
+        XMLRPC_FAIL_IF_FAULT (env);
 
         if (new_pkg->channel) {
-            xmlNewTextChild (pkgnode, NULL, "channel_id",
-                             rc_channel_get_id (new_pkg->channel));
+            RCD_XMLRPC_STRUCT_SET_STRING(
+                env, xpkg, "channel_id",
+                rc_channel_get_id (new_pkg->channel));
+            XMLRPC_FAIL_IF_FAULT (env);
         }
 
-        if (update->package_url)
-            xmlNewTextChild (pkgnode, NULL, "url", update->package_url);
+        if (update->package_url) {
+            RCD_XMLRPC_STRUCT_SET_STRING(
+                env, xpkg, "url",
+                update->package_url);
+            XMLRPC_FAIL_IF_FAULT (env);
+        }
     }
 
     if (old_pkg) {
-        pkgnode = xmlNewChild (node, NULL, "oldpackage", NULL);
+        xpkg = xmlrpc_struct_new (env);
+        XMLRPC_FAIL_IF_FAULT (env);
+        xmlrpc_struct_set_value (env, xmanifest,
+                                 "oldpackage", xpkg);
+        XMLRPC_FAIL_IF_FAULT (env);
+        xmlrpc_DECREF (xpkg);
 
-        xmlNewTextChild (pkgnode, NULL, "name",
-                         g_quark_to_string (new_pkg->spec.nameq));
+        RCD_XMLRPC_STRUCT_SET_STRING(
+            env, xpkg, "name",
+            g_quark_to_string (new_pkg->spec.nameq));
+        XMLRPC_FAIL_IF_FAULT (env);
 
-        tmp = g_strdup_printf ("%d", old_pkg->spec.epoch);
-        xmlNewTextChild (pkgnode, NULL, "epoch", tmp);
-        g_free (tmp);
+        RCD_XMLRPC_STRUCT_SET_INT(
+            env, xpkg, "epoch",
+            old_pkg->spec.epoch);
+        XMLRPC_FAIL_IF_FAULT (env);
 
-        xmlNewTextChild (pkgnode, NULL, "version", old_pkg->spec.version);
-        xmlNewTextChild (pkgnode, NULL, "release", old_pkg->spec.release);
+        RCD_XMLRPC_STRUCT_SET_STRING(
+            env, xpkg, "version",
+            old_pkg->spec.version);
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        RCD_XMLRPC_STRUCT_SET_STRING(
+            env, xpkg, "release",
+            old_pkg->spec.release);
+        XMLRPC_FAIL_IF_FAULT (env);
     }
 
-    return node;
+cleanup:
+
+    return xmanifest;
 } /* manifest_xml_node */
 
-static xmlChar *
-transaction_xml (RCDTransactionStatus *status,
-                 gboolean              successful,
-                 const char           *message,
-                 int                  *bytes)
+static xmlrpc_value *
+transaction_xml (xmlrpc_env     *env,
+                 RCDTransaction *transaction,
+                 gboolean        successful,
+                 const char     *message)
 {
-    xmlDoc *doc;
-    xmlNode *root;
-    char *tmp;
+    xmlrpc_value *xtrans;
+    xmlrpc_value *xmanifests;
     RCPackageSList *iter;
-    xmlChar *xml_string;
 
-    doc = xmlNewDoc ("1.0");
-    root = xmlNewNode (NULL, "transaction");
-    xmlDocSetRootElement (doc, root);
+    xtrans = xmlrpc_struct_new (env);
+    XMLRPC_FAIL_IF_FAULT (env);
 
-    if (status->name)
-        xmlNewTextChild (root, NULL, "name", status->name);
+    if (transaction->name) {
+        RCD_XMLRPC_STRUCT_SET_STRING(
+            env, xtrans, "name",
+            transaction->name);
+        XMLRPC_FAIL_IF_FAULT (env);
+    }
 
-    xmlNewTextChild (root, NULL, "client_id", status->client_id);
-    xmlNewTextChild (root, NULL, "client_version", status->client_version);
-    xmlNewTextChild (root, NULL, "mid", rcd_prefs_get_mid ());
-    xmlNewTextChild (root, NULL, "distro", rc_distro_get_target ());
+    RCD_XMLRPC_STRUCT_SET_STRING(
+            env, xtrans, "client_id",
+            transaction->client_id);
+    XMLRPC_FAIL_IF_FAULT (env);
 
-    xmlNewTextChild (root, NULL, "dry_run", 
-                     status->flags & RCD_TRANSACTION_FLAGS_DRY_RUN ?
-                     "1" : "0");
+    RCD_XMLRPC_STRUCT_SET_STRING(
+            env, xtrans, "client_version",
+            transaction->client_version);
+    XMLRPC_FAIL_IF_FAULT (env);
 
-    xmlNewTextChild (root, NULL, "pre_position", 
-                     status->flags & RCD_TRANSACTION_FLAGS_DOWNLOAD_ONLY ?
-                     "1" : "0");
+    RCD_XMLRPC_STRUCT_SET_STRING(
+            env, xtrans, "mid",
+            rcd_prefs_get_mid());
+    XMLRPC_FAIL_IF_FAULT (env);
 
-    tmp = g_strdup_printf ("%ld", status->start_time);
-    xmlNewTextChild (root, NULL, "start_time", tmp);
-    g_free (tmp);
+    RCD_XMLRPC_STRUCT_SET_STRING(
+            env, xtrans, "distro",
+            rc_distro_get_target());
+    XMLRPC_FAIL_IF_FAULT (env);
 
-    tmp = g_strdup_printf ("%ld", time (NULL));
-    xmlNewTextChild (root, NULL, "end_time", tmp);
-    g_free (tmp);
+    RCD_XMLRPC_STRUCT_SET_INT(
+            env, xtrans, "dry_run",
+            transaction->flags & RCD_TRANSACTION_FLAGS_DRY_RUN ? 1 : 0);
+    XMLRPC_FAIL_IF_FAULT (env);
 
-    xmlNewTextChild (root, NULL, "successful", successful ? "1" : "0");
-    if (message)
-        xmlNewTextChild (root, NULL, "message", message);
+    RCD_XMLRPC_STRUCT_SET_INT(
+            env, xtrans, "pre_position",
+            transaction->flags & RCD_TRANSACTION_FLAGS_DOWNLOAD_ONLY ? 1 : 0);
+    XMLRPC_FAIL_IF_FAULT (env);
 
-    for (iter = status->install_packages; iter; iter = iter->next) {
+    RCD_XMLRPC_STRUCT_SET_DOUBLE(
+            env, xtrans, "start_time",
+            transaction->start_time);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    RCD_XMLRPC_STRUCT_SET_DOUBLE(
+            env, xtrans, "end_time",
+            time (NULL));
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    RCD_XMLRPC_STRUCT_SET_INT(
+            env, xtrans, "successful",
+            successful ? 1 : 0);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    if (message) {
+        RCD_XMLRPC_STRUCT_SET_STRING(
+            env, xtrans, "message",
+            message);
+        XMLRPC_FAIL_IF_FAULT (env);
+    }
+
+    xmanifests = xmlrpc_build_value (env, "()");
+    XMLRPC_FAIL_IF_FAULT (env);
+    xmlrpc_struct_set_value (env, xtrans,
+                             "manifests", xmanifests);
+    XMLRPC_FAIL_IF_FAULT (env);
+    xmlrpc_DECREF (xmanifests);
+
+    for (iter = transaction->install_packages; iter; iter = iter->next) {
         RCPackage *p = iter->data;
         RCPackage *sys_pkg;
         const char *action;
-        xmlNode *n;
+        xmlrpc_value *xmanifest;
 
         sys_pkg = rc_world_find_installed_version (rc_get_world (), p);
 
@@ -1223,86 +1303,79 @@ transaction_xml (RCDTransactionStatus *status,
         else
             action = "install";
 
-        n = manifest_xml_node (p, sys_pkg, action);
-
-        xmlAddChild(root, n);
+        xmanifest = manifest_xml_node (env, p, sys_pkg, action);
+        XMLRPC_FAIL_IF_FAULT (env);
+        xmlrpc_array_append_item (env, xmanifests, xmanifest);
+        XMLRPC_FAIL_IF_FAULT (env);
+        xmlrpc_DECREF (xmanifest);
     }
 
-    for (iter = status->remove_packages; iter; iter = iter->next) {
+    for (iter = transaction->remove_packages; iter; iter = iter->next) {
         RCPackage *p = iter->data;
-        xmlNode *n;
+        xmlrpc_value *xmanifest;
 
-        n = manifest_xml_node (p, NULL, "remove");
-
-        xmlAddChild(root, n);
+        xmanifest = manifest_xml_node (env, p, NULL, "remove");
+        XMLRPC_FAIL_IF_FAULT (env);
+        xmlrpc_array_append_item (env, xmanifests, xmanifest);
+        XMLRPC_FAIL_IF_FAULT (env);
+        xmlrpc_DECREF (xmanifest);
     }
 
-    xmlDocDumpMemory(doc, &xml_string, bytes);
-            
-    return xml_string;
+cleanup:
+
+    return xtrans;
 } /* transaction_xml */
 
 static void
-transaction_sent (RCDTransfer *t, gpointer user_data)
+transaction_sent (char *server_url,
+                  char *method_name,
+                  xmlrpc_value *param_array,
+                  void *user_data,
+                  xmlrpc_env *fault,
+                  xmlrpc_value *result)
 {
-    RCDTransactionStatus *status = user_data;
-    RCDTransferProtocolHTTP *protocol;
-
-    if (rcd_transfer_get_error (t))
-        goto cleanup;
-
-    g_assert (strcmp (t->protocol->name, "http") == 0);
-
-    protocol = (RCDTransferProtocolHTTP *) t->protocol;
-
-    /* Not a g_free() because this is an xmlChar * */
-    free (protocol->request_body);
-
-cleanup:
-    rcd_transaction_status_unref (status);
-
-    g_object_unref (t);
-} /* transaction_sent */
+    if (fault->fault_occurred)
+        rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Send transaction log failed: %s",
+                  fault->fault_string);
+}
 
 static void
-rcd_transaction_send_log (RCDTransactionStatus *status,
-                          gboolean              successful,
-                          const char           *message)
+rcd_transaction_send_log (RCDTransaction *transaction,
+                          gboolean        successful,
+                          const char     *message)
 {
-    xmlChar *xml_string;
-    int bytes;
+    xmlrpc_env env;
+    xmlrpc_value *xtrans;
+    xmlrpc_server_info *server;
     char *url;
-    RCDTransfer *t;
-    RCDTransferProtocolHTTP *protocol;
 
-    url = g_strdup_printf ("%s/log.php", rcd_prefs_get_host ());
+    xmlrpc_env_init (&env);
+    xtrans = transaction_xml (&env, transaction, successful, message);
+    XMLRPC_FAIL_IF_FAULT (&env);
 
-    t = rcd_transfer_new (url, 0, NULL);
+    url = g_strdup_printf ("%s/RPC2/redcarpet-client.php",
+                           rcd_prefs_get_host ());
 
+    server = xmlrpc_server_info_new (&env, url);
     g_free (url);
 
-    if (!t->protocol || strcmp (t->protocol->name, "http") != 0) {
-        rc_debug (RC_DEBUG_LEVEL_WARNING, "Invalid log URL: %s", url);
-        g_object_unref (t);
-        return;
-    }
+    xmlrpc_server_info_set_auth (&env, server,
+                                 rcd_prefs_get_mid (),
+                                 rcd_prefs_get_secret ());
 
-    protocol = (RCDTransferProtocolHTTP *) t->protocol;
+    xmlrpc_client_call_server_asynch (server, "rcserver.transaction.new",
+                                      transaction_sent,
+                                      NULL,
+                                      "(V)", xtrans);
 
-    rcd_transfer_protocol_http_set_method (protocol, SOUP_METHOD_POST);
+    xmlrpc_server_info_free (server);
+    xmlrpc_DECREF (xtrans);
 
-    xml_string = transaction_xml (status, successful, message, &bytes);
-
-    rcd_transfer_protocol_http_set_request_body (
-        protocol, xml_string, bytes);
-
-    g_signal_connect (t, "file_done", 
-                      G_CALLBACK (transaction_sent),
-                      rcd_transaction_status_ref (status));
-
-    rcd_transfer_begin (t);
+cleanup:
+    xmlrpc_env_clean (&env);
 } /* rcd_transaction_send_log */
-    
+
+#if 0
 /*
  * This function is rather evil, but we need it to fake an
  * RCDTransactionStatus for things like dependency failures in autopull,
@@ -1318,6 +1391,7 @@ rcd_transaction_log_to_server (const char         *name,
                                gboolean            successful,
                                const char         *message)
 {
+    /* FIXME: This function will go with autopull module, right? */
     RCDTransactionStatus *status;
 
     if (!rcd_prefs_get_premium ())

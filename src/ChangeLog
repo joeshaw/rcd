@@ -1,3 +1,14 @@
+2003-07-28  Tambet Ingo  <tambet@ximian.com>
+
+	* rcd-transaction.c: Use XML-RPC method to send transaction log.
+
+	* Makefile.am (rcd_SOURCES): Add xmlrpc_soup.[ch].
+	Remove rcd-script stuff afain. It's going to rcd-modules.
+
+	* rcd-rpc-script.c: Remove
+
+	* xmlrpc_soup.[ch]: Add.
+
 2003-07-11  Tambet Ingo  <tambet@ximian.com>
 
 	* Makefile.am: Add new module called "rcd-script" for executing
