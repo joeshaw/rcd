@@ -1,5 +1,9 @@
 2002-07-22  Joe Shaw  <joe@ximian.com>
 
+	* Makefile.am: Make sure to chmod 0755 rcd when we install it.
+
+2002-07-22  Joe Shaw  <joe@ximian.com>
+
 	* Makefile.am: Added the init.d file to be disted.
 
 	* configure.in: Run rcd.in through configure to set the prefix.
