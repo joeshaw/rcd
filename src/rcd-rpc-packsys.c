@@ -212,7 +212,10 @@ packsys_refresh_all_channels (xmlrpc_env   *env,
         goto cleanup;
     }
 
-    value = xmlrpc_build_value (env, "(i)", rc_pending_get_id (pending));
+    if (pending)
+        value = xmlrpc_build_value (env, "(i)", rc_pending_get_id (pending));
+    else
+        value = xmlrpc_build_value (env, "()");
     XMLRPC_FAIL_IF_FAULT (env);
     
  cleanup:

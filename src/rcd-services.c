@@ -111,6 +111,8 @@ rcd_services_load (RCWorldMulti *multi)
             rc_world_multi_add_subworld (multi, world);
             g_object_unref (world);
         }
+
+        g_free (url);
     }
 }
 

@@ -620,7 +620,6 @@ rcd_world_remote_parse_channels_xml (RCDWorldRemote *remote,
         return NULL;
     }
 
-
     if (remote->mirrors_file)
         rcd_world_remote_fetch_mirrors (remote);
 

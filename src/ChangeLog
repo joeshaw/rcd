@@ -1,3 +1,21 @@
+2003-08-21  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-packsys.c (packsys_refresh_all_channels): If we don't
+	have a pending to poll on, return an empty array.
+
+	* rcd-services.c (rcd_services_load): Free the url when we're done
+	with it.
+
+	* rcd-transfer-http.c (http_done): Unref the transfer after we
+	call rcd_transfer_begin() having changed the protocol handler to
+	file from http.
+
+	* rcd.c (shutdown_world): Set the global world to NULL, call
+	rc_package_spew_leaks() for now to help track down package leaks.
+	(shutdown_packman): Added, sets the global packman to NULL.
+	(initialize_rc_packman): Set up a shutdown handler,
+	shutdown_packman().
+
 2003-08-19  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-packsys.c (packsys_mount_directory): Build a file URI

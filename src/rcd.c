@@ -241,9 +241,16 @@ daemonize (void)
 static void
 shutdown_world (gpointer user_data)
 {
-    RCWorld *world = user_data;
-    
-    g_object_unref (world);
+    rc_set_world (NULL);
+
+    /* FIXME: Remove for release */
+    rc_package_spew_leaks ();
+}
+
+static void
+shutdown_packman (gpointer user_data)
+{
+    rc_packman_set_global (NULL);
 }
 
 static void
@@ -264,6 +271,7 @@ initialize_rc_packman (void)
         exit (-1);
     }
 
+    rcd_shutdown_add_handler (shutdown_packman, packman);
     rc_packman_set_global (packman);
     g_object_unref (packman);
 }

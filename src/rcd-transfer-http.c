@@ -240,6 +240,13 @@ http_done (SoupMessage *message, gpointer user_data)
             g_free (local_url);
             
             rcd_transfer_begin (t);
+
+            /*
+             * rcd_transfer_begin() takes a ref which is normally released
+             * in rcd_transfer_file_done(), but since we're doing some
+             * evil here, we'll have to manage the ref manually.
+             */
+            g_object_unref (t);
             
             return;
         }
