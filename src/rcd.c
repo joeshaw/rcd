@@ -56,6 +56,10 @@
 #include "rcd-subscriptions.h"
 #include "rcd-transfer.h"
 
+#ifndef POPT_TABLEEND
+#  define POPT_TABLEEND { NULL, '\0', 0, 0, 0, NULL, NULL }
+#endif
+
 /* global variables related to option parsing */
 /* If it isn't declared "static", then it's used "extern" somewhere.  Ew. */
 
@@ -545,7 +549,7 @@ crash_handler (int sig_num)
     /* FIXME: Just to be sure, we should drop privileges before doing
        this. */
     sprintf (cmd, "python " SHAREDIR "/rcd-buddy %s %d",
-             rcd_executable_name, getpid ());
+             rcd_executable_name, (int) getpid ());
     system (cmd);
     
     exit (1);

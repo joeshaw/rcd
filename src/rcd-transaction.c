@@ -28,9 +28,7 @@
 
 #include <unistd.h>
 #include <sys/vfs.h>
-#ifdef HAVE_STATVFS
 #include <sys/statvfs.h>
-#endif
 
 #include "rcd-fetch.h"
 #include "rcd-log.h"
@@ -810,20 +808,11 @@ check_download_space (gsize download_size)
 {
     gsize block_size;
     gsize avail_blocks;
-
-#ifdef HAVE_STATVFS
     struct statvfs vfs_info;
 
     statvfs (rcd_prefs_get_cache_dir (), &vfs_info);
     block_size = vfs_info.f_frsize;
     avail_blocks = vfs_info.f_bavail;
-#else
-    struct statfs fs_info;
-
-    statfs (rcd_prefs_get_cache_dir (), &fs_info);
-    block_size = fs_info.f_bsize;
-    avail_blocks = fs_info.f_bavail;
-#endif
 
     if (download_size / block_size + 1 > avail_blocks)
         return FALSE;

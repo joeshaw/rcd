@@ -30,6 +30,7 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <stdio.h>
+#include <strings.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -56,6 +57,7 @@ substring_index (char *str, int len, char *substr)
     return -1;
 } /* substring_index */
 
+#ifdef HAVE_SO_PEERCRED
 static void
 read_cred (GIOChannel *channel, RCDUnixServerHandle *handle)
 {
@@ -81,6 +83,7 @@ read_cred (GIOChannel *channel, RCDUnixServerHandle *handle)
         handle->gid = cred.gid;
     }
 } /* read_cred */
+#endif
 
 static gboolean
 read_data(GIOChannel *iochannel,
@@ -96,8 +99,10 @@ read_data(GIOChannel *iochannel,
     int bytes_written;
     int total_written = 0;
 
+#ifdef HAVE_SO_PEERCRED
     if (!handle->cred_available)
         read_cred(iochannel, handle);
+#endif
 
     err = g_io_channel_read (iochannel,
                              read_buf,
@@ -203,7 +208,7 @@ shutdown_server_cb (gpointer user_data)
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Shutting down local server");
 
     close (sockfd);
-    unlink (SOCKET_PATH);
+    rc_rmdir (SOCKET_PATH);
 } /* shutdown_server_cb */
 
 int
@@ -228,7 +233,7 @@ rcd_unix_server_run_async(RCDUnixServerCallback callback)
         return -1;
     }
 
-    unlink(SOCKET_PATH);
+    rc_rmdir (SOCKET_PATH);
 
     /* If the socket is still around after we've tried to unlink it,
        it must be owned by someone else.  This means we won't be able
@@ -239,19 +244,46 @@ rcd_unix_server_run_async(RCDUnixServerCallback callback)
             "",
             "The socket path " SOCKET_PATH " cannot be unlinked, which",
             "will almost certainly lead to rcd being unable to start up properly.",
-            "To fix this, please delete " SOCKET_PATH " and re-start rcd.",
+            "To fix this, please remove " SOCKET_PATH " and re-start rcd.",
             "",
             NULL };
         int i;
         
         for (i = 0; message[i] != NULL; ++i)
             rc_debug (RC_DEBUG_LEVEL_WARNING, message[i]);
+
+        return -1;
     }
 
+    /*
+     * Solaris doesn't have credential passing, so we can't verify the
+     * user on the other end of the socket.  So if we don't have
+     * SO_PEERCRED, make the socket directory mode 0700 so only root can
+     * write to it.
+     *
+     * Why create a directory to put the socket into and not just make
+     * the socket mode 0700?  A great question!  Solaris is a sucky
+     * operating system and ignores permissions on domain sockets,
+     * allowing any user to write to any socket that he can see.  To get
+     * around this, we have to put the socket into a 0700 directory.
+     * Sigh.
+     */
+    if (rc_mkdir (SOCKET_PATH,
+#ifdef HAVE_SO_PEERCRED
+                   0777
+#else
+                   0700
+#endif
+                  ) < 0)
+    {
+        rc_debug (RC_DEBUG_LEVEL_WARNING, "Unable to create %s", SOCKET_PATH);
+        return -1;
+    }
 
     bzero(&servaddr, sizeof(servaddr));
     servaddr.sun_family = AF_UNIX;
-    strcpy(servaddr.sun_path, SOCKET_PATH);
+    snprintf (servaddr.sun_path, sizeof (servaddr.sun_path),
+              SOCKET_PATH"/rcd");
     
     if (bind (sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0) {
         rc_debug (RC_DEBUG_LEVEL_WARNING,
@@ -259,7 +291,9 @@ rcd_unix_server_run_async(RCDUnixServerCallback callback)
         return -1;
     }
 
-    chmod(SOCKET_PATH, 0777);
+#ifdef HAVE_SO_PEERCRED
+    chmod (servaddr.sun_path, 0777);
+#endif
 
     if (listen (sockfd, 10) < 0) {
         rc_debug (RC_DEBUG_LEVEL_WARNING,
@@ -275,3 +309,4 @@ rcd_unix_server_run_async(RCDUnixServerCallback callback)
 
     return 0;
 } /* rcd_unix_server_run_async */
+

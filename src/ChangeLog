@@ -1,3 +1,19 @@
+2002-10-01  Joe Shaw  <joe@ximian.com>
+
+	* rcd-transaction.c: Get rid of the HAVE_STATVFS conditionals.
+	Linux has it too, and it works just as we expect it, so just use
+	it everywhere since that's what Solaris has too.
+
+	* rcd-unix-server.c: Add conditionals for HAVE_SO_PEERCRED, so we
+	don't try to verify credentials on Solaris, which doesn't have
+	them.  Also work around Solaris's crappiness by moving the socket
+	from /var/run/rcd to /var/run/rcd/rcd, since Solaris lets anyone
+	write to unix domain sockets they can see, regardless of
+	filesystem permissions.
+
+	* rcd.c: Define POPT_TABLEEND if it isn't already.  Fix a compiler
+	warning on Solaris.
+
 2002-09-30  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-packsys.c (extra_dump_info): Also dump out the host URL,
