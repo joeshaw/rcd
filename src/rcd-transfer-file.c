@@ -81,9 +81,11 @@ ERROR:
 static void
 file_abort(RCDTransfer *t)
 {
-    RCDTransferProtocolFile *protocol = (RCDTransferProtocolFile *) t->protocol;
+    RCDTransferProtocolFile *protocol = 
+        (RCDTransferProtocolFile *) t->protocol;
 
-    g_source_remove (protocol->watch);
+    if (protocol->watch)
+        g_source_remove (protocol->watch);
 
     rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_CANCELLED, NULL);
     rcd_transfer_emit_done (t);

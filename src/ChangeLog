@@ -1,3 +1,9 @@
+2003-06-04  Joe Shaw  <joe@ximian.com>
+
+	* rcd-transfer-file.c (file_abort): Check to make sure
+	protocol->watch is set before trying to cancel it.  Gets rid of a
+	glib warning.
+
 2003-05-30  Joe Shaw  <joe@ximian.com>
 
 	* rcd-fetch.c (rcd_fetch_refresh): Copy the id_list so we own our
