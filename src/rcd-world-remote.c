@@ -539,7 +539,6 @@ rcd_world_remote_activate (RCDWorldRemote  *remote,
     value = xmlrpc_client_call_server_params (&env, server,
                                               "rcserver.activate",
                                               params);
-    /* FIXME: Should we ignore return value here? */
 
 cleanup:
     if (env.fault_occurred) {
