@@ -87,9 +87,29 @@ rcd_world_remote_refresh (RCWorld *world)
 static gboolean
 rcd_world_remote_assemble (RCWorldService *service)
 {
+    char *query_part;
+    gboolean local = TRUE;
     RCPending *pending;
 
-    pending = rcd_world_remote_fetch (RCD_WORLD_REMOTE (service), TRUE);
+    /* Find the query part. */
+    query_part = strchr (service->url, '?');
+
+    if (query_part) {
+        char *url;
+
+        url = g_strndup (service->url, query_part - service->url);
+
+        g_free (service->url);
+        service->url = url;
+
+        /* Move past the '?' */
+        query_part++;
+
+        if (g_strncasecmp (query_part, "remote_only=1", 15) == 0)
+            local = FALSE;
+    }
+
+    pending = rcd_world_remote_fetch (RCD_WORLD_REMOTE (service), local);
 
     if (pending == RCD_WORLD_REMOTE_FETCH_FAILED)
         return FALSE;
@@ -165,29 +185,49 @@ rcd_world_remote_get_channel_icon_url (RCDWorldRemote *remote,
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 static void
-rcd_world_remote_fetch_distributions (RCDWorldRemote *remote)
+rcd_world_remote_fetch_distributions (RCDWorldRemote *remote, gboolean local)
 {
     RCDCacheEntry *entry;
-    RCDTransfer *t;
-    const GByteArray *data;
+    RCDTransfer *t = NULL;
+    RCBuffer *buf = NULL;
+    const guint8 *buffer;
+    gsize buffer_len;
 
     entry = rcd_cache_lookup (rcd_cache_get_normal_cache (),
                               "distro_info",
                               RC_WORLD_SERVICE (remote)->unique_id,
                               TRUE);
-    t = rcd_transfer_new (remote->distributions_url,
-                          RCD_TRANSFER_FLAGS_NONE, entry);
+    
+    if (local) {
+        buf = rcd_cache_entry_map_file (entry);
 
-    data = rcd_transfer_begin_blocking (t);
-
-    if (rcd_transfer_get_error (t)) {
-        rc_debug (RC_DEBUG_LEVEL_CRITICAL,
-                  "Unable to downloaded distribution info: %s",
-                  rcd_transfer_get_error_string (t));
-        goto cleanup;
+        if (buf) {
+            buffer = buf->data;
+            buffer_len = buf->size;
+        }
     }
 
-    remote->distro = rc_distro_parse_xml (data->data, data->len);
+    if (!buf) {
+        RCDTransfer *t;
+        const GByteArray *data;
+
+        t = rcd_transfer_new (remote->distributions_url,
+                              RCD_TRANSFER_FLAGS_NONE, entry);
+
+        data = rcd_transfer_begin_blocking (t);
+
+        if (rcd_transfer_get_error (t)) {
+            rc_debug (RC_DEBUG_LEVEL_CRITICAL,
+                      "Unable to downloaded distribution info: %s",
+                      rcd_transfer_get_error_string (t));
+            goto cleanup;
+        }
+
+        buffer = data->data;
+        buffer_len = data->len;
+    }
+
+    remote->distro = rc_distro_parse_xml (buffer, buffer_len);
 
     if (!remote->distro) {
         rc_debug (RC_DEBUG_LEVEL_CRITICAL,
@@ -196,63 +236,111 @@ rcd_world_remote_fetch_distributions (RCDWorldRemote *remote)
     }
 
 cleanup:
-    g_object_unref (t);
+    if (buf)
+        rc_buffer_unmap_file (buf);
+
+    if (t)
+        g_object_unref (t);
 }
 
 static void
-rcd_world_remote_fetch_licenses (RCDWorldRemote *remote)
+rcd_world_remote_fetch_licenses (RCDWorldRemote *remote, gboolean local)
 {
     RCDCacheEntry *entry;
-    RCDTransfer *t;
-    const GByteArray *data;
+    RCDTransfer *t = NULL;
+    RCBuffer *buf = NULL;
+    const guint8 *buffer;
+    gsize buffer_len;
 
     entry = rcd_cache_lookup (rcd_cache_get_normal_cache (),
                               "licenses", RC_WORLD_SERVICE (remote)->unique_id,
                               TRUE);
-    t = rcd_transfer_new (remote->licenses_url, RCD_TRANSFER_FLAGS_NONE, entry);
 
-    data = rcd_transfer_begin_blocking (t);
+    if (local) {
+        buf = rcd_cache_entry_map_file (entry);
 
-    if (rcd_transfer_get_error (t)) {
-        rc_debug (RC_DEBUG_LEVEL_CRITICAL,
-                  "Unable to downloaded licenses info: %s",
-                  rcd_transfer_get_error_string (t));
-        goto cleanup;
+        if (buf) {
+            buffer = buf->data;
+            buffer_len = buf->size;
+        }
     }
 
-    if (!rcd_license_parse (remote, data->data, data->len)) {
+    if (!buf) {
+        const GByteArray *data;
+
+        t = rcd_transfer_new (remote->licenses_url,
+                              RCD_TRANSFER_FLAGS_NONE, entry);
+
+        data = rcd_transfer_begin_blocking (t);
+
+        if (rcd_transfer_get_error (t)) {
+            rc_debug (RC_DEBUG_LEVEL_CRITICAL,
+                      "Unable to downloaded licenses info: %s",
+                      rcd_transfer_get_error_string (t));
+            goto cleanup;
+        }
+
+        buffer = data->data;
+        buffer_len = data->len;
+    }
+
+    if (!rcd_license_parse (remote, buffer, buffer_len)) {
         rc_debug (RC_DEBUG_LEVEL_CRITICAL, "Unable to parse licenses info");
         rcd_cache_entry_invalidate (entry);
     }        
 
 cleanup:
-    g_object_unref (t);
+    if (buf)
+        rc_buffer_unmap_file (buf);
+    
+    if (t)
+        g_object_unref (t);
 }
 
 static void
-rcd_world_remote_fetch_news (RCDWorldRemote *remote)
+rcd_world_remote_fetch_news (RCDWorldRemote *remote, gboolean local)
 {
     RCDCacheEntry *entry;
-    RCDTransfer *t;
-    const GByteArray *data;
+    RCDTransfer *t = NULL;
+    RCBuffer *buf = NULL;
+    const guint8 *buffer;
+    gsize buffer_len;
     xmlDoc *doc;
     xmlNode *node;
 
     entry = rcd_cache_lookup (rcd_cache_get_normal_cache (),
                               "news", RC_WORLD_SERVICE (remote)->unique_id,
                               TRUE);
-    t = rcd_transfer_new (remote->news_url, RCD_TRANSFER_FLAGS_NONE, entry);
 
-    data = rcd_transfer_begin_blocking (t);
+    if (local) {
+        buf = rcd_cache_entry_map_file (entry);
 
-    if (rcd_transfer_get_error (t)) {
-        rc_debug (RC_DEBUG_LEVEL_CRITICAL,
-                  "Unable to downloaded licenses info: %s",
-                  rcd_transfer_get_error_string (t));
-        goto cleanup;
+        if (buf) {
+            buffer = buf->data;
+            buffer_len = buf->size;
+        }
     }
 
-    doc = rc_parse_xml_from_buffer (data->data, data->len);
+    if (!buf) {
+        const GByteArray *data;
+
+        t = rcd_transfer_new (remote->news_url,
+                              RCD_TRANSFER_FLAGS_NONE, entry);
+
+        data = rcd_transfer_begin_blocking (t);
+
+        if (rcd_transfer_get_error (t)) {
+            rc_debug (RC_DEBUG_LEVEL_CRITICAL,
+                      "Unable to downloaded licenses info: %s",
+                      rcd_transfer_get_error_string (t));
+            goto cleanup;
+        }
+
+        buffer = data->data;
+        buffer_len = data->len;
+    }
+
+    doc = rc_parse_xml_from_buffer (buffer, buffer_len);
     if (doc == NULL) {
         rc_debug (RC_DEBUG_LEVEL_CRITICAL, "Couldn't parse news XML file");
         rcd_cache_entry_invalidate (entry);
@@ -278,33 +366,57 @@ rcd_world_remote_fetch_news (RCDWorldRemote *remote)
     xmlFreeDoc (doc);
 
 cleanup:
-    g_object_unref (t);
+    if (buf)
+        rc_buffer_unmap_file (buf);
+
+    if (t)
+        g_object_unref (t);
 }
 
 static void
-rcd_world_remote_fetch_mirrors (RCDWorldRemote *remote)
+rcd_world_remote_fetch_mirrors (RCDWorldRemote *remote, gboolean local)
 {
     RCDCacheEntry *entry;
-    RCDTransfer *t;
-    const GByteArray *data = NULL;
+    RCDTransfer *t = NULL;
+    RCBuffer *buf = NULL;
+    const guint8 *buffer;
+    gsize buffer_len;
     xmlDoc *doc = NULL;
     xmlNode *node;
 
     entry = rcd_cache_lookup (rcd_cache_get_normal_cache (),
                               "mirrors", RC_WORLD_SERVICE (remote)->unique_id,
                               TRUE);
-    t = rcd_transfer_new (remote->mirrors_url, 0, entry);
 
-    data = rcd_transfer_begin_blocking (t);
+    if (local) {
+        buf = rcd_cache_entry_map_file (entry);
 
-    if (rcd_transfer_get_error (t)) {
-        rc_debug (RC_DEBUG_LEVEL_CRITICAL,
-                  "Attempt to download mirror list failed: %s",
-                  rcd_transfer_get_error_string (t));
-        goto cleanup;
+        if (buf) {
+            buffer = buf->data;
+            buffer_len = buf->size;
+        }
     }
 
-    doc = rc_parse_xml_from_buffer (data->data, data->len);
+    if (!buf) {
+        const GByteArray *data;
+
+        t = rcd_transfer_new (remote->mirrors_url,
+                              RCD_TRANSFER_FLAGS_NONE, entry);
+
+        data = rcd_transfer_begin_blocking (t);
+
+        if (rcd_transfer_get_error (t)) {
+            rc_debug (RC_DEBUG_LEVEL_CRITICAL,
+                      "Attempt to download mirror list failed: %s",
+                      rcd_transfer_get_error_string (t));
+            goto cleanup;
+        }
+
+        buffer = data->data;
+        buffer_len = data->len;
+    }
+
+    doc = rc_parse_xml_from_buffer (buffer, buffer_len);
     if (doc == NULL) {
         rc_debug (RC_DEBUG_LEVEL_CRITICAL, "Couldn't parse mirrors XML file.");
         rcd_cache_entry_invalidate (entry);
@@ -330,7 +442,11 @@ rcd_world_remote_fetch_mirrors (RCDWorldRemote *remote)
     xmlFreeDoc (doc);
     
  cleanup:
-    g_object_unref (t);
+    if (buf)
+        rc_buffer_unmap_file (buf);
+
+    if (t)
+        g_object_unref (t);
 }
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
@@ -810,7 +926,7 @@ rcd_world_remote_parse_serviceinfo (RCDWorldRemote *remote,
     }
 
     if (remote->distributions_url)
-        rcd_world_remote_fetch_distributions (remote);
+        rcd_world_remote_fetch_distributions (remote, local);
     else
         remote->distro = rc_distro_parse_xml (NULL, 0);
 
@@ -830,13 +946,13 @@ rcd_world_remote_parse_serviceinfo (RCDWorldRemote *remote,
     }
 
     if (remote->mirrors_url)
-        rcd_world_remote_fetch_mirrors (remote);
+        rcd_world_remote_fetch_mirrors (remote, local);
 
     if (remote->licenses_url)
-        rcd_world_remote_fetch_licenses (remote);
+        rcd_world_remote_fetch_licenses (remote, local);
 
     if (remote->news_url)
-        rcd_world_remote_fetch_news (remote);
+        rcd_world_remote_fetch_news (remote, local);
 
     if (remote->channels_url)
         pending = rcd_world_remote_fetch_channels (remote, local);

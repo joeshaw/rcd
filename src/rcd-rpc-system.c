@@ -42,6 +42,16 @@
 #include "rcd-rpc-util.h"
 #include "rcd-xmlrpc.h"
 
+#define RCD_XMLRPC_PROTOCOL_VERSION 2
+
+static xmlrpc_value *
+system_protocol_version (xmlrpc_env   *env,
+                         xmlrpc_value *param_array,
+                         void         *user_data)
+{
+    return xmlrpc_build_value (env, "i", RCD_XMLRPC_PROTOCOL_VERSION);
+}
+
 static xmlrpc_value *
 system_ping(xmlrpc_env   *env,
             xmlrpc_value *param_array,
@@ -405,6 +415,9 @@ system_flush_cache (xmlrpc_env   *env,
 void
 rcd_rpc_system_register_methods(void)
 {
+    rcd_rpc_register_method ("rcd.system.protocol_version",
+                             system_protocol_version,
+                             NULL, NULL);
     rcd_rpc_register_method ("rcd.system.ping",
                              system_ping,
                              NULL, NULL);

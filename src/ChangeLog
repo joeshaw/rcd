@@ -1,3 +1,21 @@
+2003-08-29  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-system.c (system_protocol_version): Added.  Allows
+	clients to recognize what version of RPC methods the daemon speaks
+	so that we can break compatibility and avoid nasty tracebacks.
+	(rcd_rpc_system_register_methods): Register the method.
+
+	* rcd-rpc-service.c (service_add): Add the "remote_only=1" query
+	string to the service URL so that we always load service data off
+	the net after a "rug service-add".
+
+	* rcd-world-remote.c (rcd_world_remote_assemble): Parse the URL
+	with the query string.
+	(rcd_world_remote_fetch_distributions,
+	rcd_world_remote_fetch_licenses, rcd_world_remote_fetch_news,
+	rcd_world_remote_fetch_mirrors): Add a local flag to all of these
+	so that they're loaded off disk when rcd starts up if possible.
+
 2003-08-28  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-packsys.c: Move the blocking RPC call and channel

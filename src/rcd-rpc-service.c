@@ -126,18 +126,23 @@ service_add (xmlrpc_env   *env,
              xmlrpc_value *param_array,
              void         *user_data)
 {
-    char *service_url;
+    char *service_url, *mangled_url;
 
     xmlrpc_parse_value (env, param_array, "(s)", &service_url);
     XMLRPC_FAIL_IF_FAULT (env);
 
+    /* We always want to download data from the site */
+    mangled_url = g_strconcat (service_url, "?remote_only=1", NULL);
+
     if (!rc_world_multi_mount_service (RC_WORLD_MULTI (rc_get_world ()),
-                                       service_url)) {
+                                       mangled_url)) {
         xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_INVALID_SERVICE,
                                         "Unable to mount service for '%s'",
                                         service_url);
     } else
         rcd_services_save ();
+
+    g_free (mangled_url);
 
 cleanup:
     if (env->fault_occurred)
