@@ -1,3 +1,18 @@
+2002-11-20  Joe Shaw  <joe@ximian.com>
+
+	* rcd-prefs.c (rcd_prefs_get_host): Get rid of RCX_MAGIC and
+	RC_MAGIC.  Everyone should just use the host preference instead.
+	(rcd_prefs_get_proxy): If the proxy URL is invalid, return the
+	invalid string instead of NULL so rcd-transfer can handle it and
+	abort properly.
+
+	* rcd-transfer-http.c (http_open): If we have a proxy_url but
+	can't get a proxy_context from Soup, then the URI is invalid and
+	set an error as such.
+
+	* rcd-transfer.c (rcd_transfer_begin_blocking): If
+	rcd_transfer_begin() returns -1, don't run the main loop.
+
 2002-11-14  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-util.c (rcd_xmlrpc_to_rc_package_dep): Sniff out debian

@@ -419,6 +419,19 @@ http_open (RCDTransfer *t)
     proxy_url = rcd_prefs_get_proxy ();
     if (proxy_url) {
         proxy_context = soup_context_get (proxy_url);
+
+        /* No context?  Probably a bad URL. */
+        if (!proxy_context) {
+            char *err_str;
+
+            err_str = g_strconcat("Invalid proxy URL: ", proxy_url, NULL);
+
+            rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_INVALID_URI,
+                                    err_str);
+            g_free (err_str);
+            return -1;
+        }
+
         soup_set_proxy (proxy_context);
     }
     else

@@ -115,13 +115,6 @@ rcd_prefs_get_host (void)
     static char *host = NULL;
 
     g_free (host);
-    host = NULL;
-
-    if (getenv ("RCX_MAGIC"))
-        return getenv ("RCX_MAGIC");
-
-    if (getenv ("RC_MAGIC"))
-        return getenv ("RC_MAGIC");
 
     host = gnome_config_get_string (
         get_config_path ("/Network/host=http://red-carpet.ximian.com"));
@@ -144,14 +137,8 @@ rcd_prefs_set_host (const char *host)
 gboolean
 rcd_prefs_get_premium (void)
 {
-    if (getenv ("RCX_MAGIC"))
-        return TRUE;
-    else if (getenv ("RC_MAGIC"))
-        return FALSE;
-    else {
-        return gnome_config_get_bool (
-            get_config_path ("/Network/enable-premium=FALSE"));
-    }
+    return gnome_config_get_bool (
+        get_config_path ("/Network/enable-premium=FALSE"));
 } /* rcd_prefs_get_premium */
 
 void
@@ -202,7 +189,7 @@ rcd_prefs_get_proxy (void)
 
     if (!proxy_uri) {
         rc_debug (RC_DEBUG_LEVEL_WARNING, "Invalid proxy URL: %s", proxy);
-        return NULL;
+        return proxy;
     }
 
     proxy_uri->user = proxy_user;

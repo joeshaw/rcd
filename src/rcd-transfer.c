@@ -421,8 +421,10 @@ rcd_transfer_begin_blocking (RCDTransfer *t)
 
     id = rcd_transfer_begin (t);
 
-    /* Wait until the transfer has finished */
-    g_main_loop_run (closure.main_loop);
+    if (id != -1) {
+        /* Wait until the transfer has finished */
+        g_main_loop_run (closure.main_loop);
+    }
 
     g_main_loop_unref (closure.main_loop);
 
