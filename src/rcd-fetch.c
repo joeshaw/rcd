@@ -424,7 +424,7 @@ rcd_fetch_news (void)
     }
 
     doc = xmlParseMemory (data->data, data->len);
-    if (doc != NULL) {
+    if (doc == NULL) {
         rc_debug (RC_DEBUG_LEVEL_CRITICAL,
                   "Couldn't parse news XML file.");
         goto cleanup;
