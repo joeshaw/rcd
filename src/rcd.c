@@ -234,7 +234,8 @@ daemonize (void)
     g_free (pid);
     close (fd);
 
-    rcd_shutdown_add_handler ((RCDHeartbeatFunc) unlink, "/var/run/rcd.pid");
+    rcd_shutdown_add_handler ((RCDShutdownFn) unlink, "/var/run/rcd.pid");
+    rcd_shutdown_add_handler ((RCDShutdownFn) unlink, "/var/lock/subsys/rcd");
 }
 
 static void

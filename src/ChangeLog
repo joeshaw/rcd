@@ -1,3 +1,9 @@
+2003-10-08  Joe Shaw  <joe@ximian.com>
+
+	* rcd.c (daemonize): Remove /var/lock/subsys/rcd on shutdown so
+	that /sbin/service rcd status doesn't report "subsys locked" when
+	you do a "rug shutdown".
+
 2003-10-07  Joe Shaw  <joe@ximian.com>
 
 	* rcd-cache.c (rcd_cache_entry_open): Check to make sure that the
