@@ -241,6 +241,7 @@ static void
 shutdown_world (gpointer user_data)
 {
     RCWorld *world = user_data;
+    
     rc_world_free (world);
 }
 
@@ -289,6 +290,8 @@ initialize_rc_world (void)
         }
 
         rc_world_undump (world, dump_file_contents);
+
+        g_free (dump_file_contents);
 
 
     } else {

@@ -1441,6 +1441,8 @@ append_dep_info (RCResolverInfo *info, gpointer user_data)
                                 (debug && rc_resolver_info_is_important (info)) ? "IMP " : "",
                                 msg, NULL);
 
+        g_free (msg);
+
         g_free (*dep_failure_info);
         *dep_failure_info = new_info;
     }

@@ -87,6 +87,7 @@ access_control_check (xmlrpc_env   *env,
 {
     RCDIdentity *identity = (RCDIdentity *) user_data;
     RCDRPCMethodInfo *method_info;
+    char *str;
 
     g_assert (identity != NULL);
 
@@ -96,14 +97,17 @@ access_control_check (xmlrpc_env   *env,
               "Method being called: %s", method_name);
 
     if (method_info) {
+        str = rcd_privileges_to_string (method_info->req_privs);
         rc_debug (RC_DEBUG_LEVEL_MESSAGE,
-                  "Requires Privileges: %s",
-                  rcd_privileges_to_string (method_info->req_privs));
+                  "Requires Privileges: %s", str);
+        g_free (str);
+              
     }
 
+    str = rcd_privileges_to_string (identity->privileges);
     rc_debug (RC_DEBUG_LEVEL_MESSAGE,
-              "    User Privileges: %s",
-              rcd_privileges_to_string (identity->privileges));
+              "    User Privileges: %s", str);
+    g_free (str);
 
     if (method_info
         && ! rcd_identity_approve_action (identity, method_info->req_privs)) {
