@@ -3,7 +3,7 @@
 /*
  * rcd-transaction.c
  *
- * Copyright (C) 2002 Ximian, Inc.
+ * Copyright (C) 2000-2002 Ximian, Inc.
  *
  */
 
@@ -27,6 +27,10 @@
 #include "rcd-transaction.h"
 
 #include <unistd.h>
+#include <sys/vfs.h>
+#ifdef HAVE_STATVFS
+#include <sys/statvfs.h>
+#endif
 
 #include "rcd-fetch.h"
 #include "rcd-log.h"
@@ -431,7 +435,56 @@ update_download_progress (gsize size, gpointer user_data)
                                 status->total_download_size);    
 } /* update_download_progress */
 
+static const char *
+format_size (gsize size)
+{
+    static char *output = NULL;
+
+    g_free (output);
+
+    if (size > 1024 * 1024 * 1024) {
+        output = g_strdup_printf (
+            "%.2fg", (float) size / (float) (1024 * 1024 * 1024));
+    }
+    else if (size > 1024 * 1024) {
+        output = g_strdup_printf (
+            "%.2fM", (float) size / (float) (1024 * 1024));
+    }
+    else if (size > 1024)
+        output = g_strdup_printf ("%.2fk", (float) size / 1024.0);
+    else
+        output = g_strdup_printf ("%db", size);
+
+    return output;
+} /* format_size */
+
 static gboolean
+check_download_space (gsize download_size)
+{
+    gsize block_size;
+    gsize avail_blocks;
+
+#ifdef HAVE_STATVFS
+    struct statvfs vfs_info;
+
+    statvfs (rcd_prefs_get_cache_dir (), &vfs_info);
+    block_size = vfs_info.f_frsize;
+    avail_blocks = vfs_info.f_bavail;
+#else
+    struct statfs fs_info;
+
+    statfs (rcd_prefs_get_cache_dir (), &fs_info);
+    block_size = fs_info.f_bsize;
+    avail_blocks = fs_info.f_bavail;
+#endif
+
+    if (download_size / block_size + 1 > avail_blocks)
+        return FALSE;
+    else
+        return TRUE;
+} /* check_download_space */
+
+static int
 download_packages (RCPackageSList *packages, RCDTransactionStatus *status)
 {
     RCPackageSList *iter;
@@ -458,7 +511,19 @@ download_packages (RCPackageSList *packages, RCDTransactionStatus *status)
     }
 
     if (!status->packages_to_download)
-        return FALSE;
+        return 0;
+
+    if (!check_download_space (status->total_download_size)) {
+        char *msg;
+
+        msg = g_strdup_printf ("Insufficient disk space: %s needed in %s",
+                               format_size (status->total_download_size),
+                               rcd_prefs_get_cache_dir ());
+        fail_transaction (status, msg);
+        g_free (msg);
+
+        return -1;
+    }
 
     rcd_pending_add_message (status->pending, "download");
     rcd_pending_update (status->pending, 0.0);
@@ -472,7 +537,7 @@ download_packages (RCPackageSList *packages, RCDTransactionStatus *status)
         download_completed,
         status);
 
-    return TRUE;
+    return g_slist_length (status->packages_to_download);
 } /* download_packages */
 
 int
@@ -514,6 +579,10 @@ rcd_transaction_begin (RCWorld        *world,
     /*
      * If we have to download files, start the download.  Otherwise,
      * schedule the transaction
+     *
+     * If there's an error, it'll be set in download_packages(), and
+     * return a negative value (and not triggering the run_transaction()
+     * call).
      */
     if (!download_packages (status->install_packages, status))
         g_idle_add (run_transaction, status);

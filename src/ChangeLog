@@ -1,5 +1,12 @@
 2002-08-12  Joe Shaw  <joe@ximian.com>
 
+	* rcd-transaction.c (download_packages): Return an int instead of
+	a gboolean.  If we have packages to download, check to make sure
+	we have the disk space to store them.  Otherwise, lose it.
+	Returns the number of packages to download now.
+
+2002-08-12  Joe Shaw  <joe@ximian.com>
+
 	* rcd-prefs.c (rcd_prefs_get_cache_dir): Change the cache dir to
 	/var/cache/redcarpet.
 
