@@ -37,6 +37,7 @@
 #include "rcd-query.h"
 #include "rcd-rpc.h"
 #include "rcd-rpc-packsys.h"
+#include "rcd-rpc-log.h"
 #include "rcd-transfer.h"
 #include "rcd-subscriptions.h"
 #include "rcd-fetch.h"

@@ -1,5 +1,7 @@
 2002-06-17  Jon Trowbridge  <trow@ximian.com>
 
+	* rcd.c: Get rid of a warning by #including rcd-rpc-log.h
+
 	* rcd-rpc-log.c: Added.  XML-RPC magic for log queries.
 
 	* rcd.c (main): Register log methods.
