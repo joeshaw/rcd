@@ -1,3 +1,9 @@
+2003-09-23  Tambet Ingo  <tambet@ximian.com>
+
+	* rcd-transaction.c (transaction_xml): Change "endtime" type to
+	integer from float. For some mysterious reason float wasn't good
+	enough.
+
 2003-09-19  Tambet Ingo  <tambet@ximian.com>
 
 	* rcd-rpc.c (rcd_rpc_call_method): Set xmlrpc preinvoke method

@@ -1317,7 +1317,7 @@ transaction_xml (xmlrpc_env     *env,
         XMLRPC_FAIL_IF_FAULT (env);
     }
 
-    RCD_XMLRPC_STRUCT_SET_DOUBLE (env, xtrans, "endtime", time (NULL));
+    RCD_XMLRPC_STRUCT_SET_INT (env, xtrans, "endtime", time (NULL));
     XMLRPC_FAIL_IF_FAULT (env);
 
     RCD_XMLRPC_STRUCT_SET_STRING (env, xtrans, "client",
