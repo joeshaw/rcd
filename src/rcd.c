@@ -60,6 +60,8 @@
 #include "rcd-transaction.h"
 #include "rcd-transfer.h"
 
+#define SYNTHETIC_PACKAGE_DB_PATH "/var/lib/rcd/synthetic-packages.xml"
+
 static void
 root_check (void)
 {
@@ -265,6 +267,8 @@ initialize_rc_world (void)
 
     world = rc_world_new (packman);
     rc_set_world (world);
+
+    rc_world_set_synthetic_package_db (world, SYNTHETIC_PACKAGE_DB_PATH);
     
     rcd_shutdown_add_handler (shutdown_world, world);
 

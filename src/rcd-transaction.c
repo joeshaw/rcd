@@ -623,6 +623,7 @@ static gboolean
 run_transaction(gpointer user_data)
 {
     RCDTransactionStatus *status = user_data;
+    RCWorld *world = rc_get_world ();
     gboolean repackage;
     int flags = 0;
 
@@ -680,10 +681,10 @@ run_transaction(gpointer user_data)
     if (status->flags == RCD_TRANSACTION_FLAGS_DRY_RUN)
         flags = RC_TRANSACT_FLAG_NO_ACT;
 
-    rc_packman_transact (status->packman,
-                         status->install_packages,
-                         status->remove_packages,
-                         flags);
+    rc_world_transact (world,
+                       status->install_packages,
+                       status->remove_packages,
+                       flags);
 
     g_signal_handlers_disconnect_by_func (
         G_OBJECT (status->packman),
@@ -718,7 +719,7 @@ run_transaction(gpointer user_data)
 
     /* Update the list of system packages */
     if (status->flags != RCD_TRANSACTION_FLAGS_DRY_RUN)
-        rc_world_get_system_packages (rc_get_world ());
+        rc_world_get_system_packages (world);
 
     rcd_transaction_unlock ();
     cleanup_after_transaction (status);
@@ -749,6 +750,9 @@ verify_packages (RCDTransactionStatus *status)
         RCVerificationStatus worst_status = RC_VERIFICATION_STATUS_PASS;
         gboolean gpg_attempted = FALSE;
         GSList *v;
+
+        if (rc_package_is_synthetic (package))
+            continue;
 
         /* Flush the glib main loop queue */
         while (g_main_pending ())
@@ -984,6 +988,11 @@ download_packages (RCPackageSList *packages, RCDTransactionStatus *status)
 
     for (iter = packages; iter; iter = iter->next) {
         RCPackage *package = iter->data;
+        
+        /* skip synthetic packages, since there is nothing to actually
+           download */
+        if (rc_package_is_synthetic (package))
+            continue;
 
         if (package->package_filename) {
             if (!g_file_test (package->package_filename, G_FILE_TEST_EXISTS)) {

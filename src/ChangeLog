@@ -1,3 +1,16 @@
+2003-04-18  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd.c (initialize_rc_world): Set the path to the synthetic
+	package db.  We use /var/lib/rcd/synthetic-packages.xml.
+
+	* rcd-transaction.c (run_transaction): Call rc_world_transact
+	instead of rc_packman_transact.
+	(verify_packages): Don't try to verify synthetic packages.
+	(download_packages): Don't try to download synthetic packages.
+
+	* rcd-rpc-packsys.c (packsys_package_dependency_info): Include
+	information on the package's children.
+
 2003-04-18  Joe Shaw  <joe@ximian.com>
 
 	* Makefile.am: Add rcd-transfer-pool.[ch].

@@ -928,7 +928,7 @@ packsys_package_dependency_info (xmlrpc_env   *env,
     xmlrpc_value *xmlrpc_package;
     RCPackage *package;
     xmlrpc_value *result = NULL;
-    xmlrpc_value *provides, *requires, *conflicts, *obsoletes;
+    xmlrpc_value *provides, *requires, *conflicts, *obsoletes, *children;
 
     xmlrpc_parse_value (env, param_array, "(V)", &xmlrpc_package);
     XMLRPC_FAIL_IF_FAULT (env);
@@ -961,6 +961,12 @@ packsys_package_dependency_info (xmlrpc_env   *env,
         xmlrpc_struct_set_value (env, result, "obsoletes", obsoletes);
         XMLRPC_FAIL_IF_FAULT (env);
         xmlrpc_DECREF (obsoletes);
+
+        children = rcd_rc_package_dep_array_to_xmlrpc (package->children_a, env);
+        xmlrpc_struct_set_value (env, result, "children", children);
+        XMLRPC_FAIL_IF_FAULT (env);
+        xmlrpc_DECREF (children);
+        
 
     } else {
         xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PACKAGE_NOT_FOUND,
