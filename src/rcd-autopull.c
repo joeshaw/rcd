@@ -538,8 +538,6 @@ package_from_xml_node (xmlNode *node)
                   channel ? rc_channel_get_name (channel) : "SYSTEM");
     }
 
-    g_print ("%s\n", rc_package_to_str_static (pkg));
-
  finished:
     g_free (pkg_name);
 

@@ -1,5 +1,8 @@
 2002-09-11  Jon Trowbridge  <trow@ximian.com>
 
+	* rcd-autopull.c (package_from_xml_node): Removed some left-over
+	debug spew.
+
 	* rcd-rpc-util.c (rcd_rc_package_to_xmlrpc): If name_installed >
 	0, this package has a greater version number than the installed
 	package with the same name.  If name_installed < 0, the installed
