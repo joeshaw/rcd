@@ -40,7 +40,10 @@ through the hell of building this stuff yourself.
   ever happens.  The first (libxml2.patch) adds libxml2 backend support
   so we don't have to link against expat (we link against libxml2 already
   anyway).  The second (preinvoke.patch) adds preinvoke support, so we
-  can do access control on methods.  Apply them both
+  can do access control on methods. The third, and final
+  (public-dispatch.patch), is useful if you want to make calls in
+  your registry without incurring the penalty inherent in XML serialization
+  and deserialization. Apply all of them
   ("patch -p1 < [patch]" from the toplevel xmlrpc-c source dir).  Then
   engage in highly entertaining build fun:
 
