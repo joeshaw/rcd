@@ -1,3 +1,7 @@
+2004-08-26  James Willcox  <james@ximian.com>
+
+	* configure.in: Bump to 2.3.9
+
 004-07-19  James Willcox  <james@ximian.com>
                                                                                 
         * configure.in: fixup the libsoup link line such that it correctly
