@@ -12,8 +12,14 @@ xmlrpc-c library with a libxml2-backend patch applied to it.  Whee!
 * xmlrpc-c
 
   Get the xmlrpc-c 0.9.10 tarball from /nfs/users/joe/xmlrpc-c and
-  untar it.  Apply the patch also in /nfs/users/joe/xmlrpc-c, and do
-  the following:
+  untar it.  
+
+  We apply a couple of patches to xmlrpc-c, both of which are pending
+  upstream.  One adds libxml2 backend support, so we don't have to
+  rely upon expat and the other adds preinvoke support, so we can do
+  access control on methods.  Apply both "xmlrpc-c.patch" and
+  "preinvoke.patch" from /nfs/users/joe/xmlrpc-c.  Then engage in
+  highly entertaining build fun:
 
       libtoolize --force --copy
       aclocal
