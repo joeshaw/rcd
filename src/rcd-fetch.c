@@ -1002,7 +1002,14 @@ rcd_fetch_news_local (void)
 static gchar *
 get_mirrors_url (void)
 {
-    return g_strdup ("http://red-carpet.ximian.com/mirrors.xml"); /* FIXME */
+    const char *server;
+
+    if (rcd_prefs_get_premium ())
+        server = rcd_prefs_get_host ();
+    else
+        server = "http://red-carpet.ximian.com";
+
+    return g_strconcat (server, "/mirrors.xml", NULL);
 }
 
 static void
