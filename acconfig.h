@@ -4,3 +4,5 @@
 #undef MICRO_VERSION
 
 #undef GETTEXT_PACKAGE
+
+#undef HAVE_SO_PEERCRED

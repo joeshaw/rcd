@@ -1,3 +1,11 @@
+2002-10-01  Joe Shaw  <joe@ximian.com>
+
+	* acconfig.h: Add HAVE_SO_PEERCRED
+
+	* configure.in: Add a check for SO_PEERCRED.
+
+	* rugburn/rugburn: Use /var/run/rcd/rcd
+
 2002-09-26  Joe Shaw  <joe@ximian.com>
 
 	* rcd.logrotate: Make this actually work.

@@ -110,6 +110,21 @@ AC_CHECK_HEADERS(uuid/uuid.h,,
 RCD_CFLAGS="$RCD_CFLAGS $XMLRPC_CFLAGS"
 RCD_LIBS="$RCD_LIBS $XMLRPC_LIBS -lpopt -luuid"
 
+###
+### Checking for SO_PEERCRED
+###
+
+AC_CACHE_CHECK(for SO_PEERCRED, have_so_peercred,
+	AC_TRY_COMPILE([
+		#include <sys/types.h>
+		#include <sys/socket.h>
+		], [
+		int rc;
+		rc = getsockopt(0, SOL_SOCKET, SO_PEERCRED, NULL, NULL);
+		], have_so_peercred=yes, have_so_peercred=no))
+if test $have_so_peercred = yes; then
+	AC_DEFINE(HAVE_SO_PEERCRED)
+fi
 
 ###
 ### static?
