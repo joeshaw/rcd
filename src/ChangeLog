@@ -1,5 +1,8 @@
 2003-09-29  Joe Shaw  <joe@ximian.com>
 
+	* rcd-rpc-prefs.c (prefs_set_pref): Free the GError after we set a
+	fault with it.  Found by Tambet.
+
 	* rcd-world-remote.c: Since the move to channel base IDs, it's
 	possible to get old cached data even if the target changes.  This
 	commit fixes that by saving the old target to disk and when

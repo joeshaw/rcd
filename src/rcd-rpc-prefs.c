@@ -276,6 +276,7 @@ prefs_set_pref (xmlrpc_env   *env,
                                             RCD_RPC_FAULT_CANT_SET_PREFERENCE,
                                             "Unable to set preference: %s",
                                             err->message);
+            g_error_free (err);
             return NULL;
         }
 
