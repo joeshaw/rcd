@@ -2,6 +2,11 @@
 
 	* configure.in: 2.0.2
 
+2004-01-23  Joe Shaw  <joe@ximian.com>
+
+	* configure.in: Add pkg-config requirement for gthread-2.0, since
+	we need to initialize threads for libsoup-2.2
+
 2004-01-13  Joe Shaw  <joe@ximian.com>
 
 	* configure.in: Update pkgconfig references from soup-2.0 to
