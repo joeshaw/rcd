@@ -1,3 +1,9 @@
+2003-04-01  Joe Shaw  <joe@ximian.com>
+
+	* Makefile.am: Conditionalize the init script directory for
+	Debian, which is strict about /etc/init.d (as opposed to
+	/etc/rc.d/init.d).  (Fixes #40518)
+
 2003-03-27  Joe Shaw  <joe@ximian.com>
 
 	* configure.in: 1.4.0

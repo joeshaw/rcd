@@ -1,7 +1,6 @@
 SUBDIRS = src
 
 passwddir = $(sysconfdir)/ximian
-initdir = $(sysconfdir)/rc.d/init.d
 logrotatedir = $(sysconfdir)/logrotate.d
 
 certdir = $(datadir)/rcd
@@ -21,18 +20,22 @@ EXTRA_DIST = rcd.init.redhat.in rcd.init.suse.in rcd.init.debian.in \
 
 if INIT_REDHAT
 init_file = rcd.init.redhat
+initdir = $(sysconfdir)/rc.d/init.d
 endif
 
 if INIT_SUSE
 init_file = rcd.init.suse
+initdir = $(sysconfdir)/rc.d/init.d
 endif
 
 if INIT_DEBIAN
 init_file = rcd.init.debian
+initdir = $(sysconfdir)/init.d
 endif
 
 if INIT_SOLARIS
 init_file = rcd.init.solaris
+initdir = $(sysconfdir)/rc.d/init.d
 endif
 
 install-data-hook:
