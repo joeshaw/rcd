@@ -648,7 +648,8 @@ rcd_world_remote_parse_channels_xml (RCDWorldRemote *remote,
     N = rc_extract_channels_from_helix_buffer (buffer, buffer_len,
                                                rcd_world_remote_per_channel_cb,
                                                &channel_data);
-    rc_debug (RC_DEBUG_LEVEL_DEBUG ("Got %d channels files", N);
+
+    rc_debug (RC_DEBUG_LEVEL_DEBUG, "Got %d channels files", N);
 
     if (channel_data.pool != NULL) {
         rcd_transfer_pool_begin (channel_data.pool);
