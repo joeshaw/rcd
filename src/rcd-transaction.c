@@ -99,8 +99,11 @@ rcd_transaction_status_unref (RCDTransactionStatus *status)
     if (status->refs == 0) {
         g_free (status->name);
         rc_package_slist_unref (status->install_packages);
+        g_slist_free (status->install_packages);
         rc_package_slist_unref (status->remove_packages);
+        g_slist_free (status->remove_packages);
         rc_package_slist_unref (status->packages_to_download);
+        g_slist_free (status->packages_to_download);
         g_free (status->client_id);
         g_free (status->client_version);
         g_free (status->client_host);
@@ -348,8 +351,10 @@ rcd_transaction_log_to_server (const char         *name,
     status = g_new0 (RCDTransactionStatus, 1);
     status->refs = 1;
     status->name = g_strdup (name);
-    status->install_packages = rc_package_slist_ref (install_packages);
-    status->remove_packages = rc_package_slist_ref (remove_packages);
+    status->install_packages =
+        g_slist_copy (rc_package_slist_ref (install_packages));
+    status->remove_packages =
+        g_slist_copy (rc_package_slist_ref (remove_packages));
     status->flags = flags;
     status->client_id = g_strdup (client_id);
     status->client_version = g_strdup (client_version);
@@ -1117,8 +1122,10 @@ rcd_transaction_begin (const char          *name,
     status->name = g_strdup (name);
     status->world = world;
     status->packman = rc_world_get_packman (world);
-    status->install_packages = rc_package_slist_ref (install_packages);
-    status->remove_packages = rc_package_slist_ref (remove_packages);
+    status->install_packages =
+        g_slist_copy (rc_package_slist_ref (install_packages));
+    status->remove_packages =
+        g_slist_copy (rc_package_slist_ref (remove_packages));
     status->flags = flags;
     status->client_id = g_strdup (client_id);
     status->client_version = g_strdup (client_version);
