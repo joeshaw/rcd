@@ -1,5 +1,11 @@
 2003-06-12  Joe Shaw  <joe@ximian.com>
 
+	* rcd-transaction.c (rcd_transaction_check_package_integrity):
+	Sigh.  Don't dereference the pointer until after the already
+	existing NULL check.  Fixes #44478.
+
+2003-06-12  Joe Shaw  <joe@ximian.com>
+
 	* rcd-fetch.c (rcd_fetch_distro): Don't fallback onto internal
 	data anymore.
 

@@ -968,11 +968,12 @@ rcd_transaction_check_package_integrity (const char *filename)
     packman = rc_world_get_packman (world);
 
     file_package = rc_packman_query_file (packman, filename);
-    file_package->package_filename = g_strdup (filename);
 
     /* Query failed, so it is a very hosed package. */
     if (!file_package)
         goto out;
+
+    file_package->package_filename = g_strdup (filename);
 
     /* Verify file size and md5sum */
     vers = rc_packman_verify (packman, file_package,
