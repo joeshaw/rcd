@@ -28,7 +28,6 @@
 
 #include <stdlib.h>
 #include <unistd.h>
-#include <signal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -72,31 +71,15 @@ rcd_open_log_file (void)
     }
 }
 
-static void
-sighup_handler (int foo)
-{
-    rcd_open_log_file ();
-}
-
 void
 rcd_log_init (const char *log_path)
 {
-    struct sigaction sighup_action;
-
     if (rcd_log_path != NULL) {
         rc_debug (RC_DEBUG_LEVEL_WARNING, "Can't re-initialize logging.");
     }
 
     rcd_log_path = g_strdup (log_path ? log_path : RCD_DEFAULT_LOG_FILE);
     rcd_open_log_file ();
-
-    /* Re-open the log file on SIGHUP.  We do this to support log
-       rotation. */
-    
-    sighup_action.sa_handler = sighup_handler;
-    sigemptyset (&sighup_action.sa_mask);
-    sighup_action.sa_flags = 0;
-    sigaction (SIGHUP, &sighup_action, NULL);
 }
 
 void

@@ -1,6 +1,17 @@
 2002-08-26  Joe Shaw  <joe@ximian.com>
 
-	* rcd-fetch (rcd_fetch_register): Get the contents of the transfer
+	* rcd-log.c (rcd_log_init): Remove the SIGHUP handler from here.
+
+	* rcd.c (daemonize): Add some asserts so we can be sure that we're
+	reopening std* correctly.
+	(main): Add a SIGHUP handler.
+	(sighup_handler): Added.  Closes and reopens stdout and stderr,
+	reinitializes the log, and adds a reload of all the channel data
+	to an idle loop.
+
+2002-08-26  Joe Shaw  <joe@ximian.com>
+
+	* rcd-fetch.c (rcd_fetch_register): Get the contents of the transfer
 	from the GByteArray returned from rcd_transfer_begin_blocking()
 	instead of from the protocol backend.
 

@@ -200,7 +200,7 @@ daemonize (void)
 {
     int fork_rv;
     int i;
-    int log_fd;
+    int fd;
     
     /* We never daemonize when we initialize from a dump file. */
     if (dump_file != NULL)
@@ -229,7 +229,8 @@ daemonize (void)
     for (i = getdtablesize (); i >= 0; --i)
         close (i);
 
-    open ("/dev/null", O_RDWR); /* open /dev/null as stdin */
+    fd = open ("/dev/null", O_RDWR); /* open /dev/null as stdin */
+    g_assert (fd == STDIN_FILENO);
 
     if (! g_file_test ("/var/log/rcd", G_FILE_TEST_EXISTS)) {
         if (mkdir ("/var/log/rcd",
@@ -243,11 +244,13 @@ daemonize (void)
     
     /* Open a new file for our logging file descriptor.  This
        will be the fd 1, stdout. */
-    log_fd = open ("/var/log/rcd/rcd-messages",
-                   O_WRONLY | O_CREAT | O_APPEND,
-                   S_IRUSR | S_IWUSR);
+    fd = open ("/var/log/rcd/rcd-messages",
+               O_WRONLY | O_CREAT | O_APPEND,
+               S_IRUSR | S_IWUSR);
+    g_assert (fd == STDOUT_FILENO);
     
-    dup (log_fd); /* dup log_fd to stdout */
+    fd = dup (fd); /* dup fd to stderr */
+    g_assert (fd == STDERR_FILENO);
 }
 
 static void
@@ -412,6 +415,40 @@ signal_handler (int sig_num)
     rcd_shutdown ();
 } /* signal_handler */
 
+static gboolean
+rehash_data (gpointer data)
+{
+    initialize_data ();
+
+    return FALSE;
+} /* rehash_data */
+
+static void
+sighup_handler (int sig_num)
+{
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "SIGHUP received; reloading data");
+
+    if (!non_daemon_flag) {
+        int fd;
+
+        close (STDOUT_FILENO);
+
+        fd = open ("/var/log/rcd/rcd-messages",
+                   O_WRONLY | O_CREAT | O_APPEND,
+                   S_IRUSR | S_IWUSR);
+        g_assert (fd == STDOUT_FILENO);
+        
+        close (STDERR_FILENO);
+        
+        fd = dup (fd); /* dup fd to stderr */
+        g_assert (fd == STDERR_FILENO);
+    }
+
+    rcd_log_reinit ();
+
+    g_idle_add (rehash_data, NULL);
+} /* sighup_handler */
+
 static void
 crash_handler (int sig_num)
 {
@@ -468,6 +505,12 @@ main (int argc, const char **argv)
     sigaction (SIGINT,  &sig_action, NULL);
     sigaction (SIGTERM, &sig_action, NULL);
     sigaction (SIGQUIT, &sig_action, NULL);
+
+    /* Set up SIGHUP handler. */
+    sig_action.sa_handler = sighup_handler;
+    sigemptyset (&sig_action.sa_mask);
+    sig_action.sa_flags = 0;
+    sigaction (SIGHUP, &sig_action, NULL);
     
     /* If it looks like rcd-buddy is in the right place, set up
        handlers for crashes */
