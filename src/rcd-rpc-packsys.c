@@ -1616,7 +1616,9 @@ packsys_rollback_dependencies(xmlrpc_env   *env,
                               void         *user_data)
 {
     RCWorld *world = (RCWorld *) user_data;
+    int channel_priority;
     RCChannel *rollback_channel = NULL;
+    int size, i;
     GSList *iter;
     xmlrpc_value *xmlrpc_package_names;
     xmlrpc_value *xmlrpc_packages = NULL;
@@ -1635,12 +1637,19 @@ packsys_rollback_dependencies(xmlrpc_env   *env,
     xmlrpc_installs = rcd_xmlrpc_array_copy (env, 1, xmlrpc_packages);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    /* Create a dummy channel with all the rollback packages. */
-    rollback_channel = rc_world_add_channel (world,
-                                             "Rollback Packages",
-                                             "rollback-packages",
-                                             0, 0,
-                                             RC_CHANNEL_TYPE_UNKNOWN);
+    /* 
+     * Create a dummy channel with all the rollback packages.  Give it
+     * a very high priority so it picks packages from there first.
+     */
+    channel_priority = rc_channel_priority_parse ("private") * 1000;
+
+    rollback_channel = rc_world_add_channel_with_priorities (
+        world,
+        "Rollback Packages",
+        "rollback-packages",
+        0, 0,
+        RC_CHANNEL_TYPE_UNKNOWN,
+        channel_priority, channel_priority, channel_priority);
 
     for (iter = rcd_rollback_get_packages (); iter; iter = iter->next) {
         RCPackage *package = iter->data;
@@ -1653,6 +1662,42 @@ packsys_rollback_dependencies(xmlrpc_env   *env,
         env, &xmlrpc_installs, &xmlrpc_removals, &xmlrpc_extra_deps,
         NULL, FALSE, world);
     XMLRPC_FAIL_IF_FAULT (env);
+
+    /* 
+     * This is an exceptionally lame hack to set the package filename field
+     * on the XML-RPC package because the rollback channel doesn't persist
+     * dependency resolution.
+     */
+    size = xmlrpc_array_size (env, xmlrpc_installs);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    for (i = 0; i < size; i++) {
+        xmlrpc_value *dep_op_value, *package_value;
+        char *package_name;
+        RCPackage *pkg;
+
+        dep_op_value = xmlrpc_array_get_item (env, xmlrpc_installs, i);
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        package_value = xmlrpc_struct_get_value (env, dep_op_value, "package");
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        RCD_XMLRPC_STRUCT_GET_STRING (env, package_value,
+                                      "name", package_name);
+
+        pkg = rc_world_get_package (world, rollback_channel, package_name);
+
+        if (!pkg) {
+            xmlrpc_env_set_fault_formatted (
+                env, RCD_RPC_FAULT_PACKAGE_NOT_FOUND,
+                "Unable to find '%s' in rollback packages",
+                package_name);
+            goto cleanup;
+        }
+
+        RCD_XMLRPC_STRUCT_SET_STRING (env, package_value, "package_filename",
+                                      pkg->package_filename);
+    }
 
     tmp = xmlrpc_packages;
     xmlrpc_packages = rcd_xmlrpc_array_copy (env, 2, tmp, xmlrpc_installs);

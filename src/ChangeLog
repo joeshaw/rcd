@@ -1,3 +1,13 @@
+2002-12-05  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-packsys.c (packsys_rollback_dependencies): Create the
+	temporary rollback channel with a very high priority so that
+	dependencies are pulled from that channel first.  Add a lame hack
+	which sets the "package_filename" field on the XML-RPC struct,
+	since the rollback channel is temporary only for dependency
+	resolution and the XML-RPC struct references the channel by id
+	which won't exist when it comes time to install the packages.
+
 2002-12-04  Joe Shaw  <joe@ximian.com>
 
 	* rcd-fetch.c (rcd_fetch_register): Also enable premium mode when
