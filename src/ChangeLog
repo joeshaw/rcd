@@ -1,3 +1,13 @@
+2003-02-13  Tambet Ingo  <tambet@ximian.com>
+
+	* rcd-package-locks.c: Add locking sequnece number.
+	(rcd_package_locks_get_sequence_number): Implement.
+	(rcd_package_locks_save): Implement, increase seq. number.
+
+	* rcd-rpc-packsys.c (rcd_rpc_packsys_register_methods): Register
+	packsys.lock_sequence_number method.
+	(packsys_lock_sequence_number): Implement.
+
 2003-02-11  Joe Shaw  <joe@ximian.com>
 
 	* rcd-transfer-http.c (map_soup_error_to_rcd_transfer_error): Get

@@ -32,6 +32,8 @@
 
 #define PACKAGE_LOCK_FILE SYSCONFDIR "/rcd-package-locks"
 
+static guint lock_seqno = 1;
+
 void
 rcd_package_locks_load (RCWorld *world)
 {
@@ -93,7 +95,14 @@ rcd_package_locks_save (RCWorld *world)
   if (! xmlSaveFile (PACKAGE_LOCK_FILE, doc)) {
     rc_debug (RC_DEBUG_LEVEL_WARNING,
 	      "Can't write package locks to '" PACKAGE_LOCK_FILE "'");
-  }
+  } else
+	  ++lock_seqno;
 
   xmlFreeDoc (doc);
+}
+
+guint
+rcd_package_locks_get_sequence_number (void)
+{
+    return lock_seqno;
 }

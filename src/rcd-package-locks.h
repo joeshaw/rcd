@@ -30,8 +30,10 @@
 
 #include <libredcarpet.h>
 
-void rcd_package_locks_load (RCWorld *world);
-void rcd_package_locks_save (RCWorld *world);
+void  rcd_package_locks_load (RCWorld *world);
+void  rcd_package_locks_save (RCWorld *world);
+
+guint rcd_package_locks_get_sequence_number (void);
 
 #endif /* __RCD_PACKAGE_LOCKS_H__ */
 

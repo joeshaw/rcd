@@ -2089,6 +2089,15 @@ packsys_remove_lock (xmlrpc_env   *env,
     return retval;
 }
 
+static xmlrpc_value *
+packsys_lock_sequence_number (xmlrpc_env   *env,
+                              xmlrpc_value *param_array,
+                              void         *user_data)
+{
+    return xmlrpc_build_value (env, "i",
+                               rcd_package_locks_get_sequence_number ());
+}
+
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 static xmlNode *
@@ -2427,6 +2436,11 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
                             packsys_remove_lock,
                             "lock",
                             world);
+
+    rcd_rpc_register_method("rcd.packsys.lock_sequence_number",
+                            packsys_lock_sequence_number,
+                            NULL,
+                            NULL);
 
     rcd_rpc_register_method("rcd.packsys.dump",
                             packsys_dump,
