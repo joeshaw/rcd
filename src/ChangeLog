@@ -1,3 +1,13 @@
+2002-08-08  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-rpc-packsys.c (append_dep_info): Call
+	rc_resolver_info_type_to_string instead of _to_str.
+	(dep_get_package_info_cb): Call
+	rc_resolver_info_packages_to_string instead of to_str.
+
+	* rcd-rpc-util.c (rcd_rc_resolver_info_to_xmlrpc): Changed to call
+	rc_resolver_info_type_to_string instead of _to_str.
+
 2002-08-08  Ian Peters  <itp@ximian.com>
 
 	* rcd-rpc-util.c (rcd_rc_package_dep_to_xmlrpc): opaque

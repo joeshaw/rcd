@@ -1446,7 +1446,7 @@ append_dep_info (RCResolverInfo *info, gpointer user_data)
         debug = TRUE;
 
     if (debug || rc_resolver_info_is_important (info)) {
-        char *msg = rc_resolver_info_to_str (info);
+        char *msg = rc_resolver_info_to_string (info);
 
         new_info = g_strconcat (*dep_failure_info, "\n",
                                 (debug && rc_resolver_info_is_error (info)) ? "ERR " : "",
@@ -1554,31 +1554,31 @@ dep_get_package_info_cb (RCResolverInfo *info, gpointer user_data)
 
     switch (info->type) {
     case RC_RESOLVER_INFO_TYPE_NEEDED_BY:
-        pkgs = rc_resolver_info_packages_to_str (info, FALSE);
+        pkgs = rc_resolver_info_packages_to_string (info, FALSE);
         info_str = g_strconcat ("needed by: ", pkgs, NULL);
         g_free (pkgs);
         break;
 
     case RC_RESOLVER_INFO_TYPE_CONFLICTS_WITH:
-        pkgs = rc_resolver_info_packages_to_str (info, FALSE);
+        pkgs = rc_resolver_info_packages_to_string (info, FALSE);
         info_str = g_strconcat ("conflicts with: ", pkgs, NULL);
         g_free (pkgs);
         break;
         
     case RC_RESOLVER_INFO_TYPE_OBSOLETES:
-        pkgs = rc_resolver_info_packages_to_str (info, FALSE);
+        pkgs = rc_resolver_info_packages_to_string (info, FALSE);
         info_str = g_strconcat ("replaces: ", pkgs, NULL);
         g_free (pkgs);
         break;
 
     case RC_RESOLVER_INFO_TYPE_DEPENDS_ON:
-        pkgs = rc_resolver_info_packages_to_str (info, FALSE);
+        pkgs = rc_resolver_info_packages_to_string (info, FALSE);
         info_str = g_strconcat ("depends on: ", pkgs, NULL);
         g_free (pkgs);
         break;
 
     default:
-        info_str = rc_resolver_info_to_str (info);
+        info_str = rc_resolver_info_to_string (info);
         break;
     }
 

@@ -593,6 +593,8 @@ rcd_rc_channel_to_xmlrpc (RCChannel  *channel,
     return value;
 }
 
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
 xmlrpc_value *
 rcd_rc_resolver_info_to_xmlrpc (RCResolverInfo *info,
                                 xmlrpc_env     *env)
@@ -607,7 +609,7 @@ rcd_rc_resolver_info_to_xmlrpc (RCResolverInfo *info,
     XMLRPC_FAIL_IF_FAULT (env);
 
     RCD_XMLRPC_STRUCT_SET_STRING (env, value, "type",
-                                  rc_resolver_info_type_to_str (rc_resolver_info_type (info)));
+                                  rc_resolver_info_type_to_string (rc_resolver_info_type (info)));
     XMLRPC_FAIL_IF_FAULT (env);
 
     if (info->package) {
@@ -660,6 +662,61 @@ rcd_rc_resolver_info_to_xmlrpc (RCResolverInfo *info,
 
     return value;
 }
+
+struct GetContextInfo {
+    xmlrpc_value *info_array;
+    xmlrpc_env   *env;
+};
+
+static void
+get_info_cb (RCResolverInfo *info,
+             gpointer        user_data)
+{
+    struct GetContextInfo *gc = user_data;
+    xmlrpc_value *value;
+    
+    if (gc->env->fault_occurred)
+        return;
+
+    value = rcd_rc_resolver_info_to_xmlrpc (info, gc->env);
+
+    xmlrpc_array_append_item (gc->env,
+                              gc->info_array,
+                              value);
+
+    xmlrpc_DECREF (value);
+}
+
+xmlrpc_value *
+rcd_rc_resolver_context_info_to_xmlrpc_array (RCResolverContext *context,
+                                              RCPackage         *package,
+                                              int                priority,
+                                              xmlrpc_env        *env)
+{
+    struct GetContextInfo gc;
+
+    g_return_val_if_fail (context != NULL, NULL);
+    g_return_val_if_fail (env != NULL, NULL);
+
+    gc.info_array = xmlrpc_build_value (env, "()");
+    XMLRPC_FAIL_IF_FAULT (env);
+    gc.env = env;
+
+    rc_resolver_context_foreach_info (context,
+                                      package,
+                                      priority,
+                                      get_info_cb,
+                                      &gc);
+    
+ cleanup:
+    if (env->fault_occurred)
+        return NULL;
+
+    return gc.info_array;
+}
+
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 RCDQueryPart
 rcd_xmlrpc_tuple_to_query_part (xmlrpc_value *tuple, xmlrpc_env *env)
