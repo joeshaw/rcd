@@ -23,15 +23,12 @@ through the hell of building this stuff yourself.
   probably every distro after.  If you don't have it, you can get it
   from http://www.gtk.org.
 
-* Soup
+* Libsoup
 
-  You will need to build Soup, an HTTP transfer library, against glib2.
-  Check out the soup-0-7 branch from the soup module in GNOME CVS.
-  Configure it with the --enable-glib2 option, and install it into some
-  funky prefix.  The library names aren't different between a glib 1.2
-  build and a glib 2 build, so installing into a different prefix
-  will ensure you don't accidentally overwrite an existing version!
-  (Evolution uses Soup, for instance.)
+  You will need to build libsoup, and HTTP transfer library.  Checkout
+  the "libsoup" module from GNOME CVS.  It's parallel installable with
+  older glib 1.2-based versions of soup (used by Evolution, for example),
+  so you can install it into your favorite prefix.
 
 * xmlrpc-c
 
@@ -74,11 +71,11 @@ through the hell of building this stuff yourself.
 
 And now you're ready to build rcd.
 
-Since you should have installed Soup and xmlrpc-c in a weird prefix,
-you will probably want to pass in --with-xmlrpc-prefix=[prefix] and
---with-soup=[path] to configure/autogen.sh.  You may also need to set
-your PKG_CONFIG_PATH to the paths containing the Soup and libredcarpet
-pkgconfig files ($prefix/lib/pkgconfig).
+If you build xmlrpc-c into a prefix, you'll probably want to pass in
+the --with-xmlrpc-prefix=[prefix] option to configure/autogen.sh.  You
+will probably also need to set the PKG_CONFIG_PATH environment variable
+to the paths containing the libsoup and libredcarpet pkgconfig files
+([prefix]/lib/pkgconfig).
 
 Once all of that is taken care of, you should be off and running.
 Good Luck.
