@@ -427,6 +427,12 @@ rcd_prefs_set_require_signed_packages (gboolean enabled)
 gint
 rcd_prefs_get_debug_level (void)
 {
+    /* Command-line debug level option */
+    extern int debug_level;
+
+    if (debug_level > -1)
+        return debug_level;
+
     return gnome_config_get_int (
         get_config_path ("/System/debug-level=4"));
 } /* rcd_prefs_get_debug_level */
@@ -434,6 +440,12 @@ rcd_prefs_get_debug_level (void)
 void
 rcd_prefs_set_debug_level (gint level)
 {
+    /* Command-line debug level option */
+    extern int debug_level;
+
+    /* Don't obey the command-line option anymore */
+    debug_level = -1;
+
     gnome_config_set_int (
         get_config_path ("/System/debug-level"), level);
     SYNC_CONFIG;
@@ -442,6 +454,12 @@ rcd_prefs_set_debug_level (gint level)
 gint
 rcd_prefs_get_syslog_level (void)
 {
+    /* Command-line debug level option */
+    extern int syslog_level;
+
+    if (syslog_level > -1)
+        return syslog_level;
+
     return gnome_config_get_int (
         get_config_path ("/System/syslog-level=4"));
 } /* rcd_prefs_get_syslog_level */
@@ -449,6 +467,12 @@ rcd_prefs_get_syslog_level (void)
 void
 rcd_prefs_set_syslog_level (gint level)
 {
+    /* Command-line debug level option */
+    extern int syslog_level;
+
+    /* Don't obey the command-line option anymore */
+    syslog_level = -1;
+
     gnome_config_set_int (
         get_config_path ("/System/syslog-level"), level);
 

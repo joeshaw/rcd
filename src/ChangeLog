@@ -1,3 +1,17 @@
+2002-11-06  Joe Shaw  <joe@ximian.com>
+
+	* rcd.c (option_parsing): Move debug_level and syslog_level out of
+	here and make them global options.  Don't call
+	rcd_prefs_set_{debug|syslog}_level() since we don't want the
+	command-line option to get saved to disk.
+
+	* rcd-prefs.c (rcd_prefs_get_{debug|syslog}_level): If the global
+	debug_level or syslog_level option isn't -1, return its value,
+	otherwise get it from the config file.
+	(rcd_prefs_set_{debug|syslog}_level): Reset the global debug_level
+	or syslog_level option, so that setting the level overrides the
+	level passed in at the command-line.
+
 2002-11-05  Joe Shaw  <joe@ximian.com>
 
 	* rcd-query.c (rcd_query_match_string, rcd_query_match_string_ci):

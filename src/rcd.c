@@ -71,12 +71,12 @@ static int remote_port = 0;
 static gboolean remote_disable = FALSE;
 static char *dump_file = NULL;
 char *config_file = NULL;
+int debug_level = -1;
+int syslog_level = -1;
 
 static void
 option_parsing (int argc, const char **argv)
 {
-    gint debug_level = -1, syslog_level = -1;
-
     const struct poptOption command_line_options[] = {
         POPT_AUTOHELP
         { "config", 'f', POPT_ARG_STRING, &config_file, 0,
@@ -119,11 +119,6 @@ option_parsing (int argc, const char **argv)
 
     if (getenv ("RCD_NON_DAEMON"))
         non_daemon_flag = TRUE;
-
-    if (debug_level > -1)
-        rcd_prefs_set_debug_level (debug_level);
-    if (syslog_level > -1)
-        rcd_prefs_set_syslog_level (syslog_level);
 }
 
 static void
