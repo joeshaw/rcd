@@ -87,17 +87,19 @@ add_service_cb (RCWorld *subworld, gpointer user_data)
     if (g_type_is_a (G_TYPE_FROM_INSTANCE (service), RCD_TYPE_WORLD_REMOTE)) {
         RCDWorldRemote *remote = RCD_WORLD_REMOTE (service);
 
-        RCD_XMLRPC_STRUCT_SET_STRING (info->env, xmlrpc_service,
-                                      "distro_name",
-                                      rc_distro_get_name (remote->distro));
+        if (remote->distro) {
+            RCD_XMLRPC_STRUCT_SET_STRING (info->env, xmlrpc_service,
+                                          "distro_name",
+                                          rc_distro_get_name (remote->distro));
 
-        RCD_XMLRPC_STRUCT_SET_STRING (info->env, xmlrpc_service,
-                                      "distro_version",
-                                      rc_distro_get_version (remote->distro));
+            RCD_XMLRPC_STRUCT_SET_STRING (info->env, xmlrpc_service,
+                                          "distro_version",
+                                          rc_distro_get_version (remote->distro));
 
-        RCD_XMLRPC_STRUCT_SET_STRING (info->env, xmlrpc_service,
-                                      "distro_target",
-                                      rc_distro_get_target (remote->distro));
+            RCD_XMLRPC_STRUCT_SET_STRING (info->env, xmlrpc_service,
+                                          "distro_target",
+                                          rc_distro_get_target (remote->distro));
+        }
 
         if (remote->contact_email) {
             RCD_XMLRPC_STRUCT_SET_STRING (info->env, xmlrpc_service,

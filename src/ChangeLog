@@ -1,3 +1,17 @@
+2003-10-15  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-service.c (add_service_cb): Don't send distro info if the
+	distro isn't set.
+
+	* rcd-world-remote.c (rcd_world_remote_refresh): Pass in a GError
+	to rcd_world_remote_fetch(), and if it comes back non-NULL, call
+	rc_world_refresh_complete() to indicate that we're finished
+	refreshing that world.  (Otherwise it'll be called after we've
+	successfully finished download package data)
+	(rcd_world_remote_fetch): Remove the call to
+	rc_world_refresh_complete() in just one failure case.  Moving it
+	up to rcd_world_remote_refresh() catches all cases.
+
 2003-10-14  Joe Shaw  <joe@ximian.com>
 
 	* rcd-world-remote.c (rcd_world_remote_assemble): Validate the URL

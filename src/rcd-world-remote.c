@@ -86,9 +86,20 @@ rcd_world_remote_finalize (GObject *obj)
 static RCPending *
 rcd_world_remote_refresh (RCWorld *world)
 {
+    RCPending *pending;
+    GError *err = NULL;
+
     rc_world_refresh_begin (world);
 
-    return rcd_world_remote_fetch (RCD_WORLD_REMOTE (world), FALSE, NULL);
+    pending = rcd_world_remote_fetch (RCD_WORLD_REMOTE (world), FALSE, &err);
+
+    if (err != NULL) {
+        g_error_free (err);
+        rc_world_refresh_complete (world);
+        return NULL;
+    }
+
+    return pending;
 }
 
 static gboolean
@@ -1379,13 +1390,6 @@ rcd_world_remote_fetch (RCDWorldRemote *remote, gboolean local, GError **error)
     if (tmp_error != NULL) {
         /* We don't want to cache bad data */
         rcd_cache_entry_invalidate (entry);
-
-        /*
-         * If an error has occurred, we'll need to say that the refresh
-         * is finished.
-         */
-        if (rc_world_is_refreshing (RC_WORLD (remote)))
-            rc_world_refresh_complete (RC_WORLD (remote));
 
         g_propagate_error (error, tmp_error);
     }
