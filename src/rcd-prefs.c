@@ -531,7 +531,7 @@ rcd_prefs_set_heartbeat_interval (guint32 interval, GError **err)
 
     if (interval != 0 && interval < HEARTBEAT_MINIMUM) {
         g_set_error (err, RCD_PREFS_ERROR, RCD_PREFS_ERROR,
-                     "Heartbeat frequences of less than %d seconds are not "
+                     "Heartbeat frequencies of less than %d seconds are not "
                      "allowed", HEARTBEAT_MINIMUM);
         rc_debug (RC_DEBUG_LEVEL_WARNING,
                   "Heartbeat frequencies of less than %d seconds are not "

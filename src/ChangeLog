@@ -1,3 +1,9 @@
+2003-10-29  Tambet Ingo  <tambet@ximian.com>
+
+	* rcd-heartbeat.c (rcd_heartbeat_start): Decrease debug level.
+
+	* rcd-prefs.c (rcd_prefs_set_heartbeat_interval): Fix a typo.
+
 2003-10-28  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-util.c (rcd_rc_package_dep_to_xmlrpc): Marshal the

@@ -78,7 +78,7 @@ void
 rcd_heartbeat_start (void)
 {
     if (!rcd_prefs_get_heartbeat_interval ()) {
-        rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Heartbeat disabled");
+        rc_debug (RC_DEBUG_LEVEL_INFO, "Heartbeat disabled");
         return;
     }
 
