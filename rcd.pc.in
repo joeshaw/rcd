@@ -8,3 +8,4 @@ Description: RCD - The Red Carpet Daemon
 Version: @VERSION@
 Libs:
 Cflags: -I${includedir}/rcd
+Requires: soup-2.0

@@ -122,9 +122,11 @@ rcdinclude_HEADERS = 		\
 	rcd-rpc-prefs.h		\
 	rcd-rpc-util.h		\
 	rcd-shutdown.h		\
+	rcd-transaction.h	\
 	rcd-transfer.h		\
 	rcd-transfer-file.h	\
 	rcd-transfer-http.h	\
+	rcd-transfer-pool.h \
 	rcd-world-remote.h	\
 	rcd-xmlrpc.h
 
