@@ -1,5 +1,12 @@
 2004-06-17  James Willcox  <james@ximian.com>
 
+	* rcd-world-remote.c: (parse_nevra),
+	(rcd_extract_packages_from_yum_buffer):
+
+	Don't leak if parsing the yum NEVRA fails.
+
+2004-06-17  James Willcox  <james@ximian.com>
+
 	* rcd-world-remote.c: (parse_nevra), (get_installed_package),
 	(rcd_extract_packages_from_yum_buffer),
 	(rcd_world_remote_parse_channel_data), (channel_data_file_done_cb),

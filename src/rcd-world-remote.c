@@ -673,6 +673,11 @@ parse_nevra (const char *orig_input,
     char *input;
     gboolean ret = TRUE;
 
+    *name_out = NULL;
+    *version_out = NULL;
+    *release_out = NULL;
+    *arch_out = NULL;
+    
     input = g_strdup (orig_input);
     
     arch_sep = g_strrstr (input, ".");
@@ -775,7 +780,9 @@ rcd_extract_packages_from_yum_buffer (RCDWorldRemote *world,
 
     g_return_val_if_fail (packman != NULL, -1);
 
-    /* the yum header.info files are text files with header file names and urls
+    /* the yum header.info files are text files with version info
+     * and the RPM filename.  The path to the header is constructed
+     * from the version info.
      *
      * example:
      * 0:pwlib-devel-1.5.0-4.i386=pwlib-devel-1.5.0-4.i386.rpm
@@ -805,6 +812,10 @@ rcd_extract_packages_from_yum_buffer (RCDWorldRemote *world,
         if (!parse_nevra (split_a[0], &name, &epoch, &version,
                           &release, &arch)) {
             g_strfreev (split_a);
+            g_free (name);
+            g_free (version);
+            g_free (release);
+            g_free (arch);
             continue;
         }
 
