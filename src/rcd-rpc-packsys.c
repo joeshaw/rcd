@@ -105,7 +105,7 @@ packsys_refresh_all_channels (xmlrpc_env   *env,
                               xmlrpc_value *param_array,
                               void         *user_data)
 {
-    RCWorld *world = user_data;
+    /* RCWorld *world = user_data; */
     xmlrpc_value *value;
 
     rcd_fetch_channel_list ();
@@ -172,6 +172,77 @@ packsys_unsubscribe (xmlrpc_env   *env,
         
     return value;
 }
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+struct BuildUpdatesInfo {
+    xmlrpc_env *env;
+    xmlrpc_value *array;
+    gboolean failed;
+};
+
+static void
+build_updates_list (RCPackage *old,
+                    RCPackage *nuevo,
+                    gpointer   user_data)
+{
+    struct BuildUpdatesInfo *info = user_data;
+    xmlrpc_value *pair;
+    xmlrpc_value *old_xmlrpc, *new_xmlrpc;
+
+    if (info->failed)
+        return;
+
+    old_xmlrpc = rcd_rc_package_to_xmlrpc (old, info->env);
+    new_xmlrpc = rcd_rc_package_to_xmlrpc (nuevo, info->env);
+
+    pair = xmlrpc_build_value (info->env,
+                               "(VV)",
+                               old_xmlrpc,
+                               new_xmlrpc);
+    XMLRPC_FAIL_IF_FAULT (info->env);
+
+    xmlrpc_array_append_item (info->env,
+                              info->array, pair);
+    XMLRPC_FAIL_IF_FAULT (info->env);
+
+    xmlrpc_DECREF (old_xmlrpc);
+    xmlrpc_DECREF (new_xmlrpc);
+    xmlrpc_DECREF (pair);
+
+ cleanup:
+    if (info->env->fault_occurred)
+        info->failed = TRUE;
+}
+
+static xmlrpc_value *
+packsys_get_updates (xmlrpc_env   *env,
+                     xmlrpc_value *param_array,
+                     void         *user_data)
+{
+    struct BuildUpdatesInfo info;
+    RCWorld *world = user_data;
+    xmlrpc_value *update_array = NULL;
+
+    update_array = xmlrpc_build_value (env, "()");
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    info.env    = env;
+    info.array  = update_array;
+    info.failed = FALSE;
+
+    rc_world_foreach_system_upgrade (world,
+                                     build_updates_list,
+                                     &info);
+
+ cleanup:
+    if (env->fault_occurred || info.failed)
+        return NULL;
+
+    return update_array;
+}
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 static void
 add_package_cb (RCPackage *package, gpointer user_data)
@@ -642,6 +713,11 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
         packsys_transact,
         rcd_auth_action_list_from_1 (RCD_AUTH_NONE),
         world);
+
+    rcd_rpc_register_method("rcd.packsys.get_updates",
+                            packsys_get_updates,
+                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            world);
 
     rcd_rpc_register_method("rcd.packsys.get_channels",
                             packsys_get_channels,

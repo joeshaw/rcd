@@ -37,6 +37,7 @@ xmlrpc_value *
 rcd_rc_package_to_xmlrpc (RCPackage *package, xmlrpc_env *env)
 {
     xmlrpc_value *value = NULL;
+    RCPackageUpdate *update;
     gboolean installed;
 
     value = xmlrpc_struct_new(env);
@@ -50,6 +51,18 @@ rcd_rc_package_to_xmlrpc (RCPackage *package, xmlrpc_env *env)
     RCD_XMLRPC_STRUCT_SET_INT(
         env, value, "channel",
         package->channel ? rc_channel_get_id(package->channel) : 0);
+    
+    update = rc_package_get_latest_update (package);
+    if (update) {
+        RCD_XMLRPC_STRUCT_SET_INT(
+            env, value,
+            "importance_num", (int) update->importance);
+
+        RCD_XMLRPC_STRUCT_SET_STRING(
+            env, value,
+            "importance_str",
+            rc_package_importance_to_string (update->importance));
+    }
 
     /* Extra data useful to a client */
     if (package->installed)
