@@ -632,6 +632,7 @@ rcd_rc_package_from_xmlrpc_package (xmlrpc_value *value,
                                     xmlrpc_env   *env)
 {
     char *name = NULL;
+    int installed;
     int channel_id;
     RCWorld *world = rc_get_world ();
     RCPackman *packman = rc_world_get_packman (world);
@@ -639,6 +640,18 @@ rcd_rc_package_from_xmlrpc_package (xmlrpc_value *value,
 
     RCD_XMLRPC_STRUCT_GET_STRING (env, value, "name", name);
     XMLRPC_FAIL_IF_FAULT (env);
+
+    RCD_XMLRPC_STRUCT_GET_INT (env, value, "installed", installed);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    if (installed) {
+        package = rc_world_get_package (world, RC_WORLD_SYSTEM_PACKAGES, name);
+
+        if (package) {
+            rc_package_ref (package);
+            goto cleanup;
+        }
+    }
 
     RCD_XMLRPC_STRUCT_GET_INT (env, value, "channel", channel_id);
     XMLRPC_FAIL_IF_FAULT (env);

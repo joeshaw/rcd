@@ -1,3 +1,22 @@
+2002-10-22  Joe Shaw  <joe@ximian.com>
+
+	* rcd-transaction.c (transaction_step_cb): Update the
+	transaction_pending with the sequence number.
+
+2002-10-21  Joe Shaw  <joe@ximian.com>
+
+	* rcd-fetch.c (rcd_fetch_packages_abort): Unref all of the queued
+	transfers before the running transfers.  Don't free the closure,
+	that'll be done after the last running transfer is cancelled.
+
+	* rcd-rpc-util.c (rcd_rc_package_from_xmlrpc_package): If the
+	installed bit is set on the package, get it out of the system
+	packages in the world.
+
+	* rcd-transaction.c (rcd_transaction_status_unref): Set the
+	"status" field on the download_pending to NULL so we don't point
+	at a junk pointer.
+
 2002-10-22  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-rpc-util.c (assemble_spec): When processing an xmlrpc struct

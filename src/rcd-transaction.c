@@ -107,8 +107,11 @@ rcd_transaction_status_unref (RCDTransactionStatus *status)
         g_free (status->temp_repack_dir);
         rcd_identity_free (status->identity);
 
-        if (status->download_pending)
+        if (status->download_pending) {
+            g_object_set_data (G_OBJECT (status->download_pending),
+                               "status", NULL);
             g_object_unref (status->download_pending);
+        }
 
         if (status->transaction_pending)
             g_object_unref (status->transaction_pending);
@@ -376,6 +379,9 @@ transact_step_cb(RCPackman *packman,
     const char *last;
 
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Transaction step.  seqno %d", seqno);
+
+    rcd_pending_update_by_size (status->transaction_pending, seqno - 1,
+                                status->total_transaction_steps);
 
     status->transaction_size = 0;
 
@@ -1164,6 +1170,7 @@ rcd_transaction_begin (const char          *name,
     if (!download_count &&
         status->flags != RCD_TRANSACTION_FLAGS_DOWNLOAD_ONLY)
         verify_packages (status);
+
     rcd_transaction_status_unref (status);
 } /* rcd_transaction_begin */
 

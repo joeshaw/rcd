@@ -1089,16 +1089,12 @@ rcd_fetch_packages_abort (int transfer_id)
 
     g_return_if_fail (closure);
 
+    for (iter = closure->queued_transfers; iter; iter = iter->next)
+        g_object_unref (iter->data);
+
     for (iter = closure->running_transfers; iter; iter = next) {
         next = iter->next;
 
         rcd_transfer_abort (iter->data);
     }
-
-    for (iter = closure->queued_transfers; iter; iter = iter->next)
-        g_object_unref (iter->data);
-
-    g_hash_table_remove (package_transfer_table,
-                         GINT_TO_POINTER (closure->transfer_id));
-    g_free (closure);
 } /* rcd_fetch_packages_abort */
