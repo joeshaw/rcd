@@ -8,7 +8,7 @@ certdir = $(datadir)/rcd
 cert_DATA = rcd.pem
 
 cadir = $(datadir)/rcd/ca
-ca_DATA = rcd-ca-bundle.pem
+ca_DATA = rcd-ca-bundle.pem ximian-ca.pem
 
 gpgdir = $(datadir)/rcd
 gpg_DATA = rcd.gpg
