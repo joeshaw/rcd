@@ -829,12 +829,12 @@ rcd.packsys.find_dangling_requires()
 rcd.packsys.mount_directory(string path)
 
 	Returns: string
-	Faults: none
+	Faults: invalid_service
 
 	Mounts a directory on the local system as a channel, so
 	packages can be installed off a local filesystem with full
 	dependency analysis.  This will return the channel ID on
-	success, or an empty string on failure.
+	success, or throw an invalid_service fault on failure.
 
 rcd.packsys.unmount_directory(string channel_id)
 
