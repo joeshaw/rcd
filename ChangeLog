@@ -1,3 +1,7 @@
+2004-02-05 Aaron Weber <aaron@ximian.com>
+
+	* rcd.8: remove late-background option, bug 53766
+
 2004-02-03  Joe Shaw  <joe@ximian.com>
 
 	* rcd.gpg: Import the Fedora public key
