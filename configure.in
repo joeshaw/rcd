@@ -72,9 +72,9 @@ if test "x$with_soup" != "x"; then
 
   PKG_CHECK_MODULES(SOUP, soup >= 0.7.5)
 
-  CPPFLAGS="${CPPFLAGS:+$CPPFLAGS }-I$with_soup/src"
-
   real_with_soup=`cd $with_soup && pwd`
+
+  CPPFLAGS="${CPPFLAGS:+$CPPFLAGS }-I$real_with_soup/src"
 
   SOUP_LIBS=`echo $SOUP_LIBS | sed 's/-L[[^ ]]* *//g'`
   SOUP_LIBS=`echo $SOUP_LIBS | sed "s,-lsoup,$real_with_soup/src/libsoup/.libs/libsoup.a,g"`

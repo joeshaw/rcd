@@ -1,5 +1,9 @@
 2002-08-02  Frank Belew  <frb@ximian.com>
 
+	* configure.in: fixed include path of custom path for soup
+
+2002-08-02  Frank Belew  <frb@ximian.com>
+
 	* configure.in: fixed path of static library for soup
 
 2002-08-02  Frank Belew  <frb@ximian.com>
