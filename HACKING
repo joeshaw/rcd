@@ -26,9 +26,8 @@ through the hell of building this stuff yourself.
 * Libsoup
 
   You will need to build libsoup, and HTTP transfer library.  Checkout
-  the "libsoup" module from GNOME CVS.  It's parallel installable with
-  older glib 1.2-based versions of soup (used by Evolution, for example),
-  so you can install it into your favorite prefix.
+  the "libsoup" module from GNOME CVS.  Make sure to get it from the
+  "libsoup-2-0-branch" branch, as HEAD won't work right now.
 
 * xmlrpc-c
 
