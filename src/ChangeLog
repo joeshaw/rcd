@@ -1,3 +1,8 @@
+2003-04-21  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-rpc-packsys.c (dep_get_package_info_cb): Handle
+	RC_RESOLVER_INFO_TYPE_CHILD_OF.
+
 2003-04-18  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd.c (initialize_rc_world): Set the path to the synthetic

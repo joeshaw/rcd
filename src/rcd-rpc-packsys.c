@@ -1292,6 +1292,12 @@ dep_get_package_info_cb (RCResolverInfo *info, gpointer user_data)
         g_free (pkgs);
         break;
 
+    case RC_RESOLVER_INFO_TYPE_CHILD_OF:
+        pkgs = rc_resolver_info_packages_to_string (info, FALSE);
+        info_str = g_strconcat ("part of: ", pkgs, NULL);
+        g_free (pkgs);
+        break;
+
     default:
         info_str = rc_resolver_info_to_string (info);
         break;
