@@ -1,5 +1,14 @@
 2003-01-29  Joe Shaw  <joe@ximian.com>
 
+	* rcd-privileges.c (rcd_privileges_init): Add a "lock" privilege
+	to the base privileges.
+
+	* rcd-rpc-packsys.c (rcd_rpc_packsys_register_methods): Make
+	rcd.packsys.add_lock() and rcd.packsys.remove_lock() require the
+	"lock" privilege, not the "subscribe" privilege.
+
+2003-01-29  Joe Shaw  <joe@ximian.com>
+
 	* rcd-transaction.c (verify_packages): Check our trusted privilege
 	before we send a message to the client.  If we're trusted, tell
 	the user that when we say that the package is unsigned or we

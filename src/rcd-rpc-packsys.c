@@ -2420,12 +2420,12 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
 
     rcd_rpc_register_method("rcd.packsys.add_lock",
                             packsys_add_lock,
-                            "subscribe", /* FIXME */
+                            "lock",
                             world);
 
     rcd_rpc_register_method("rcd.packsys.remove_lock",
                             packsys_remove_lock,
-                            "subscribe", /* FIXME */
+                            "lock",
                             world);
 
     rcd_rpc_register_method("rcd.packsys.dump",
