@@ -74,8 +74,10 @@ if test "x$with_soup" != "x"; then
 
   CPPFLAGS="${CPPFLAGS:+$CPPFLAGS }-I$with_soup/src"
 
+  real_with_soup=`cd $with_soup && pwd`
+
   SOUP_LIBS=`echo $SOUP_LIBS | sed 's/-L[[^ ]]* *//g'`
-  SOUP_LIBS=`echo $SOUP_LIBS | sed "s,-lsoup,$with_soup/src/libsoup/.libs/libsoup.a,g"`
+  SOUP_LIBS=`echo $SOUP_LIBS | sed "s,-lsoup,$real_with_soup/src/libsoup/.libs/libsoup.a,g"`
 
   RCD_LIBS=`echo $RCD_LIBS | sed 's/-lsoup//g'`
 else
