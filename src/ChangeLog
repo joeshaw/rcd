@@ -1,5 +1,19 @@
 2003-08-22  Joe Shaw  <joe@ximian.com>
 
+	* rcd-transaction.c (rcd_transaction_finished,
+	rcd_transaction_failed): Unconditionally call
+	rcd_transaction_send_log().  It will just effectively be a no-op
+	if there are no premium hosts to log to.
+	(rcd_transaction_send_log): Iterate across the remote worlds and
+	log to the associated server if it is a premium service host.
+
+	* rcd-xmlrpc.c (rcd_xmlrpc_get_server): Take the URL for the host
+	to connect to, instead of just calling rcd_prefs_get_host().
+
+	* rcd-xmlrpc.h: Add a proper copyright notice.
+
+2003-08-22  Joe Shaw  <joe@ximian.com>
+
 	* rcd-mirror.c, rcd-rpc-mirror.c, rcd-world-remote.c: Fix up some
 	licensing text.
 

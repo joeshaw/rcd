@@ -1,8 +1,36 @@
-/* Copyright (C) 2003 by Ximian, Inc. All rights reserved.
+/* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+
+/*
+ * rcd-xmlrpc.c
  *
- * Derived from xmlrpc-c/src/xmlrpc_client.h
+ * Copyright (C) 2001 by First Peer, Inc. All rights reserved.
+ * Copyright (C) 2003 Ximian, Inc.
  *
- * See xmlrpc_client.h for method documentation
+ * Derived from xmlrpc-c-0.9.10/src/xmlrpc_client.c
+ */
+
+/* Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. The name of the author may not be used to endorse or promote products
+ *    derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  */
 
 #ifndef  _REDCARPET_XMLRPC_SOUP_H_
@@ -141,7 +169,8 @@ xmlrpc_client_call_server_asynch_params (xmlrpc_server_info *server,
 					 xmlrpc_value *param_array);
 
 
-xmlrpc_server_info *rcd_xmlrpc_get_server (xmlrpc_env *env);
+xmlrpc_server_info *rcd_xmlrpc_get_server (xmlrpc_env *env,
+					   const char *host_url);
 
 
 #endif /* _REDCARPET_XMLRPC_SOUP_H_ */

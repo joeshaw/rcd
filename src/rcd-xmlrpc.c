@@ -590,13 +590,12 @@ do_soup_request_async (RequestInfo *info)
 }
 
 xmlrpc_server_info *
-rcd_xmlrpc_get_server (xmlrpc_env *env)
+rcd_xmlrpc_get_server (xmlrpc_env *env, const char *host_url)
 {
     xmlrpc_server_info *server;
     gchar *url;
 
-    url = g_strdup_printf ("%s/RPC2/redcarpet-client.php",
-                           rcd_prefs_get_host ());
+    url = g_strdup_printf ("%s/RPC2/redcarpet-client.php", host_url);
 
     server = xmlrpc_server_info_new (env, url);
     g_free (url);

@@ -34,11 +34,12 @@
 #include "rcd-log.h"
 #include "rcd-marshal.h"
 #include "rcd-prefs.h"
+#include "rcd-rpc-util.h"
 #include "rcd-shutdown.h"
 #include "rcd-transfer.h"
 #include "rcd-transfer-http.h"
 #include "rcd-transfer-pool.h"
-#include "rcd-rpc-util.h"
+#include "rcd-world-remote.h"
 #include "rcd-xmlrpc.h"
 
 static GObjectClass *parent_class;
@@ -393,8 +394,7 @@ rcd_transaction_finished (RCDTransaction *transaction, const char *msg)
     if (transaction->flags != RCD_TRANSACTION_FLAGS_DRY_RUN)
         update_log (transaction);
 
-    if (rcd_prefs_get_premium ())
-        rcd_transaction_send_log (transaction, TRUE, msg);
+    rcd_transaction_send_log (transaction, TRUE, msg);
 
     rcd_transaction_emit_transaction_finished (transaction);
 }
@@ -416,8 +416,7 @@ rcd_transaction_failed (RCDTransaction *transaction,
         rc_pending_fail (pending_to_fail, 0, msg);
     }
 
-    if (rcd_prefs_get_premium ())
-        rcd_transaction_send_log (transaction, FALSE, msg);
+    rcd_transaction_send_log (transaction, FALSE, msg);
 
     rcd_transaction_emit_transaction_finished (transaction);
 }
@@ -1328,16 +1327,55 @@ cleanup:
 } /* transaction_xml */
 
 static void
-transaction_sent (char *server_url,
-                  char *method_name,
-                  xmlrpc_value *param_array,
-                  void *user_data,
-                  xmlrpc_env *fault,
-                  xmlrpc_value *result)
+log_sent_cb (char *server_url,
+             char *method_name,
+             xmlrpc_value *param_array,
+             void *user_data,
+             xmlrpc_env *fault,
+             xmlrpc_value *result)
 {
-    if (fault->fault_occurred)
-        rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Send transaction log failed: %s",
-                  fault->fault_string);
+    RCDWorldRemote *remote = RCD_WORLD_REMOTE (user_data);
+
+    if (fault->fault_occurred) {
+        rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Unable to send data to '%s': %s",
+                  RC_WORLD_SERVICE (remote)->name, fault->fault_string);
+    }
+}
+
+static gboolean
+send_log_cb (RCWorld *world, gpointer user_data)
+{
+    RCDWorldRemote *remote = RCD_WORLD_REMOTE (world);
+    xmlrpc_value *transaction_log = user_data;
+    xmlrpc_env env;
+    xmlrpc_server_info *server;
+
+    /* Don't log to non-premium service hosts */
+    if (!remote->premium_service)
+        return TRUE;
+
+    xmlrpc_env_init (&env);
+
+    server = rcd_xmlrpc_get_server (&env, RC_WORLD_SERVICE (remote)->url);
+
+    if (env.fault_occurred) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING, "Unable to get server for '%s'",
+                  RC_WORLD_SERVICE (remote)->url);
+        goto cleanup;
+    }
+
+    xmlrpc_client_call_server_asynch (server, "rcserver.transaction.new",
+                                      log_sent_cb, remote,
+                                      "(V)", transaction_log);
+    if (env.fault_occurred) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING, "Unable to send data to '%s': %s",
+                  RC_WORLD_SERVICE (remote)->name, env.fault_string);
+    }
+
+cleanup:
+    xmlrpc_env_clean (&env);
+
+    return TRUE;
 }
 
 static void
@@ -1346,24 +1384,23 @@ rcd_transaction_send_log (RCDTransaction *transaction,
                           const char     *message)
 {
     xmlrpc_env env;
-    xmlrpc_value *xtrans;
-    xmlrpc_server_info *server;
+    xmlrpc_value *transaction_log = NULL;
 
     xmlrpc_env_init (&env);
-    xtrans = transaction_xml (&env, transaction, successful, message);
+
+    transaction_log = transaction_xml (&env, transaction,
+                                       successful, message);
     XMLRPC_FAIL_IF_FAULT (&env);
 
-    server = rcd_xmlrpc_get_server (&env);
-    xmlrpc_client_call_server_asynch (server, "rcserver.transaction.new",
-                                      transaction_sent,
-                                      NULL,
-                                      "(V)", xtrans);
-
-    xmlrpc_server_info_free (server);
-    xmlrpc_DECREF (xtrans);
+    rc_world_multi_foreach_subworld_by_type (RC_WORLD_MULTI (rc_get_world ()),
+                                             RCD_TYPE_WORLD_REMOTE,
+                                             send_log_cb, transaction_log);
 
 cleanup:
     xmlrpc_env_clean (&env);
+
+    if (transaction_log)
+        xmlrpc_DECREF (transaction_log);
 } /* rcd_transaction_send_log */
 
 void
