@@ -74,48 +74,13 @@ text_match (RCDQueryPart *part,
                                                            pkg->description));
 }
 
-#define SYSTEM_HACK (guint)(~0)
-
-static void
-channel_init (RCDQueryPart *part)
-{
-    int code;
-    char *endptr;
-
-    if (! g_strcasecmp (part->query_str, "system")) {
-        part->data = GUINT_TO_POINTER (SYSTEM_HACK);
-        return;
-    }
-
-    code = strtol (part->query_str, &endptr, 10);
-    if (endptr != NULL && *endptr == '\0') {
-        part->data = GUINT_TO_POINTER (code);
-    } else
-        part->data = NULL;
-}
-
 static gboolean
 channel_match (RCDQueryPart *part,
                gpointer      data) 
 {
     RCPackage *pkg = data;
 
-    /* Match against our cached id */
-    if (part->data != NULL) {
-        guint32 id;        
-        if (pkg->channel == NULL)
-            id = SYSTEM_HACK;
-        else
-            id = rc_channel_get_id (pkg->channel);
-
-        return rcd_query_type_int_compare (part->type, id, GPOINTER_TO_UINT (part->data));
-    }
-
-    if (pkg->channel == NULL)
-        return FALSE;
-    
-    /* Fallback: match against name */
-    return rcd_query_match_string_ci (part, rc_channel_get_name (pkg->channel));
+    return rc_channel_equal_id (pkg->channel, part->query_str);
 }
 
 static gboolean
@@ -133,7 +98,7 @@ name_installed_match (RCDQueryPart *part,
     RCPackage *pkg = data;
     RCPackage *sys_pkg = rc_world_get_package (
         rc_get_world (), 
-        RC_WORLD_SYSTEM_PACKAGES,
+        RC_CHANNEL_SYSTEM,
         g_quark_to_string (pkg->spec.nameq));
 
     return rcd_query_match_bool (part, sys_pkg != NULL);
@@ -182,7 +147,7 @@ package_installed_match (RCDQueryPart *part,
         name = g_quark_to_string (RC_PACKAGE_SPEC (pkg)->nameq);
         rc_world_foreach_package_by_name (rc_get_world (),
                                           name,
-                                          RC_WORLD_SYSTEM_PACKAGES,
+                                          RC_CHANNEL_SYSTEM,
                                           installed_check_cb,
                                           &check);
 
@@ -256,7 +221,7 @@ static RCDQueryEngine query_packages_engine[] = {
       text_match },
 
     { "channel",
-      NULL, channel_init, NULL,
+      NULL, NULL, NULL,
       channel_match },
 
     { "installed",  /* This is a system package, essentially. */
@@ -326,7 +291,7 @@ rcd_query_packages (RCWorld      *world,
     info.count = 0;
 
     rc_world_foreach_package (world,
-                              RC_WORLD_ANY_CHANNEL,
+                              RC_CHANNEL_ANY,
                               match_package_fn,
                               &info);
 

@@ -583,7 +583,7 @@ process_channel_cb (RCDTransfer *t, gpointer user_data)
      * known good files.
      */
     if (success) {
-        local_file = g_strdup_printf ("/var/lib/rcd/channel-%d.xml%s",
+        local_file = g_strdup_printf ("/var/lib/rcd/channel-%s.xml%s",
                                       rc_channel_get_id (channel),
                                       rc_channel_get_pkginfo_compressed (channel) ? ".gz" : "");
         write_file_contents (local_file, data);
@@ -686,7 +686,7 @@ rcd_fetch_channel_local (RCChannel *channel, RCWorld *world)
         world = rc_get_world ();
 
     local_file = g_strdup_printf (
-        "/var/lib/rcd/channel-%d.xml%s",
+        "/var/lib/rcd/channel-%s.xml%s",
         rc_channel_get_id (channel),
         rc_channel_get_pkginfo_compressed (channel) ? ".gz" : "");
 

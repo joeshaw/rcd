@@ -101,10 +101,10 @@ packsys_refresh_channel (xmlrpc_env   *env,
     RCWorld *world = user_data;
     xmlrpc_value *value = NULL;
     RCChannel *channel;
-    guint32 channel_id;
+    char *channel_id;
     gint pending_id = -1;
 
-    xmlrpc_parse_value (env, param_array, "(i)", &channel_id);
+    xmlrpc_parse_value (env, param_array, "(s)", &channel_id);
     XMLRPC_FAIL_IF_FAULT (env);
 
     channel = rc_world_get_channel_by_id (world, channel_id);
@@ -296,13 +296,13 @@ packsys_get_channel_icon (xmlrpc_env   *env,
                           void         *user_data)
 {
     RCWorld *world = user_data;
-    int channel_id;
+    char *channel_id;
     RCChannel *channel;
     char *local_file = NULL;
     RCBuffer *buf;
     xmlrpc_value *value = NULL;
 
-    xmlrpc_parse_value (env, param_array, "(i)", &channel_id);
+    xmlrpc_parse_value (env, param_array, "(s)", &channel_id);
     XMLRPC_FAIL_IF_FAULT (env);
 
     channel = rc_world_get_channel_by_id (world, channel_id);
@@ -367,10 +367,10 @@ packsys_subscribe (xmlrpc_env   *env,
     RCWorld *world = user_data;
     RCChannel *channel = NULL;
     xmlrpc_value *value = NULL;
-    gint channel_id = -1;
+    const char *channel_id;
     gboolean success = FALSE;
 
-    xmlrpc_parse_value (env, param_array, "(i)", &channel_id);
+    xmlrpc_parse_value (env, param_array, "(s)", &channel_id);
     XMLRPC_FAIL_IF_FAULT (env);
 
     channel = rc_world_get_channel_by_id (world, channel_id);
@@ -409,10 +409,10 @@ packsys_unsubscribe (xmlrpc_env   *env,
     RCWorld *world = user_data;
     RCChannel *channel = NULL;
     xmlrpc_value *value = NULL;
-    gint channel_id = -1;
+    char *channel_id;
     gboolean success = FALSE;
 
-    xmlrpc_parse_value (env, param_array, "(i)", &channel_id);
+    xmlrpc_parse_value (env, param_array, "(s)", &channel_id);
     XMLRPC_FAIL_IF_FAULT (env);
 
     channel = rc_world_get_channel_by_id (world, channel_id);
@@ -832,10 +832,10 @@ packsys_find_latest_version (xmlrpc_env   *env,
     closure.subscribed_only = subscribed_only;
 
     rc_world_foreach_package_by_name (
-        world, name, RC_WORLD_SYSTEM_PACKAGES,
+        world, name, RC_CHANNEL_SYSTEM,
         find_latest_installed_version, &closure);
     rc_world_foreach_package_by_name (
-        world, name, RC_WORLD_ANY_NON_SYSTEM, find_latest_version, &closure);
+        world, name, RC_CHANNEL_NON_SYSTEM, find_latest_version, &closure);
 
     if (!closure.package) {
         if (closure.installed_package) {
@@ -1736,10 +1736,10 @@ packsys_rollback_dependencies(xmlrpc_env   *env,
         world,
         "Rollback Packages",
         "rollback-packages",
-        0, 0,
+        "rollback!",
         TRUE, /* this is a silent channel */
         RC_CHANNEL_TYPE_UNKNOWN,
-        channel_priority, channel_priority, channel_priority);
+        channel_priority, channel_priority);
 
     for (iter = rcd_rollback_get_packages (); iter; iter = iter->next) {
         RCPackage *package = iter->data;
@@ -1924,7 +1924,6 @@ packsys_what_provides (xmlrpc_env   *env,
 
         rc_world_foreach_providing_package (world,
                                             dep,
-                                            RC_WORLD_ANY_CHANNEL,
                                             what_provides_cb,
                                             &info);
 
@@ -1997,7 +1996,6 @@ packsys_what_requires (xmlrpc_env   *env,
 
         rc_world_foreach_requiring_package (world,
                                             dep,
-                                            RC_WORLD_ANY_CHANNEL,
                                             what_requires_or_conflicts_cb,
                                             &info);
 
@@ -2034,7 +2032,6 @@ packsys_what_conflicts (xmlrpc_env   *env,
 
         rc_world_foreach_conflicting_package (world,
                                               dep,
-                                              RC_WORLD_ANY_CHANNEL,
                                               what_requires_or_conflicts_cb,
                                               &info);
 
@@ -2283,13 +2280,13 @@ packsys_unmount_directory(xmlrpc_env   *env,
 {
     RCWorld *world = user_data;
     RCChannel *channel = NULL;
-    gint cid;
+    char *cid;
     xmlrpc_value *retval;
 
     retval = xmlrpc_build_value (env, "i", 0);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    xmlrpc_parse_value (env, param_array, "(i)", &cid);
+    xmlrpc_parse_value (env, param_array, "(s)", &cid);
     XMLRPC_FAIL_IF_FAULT (env);
 
     channel = rc_world_get_channel_by_id (world, cid);
@@ -2358,7 +2355,6 @@ dangling_req_cb (RCPackage *package,
             RCPackageDep *dep = package->requires_a->data[i];
             int num = rc_world_foreach_providing_package (info->world,
                                                           dep,
-                                                          RC_WORLD_ANY_CHANNEL,
                                                           NULL, NULL);
             if (num == 0) {
 
@@ -2404,7 +2400,7 @@ packsys_find_dangling_requires (xmlrpc_env   *env,
     info.env     = env;
 
     rc_world_foreach_package (info.world,
-                              RC_WORLD_ANY_CHANNEL,
+                              RC_CHANNEL_ANY,
                               dangling_req_cb,
                               &info);
 

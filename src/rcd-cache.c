@@ -333,12 +333,12 @@ package_cache_filename_func (RCDCache *cache, const char *url)
 static char *
 icon_cache_filename_func (RCDCache *cache, const char *url)
 {
-    int channel_id = GPOINTER_TO_INT (cache->user_data);
+    char *channel_id = cache->user_data;
     const char *extension;
     char *path;
 
     extension = strrchr (url, '.');
-    path = g_strdup_printf ("icons/channel-%d%s", 
+    path = g_strdup_printf ("icons/channel-%s%s", 
                             channel_id, extension ? extension : "");
 
     return path;
@@ -378,7 +378,7 @@ rcd_cache_get_package_cache (void)
 } /* rcd_cache_get_package_cache */
 
 RCDCache *
-rcd_cache_get_icon_cache (int channel_id)
+rcd_cache_get_icon_cache (const char *channel_id)
 {
     static RCDCache *cache = NULL;
 
@@ -386,7 +386,7 @@ rcd_cache_get_icon_cache (int channel_id)
         cache = rcd_cache_new (icon_cache_filename_func);
     }
 
-    cache->user_data = GINT_TO_POINTER (channel_id);
+    cache->user_data = g_strdup (channel_id);
 
     return cache;
 } /* rcd_cache_get_icon_cache */

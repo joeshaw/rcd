@@ -142,7 +142,7 @@ manifest_xml_node(RCPackage  *new_pkg,
     node = xmlNewNode (NULL, "manifest");
 
     tmp = g_strdup_printf (
-        "%d", new_pkg->channel ? rc_channel_get_id (new_pkg->channel) : 0);
+        "%s", new_pkg->channel ? rc_channel_get_id (new_pkg->channel) : "");
     xmlNewTextChild (node, NULL, "cid", tmp);
     g_free (tmp);
 
@@ -171,9 +171,8 @@ manifest_xml_node(RCPackage  *new_pkg,
         g_free (tmp);
 
         if (new_pkg->channel) {
-            tmp = g_strdup_printf ("%d", rc_channel_get_id (new_pkg->channel));
-            xmlNewTextChild (pkgnode, NULL, "channel_id", tmp);
-            g_free (tmp);
+            xmlNewTextChild (pkgnode, NULL, "channel_id",
+                             rc_channel_get_id (new_pkg->channel));
         }
 
         if (update->package_url)
@@ -510,7 +509,7 @@ update_log (RCDTransactionStatus *status)
                                        status->identity->username);
 
         old_p = rc_world_get_package (rc_get_world (),
-                                      RC_WORLD_SYSTEM_PACKAGES,
+                                      RC_CHANNEL_SYSTEM,
                                       g_quark_to_string (new_p->spec.nameq));
 
         if (old_p)

@@ -133,7 +133,7 @@ install_whole_channel_cb (RCPackage *pkg, gpointer user_data)
        a package of the same name is already installed on the system */
 
     if (rc_world_get_package (rc_get_world (),
-                              RC_WORLD_SYSTEM_PACKAGES,
+                              RC_CHANNEL_SYSTEM,
                               name) == NULL) {
 
         pull->all_to_add = g_slist_prepend (pull->all_to_add,
@@ -717,7 +717,6 @@ channel_from_xml_props (xmlNode *node, gboolean *install_everything)
     RCChannel *channel = NULL;
     char *alias_str = NULL;
     char *cid_str = NULL;
-    char *bid_str = NULL;
 
     world = rc_get_world ();
 
@@ -739,37 +738,17 @@ channel_from_xml_props (xmlNode *node, gboolean *install_everything)
 
     cid_str = xml_get_prop (node, "cid");
     if (cid_str) {
-        guint32 cid = 0;
-        cid = atol (cid_str);
         rc_debug (RC_DEBUG_LEVEL_INFO,
-                  "Looking for channel with cid=%d ('%s')",
-                  cid, cid_str);
-        if (cid) {
-            channel = rc_world_get_channel_by_id (world, cid);
-            if (channel)
-                goto finished;
-        }
+                  "Looking for channel with cid='%s'",
+                  cid_str);
+        channel = rc_world_get_channel_by_id (world, cid_str);
+        if (channel)
+            goto finished; /* not a long trip */
     }
     
-    bid_str = xml_get_prop (node, "bid");
-    if (bid_str) {
-        guint32 bid = 0;
-        bid = atol (bid_str);
-        rc_debug (RC_DEBUG_LEVEL_INFO,
-                  "Looking for channel with bid=%d ('%s')",
-                  bid, bid_str);
-        if (bid) {
-            channel = rc_world_get_channel_by_base_id (world, bid);
-            if (channel)
-                goto finished;
-        }
-    }
-
-
  finished:
     g_free (alias_str);
     g_free (cid_str);
-    g_free (bid_str);
 
     return channel;
 }
@@ -813,7 +792,7 @@ package_from_xml_node (xmlNode *node)
     pkg_name = xml_get_prop (node, "name");
 
     pkg = rc_world_get_package (world,
-                                channel ? channel : RC_WORLD_SYSTEM_PACKAGES,
+                                channel ? channel : RC_CHANNEL_SYSTEM,
                                 pkg_name);
 
     if (pkg == NULL) {

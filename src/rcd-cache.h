@@ -65,6 +65,6 @@ gsize rcd_cache_size (RCDCache *cache);
 
 RCDCache *rcd_cache_get_normal_cache  (void);
 RCDCache *rcd_cache_get_package_cache (void);
-RCDCache *rcd_cache_get_icon_cache    (int channel_id);
+RCDCache *rcd_cache_get_icon_cache    (const char *channel_id);
 
 #endif /* __RCD_CACHE_H__ */

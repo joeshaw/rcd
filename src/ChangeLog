@@ -1,3 +1,9 @@
+2003-04-17  Jon Trowbridge  <trow@ximian.com>
+
+	* Lots of small, uninteresting fixes to make rcd work with
+	our bleeding-edge libredcarpet.  Most changes involve the
+	transition from integer to string channel IDs.
+
 2003-04-10  Joe Shaw  <joe@ximian.com>
 
 	* rcd-prefs.c (rcd_prefs_get_required_certificates): Also set the

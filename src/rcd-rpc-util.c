@@ -202,7 +202,9 @@ rcd_xmlrpc_to_rc_package_dep (xmlrpc_value *value,
     if (relation == RC_RELATION_INVALID)
         goto cleanup;
     
-    dep = rc_package_dep_new_from_spec (&spec, relation, FALSE, is_or);
+    dep = rc_package_dep_new_from_spec (&spec, relation, 
+                                        RC_CHANNEL_ANY, /* FIXME!!! */
+                                        FALSE, is_or);
 
  cleanup:
     rc_package_spec_free_members (&spec);
@@ -279,8 +281,9 @@ rcd_rc_package_match_to_xmlrpc (RCPackageMatch *match,
     }
 
     if (rc_package_match_get_channel (match) != NULL) {
-        gint cid = rc_channel_get_id (rc_package_match_get_channel (match));
-        RCD_XMLRPC_STRUCT_SET_INT (env, value, "channel", cid);
+        const char *cid = \
+            rc_channel_get_id (rc_package_match_get_channel (match));
+        RCD_XMLRPC_STRUCT_SET_STRING (env, value, "channel", cid);
     }
 
     if (rc_package_match_get_importance (match, NULL) != RC_IMPORTANCE_INVALID) {
@@ -307,7 +310,7 @@ rcd_xmlrpc_to_rc_package_match (xmlrpc_value *value,
 {
     RCPackageMatch *match;
     char *glob = NULL;
-    int cid;
+    char *cid;
     gboolean did_something = FALSE;
     
     g_return_val_if_fail (value != NULL, NULL);
@@ -340,14 +343,14 @@ rcd_xmlrpc_to_rc_package_match (xmlrpc_value *value,
     if (xmlrpc_struct_has_key (env, value, "channel")) {
 
         RCChannel *channel;
-        RCD_XMLRPC_STRUCT_GET_INT (env, value, "channel", cid);
+        RCD_XMLRPC_STRUCT_GET_STRING (env, value, "channel", cid);
         channel = rc_world_get_channel_by_id (rc_get_world (), cid);
         if (channel) {
             rc_package_match_set_channel (match, channel);
             did_something = TRUE;
         } else
             rc_debug (RC_DEBUG_LEVEL_WARNING,
-                      "Unknown channel '%d' in match", cid);
+                      "Unknown channel '%s' in match", cid);
     }
 
     if (xmlrpc_struct_has_key (env, value, "importance_str")
@@ -439,9 +442,9 @@ rcd_rc_package_to_xmlrpc (RCPackage *package, xmlrpc_env *env)
     XMLRPC_FAIL_IF_FAULT(env);
 
     /* RCPackage members */
-    RCD_XMLRPC_STRUCT_SET_INT(
+    RCD_XMLRPC_STRUCT_SET_STRING(
         env, value, "channel",
-        package->channel ? rc_channel_get_id(package->channel) : 0);
+        package->channel ? rc_channel_get_id(package->channel) : "");
     
     update = rc_package_get_latest_update (package);
     if (update) {
@@ -506,7 +509,7 @@ rcd_rc_package_to_xmlrpc (RCPackage *package, xmlrpc_env *env)
         name = g_quark_to_string (RC_PACKAGE_SPEC (package)->nameq);
         rc_world_foreach_package_by_name (rc_get_world (),
                                           name,
-                                          RC_WORLD_SYSTEM_PACKAGES,
+                                          RC_CHANNEL_SYSTEM,
                                           installed_check_cb,
                                           &flags);
 
@@ -574,7 +577,7 @@ rcd_rc_package_from_name (xmlrpc_value *value,
     XMLRPC_FAIL_IF_FAULT (env);
 
     /* FIXME: This should probably check EVR too */
-    package = rc_world_get_package (world, RC_WORLD_SYSTEM_PACKAGES, name);
+    package = rc_world_get_package (world, RC_CHANNEL_SYSTEM, name);
 
     if (!package)
         xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PACKAGE_NOT_FOUND,
@@ -649,7 +652,7 @@ rcd_rc_package_from_xmlrpc_package (xmlrpc_value *value,
 {
     char *name = NULL;
     int has_key;
-    int channel_id;
+    char *channel_id;
     RCWorld *world = rc_get_world ();
     RCPackman *packman = rc_world_get_packman (world);
     RCPackage *package = NULL;
@@ -694,12 +697,12 @@ rcd_rc_package_from_xmlrpc_package (xmlrpc_value *value,
     RCD_XMLRPC_STRUCT_GET_STRING (env, value, "name", name);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    RCD_XMLRPC_STRUCT_GET_INT (env, value, "channel", channel_id);
+    RCD_XMLRPC_STRUCT_GET_STRING (env, value, "channel", channel_id);
     XMLRPC_FAIL_IF_FAULT (env);
 
     if (channel_id) {
         RCChannel *channel;
-
+        
         channel = rc_world_get_channel_by_id (world, channel_id);
         if (!channel) {
             xmlrpc_env_set_fault (env, RCD_RPC_FAULT_INVALID_CHANNEL,
@@ -715,7 +718,7 @@ rcd_rc_package_from_xmlrpc_package (xmlrpc_value *value,
         }
     }
     else {
-        package = rc_world_get_package (world, RC_WORLD_SYSTEM_PACKAGES, name);
+        package = rc_world_get_package (world, RC_CHANNEL_SYSTEM, name);
 
         if (!package) {
             xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PACKAGE_NOT_FOUND,
@@ -811,7 +814,7 @@ rcd_rc_channel_to_xmlrpc (RCChannel  *channel,
     value = xmlrpc_struct_new (env);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    RCD_XMLRPC_STRUCT_SET_INT (env, value, "id", rc_channel_get_id (channel));
+    RCD_XMLRPC_STRUCT_SET_STRING (env, value, "id", rc_channel_get_id (channel));
     
     RCD_XMLRPC_STRUCT_SET_STRING (env, value, "name", rc_channel_get_name (channel));
 
