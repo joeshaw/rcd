@@ -223,7 +223,8 @@ rcd_rc_package_to_xmlrpc (RCPackage *package, xmlrpc_env *env)
 {
     xmlrpc_value *value = NULL;
     RCPackageUpdate *update;
-    gboolean installed;
+    const char *name;
+    gboolean installed, name_installed;
 
     value = xmlrpc_struct_new(env);
     XMLRPC_FAIL_IF_FAULT(env);
@@ -297,6 +298,14 @@ rcd_rc_package_to_xmlrpc (RCPackage *package, xmlrpc_env *env)
                                                RC_PACKAGE_SPEC(sys_pkg)));
     }
     RCD_XMLRPC_STRUCT_SET_INT(env, value, "installed", installed);
+
+    name = g_quark_to_string (RC_PACKAGE_SPEC (package)->nameq);
+    name_installed = rc_world_foreach_package_by_name (rc_get_world (),
+                                                       name,
+                                                       RC_WORLD_SYSTEM_PACKAGES,
+                                                       NULL, NULL);
+                                                       
+    RCD_XMLRPC_STRUCT_SET_INT(env, value, "name_installed", name_installed);
         
 cleanup:
     if (env->fault_occurred) {
