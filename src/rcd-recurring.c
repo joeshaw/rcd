@@ -35,8 +35,6 @@ static gint   recurring_lock = 0;
 static gboolean
 rcd_recurring_execute (RCDRecurring *recurring)
 {
-    time_t next;
-
     g_return_val_if_fail (recurring != NULL, FALSE);
 
     if (recurring->execute)

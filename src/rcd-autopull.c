@@ -32,6 +32,7 @@
 #include "rcd-module.h"
 #include "rcd-fetch.h"
 #include "rcd-recurring.h"
+#include "rcd-rpc.h"
 #include "rcd-transaction.h"
 #include "rcd-transfer.h"
 #include "rcd-subscriptions.h"

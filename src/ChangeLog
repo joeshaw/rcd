@@ -1,3 +1,11 @@
+2002-12-17  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-recurring.c (rcd_recurring_execute): Removed an unused
+	variable's declaration.
+
+	* rcd-autopull.c: Include rcd-rpc.h to get rid of a compiler
+	warning.
+
 2002-12-14  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-recurring.c (rcd_recurring_execute): If the RCDRecurring
