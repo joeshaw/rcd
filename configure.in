@@ -49,7 +49,7 @@ AM_PROG_LIBTOOL
 
 ### get cflags and libs
 
-PKG_CHECK_MODULES(RCD, glib-2.0 gmodule-2.0 gobject-2.0 libxml-2.0)
+PKG_CHECK_MODULES(RCD, glib-2.0 gthread-2.0 gmodule-2.0 gobject-2.0 libxml-2.0)
 
 ###
 ### soup magic
@@ -130,14 +130,14 @@ SHARED_ONLY=
 HOST_OS=`uname`
 case "$HOST_OS" in
   SunOS)
-    FORCE_SHLIBS="dl resolv rt nsl"
+    FORCE_SHLIBS="dl resolv rt nsl pthread"
+    RCD_LIBS="$RCD_LIBS -lpthread"
   ;;
   Linux)
-    FORCE_SHLIBS="dl"
-    RCD_LIBS="$RCD_LIBS -lutil"
+    FORCE_SHLIBS="dl pthread"
+    RCD_LIBS="$RCD_LIBS -lutil -lpthread"
   ;;
   *)
-    FORCE_SHLIBS="NONE"
   ;;
 esac
 
