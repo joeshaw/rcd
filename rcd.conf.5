@@ -23,6 +23,28 @@ should be enclosed in double quotes.
 .LP 
 Additional rcd clients or Red Carpet Enterprise modules can add their own sections and entry/value pairs. The basic list of sections and entries is as follows:
 .LP 
+\fB[Cache]\fR
+.TP 
+This section contains settings related to rcd's download caches.
+
+.TP 
+\fBenabled=[true | false]\fR
+Specifies whether rcd should cache downloaded data.  This defaults to true.  This key can be set with "rc set" or other rcd client settings tools.
+
+.TP 
+\fBdirectory=<directory>\fR
+Specifies the parent directory where rcd should store cached downloaded data.  This defaults to /var/cache/redcarpet.  This key can be set through rcd's preferences mechanism.
+
+.LP 
+\fB[MagicProxy]\fR
+.TP 
+This section holds the settings for the dispatcher ("middleman" or "magic proxy") tool used to work within complex and restrictive firewall situations. It has one key/value pair:
+
+.TP 
+\fBmiddleman\-host=host\fR
+The host value should be the hostname of the system acting as the middleman. If you are configuring the middleman system itself, then this value should be the host name of the local system.
+
+.LP 
 \fB[Network]\fR
 
 .TP 
@@ -74,18 +96,9 @@ Specifies whether rcd should listen to remote (TCP) connections.  This defaults 
 \fBport=<number>\fR
 Specifies the port rcd should listen on for remote (TCP) connections. This defaults to 505.
 
-.LP 
-\fB[Cache]\fR
 .TP 
-This section contains settings related to rcd's download caches.
-
-.TP 
-\fBenabled=[true | false]\fR
-Specifies whether rcd should cache downloaded data.  This defaults to true.  This key can be set with "rc set" or other rcd client settings tools.
-
-.TP 
-\fBdirectory=<directory>\fR
-Specifies the parent directory where rcd should store cached downloaded data.  This defaults to /var/cache/redcarpet.  This key can be set through rcd's preferences mechanism.
+\fBbind\-ip=ip\fR
+Applicable only to systems which can be addressed by more than one IP address. If this value is not set, rcd will bind to all IP addresses served by the system. If you wish to have rcd available on only one IP (in addition to localhost, where it is always available), set this key to that address. 
 
 .TP 
 \fB[System]
