@@ -42,6 +42,7 @@
 #define RCD_RPC_FAULT_INVALID_CHANNEL        -606
 #define RCD_RPC_FAULT_INVALID_TRANSACTION_ID -607
 #define RCD_RPC_FAULT_INVALID_PREFERENCE     -608
+#define RCD_RPC_FAULT_LOCKED                 -609
 
 #define is_empty_string(x)     (!(x) || !(*(x)))
 #define RC_STRING_TO_XMLRPC(x) ((x) == NULL ? "" : (x))

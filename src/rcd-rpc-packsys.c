@@ -149,17 +149,35 @@ remove_channel_cb (RCChannel *channel, gpointer user_data)
     rc_world_remove_channel (rc_get_world (), channel);
 } /* remove_channel_cb */
 
+static gboolean
+check_pending_status_cb (gpointer user_data)
+{
+    GSList *id_list = user_data;
+    GSList *iter;
+
+    for (iter = id_list; iter; iter = iter->next) {
+        int id = GPOINTER_TO_INT (iter->data);
+        RCDPending *pending = rcd_pending_lookup_by_id (id);
+        RCDPendingStatus status = rcd_pending_get_status (pending);
+
+        if (status == RCD_PENDING_STATUS_PRE_BEGIN ||
+            status == RCD_PENDING_STATUS_RUNNING ||
+            status == RCD_PENDING_STATUS_BLOCKING)
+            return TRUE;
+    }
+
+    g_slist_free (id_list);
+
+    packsys_lock = FALSE;
+
+    return FALSE;
+} /* check_pending_status_cb */
+
 static void
 refresh_channels_cb (gpointer user_data)
 {
     GSList *id_list;
     GSList **ret_list = user_data;
-
-    if (packsys_lock) {
-        rc_debug (RC_DEBUG_LEVEL_MESSAGE, 
-                  "Can't refresh channel data while transaction is running");
-        return;
-    }
 
     rc_world_foreach_channel (rc_get_world (), remove_channel_cb, NULL);
 
@@ -172,6 +190,8 @@ refresh_channels_cb (gpointer user_data)
         g_slist_free (id_list);
     else
         *ret_list = id_list;
+
+    g_idle_add (check_pending_status_cb, id_list);
 } /* refresh_channels_cb */
 
 static xmlrpc_value *
@@ -181,6 +201,14 @@ packsys_refresh_all_channels (xmlrpc_env   *env,
 {
     xmlrpc_value *value;
     GSList *ret_list = NULL, *iter;
+
+    if (packsys_lock) {
+        xmlrpc_env_set_fault (env, RCD_RPC_FAULT_LOCKED,
+                              "Transaction lock in place");
+        return NULL;
+    }
+
+    packsys_lock = TRUE;
 
     refresh_channels_cb (&ret_list);
 
@@ -201,7 +229,6 @@ packsys_refresh_all_channels (xmlrpc_env   *env,
     }
     
  cleanup:
-    g_slist_free (ret_list);
     if (env->fault_occurred)
         return NULL;
 

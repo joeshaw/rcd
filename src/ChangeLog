@@ -1,3 +1,17 @@
+2002-07-18  Joe Shaw  <joe@ximian.com>
+
+	* rcd-fetch.c (all_channels_cb): In the local case, if we have to
+	fallback to fetching from the net, add the ids to the list.
+
+	* rcd-rpc-packsys.c (check_pending_status_cb): Added.  Unlock the
+	packsys lock if all of the transfers have finished.
+	(refresh_channels_cb): Set up the check_pending_status_cb()
+	handler.
+	(packsys_refresh_all_channels): Check for a lock and throw a fault
+	if we're locked.
+
+	* rcd-rpc-util.h: Add a RCD_RPC_FAULT_LOCKED fault.
+
 2002-07-17  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-util.c (rcd_rc_package_from_xmlrpc_package): If we don't

@@ -198,6 +198,54 @@ rcd_fetch_channel_list_local (void)
     return success;
 }    
 
+static char *
+merge_paths (const char *parent_path, const char *child_path)
+{
+    SoupUri *parent_url;
+    SoupUri *child_url;
+    char *ret;
+
+    g_return_val_if_fail (parent_path, NULL);
+
+    if (!child_path)
+        return g_strdup (parent_path);
+
+    parent_url = soup_uri_new (parent_path);
+    child_url = soup_uri_new (child_path);
+
+    if (child_url)
+        ret = g_strdup (child_path);
+    else {
+        if (!parent_url) {
+            if (parent_path[strlen(parent_path) - 1] == '/')
+                ret = g_strconcat (parent_path, child_path, NULL);
+            else
+                ret = g_strconcat (parent_path, "/", child_path, NULL);
+        }
+        else {
+            if (child_path[0] == '/') {
+                g_free (parent_url->path);
+                parent_url->path = g_strdup(child_path);
+                ret = soup_uri_to_string (parent_url, TRUE);
+            }
+            else {
+                if (parent_path[strlen(parent_path) - 1] == '/')
+                    ret = g_strconcat (parent_path, child_path, NULL);
+                else
+                    ret = g_strconcat (parent_path, "/", child_path, NULL);
+            }
+        }
+    }
+
+    if (parent_url)
+        soup_uri_free (parent_url);
+
+    if (child_url)
+        soup_uri_free (child_url);
+
+    return ret;
+}
+
 typedef struct {
     GByteArray *data;
     RCChannel  *channel;
@@ -267,55 +315,6 @@ process_channel_cb (RCDTransfer *t, gpointer user_data)
     g_byte_array_free (data, TRUE);
     g_free (closure);
 }
-
-static char *
-merge_paths (const char *parent_path, const char *child_path)
-{
-    SoupUri *parent_url;
-    SoupUri *child_url;
-    char *ret;
-
-    g_return_val_if_fail (parent_path, NULL);
-
-    if (!child_path)
-        return g_strdup (parent_path);
-
-    parent_url = soup_uri_new (parent_path);
-    child_url = soup_uri_new (child_path);
-
-    if (child_url)
-        ret = g_strdup (child_path);
-    else {
-        if (!parent_url) {
-            if (parent_path[strlen(parent_path) - 1] == '/')
-                ret = g_strconcat (parent_path, child_path, NULL);
-            else
-                ret = g_strconcat (parent_path, "/", child_path, NULL);
-        }
-        else {
-            if (child_path[0] == '/') {
-                g_free (parent_url->path);
-                parent_url->path = g_strdup(child_path);
-                ret = soup_uri_to_string (parent_url, TRUE);
-            }
-            else {
-                if (parent_path[strlen(parent_path) - 1] == '/')
-                    ret = g_strconcat (parent_path, child_path, NULL);
-                else
-                    ret = g_strconcat (parent_path, "/", child_path, NULL);
-            }
-        }
-    }
-
-    if (parent_url)
-        soup_uri_free (parent_url);
-
-    if (child_url)
-        soup_uri_free (child_url);
-
-    return ret;
-}
-
 
 gint
 rcd_fetch_channel (RCChannel *channel)
@@ -425,13 +424,18 @@ static void
 all_channels_cb (RCChannel *channel, gpointer user_data)
 {
     struct FetchAllInfo *info = user_data;
+    int id;
 
     if (info->local) {
-        if (!rcd_fetch_channel_local (channel))
-            rcd_fetch_channel (channel);
+        if (!rcd_fetch_channel_local (channel)) {
+            id = rcd_fetch_channel (channel);
+            if (id != RCD_INVALID_PENDING_ID)
+                info->id_list = g_slist_prepend (info->id_list,
+                                                 GINT_TO_POINTER (id));
+        }
     }
     else {
-        gint id = rcd_fetch_channel (channel);
+        id = rcd_fetch_channel (channel);
         if (id != RCD_INVALID_PENDING_ID)
             info->id_list = g_slist_prepend (info->id_list,
                                              GINT_TO_POINTER (id));
