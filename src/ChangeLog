@@ -1,7 +1,7 @@
 2003-01-22  Joe Shaw  <joe@ximian.com>
 
-	* rcd-identity.c (write_identity): Make -1, not 0, to mean that
-	"no changes" when writing out the password file to disk.  Fixes
+	* rcd-identity.c (write_identity): Make -1, not 0, mean "no
+	changes" when writing out the password file to disk.  Fixes
 	#36257, in which you couldn't take all users' privileges away.
 
 	* rcd-rpc-users.c (users_update): Set id->privileges to -1, not 0.
