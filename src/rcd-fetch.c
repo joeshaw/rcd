@@ -1222,7 +1222,7 @@ rcd_fetch_refresh (char **err_msg)
        non-mounted ones). */
     id_list = rcd_fetch_some_channels (RCD_FETCH_PERSISTENT, info->temp_world);
 
-    info->id_list = id_list;
+    info->id_list = g_slist_copy (id_list);
 
     g_idle_add (check_pending_status_cb, info);
 

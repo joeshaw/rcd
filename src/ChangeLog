@@ -1,5 +1,25 @@
 2003-05-30  Joe Shaw  <joe@ximian.com>
 
+	* rcd-fetch.c (rcd_fetch_refresh): Copy the id_list so we own our
+	own copy since we free it later.
+
+	* rcd-rpc-packsys.c (wait_for_pending_cb): Added.  Given a list of
+	pending objects, it blocks on them and possibly sets XML-RPC
+	faults on error.
+	(packsys_refresh_channel_blocking,
+	packsys_refresh_all_channels_blocking, packsys_transact_blocking):
+	Added these new blocking versions of popular RPC methods.  Return
+	regular XML-RPC faults on error and 0 on success.
+	(packsys_refresh_all_channels): Plug a leak.
+	(setup_transaction): Move almost all of the old packsys_transact()
+	logic into here.  Returns an RCDTransaction ready to be run.
+	(packsys_transact): Make this a shell around setup_transaction()
+	which returns the three pending ids for clients to poll on.
+	(rcd_rpc_packsys_register_methods): Register the new blocking RPC
+	methods.
+
+2003-05-30  Joe Shaw  <joe@ximian.com>
+
 	* rcd-rpc-packsys.c (synth_package_from_update): After copying a
 	package, clear out its spec members and graft in the update's spec
 	members so the right version numbers are returned to clients.

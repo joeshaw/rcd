@@ -121,6 +121,139 @@ packsys_refresh_channel (xmlrpc_env   *env,
     return value;
 }
 
+typedef struct {
+    GSList *pending_id_list;
+    gboolean fail_if_any;
+    xmlrpc_env *env;
+    GMainLoop *inferior_loop;
+} BlockingInfo;
+
+static gboolean
+wait_for_pending_cb (gpointer user_data)
+{
+    BlockingInfo *info = user_data;
+    GSList *iter, *next;
+    gboolean exit_out = FALSE;
+
+    for (iter = info->pending_id_list; iter; iter = next) {
+        int pending_id = GPOINTER_TO_INT (iter->data);
+        RCDPending *pending = rcd_pending_lookup_by_id (pending_id);
+
+        next = iter->next;
+
+        if (!rcd_pending_is_active (pending)) {
+            info->pending_id_list = g_slist_delete_link (info->pending_id_list,
+                                                         iter);
+        }
+
+        if (info->fail_if_any) {
+            const char *err_msg = rcd_pending_get_error_msg (pending);
+
+            if (err_msg) {
+                xmlrpc_env_set_fault (info->env, RCD_RPC_FAULT_CANT_REFRESH,
+                                      (char *) err_msg);
+                exit_out = TRUE;
+                break;
+            }
+        }
+    }
+
+    if (exit_out || !info->pending_id_list) {
+        g_main_loop_quit (info->inferior_loop);
+        return FALSE;
+    }
+    else
+        return TRUE;
+}
+
+static xmlrpc_value *
+packsys_refresh_channel_blocking (xmlrpc_env   *env,
+                                  xmlrpc_value *param_array,
+                                  void         *user_data)
+{
+    RCWorld *world = user_data;
+    char *channel_id;
+    RCChannel *channel;
+    int pending_id;
+    BlockingInfo info;
+
+    xmlrpc_parse_value (env, param_array, "(s)", &channel_id);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    channel = rc_world_get_channel_by_id (world, channel_id);
+    if (!channel) {
+        xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_INVALID_CHANNEL,
+                                        "Unknown channel '%s'", channel_id);
+        return NULL;
+    }
+
+    pending_id = rcd_fetch_channel (channel, NULL);
+    rcd_fetch_channel_icon (channel);
+
+    info.pending_id_list = g_slist_prepend (NULL,
+                                            GINT_TO_POINTER (pending_id));
+    info.fail_if_any = TRUE;
+    info.env = env;
+    info.inferior_loop = g_main_loop_new (NULL, FALSE);
+
+    g_idle_add (wait_for_pending_cb, &info);
+    g_main_loop_run (info.inferior_loop);
+    g_main_loop_unref (info.inferior_loop);
+    g_slist_free (info.pending_id_list);
+
+cleanup:
+    if (env->fault_occurred)
+        return NULL;
+
+    return xmlrpc_build_value (env, "i", 0);
+}
+
+static xmlrpc_value *
+packsys_refresh_all_channels_blocking (xmlrpc_env   *env,
+                                       xmlrpc_value *param_array,
+                                       void         *user_data)
+{
+    GSList *ret_list;
+    char *err_msg = NULL;
+    BlockingInfo info;
+
+    if (rcd_transaction_is_locked ()) {
+        xmlrpc_env_set_fault (env, RCD_RPC_FAULT_LOCKED,
+                              "Transaction lock in place");
+        return NULL;
+    }
+
+    ret_list = rcd_fetch_refresh (&err_msg);
+
+    if (err_msg) {
+        xmlrpc_env_set_fault_formatted (
+            env, RCD_RPC_FAULT_CANT_REFRESH,
+            "Unable to download channel data: %s", err_msg);
+        goto cleanup;
+    }
+    
+    info.pending_id_list = ret_list;
+    info.fail_if_any = FALSE;
+    info.env = env;
+    info.inferior_loop = g_main_loop_new (NULL, FALSE);
+
+    g_idle_add (wait_for_pending_cb, &info);
+    g_main_loop_run (info.inferior_loop);
+    g_main_loop_unref (info.inferior_loop);
+
+cleanup:
+    if (ret_list)
+        g_slist_free (ret_list);
+
+    if (err_msg)
+        g_free (err_msg);
+
+    if (env->fault_occurred)
+        return NULL;
+
+    return xmlrpc_build_value (env, "i", 0);
+}
+
 static xmlrpc_value *
 packsys_refresh_all_channels (xmlrpc_env   *env,
                               xmlrpc_value *param_array,
@@ -128,7 +261,7 @@ packsys_refresh_all_channels (xmlrpc_env   *env,
 {
     xmlrpc_value *value = NULL;
     GSList *ret_list = NULL, *iter;
-    char *err_msg;
+    char *err_msg = NULL;
 
     if (rcd_transaction_is_locked ()) {
         xmlrpc_env_set_fault (env, RCD_RPC_FAULT_LOCKED,
@@ -162,6 +295,12 @@ packsys_refresh_all_channels (xmlrpc_env   *env,
     }
     
  cleanup:
+    if (ret_list)
+        g_slist_free (ret_list);
+
+    if (err_msg)
+        g_free (err_msg);
+
     if (env->fault_occurred)
         return NULL;
 
@@ -193,7 +332,7 @@ packsys_get_channel_icon (xmlrpc_env   *env,
 
     if (!rc_channel_get_icon_file (channel)) {
         xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_NO_ICON,
-                                        "There is ot icon for channel "
+                                        "There is no icon for channel "
                                         "'%s' (%d)",
                                         rc_channel_get_name (channel),
                                         channel_id);
@@ -992,10 +1131,10 @@ check_remove_package_auth (xmlrpc_env     *env,
     }
 } /* check_remove_package_auth */
 
-static xmlrpc_value *
-packsys_transact(xmlrpc_env   *env,
-                 xmlrpc_value *param_array,
-                 void         *user_data)
+static RCDTransaction *
+setup_transaction (xmlrpc_env   *env,
+                   xmlrpc_value *param_array,
+                   void         *user_data)
 {
     RCWorld *world = (RCWorld *) user_data;
     xmlrpc_value *xmlrpc_install_packages;
@@ -1005,9 +1144,7 @@ packsys_transact(xmlrpc_env   *env,
     RCPackageSList *install_packages = NULL;
     RCPackageSList *remove_packages = NULL;
     RCDRPCMethodData *method_data;
-    RCDTransaction *transaction;
-    int download_id, transaction_id, step_id;
-    xmlrpc_value *result = NULL;
+    RCDTransaction *transaction = NULL;
 
     /* Before we begin any transaction, expire the package cache. */
     rcd_cache_expire_package_cache ();
@@ -1049,6 +1186,31 @@ packsys_transact(xmlrpc_env   *env,
                                      method_data->host,
                                      method_data->identity);
 
+cleanup:
+    if (install_packages)
+        rc_package_slist_unref (install_packages);
+
+    if (remove_packages)
+        rc_package_slist_unref (remove_packages);
+
+    if (env->fault_occurred)
+        return NULL;
+
+    return transaction;
+}
+
+static xmlrpc_value *
+packsys_transact(xmlrpc_env   *env,
+                 xmlrpc_value *param_array,
+                 void         *user_data)
+{
+    RCDTransaction *transaction;
+    int download_id, transaction_id, step_id;
+    xmlrpc_value *result = NULL;
+
+    transaction = setup_transaction (env, param_array, user_data);
+    XMLRPC_FAIL_IF_FAULT (env);
+
     rcd_transaction_begin (transaction);
 
     download_id = rcd_transaction_get_download_pending_id (transaction);
@@ -1062,17 +1224,56 @@ packsys_transact(xmlrpc_env   *env,
     XMLRPC_FAIL_IF_FAULT(env);
 
 cleanup:
-    if (install_packages)
-        rc_package_slist_unref(install_packages);
-
-    if (remove_packages)
-        rc_package_slist_unref(remove_packages);
-
     if (env->fault_occurred)
         return NULL;
 
     return result;
-} /* packsys_transact */
+}
+
+static xmlrpc_value *
+packsys_transact_blocking (xmlrpc_env   *env,
+                           xmlrpc_value *param_array,
+                           void         *user_data)
+{
+    RCDTransaction *transaction;
+    int download_id, transaction_id;
+    BlockingInfo info;
+
+    transaction = setup_transaction (env, param_array, user_data);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    rcd_transaction_begin (transaction);
+
+    download_id = rcd_transaction_get_download_pending_id (transaction);
+    transaction_id = rcd_transaction_get_transaction_pending_id (transaction);
+
+    g_object_unref (transaction);
+
+    info.pending_id_list = NULL;
+    if (download_id != -1) {
+        info.pending_id_list = g_slist_prepend (info.pending_id_list,
+                                                GINT_TO_POINTER (download_id));
+    }
+    if (transaction_id != -1) {
+        info.pending_id_list = g_slist_prepend (info.pending_id_list,
+                                                GINT_TO_POINTER (transaction_id));
+    }
+
+    info.fail_if_any = TRUE;
+    info.env = env;
+    info.inferior_loop = g_main_loop_new (NULL, FALSE);
+
+    g_idle_add (wait_for_pending_cb, &info);
+    g_main_loop_run (info.inferior_loop);
+    g_main_loop_unref (info.inferior_loop);
+    g_slist_free (info.pending_id_list);
+
+cleanup:
+    if (env->fault_occurred)
+        return NULL;
+
+    return xmlrpc_build_value (env, "i", 0);
+}
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
@@ -2415,6 +2616,11 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
                             "",
                             world);
 
+    rcd_rpc_register_method("rcd.packsys.transact_blocking",
+                            packsys_transact_blocking,
+                            "",
+                            world);
+
     rcd_rpc_register_method("rcd.packsys.abort_download",
                             packsys_abort_download,
                             "",
@@ -2470,8 +2676,18 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
                             "view",
                             world);
 
+    rcd_rpc_register_method("rcd.packsys.refresh_channel_blocking",
+                            packsys_refresh_channel_blocking,
+                            "view",
+                            world);
+
     rcd_rpc_register_method("rcd.packsys.refresh_all_channels",
                             packsys_refresh_all_channels,
+                            "view",
+                            world);
+
+    rcd_rpc_register_method("rcd.packsys.refresh_all_channels_blocking",
+                            packsys_refresh_all_channels_blocking,
                             "view",
                             world);
 
