@@ -54,6 +54,10 @@ system_ping(xmlrpc_env   *env,
     RCD_XMLRPC_STRUCT_SET_STRING(env, value, "copyright", rcd_about_copyright ());
     XMLRPC_FAIL_IF_FAULT(env);
 
+    RCD_XMLRPC_STRUCT_SET_INT(env, value, "major_version", MAJOR_VERSION);
+    RCD_XMLRPC_STRUCT_SET_INT(env, value, "minor_version", MINOR_VERSION);
+    RCD_XMLRPC_STRUCT_SET_INT(env, value, "micro_version", MICRO_VERSION);
+
     distro_info = g_strdup_printf ("%s %s (%s)",
                                    rc_distro_get_name (),
                                    rc_distro_get_version (),

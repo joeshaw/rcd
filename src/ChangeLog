@@ -1,3 +1,10 @@
+2002-08-07  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-rpc-system.c (system_ping): Send the server's major, minor
+	and micro version information back in response to the ping.  This
+	way clients don't need to parse the "name" field to figure out
+	what version of rcd they are talking to.
+
 2002-08-06  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-privileges.c (rcd_privileges_from_string): Properly handle
