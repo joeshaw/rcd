@@ -192,13 +192,19 @@ rcd_recurring_setup_timeout (void)
 
     if (next) {
         time_t now;
-        int delay;
+        guint delay;
 
         time (&now);
-    
-        delay = (next - now) * 1000;
-        if (delay < 1)
+
+        if (next < now)
             delay = 1;
+        else if (next - now > UINT_MAX / 1000)
+            /* We can't register this, let's ignore it
+               and hope we get it again later.
+            */
+            return;
+        else
+            delay = (next - now) * 1000;
 
         recurring_timeout_id = g_timeout_add (delay,
                                               rcd_recurring_timeout_cb,
