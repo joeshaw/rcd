@@ -20,7 +20,9 @@
 #include <config.h>
 #include "rcd-transfer-http.h"
 
+#include <fcntl.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <libredcarpet.h>
 
@@ -48,6 +50,24 @@ http_done (SoupMessage *message, gpointer user_data)
     RCDTransfer *t = user_data;
     RCDTransferProtocolHTTP *protocol =
         (RCDTransferProtocolHTTP *) t->protocol;
+
+    /* Map Soup errors to RCDTransfer errors. */
+    if (SOUP_MESSAGE_IS_ERROR (message)) {
+        if (message->errorcode == SOUP_ERROR_CANT_AUTHENTICATE)
+            rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_CANT_AUTHENTICATE, NULL);
+        else if (message->errorcode == SOUP_ERROR_CANT_AUTHENTICATE_PROXY)
+            rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_CANT_AUTHENTICATE, NULL);
+        else if (message->errorcode == SOUP_ERROR_NOT_FOUND)
+            rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_FILE_NOT_FOUND, t->url);
+        else {
+            char *err = g_strdup_printf (
+                "Soup error: %s (%d)",
+                soup_error_get_phrase (message->errorcode),
+                message->errorcode);
+            rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_IO, err);
+            g_free (err);
+        }
+    }
 
     if (!rcd_transfer_get_error (t)) {
         if (protocol->cache_hit) {
@@ -142,6 +162,7 @@ http_info (SoupMessage *message,
         (RCDTransferProtocolHTTP *) t->protocol;
 
     if (!HTTP_RESPONSE_NOT_MODIFIED (message->errorcode) &&
+        !HTTP_RESPONSE_AUTH_FAILURE (message->errorcode) &&
         protocol->entry)
         rcd_cache_entry_open (protocol->entry);
 
@@ -177,6 +198,59 @@ http_abort (RCDTransfer *t)
         soup_message_cancel (protocol->message);
 } /* http_abort */
 
+static char *
+get_mid (void)
+{
+    RCBuffer *buf;
+    char *mid;
+
+    buf = rc_buffer_map_file (SYSCONFDIR "/mcookie");
+    if (!buf)
+        return NULL;
+
+    mid = g_strndup (buf->data, 36);
+    mid[36] = '\0';
+
+    rc_buffer_unmap_file (buf);
+
+    return mid;
+} /* get_mid */
+
+static char *
+get_secret (void)
+{
+    RCBuffer *buf;
+    char *secret;
+
+    buf = rc_buffer_map_file (SYSCONFDIR "/partnernet");
+    if (!buf)
+        return NULL;
+
+    secret = g_strndup (buf->data, 36);
+    secret[36] = '\0';
+
+    rc_buffer_unmap_file (buf);
+
+    return secret;
+} /* get_secret */
+
+static SoupUri *
+get_premium_uri (const char *url)
+{
+    SoupUri *uri;
+
+    uri = soup_uri_new (url);
+
+    /* An invalid URL was passed to us */
+    if (!uri)
+        return NULL;
+
+    uri->user = get_mid ();
+    uri->passwd = get_secret ();
+
+    return uri;
+} /* get_premium_uri */
+
 static int
 http_open (RCDTransfer *t)
 {
@@ -191,26 +265,10 @@ http_open (RCDTransfer *t)
 
     protocol = (RCDTransferProtocolHTTP *) t->protocol;
 
-    uri = soup_uri_new (t->url);
-
-#ifdef ALLOW_RCX
-    /* 
-     * FIXME: Obviously this bit below will need some work for authorization
-     * and such.
-     */
-
-    if (rcd_prefs_get_priority ()) {
-        SoupUri *uri = rc_rcd_priority_authorized_url(t->url);
-
-        if (!uri) {
-            rcd_transfer_set_error(t, RCD_TRANSFER_ERROR_INVALID_URI, t->url);
-            return -1;
-        }
-
-        context = soup_context_from_uri(uri);
-        soup_uri_free(uri);
-    }
-#endif
+    if (rcd_prefs_get_premium ())
+        uri = get_premium_uri (t->url);
+    else
+        uri = soup_uri_new (t->url);
 
     context = soup_context_from_uri (uri);
 

@@ -57,6 +57,7 @@
 
 static gboolean non_daemon_flag = FALSE;
 static gboolean non_root_flag = FALSE;
+static int debug_level = RC_DEBUG_LEVEL_INFO;
 
 static void
 option_parsing (int argc, const char **argv)
@@ -67,6 +68,8 @@ option_parsing (int argc, const char **argv)
           "Don't run the daemon in the background.", NULL },
         { "allow-non-root", '\0', POPT_ARG_NONE, &non_root_flag, 0,
           "Allow the daemon to be run as a user other than root.", NULL },
+        { "debug", 'd', POPT_ARG_INT, &debug_level, 0,
+          "Set the verbosity of debugging output.", NULL },
         POPT_TABLEEND
     };
 
@@ -170,7 +173,7 @@ initialize_logging (void)
     rcd_log_init (NULL); /* use default path */
 
     rc_debug_set_display_handler (debug_message_handler, NULL);
-    rc_debug_set_display_level (RC_DEBUG_LEVEL_INFO);
+    rc_debug_set_display_level (debug_level);
 
     rc_debug (RC_DEBUG_LEVEL_ALWAYS, "%s", rcd_about_name ());
     rc_debug (RC_DEBUG_LEVEL_ALWAYS, "%s", rcd_about_copyright ());

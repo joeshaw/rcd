@@ -1,3 +1,45 @@
+2002-07-15  Joe Shaw  <joe@ximian.com>
+
+	* gnome-config.c: Remove an unused function to avoid a compiler
+	warning.
+
+	* rcd-cache.c (normal_cache_filename_func): Write out the URI's
+	querystring if present as well as the path for things like
+	packages.php.
+
+	* rcd-fetch.c (merge_paths): A horrible, horrible function to
+	merge the broken paths we build in libredcarpet so we always
+	download the right thing.
+	(rcd_fetch_channel): Use merge_paths().  Check for an error after
+	the rcd_transfer_begin().
+	(download_package_file): Ditto.
+
+	* rcd-prefs.c (rcd_prefs_get_host): Check RCX_MAGIC first.
+	(rcd_prefs_get_premium): Added.  Checks RCX_MAGIC, then RC_MAGIC,
+	then the configuration.
+
+	* rcd-transfer-http.c (http_done): Map a few Soup errors to
+	RCDTransfer errors.
+	(http_info): Don't open a cache entry if we got a 401 or 407.
+	(get_mid, get_secret): Added.  Get the MID and secret for a
+	machine.
+	(get_premium_uri): Added.  Reads the MID and secret and inserts
+	them as username and password into the transfer URI.
+	(http_open): Get rid of the ALLOW_RCX ifdef.  If we're in premium
+	mode, call get_premium_uri(), otherwise use regular old
+	soup_uri_new().
+
+	* rcd-transfer.c (pending_file_data_cb): Only update by size if we
+	know the file size.
+	(pending_file_done_cb): If there was an error, call
+	rcd_pending_fail() with the transfer error string.
+
+	* rcd.c (option_parsing): Add a --debug/-d flag which takes a
+	level of debugging, like red-carpet and rc-autopull.
+	(initialize_logging): Set the display level to the debug level
+	specified with the -d flag.  Still defaults to
+	RC_DEBUG_LEVEL_INFO.
+
 2002-07-12  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-privileges.c: Make our first assigned privilege be 1<<1, so

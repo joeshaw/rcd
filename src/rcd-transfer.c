@@ -178,6 +178,7 @@ RCDTransferError
 rcd_transfer_get_error(RCDTransfer *t)
 {
     g_return_val_if_fail (RCD_IS_TRANSFER (t), RCD_TRANSFER_ERROR_NONE);
+
     return t->error;
 } /* rcd_transfer_get_error */
 
@@ -300,7 +301,10 @@ pending_file_data_cb (RCDTransfer *t,
 {
     RCDPending *pending = user_data;
 
-    rcd_pending_update_by_size (pending, t->bytes_transferred, t->file_size);
+    if (t->file_size) {
+        rcd_pending_update_by_size (pending, t->bytes_transferred,
+                                    t->file_size);
+    }
 } /* pending_file_data_cb */
 
 static void
@@ -310,6 +314,8 @@ pending_file_done_cb (RCDTransfer *t, gpointer user_data)
 
     if (rcd_transfer_get_error (t) == RCD_TRANSFER_ERROR_CANCELLED)
         rcd_pending_abort (pending, 0);
+    else if (rcd_transfer_get_error (t))
+        rcd_pending_fail (pending, 0, rcd_transfer_get_error_string (t));
     else
         rcd_pending_finished (pending, 0);
 } /* pending_file_done_cb */

@@ -41,7 +41,7 @@ const gchar *rcd_prefs_get_host               (void);
 gboolean     rcd_prefs_get_http10_enabled     (void);
 void         rcd_prefs_set_http10_enabled     (gboolean);
 
-gboolean     rcd_prefs_get_priority           (void);
+gboolean     rcd_prefs_get_premium            (void);
 
 guint32      rcd_prefs_get_heartbeat_interval (void);
 void         rcd_prefs_set_heartbeat_interval (guint32);

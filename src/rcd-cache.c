@@ -242,9 +242,16 @@ static char *
 normal_cache_filename_func (RCDCache *cache, const char *url)
 {
     SoupUri *uri = soup_uri_new (url);
-    const char *filename;
+    char *fn;
+    char *filename;
+    char *local_filename;
 
-    filename = uri->path;
+    if (uri->querystring)
+        fn = g_strconcat (uri->path, "?", uri->querystring, NULL);
+    else
+        fn = g_strdup (uri->path);
+
+    filename = fn;
 
     if (*filename == '/')
         filename++;
@@ -252,8 +259,13 @@ normal_cache_filename_func (RCDCache *cache, const char *url)
     if (!*filename)
         filename = "index";
 
-    return g_strdup_printf ("%s:%d/%s", uri->host, uri->port,
-                            g_strdelimit (g_strdup (filename), "/", '-'));
+    local_filename = g_strdup_printf (
+        "%s:%d/%s", uri->host, uri->port,
+        g_strdelimit (filename, "/", '-'));
+
+    g_free (fn);
+
+    return local_filename;
 } /* normal_cache_filename_func */
 
 static char *

@@ -88,7 +88,7 @@ get_channel_list_url (void)
         rc_debug (RC_DEBUG_LEVEL_INFO, "Distro is %s", dt->unique_name);
     }
 
-    if (rcd_prefs_get_priority ()) {
+    if (rcd_prefs_get_premium ()) {
         url = g_strdup_printf ("%s/channels.php?distro_target=%s",
                                rcd_prefs_get_host (),
                                dt->pretend_name ? dt->pretend_name : dt->unique_name);
@@ -270,6 +270,55 @@ process_channel_cb (RCDTransfer *t, gpointer user_data)
     g_free (closure);
 }
 
+static char *
+merge_paths (const char *parent_path, const char *child_path)
+{
+    SoupUri *parent_url;
+    SoupUri *child_url;
+    char *ret;
+
+    g_return_val_if_fail (parent_path, NULL);
+
+    if (!child_path)
+        return g_strdup (parent_path);
+
+    parent_url = soup_uri_new (parent_path);
+    child_url = soup_uri_new (child_path);
+
+    if (child_url)
+        ret = g_strdup (child_path);
+    else {
+        if (!parent_url) {
+            if (parent_path[strlen(parent_path) - 1] == '/')
+                ret = g_strconcat (parent_path, child_path, NULL);
+            else
+                ret = g_strconcat (parent_path, "/", child_path, NULL);
+        }
+        else {
+            if (child_path[0] == '/') {
+                g_free (parent_url->path);
+                parent_url->path = g_strdup(child_path);
+                ret = soup_uri_to_string (parent_url, TRUE);
+            }
+            else {
+                if (parent_path[strlen(parent_path) - 1] == '/')
+                    ret = g_strconcat (parent_path, child_path, NULL);
+                else
+                    ret = g_strconcat (parent_path, "/", child_path, NULL);
+            }
+        }
+    }
+
+    if (parent_url)
+        soup_uri_free (parent_url);
+
+    if (child_url)
+        soup_uri_free (child_url);
+
+    return ret;
+}
+
+
 gint
 rcd_fetch_channel (RCChannel *channel)
 {
@@ -295,12 +344,19 @@ rcd_fetch_channel (RCChannel *channel)
                       (GCallback) process_channel_cb,
                       closure);
 
-    /* FIXME: deal with mirrors */
-    url = rc_maybe_merge_paths (rcd_prefs_get_host (),
-                                rc_channel_get_pkginfo_file (channel));
+    url = merge_paths (rcd_prefs_get_host (),
+                       rc_channel_get_pkginfo_file (channel));
 
     rcd_transfer_begin (t, url);
     g_free (url);
+
+    if (rcd_transfer_get_error (t)) {
+        rc_debug (RC_DEBUG_LEVEL_CRITICAL,
+                  "Attempt to download channel data for '%s' (%d) failed: %s",
+                  rc_channel_get_name (channel), rc_channel_get_id (channel),
+                  rcd_transfer_get_error_string (t));
+        return RCD_INVALID_PENDING_ID;
+    }
 
     /* Attach a more meaningful description to our pending object. */
     pending = rcd_transfer_get_pending (t);
@@ -617,9 +673,15 @@ download_package_file (RCPackage           *package,
                       (GCallback) package_completed_cb,
                       closure);
 
-    /* FIXME: deal with mirrors */
-    url = rc_maybe_merge_paths (rcd_prefs_get_host (), file_url);
+    url = merge_paths (rcd_prefs_get_host (), file_url);
     rcd_transfer_begin (t, url);
+
+    if (rcd_transfer_get_error (t)) {
+        rc_debug (RC_DEBUG_LEVEL_CRITICAL,
+                  "Attempt to download package failed: %s",
+                  rcd_transfer_get_error_string (t));
+        return;
+    }
 
     /* Attach a more meaningful description to our pending object. */
     pending = rcd_transfer_get_pending (t);

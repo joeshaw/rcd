@@ -1512,31 +1512,6 @@ get_string_with_default_from_pp (ParsedPath *pp, gboolean *def, gboolean priv)
 	return ret;
 }
 
-/*
- * like get_string_with_default_from_pp but with language
- * This is because we must work on the parsed path to add the language
- * thingie.
- */
-static char *
-get_string_with_default_from_pp_with_lang (ParsedPath *pp,
-					   const char *lang,
-					   gboolean *def,
-					   gboolean priv)
-{
-	char *value;
-	char *oldkey;
-
-	/* switch the key in the key from underneath it, then
-	 * return it back */
-	oldkey = pp->key;
-	pp->key = g_strconcat (oldkey, "[", lang, "]", NULL);
-	value = get_string_with_default_from_pp (pp, def, priv);
-	g_free (pp->key);
-	pp->key = oldkey;
-
-	return value;
-}
-
 /**
  * gnome_config_get_string:
  * @path: A gnome configuration path to an item.
