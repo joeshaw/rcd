@@ -1,3 +1,10 @@
+2002-06-17  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-packsys.c: Resurrected packsys_resolve_dependencies().
+	Given a list of packages to be installed and removed, it returns a
+	list of additional packages to be installed and removed to satisfy
+	dependencies.
+
 2002-06-17  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd.c: Get rid of a warning by #including rcd-rpc-log.h

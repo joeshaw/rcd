@@ -884,13 +884,13 @@ cleanup:
     return result;
 } /* packsys_transact */
 
-#if 0
 static void
 prepend_pkg (RCPackage *pkg, RCPackageStatus status, gpointer user_data)
 {
-    RCPackageSList **package_list = user_data;
+    GHashTable **hash = user_data;
 
-    *package_list = g_slist_prepend(*package_list, pkg);
+    g_hash_table_insert (*hash, pkg->spec.name, pkg);
+    rc_package_ref (pkg);
 } /* prepend_pkg */
 
 static void
@@ -900,75 +900,122 @@ prepend_pkg_pair (RCPackage *pkg_to_add,
                   RCPackageStatus status_to_remove, 
                   gpointer user_data)
 {
-    RCPackageSList **package_list = user_data;
+    GHashTable **hash = user_data;
 
-    *package_list = g_slist_prepend(*package_list, pkg_to_add);
+    g_hash_table_insert (*hash, pkg_to_add->spec.name, pkg_to_add);
+    rc_package_ref (pkg_to_add);
 
     /* We don't need to do the removal part of the upgrade */
-}
+} /* prepend_pkg_pair */
+
+static void
+hash_to_list_cb (gpointer key, gpointer value, gpointer user_data)
+{
+    RCPackageSList **list = user_data;
+
+    *list = g_slist_append (*list, value);
+} /* hash_to_list_cb */
+
+static RCPackageSList *
+hash_to_list (GHashTable *hash)
+{
+    RCPackageSList *list = NULL;
+
+    g_hash_table_foreach (hash, hash_to_list_cb, &list);
+
+    return list;
+} /* hash_to_list */
 
 static xmlrpc_value *
-packman_resolve_dependencies(xmlrpc_env   *env,
+packsys_resolve_dependencies(xmlrpc_env   *env,
                              xmlrpc_value *param_array,
                              void         *user_data)
 {
-    RCPackman *packman = (RCPackman *) user_data;
+    RCWorld *world = (RCWorld *) user_data;
+    RCPackman *packman;
     xmlrpc_value *xmlrpc_install_packages;
     xmlrpc_value *xmlrpc_remove_packages;
     RCPackageSList *install_packages = NULL;
     RCPackageSList *remove_packages = NULL;
     RCResolver *resolver = NULL;
-    xmlrpc_value *value;
+    GHashTable *install_hash;
+    GHashTable *remove_hash;
+    RCPackageSList *iter;
+    xmlrpc_value *value = NULL;
 
     xmlrpc_parse_value(
         env, param_array, "(AA)",
         &xmlrpc_install_packages, &xmlrpc_remove_packages);
     XMLRPC_FAIL_IF_FAULT(env);
 
-    install_packages = rcd_xmlrpc_parse_package_array(
-        xmlrpc_install_packages, env);
-    XMLRPC_FAIL_IF_FAULT(env);
+    install_packages = rcd_xmlrpc_array_to_rc_package_slist (
+        xmlrpc_install_packages, env,
+        RCD_PACKAGE_FROM_FILE | RCD_PACKAGE_FROM_STREAMED_PACKAGE |
+        RCD_PACKAGE_FROM_XMLRPC_PACKAGE);
+    XMLRPC_FAIL_IF_FAULT (env);
 
-    remove_packages = rcd_xmlrpc_parse_package_array(
-        xmlrpc_remove_packages, env);
-    XMLRPC_FAIL_IF_FAULT(env);
+    remove_packages = rcd_xmlrpc_array_to_rc_package_slist (
+        xmlrpc_remove_packages, env,
+        RCD_PACKAGE_FROM_NAME | RCD_PACKAGE_FROM_XMLRPC_PACKAGE);
+    XMLRPC_FAIL_IF_FAULT (env);
 
-    resolver = rc_resolver_new();
+    resolver = rc_resolver_new ();
 
-    rc_resolver_add_packages_to_install_from_slist(resolver, install_packages);
-    rc_resolver_add_packages_to_remove_from_slist(resolver, remove_packages);
+    rc_resolver_add_packages_to_install_from_slist (
+        resolver, install_packages);
+    rc_resolver_add_packages_to_remove_from_slist (
+        resolver, remove_packages);
 
-    rc_package_slist_unref(install_packages);
-    rc_package_slist_unref(remove_packages);
-
-    install_packages = NULL;
-    remove_packages = NULL;
-
-    /* FIXME: Set current channel and subscribed channels here? */
-
-    if (rc_packman_get_capabilities(packman) & 
+    packman = rc_world_get_packman (world);
+    if (rc_packman_get_capabilities (packman) & 
         RC_PACKMAN_CAP_VIRTUAL_CONFLICTS)
-        rc_resolver_allow_virtual_conflicts(resolver, TRUE);
+        rc_resolver_allow_virtual_conflicts (resolver, TRUE);
 
-    rc_resolver_resolve_dependencies(resolver);
+    rc_resolver_resolve_dependencies (resolver);
 
     if (!resolver->best_context) {
         xmlrpc_env_set_fault(env, -604, "Unresolved dependencies");
         goto cleanup;
     }
 
-    rc_resolver_context_foreach_install(
-        resolver->best_context, prepend_pkg, &install_packages);
-    rc_resolver_context_foreach_uninstall(
-        resolver->best_context, prepend_pkg, &remove_packages);
-    rc_resolver_context_foreach_upgrade(
-        resolver->best_context, prepend_pkg_pair, &install_packages);
+    install_hash = g_hash_table_new (g_str_hash, g_str_equal);
+    remove_hash = g_hash_table_new (g_str_hash, g_str_equal);
 
-    xmlrpc_install_packages = rcd_xmlrpc_build_package_array(
+    rc_resolver_context_foreach_install(
+        resolver->best_context, prepend_pkg, &install_hash);
+    rc_resolver_context_foreach_uninstall(
+        resolver->best_context, prepend_pkg, &remove_hash);
+    rc_resolver_context_foreach_upgrade(
+        resolver->best_context, prepend_pkg_pair, &install_hash);
+
+    for (iter = install_packages; iter; iter = iter->next) {
+        RCPackage *p = iter->data;
+
+        if (g_hash_table_lookup (install_hash, p->spec.name))
+            g_hash_table_remove (install_hash, p->spec.name);
+    }
+
+    for (iter = remove_packages; iter; iter = iter->next) {
+        RCPackage *p = iter->data;
+
+        if (g_hash_table_lookup (remove_hash, p->spec.name))
+            g_hash_table_remove (remove_hash, p->spec.name);
+    }
+
+    rc_package_slist_unref (install_packages);
+    rc_package_slist_unref (remove_packages);
+
+    install_packages = hash_to_list (install_hash);
+    remove_packages = hash_to_list (remove_hash);
+    
+    g_hash_table_destroy (install_hash);
+    g_hash_table_destroy (remove_hash);
+
+    xmlrpc_install_packages = rcd_rc_package_slist_to_xmlrpc_array (
         install_packages, env);
     XMLRPC_FAIL_IF_FAULT(env);
 
-    xmlrpc_remove_packages = rcd_xmlrpc_build_package_array(
+    xmlrpc_remove_packages = rcd_rc_package_slist_to_xmlrpc_array (
         remove_packages, env);
     XMLRPC_FAIL_IF_FAULT(env);
 
@@ -983,12 +1030,14 @@ cleanup:
     if (resolver)
         rc_resolver_free(resolver);
 
+    rc_package_slist_unref (install_packages);
+    rc_package_slist_unref (remove_packages);
+
     if (env->fault_occurred)
         return NULL;
 
     return value;
-} /* packman_resolve_dependencies */
-#endif
+} /* packsys_resolve_dependencies */
 
 void
 rcd_rpc_packsys_register_methods(RCWorld *world)
@@ -1015,6 +1064,11 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
 
     rcd_rpc_register_method("rcd.packsys.get_updates",
                             packsys_get_updates,
+                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            world);
+
+    rcd_rpc_register_method("rcd.packsys.resolve_dependencies",
+                            packsys_resolve_dependencies,
                             rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
                             world);
 
@@ -1051,12 +1105,5 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
                             world);
 
     rcd_heartbeat_register_func (refresh_channels_cb, NULL);
-
-#if 0
-    rcd_rpc_register_method(
-        "rcd.packsys.resolve_dependencies",
-        packman_resolve_dependencies,
-        packman);
-#endif
 } /* rcd_rpc_packsys_register_methods */
 
