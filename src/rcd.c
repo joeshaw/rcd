@@ -33,9 +33,9 @@
 #include <syslog.h>
 #include <unistd.h>
 
-
 #include <glib.h>
 #include <libredcarpet.h>
+#include <uuid/uuid.h>
 
 #include "rcd-about.h"
 #include "rcd-fetch.h"
@@ -311,6 +311,36 @@ initialize_rpc (void)
 } /* initialize_rpc */
 
 static void
+rcd_create_uuid (const char *file)
+{
+    uuid_t uuid;
+    char *out;
+    char *dir;
+    FILE *f;
+
+    out = g_malloc0 (37);
+    uuid_generate_random (uuid);
+    uuid_unparse (uuid, out);
+
+    dir = g_path_get_dirname (file);
+    rc_mkdir (dir, 0755);
+    g_free (dir);
+
+    f = fopen (file, "w");
+    if (!f) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING, "Unable to create machine ID");
+        g_free (out);
+        return;
+    }
+
+    fwrite (out, 37, 1, f);
+    fflush (f);
+    fclose (f);
+
+    chmod (file, 0600);
+} /* rcd_create_uuid */
+
+static void
 initialize_data (void)
 {
     /* If we have loaded a dump file, we don't want to initialize
@@ -323,6 +353,12 @@ initialize_data (void)
     
     rcd_subscriptions_load ();
     
+    if (!g_file_test (SYSCONFDIR "/mcookie", G_FILE_TEST_EXISTS))
+        rcd_create_uuid (SYSCONFDIR "/mcookie");
+
+    if (!g_file_test (SYSCONFDIR "/partnernet", G_FILE_TEST_EXISTS))
+        rcd_create_uuid (SYSCONFDIR "/partnernet");
+
     rcd_fetch_register ();
 
     /* This will fall back and download from the net if necessary */

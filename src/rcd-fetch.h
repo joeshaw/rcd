@@ -33,6 +33,9 @@
  * file and return FALSE if unable to load from it.
  */
 
+/* Register the daemon against the server, if we're in premium mode */
+void     rcd_fetch_register (void);
+
 /* 
    Download the channel list from the server, then
    add the channels corresponding to our disto to the global
