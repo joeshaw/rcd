@@ -87,7 +87,12 @@ red_carpet_libs = 		\
 	$(top_builddir)/libredcarpet/src/libredcarpet.a
 
 rcd_LDADD =	\
-	$(red_carpet_libs) $(RCD_LIBS)
+	$(red_carpet_libs) $(LINK_BEGIN) $(RCD_LIBS) $(LINK_END) $(SHARED_ONLY)
+
+rcd$(EXEEXT): $(rcd_OBJECTS) $(rcd_DEPENDENCIES)
+	@rm -f rcd$(EXEEXT)
+	$(CCLD) $(AM_CFLAGS) $(CFLAGS) $(LDFLAGS) -o $@ $(rcd_LDFLAGS) $(rcd_OBJECTS) $(rcd_LDADD) $(LIBS)
+
 
 rcd_moduledir = $(libdir)/rcd/modules
 rcd_module_LTLIBRARIES = librcd-sample.la

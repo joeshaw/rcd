@@ -1,3 +1,9 @@
+2002-07-30  Frank Belew  <frb@ximian.com>
+
+	* configure.in: cleaned up xmlrpc comment
+			added argument for static build
+			ported static-magic from red-carpet
+
 2002-07-26  Joe Shaw  <joe@ximian.com>
 
 	* configure.in: Link against libutil to get openpty() for Debian.
