@@ -669,7 +669,7 @@ load_package (RCPackage *package, gpointer user_data)
     return TRUE;
 }
 
-static void
+static gboolean
 rcd_world_remote_parse_channel_data (RCDWorldRemote *remote,
                                      RCChannel      *channel,
                                      const guint8   *buffer,
@@ -679,7 +679,9 @@ rcd_world_remote_parse_channel_data (RCDWorldRemote *remote,
     int count;
 
     if (rc_memory_looks_compressed (buffer, buffer_len)) {
-        rc_uncompress_memory (buffer, buffer_len, &decompressed_data);
+        if (rc_uncompress_memory (buffer, buffer_len, &decompressed_data) < 0)
+            return FALSE;
+
         buffer = decompressed_data->data;
         buffer_len = decompressed_data->len;
     }
@@ -707,15 +709,22 @@ rcd_world_remote_parse_channel_data (RCDWorldRemote *remote,
     default:
         rc_debug (RC_DEBUG_LEVEL_WARNING, "Unknown channel type for '%s'!",
                   rc_channel_get_id (channel));
-        count = 0;
+        count = -1;
         break;
     }
 
-    rc_debug (RC_DEBUG_LEVEL_DEBUG, "Loaded %d packages in '%s'",
-              count, rc_channel_get_id (channel));
-
     if (decompressed_data)
         g_byte_array_free (decompressed_data, TRUE);
+
+    if (count < 0) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING, "Unable to load packages in '%s'",
+                  rc_channel_get_id (channel));
+        return FALSE;
+    } else {                 
+        rc_debug (RC_DEBUG_LEVEL_DEBUG, "Loaded %d packages in '%s'",
+                  count, rc_channel_get_id (channel));
+        return TRUE;
+    }
 }
 
 typedef struct {
@@ -794,13 +803,16 @@ rcd_world_remote_per_channel_cb (RCChannel *channel,
         buf = rcd_cache_entry_map_file (entry);
 
         if (buf) {
-            rcd_world_remote_parse_channel_data (channel_data->remote,
-                                                 channel,
-                                                 buf->data, buf->size);
+            gboolean success;
+
+            success = rcd_world_remote_parse_channel_data (channel_data->remote,
+                                                           channel,
+                                                           buf->data,
+                                                           buf->size);
 
             rc_buffer_unmap_file (buf);
 
-            need_download = FALSE;
+            need_download = !success;
         }
     }
 

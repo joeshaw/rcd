@@ -1,3 +1,14 @@
+2003-10-20  Joe Shaw  <joe@Ximian.com>
+
+	* rcd-world-remote.c (rcd_world_remote_parse_channel_data): Return
+	a gboolean indicating success.  If rc_uncompress_memory() returns
+	< 0, return FALSE.  If we don't understand the channel type, set
+	the count to -1 instead of 0.  Return TRUE if the count is >= 0.
+	(rcd_world_remote_per_channel_cb): If we're loading cached data
+	off the disk and rcd_world_remote_parse_channel_data() fails, set
+	need_download to TRUE so we'll get it off the network (and hope
+	that it's good).
+
 2003-10-20  Joe Shaw  <joe@ximian.com>
 
 	* rcd-cache.c (rcd_cache_lookup_entry): Change the
