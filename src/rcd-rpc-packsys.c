@@ -1912,7 +1912,7 @@ packsys_what_provides (xmlrpc_env   *env,
                                             what_provides_cb,
                                             &info);
 
-        rc_package_dep_free (dep);
+        rc_package_dep_unref (dep);
     }
 
     return info.array;
@@ -1976,7 +1976,7 @@ packsys_what_requires (xmlrpc_env   *env,
                                             what_requires_or_conflicts_cb,
                                             &info);
 
-        rc_package_dep_free (dep);
+        rc_package_dep_unref (dep);
     }
 
     return info.array;
@@ -2008,7 +2008,7 @@ packsys_what_conflicts (xmlrpc_env   *env,
                                               what_requires_or_conflicts_cb,
                                               &info);
 
-        rc_package_dep_free (dep);
+        rc_package_dep_unref (dep);
     }
 
     return info.array;

@@ -1,3 +1,15 @@
+2002-08-07  Ian Peters  <itp@ximian.com>
+
+	* rcd-rpc-packsys.c (packsys_what_provides): unref a dep, don't
+	free
+	(packsys_what_requires): ditto
+	(packsys_what_conflicts): ditto
+
+	* rcd-rpc-util.c (rcd_rc_package_dep_array_to_xmlrpc): change the
+	way we iterate over RCPackageDepArrays
+	(rcd_xmlrpc_to_rc_package_dep): add FALSE, FALSE to
+	rc_package_dep_new_from_spec
+
 2002-08-07  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd.c (option_parsing): If the RCD_NON_DAEMON environment

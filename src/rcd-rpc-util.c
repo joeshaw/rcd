@@ -87,7 +87,7 @@ rcd_rc_package_dep_array_to_xmlrpc (RCPackageDepArray *rc_deps,
         xmlrpc_value *dep_value;
 
         dep_value = xmlrpc_struct_new (env);
-        rcd_rc_package_dep_to_xmlrpc (rc_deps->data + i, dep_value, env);
+        rcd_rc_package_dep_to_xmlrpc (rc_deps->data[i], dep_value, env);
         xmlrpc_array_append_item (env, dep_array, dep_value);
         xmlrpc_DECREF (dep_value);
     }
@@ -172,7 +172,7 @@ rcd_xmlrpc_to_rc_package_dep (xmlrpc_value *value,
     if (relation == RC_RELATION_INVALID)
         goto cleanup;
     
-    dep = rc_package_dep_new_from_spec (&spec, relation);
+    dep = rc_package_dep_new_from_spec (&spec, relation, FALSE, FALSE);
 
  cleanup:
     rc_package_spec_free_members (&spec);
