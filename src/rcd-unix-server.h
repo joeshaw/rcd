@@ -5,7 +5,20 @@
 
 #include <glib.h>
 
-typedef GByteArray *(*RCDUnixServerCallback) (GByteArray *data);
+typedef struct _RCDUnixServerHandle RCDUnixServerHandle;
+
+typedef GByteArray *(*RCDUnixServerCallback) (RCDUnixServerHandle *handle);
+
+struct _RCDUnixServerHandle {
+    GByteArray *data;
+
+    gboolean cred_available;
+    pid_t pid;
+    uid_t uid;
+    gid_t gid;
+
+    RCDUnixServerCallback cb;
+};
 
 void rcd_unix_server_run_async(RCDUnixServerCallback callback);
 

@@ -23,6 +23,7 @@
  * USA.
  */
 
+#include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -72,24 +73,17 @@ cleanup:
     return NULL;
 } /* serialize_permission_fault */
 
-static xmlrpc_mem_block *
-process_rpc_call (xmlrpc_env  *env,
-                  const char  *data,
-                  gsize        size,
-                  RCDIdentity *identity)
+static void
+access_control_check (xmlrpc_env   *env,
+                      char         *method_name,
+                      xmlrpc_value *param_array,
+                      void         *user_data)
 {
-    char *method_name;
-    xmlrpc_value *param_array;
+    RCDIdentity *identity = (RCDIdentity *) user_data;
     RCDRPCMethodInfo *method_info;
-    xmlrpc_mem_block *output;
-
-    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Handling RPC connection");
 
     if (getenv ("RCD_ENFORCE_AUTH")) {
-        /* Kind of lame just to get the method name */
-        xmlrpc_parse_call (
-            env, (char *) data, size, &method_name, &param_array);
-        xmlrpc_DECREF (param_array);
+        g_assert (identity != NULL);
 
         method_info = g_hash_table_lookup (method_info_hash, method_name);
 
@@ -97,14 +91,27 @@ process_rpc_call (xmlrpc_env  *env,
             !rcd_auth_approve_action (identity,
                                       method_info->req_privs,
                                       NULL)) {
-            output = serialize_permission_fault ();
-
+            xmlrpc_env_set_fault (env, -610, "Permission denied");
+            
             rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Unable to approve action");
-
-            return output;
         }
     }
-        
+} /* access_control_check */
+
+static xmlrpc_mem_block *
+process_rpc_call (xmlrpc_env  *env,
+                  const char  *data,
+                  gsize        size,
+                  RCDIdentity *identity)
+{
+    xmlrpc_mem_block *output;
+
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Handling RPC connection");
+
+    /* Set up the access control check function */
+    xmlrpc_registry_set_preinvoke_method (
+        env, registry, access_control_check, identity);
+
     output = xmlrpc_registry_process_call (
         env, registry, NULL, (char *) data, size);
 
@@ -114,15 +121,37 @@ process_rpc_call (xmlrpc_env  *env,
 } /* process_rpc_call */
     
 static GByteArray *
-unix_rpc_callback (GByteArray *in_data)
+unix_rpc_callback (RCDUnixServerHandle *handle)
 {
     xmlrpc_env env;
     xmlrpc_mem_block *output;
     GByteArray *out_data;
+    RCDIdentity *identity;
 
     xmlrpc_env_init(&env);
 
-    output = process_rpc_call (&env, in_data->data, in_data->len, NULL);
+    if (getenv ("RCD_ENFORCE_AUTH")) {
+        if (handle->uid != 0) {
+            struct passwd *pw;
+            
+            pw = getpwuid (handle->uid);
+            if (!pw)
+                identity = NULL;
+            else
+                identity = rcd_identity_from_password_file (pw->pw_name);
+        }
+        else {
+            identity = rcd_identity_new ();
+            identity->username = g_strdup ("root");
+            identity->privileges = rcd_auth_action_list_from_1 (
+                RCD_AUTH_SUPERUSER);
+        }
+    }
+    else
+        identity = NULL;
+
+    output = process_rpc_call (
+        &env, handle->data->data, handle->data->len, identity);
 
     if (env.fault_occurred) {
         g_warning ("Some weird fault during registry processing");
@@ -154,10 +183,10 @@ soup_rpc_callback (SoupServerContext *context, SoupMessage *msg, gpointer data)
         username = soup_server_auth_get_user (context->auth);
         identity = rcd_identity_from_password_file (username);
 
-        if (!soup_server_auth_check_passwd (context->auth,
-                                            identity->password)) {
-            g_print ("[%d]: Couldn't authenticate %s\n",
-                     getpid(), identity->username);
+        if (!identity || !soup_server_auth_check_passwd (context->auth,
+                                                         identity->password)) {
+            rc_debug (RC_DEBUG_LEVEL_MESSAGE,
+                      "Couldn't authenticate %s", username);
             
             rcd_identity_free (identity);
             output = serialize_permission_fault ();
@@ -297,8 +326,7 @@ rcd_rpc_init(void)
                 "registry: %s (%d)", env.fault_string, env.fault_code);
     }
 
-    xmlrpc_env_clean(&env);
-
+    /* Create a hash which will be used for registering RPC methods */
     method_info_hash = g_hash_table_new (g_str_hash, g_str_equal);
 
     /* Register the basic RPC calls (ping, querying for modules, etc.) */

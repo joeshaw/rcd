@@ -7,13 +7,9 @@
 #include <sys/un.h>
 #include <unistd.h>
 
+#include <libredcarpet.h>
+
 #include "rcd-unix-server.h"
-
-typedef struct {
-    GByteArray *data;
-
-    RCDUnixServerCallback cb;
-} ConnectionState;
 
 int
 substring_index (char *str, int len, char *substr)
@@ -29,7 +25,7 @@ substring_index (char *str, int len, char *substr)
 } /* substring_index */
 
 static void
-read_cred (GIOChannel *channel)
+read_cred (GIOChannel *channel, RCDUnixServerHandle *handle)
 {
     int sockfd;
     struct ucred cred;
@@ -37,12 +33,23 @@ read_cred (GIOChannel *channel)
 
     sockfd = g_io_channel_unix_get_fd (channel);
 
-    getsockopt (sockfd, SOL_SOCKET, SO_PEERCRED, &cred, &size);
+    if (getsockopt (sockfd, SOL_SOCKET, SO_PEERCRED, &cred, &size) < 0) {
+        handle->cred_available = FALSE;
 
-    g_print("PID: %d\n"
-            "UID: %d\n"
-            "GID: %d\n\n",
-            cred.pid, cred.uid, cred.gid);
+        rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Couldn't get credentials");
+    }
+    else {
+        handle->cred_available = TRUE;
+        handle->pid = cred.pid;
+        handle->uid = cred.uid;
+        handle->gid = cred.gid;
+
+        rc_debug (RC_DEBUG_LEVEL_MESSAGE,
+                  "PID: %d\n"
+                  "UID: %d\n"
+                  "GID: %d\n\n",
+                  cred.pid, cred.uid, cred.gid);
+    }
 } /* read_cred */
 
 static gboolean
@@ -50,7 +57,7 @@ read_data(GIOChannel *iochannel,
           GIOCondition condition,
           gpointer user_data)
 {
-    ConnectionState *state = user_data;
+    RCDUnixServerHandle *handle = user_data;
     GIOError err;
     char read_buf[4096];
     int bytes_read = 0;
@@ -59,9 +66,7 @@ read_data(GIOChannel *iochannel,
     int bytes_written;
     int total_written = 0;
 
-    read_cred(iochannel);
-
-    printf("Reading data!\n");
+    read_cred(iochannel, handle);
 
     err = g_io_channel_read (iochannel,
                              read_buf,
@@ -69,7 +74,7 @@ read_data(GIOChannel *iochannel,
                              &bytes_read);
 
     if (bytes_read) {
-        g_byte_array_append(state->data, read_buf, bytes_read);
+        g_byte_array_append(handle->data, read_buf, bytes_read);
         total_read += bytes_read;
     }
 
@@ -78,17 +83,15 @@ read_data(GIOChannel *iochannel,
     }
     
     if (err != G_IO_ERROR_NONE) {
-        printf("Error occurred\n");
-
-        g_byte_array_free(state->data, TRUE);
+        g_byte_array_free(handle->data, TRUE);
 
         return FALSE;
     }
 
-    if (substring_index(state->data->data, state->data->len, "\r\n\r\n") < 0)
+    if (substring_index(handle->data->data, handle->data->len, "\r\n\r\n") < 0)
         return TRUE;
 
-    result = (state->cb) (state->data);
+    result = (handle->cb) (handle);
 
     if (!result)
         return FALSE;
@@ -103,8 +106,8 @@ read_data(GIOChannel *iochannel,
     } while (total_written < result->len);
 
     g_byte_array_free(result, TRUE);
-    g_byte_array_free(state->data, TRUE);
-    g_free(state);
+    g_byte_array_free(handle->data, TRUE);
+    g_free(handle);
 
     g_io_channel_close(iochannel);
     g_io_channel_unref(iochannel);
@@ -123,9 +126,7 @@ conn_accept(GIOChannel *serv_chan, GIOCondition condition, gpointer user_data)
     socklen_t n;
     struct sockaddr sa;
     int flags;
-    ConnectionState *state;
-
-    g_print ("[%d]: Accepting connection!\n", getpid());
+    RCDUnixServerHandle *handle;
 
     serv_fd = g_io_channel_unix_get_fd(serv_chan);
 
@@ -147,15 +148,16 @@ try_again:
     flags = fcntl (conn_fd, F_GETFL, 0);
     fcntl (conn_fd, F_SETFL, flags | O_NONBLOCK);
 
-    state = g_new0(ConnectionState, 1);
-    state->data = g_byte_array_new();
-    state->cb = (RCDUnixServerCallback) user_data;
+    handle = g_new0(RCDUnixServerHandle, 1);
+    handle->cred_available = FALSE;
+    handle->data = g_byte_array_new();
+    handle->cb = (RCDUnixServerCallback) user_data;
 
     conn_chan = g_io_channel_unix_new (conn_fd);
     g_io_add_watch (conn_chan, 
                     G_IO_IN,
                     (GIOFunc) read_data,
-                    state);
+                    handle);
 
     return TRUE;
 } /* conn_accept */

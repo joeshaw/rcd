@@ -1,3 +1,20 @@
+2002-05-30  Joe Shaw  <joe@ximian.com>
+
+	* rcd-auth.c: Add a new special auth type, "superuser", which
+	grants all rights to any user who has it.
+
+	* rcd-rpc.c (process_rpc_call): Use the new preinvoke method code
+	I added to xmlrpc-c to do access control.  It's a lot cleaner, and
+	you can't subvert it by using system.multicall(). :)
+	(access_control_check): Added.  Does an ACL lookup and check
+	before all RPC calls and sets a fault if not approved.
+	(unix_rpc_call): Implement identites for Unix domain RPC calls.
+
+	* rcd-unix-server.c (RCDUnixServerCallback): Return a handle which
+	contains both the method data and credential info.
+	(read_cred): Check to make sure we got valid credentials and put
+	that info in the handle.
+
 2002-05-29  Joe Shaw  <joe@ximian.com>
 
 	* rcd-auth.c: Made more extensible for modules by making ACLs
