@@ -25,6 +25,7 @@
 
 #include <config.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <popt.h>
 
@@ -138,6 +139,18 @@ rcd_options_get_argv (void)
 const char *
 rcd_options_get_config_file (void)
 {
+    if (config_file != NULL && !g_path_is_absolute (config_file)) {
+        char cwd[PATH_MAX];
+        char *new_config_file;
+
+        getcwd (cwd, PATH_MAX);
+
+        new_config_file = g_strconcat (cwd, "/", config_file, NULL);
+
+        g_free (config_file);
+        config_file = new_config_file;
+    }
+
     return config_file;
 }
 

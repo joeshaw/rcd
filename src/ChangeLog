@@ -1,3 +1,8 @@
+2003-10-29  Joe Shaw  <joe@ximian.com>
+
+	* rcd-options.c (rcd_options_get_config_file): If the config file
+	isn't absolute, make it so.
+
 2003-10-29  Tambet Ingo  <tambet@ximian.com>
 
 	* rcd-heartbeat.c (rcd_heartbeat_start): Decrease debug level.
