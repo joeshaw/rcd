@@ -1729,14 +1729,17 @@ packsys_dump(xmlrpc_env   *env,
 } /* packsys_dump */
 
 static xmlrpc_value *
-packsys_world_sequence_number (xmlrpc_env   *env,
-                               xmlrpc_value *param_array,
-                               void         *user_data)
+packsys_world_sequence_numbers (xmlrpc_env   *env,
+                                xmlrpc_value *param_array,
+                                void         *user_data)
 {
     RCWorld *world = user_data;
     xmlrpc_value *value;
 
-    value = xmlrpc_build_value (env, "i", rc_world_sequence_number (world));
+    value = xmlrpc_build_value (env, "(iii)",
+                                rc_world_get_package_sequence_number (world),
+                                rc_world_get_channel_sequence_number (world),
+                                rc_world_get_subscription_sequence_number (world));
 
     return value;
 }
@@ -1851,8 +1854,8 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
                             "subscribe",
                             world);
 
-    rcd_rpc_register_method("rcd.packsys.world_sequence_number",
-                            packsys_world_sequence_number,
+    rcd_rpc_register_method("rcd.packsys.world_sequence_numbers",
+                            packsys_world_sequence_numbers,
                             "view",
                             world);
 

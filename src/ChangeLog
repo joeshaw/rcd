@@ -1,3 +1,12 @@
+2002-09-16  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-rpc-packsys.c (packsys_world_sequence_numbers): Renamed from
+	packsys_world_sequence_number.  Now returns a tuple of our three
+	sequence numbers (package, channel and subscriptions) instead of
+	just an integer.
+	(rcd_rpc_packsys_register_methods): Change the registration of our
+	sequence number method.
+
 2002-09-13  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-prefs.c: Add a description field to the pref table
