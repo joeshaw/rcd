@@ -1,3 +1,8 @@
+2004-01-29  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-packsys.c (packsys_get_channel_icon): Fix a few
+	instances where "%d" was used instead of "%s" for channel ids.
+
 2004-01-20  Joe Shaw  <joe@ximian.com>
 
 	* rcd-transfer-file.c (file_open): If we get an invalid URI, set

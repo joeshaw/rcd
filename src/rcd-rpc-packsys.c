@@ -108,7 +108,7 @@ packsys_get_channel_icon (xmlrpc_env   *env,
     channel = rc_world_get_channel_by_id (world, channel_id);
     if (!channel) {
         xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_INVALID_CHANNEL,
-                                        "Unable to find channel %d",
+                                        "Unable to find channel %s",
                                         channel_id);
         goto cleanup;
     }
@@ -116,7 +116,7 @@ packsys_get_channel_icon (xmlrpc_env   *env,
     if (!rc_channel_get_icon_file (channel)) {
         xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_NO_ICON,
                                         "There is no icon for channel "
-                                        "'%s' (%d)",
+                                        "'%s' (%s)",
                                         rc_channel_get_name (channel),
                                         channel_id);
         goto cleanup;
@@ -129,7 +129,7 @@ packsys_get_channel_icon (xmlrpc_env   *env,
         local_file = rcd_cache_entry_get_local_filename (entry);
     if (!local_file) {
         xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_NO_ICON,
-                                        "Can't get icon for channel '%s' (%d)",
+                                        "Can't get icon for channel '%s' (%s)",
                                         rc_channel_get_name (channel),
                                         channel_id);
         goto cleanup;
@@ -139,7 +139,7 @@ packsys_get_channel_icon (xmlrpc_env   *env,
     if (!buf) {
         xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_NO_ICON,
                                         "Unable to open icon for channel "
-                                        "'%s' (%d)",
+                                        "'%s' (%s)",
                                         rc_channel_get_name (channel),
                                         channel_id);
         goto cleanup;
