@@ -571,6 +571,16 @@ rcd_prefs_get_repackage (void)
     return gnome_config_get_bool (get_config_path ("/System/repackage=FALSE"));
 }
 
+void
+rcd_prefs_set_repackage (gboolean enabled)
+{
+    gnome_config_set_bool (get_config_path ("/System/repackage"), enabled);
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Repackaging enabled: %s",
+              enabled ? "TRUE" : "FALSE");
+
+    SYNC_CONFIG;
+}
+
 const char *
 rcd_prefs_get_mid (void)
 {

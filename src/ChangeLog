@@ -1,5 +1,15 @@
 2002-12-10  Joe Shaw  <joe@ximian.com>
 
+	* rcd-prefs.c (rcd_prefs_set_repackage): Added.
+
+	* rcd-rpc-prefs.c (rcd_rpc_prefs_register_pref): Check to see if
+	our packman handles repackaging and register the repackage pref if
+	so.
+
+	* rcd-transaction.c (run_transaction): Get whether we can
+	repackage before we can transact and use it throughout to avoid a
+	minor race.
+
 	* rcd-rpc-packsys.c (dep_get_package_info_cb): Change "replaces"
 	to "replaced by" and "depends on" to "depended on".
 

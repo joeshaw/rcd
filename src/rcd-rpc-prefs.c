@@ -358,6 +358,9 @@ rcd_rpc_prefs_register_pref (const char     *pref_name,
 void
 rcd_rpc_prefs_register_methods (void)
 {
+    RCWorld *world;
+    RCPackman *packman;
+
     rcd_rpc_prefs_register_pref (
         "host", RCD_PREF_STRING,
         "Server URL",
@@ -459,6 +462,16 @@ rcd_rpc_prefs_register_methods (void)
         "Level at which to log to syslog (0 to 6)",
         (RCDPrefGetFunc) rcd_prefs_get_syslog_level, "view",
         (RCDPrefSetFunc) rcd_prefs_set_syslog_level, "superuser");
+
+    world = rc_get_world ();
+    packman = rc_world_get_packman (world);
+    if (rc_packman_get_capabilities (packman) & RC_PACKMAN_CAP_REPACKAGING) {
+        rcd_rpc_prefs_register_pref (
+            "repackage", RCD_PREF_BOOLEAN,
+            "Repackage installed packages on upgrade or removal for rollback",
+            (RCDPrefGetFunc) rcd_prefs_get_repackage, "view",
+            (RCDPrefSetFunc) rcd_prefs_set_repackage, "superuser");
+    }
 
     /* We handle more fine grained privileges in these pref functions. */
     rcd_rpc_register_method ("rcd.prefs.get_pref",

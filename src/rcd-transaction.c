@@ -611,6 +611,7 @@ static gboolean
 run_transaction(gpointer user_data)
 {
     RCDTransactionStatus *status = user_data;
+    gboolean repackage;
     int flags = 0;
 
     g_signal_connect (
@@ -626,9 +627,10 @@ run_transaction(gpointer user_data)
         G_OBJECT (status->packman), "transact_done",
         G_CALLBACK (transact_done_cb), status);
 
-    if (rc_packman_get_capabilities (status->packman) & 
-        RC_PACKMAN_CAP_REPACKAGING && rcd_prefs_get_repackage ())
-    {
+    repackage = (rc_packman_get_capabilities (status->packman) &
+                 RC_PACKMAN_CAP_REPACKAGING && rcd_prefs_get_repackage ());
+
+    if (repackage) {
         char *repackage_dir;
 
         repackage_dir = g_strconcat (rcd_prefs_get_cache_dir (),
@@ -694,8 +696,7 @@ run_transaction(gpointer user_data)
         if (status->flags != RCD_TRANSACTION_FLAGS_DRY_RUN) {
             update_log (status);
 
-            if (rc_packman_get_capabilities (status->packman) & 
-                RC_PACKMAN_CAP_REPACKAGING && rcd_prefs_get_repackage ())
+            if (repackage)
                 add_rollback_packages (status);
         }
 

@@ -88,6 +88,7 @@ gint         rcd_prefs_get_cache_max_size_in_mb (void);
 void         rcd_prefs_set_cache_max_size_in_mb (gint);
 
 gboolean     rcd_prefs_get_repackage (void);
+void         rcd_prefs_set_repackage (gboolean);
 
 /* These aren't really prefs, but there here for lack of a better place */
 const gchar *rcd_prefs_get_mid                (void);
