@@ -187,9 +187,10 @@ refresh_channels_cb (gpointer user_data)
 
     id_list = rcd_fetch_all_channels ();
 
-    if (ret_list == NULL)
+    if (ret_list == NULL) {
         g_slist_free (id_list);
-    else
+        id_list = NULL;
+    } else
         *ret_list = id_list;
 
     g_idle_add (check_pending_status_cb, id_list);

@@ -313,6 +313,8 @@ process_channel_cb (RCDTransfer *t, gpointer user_data)
               rc_channel_get_name (channel));
 
     g_byte_array_free (data, TRUE);
+
+    rc_channel_unref (closure->channel);
     g_free (closure);
 }
 
@@ -330,7 +332,7 @@ rcd_fetch_channel (RCChannel *channel)
 
     closure = g_new0 (ChannelFetchClosure, 1);
     closure->data = g_byte_array_new ();
-    closure->channel = channel;
+    closure->channel = rc_channel_ref (channel);
 
     g_signal_connect (t,
                       "file_data",
@@ -595,6 +597,7 @@ static int package_transfer_id = 0;
 
 typedef struct {
     int transfer_id;
+    int refs;
 
     GSList *running_transfers;
 

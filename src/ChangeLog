@@ -1,3 +1,16 @@
+2002-07-22  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-fetch.c (rcd_fetch_channel): The ChannelFetchClosure needs
+	to hold a reference to the channel.  This fixes a bug which was
+	causing us to segfault when repeatedly refreshing the channel
+	data.
+	(process_channel_cb): Release the closure's reference on the
+	channel.
+
+	* rcd-rpc-packsys.c (refresh_channels_cb): Set id_list to NULL
+	after we g_slist_free it, so that it won't get freed again in
+	check_pending_status_cb.
+
 2002-07-22  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc.c (serialize_fault): Fix a compiler warning.
