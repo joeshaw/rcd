@@ -193,6 +193,7 @@ esac
 for lib in $FORCE_SHLIBS; do
   if echo $RCD_LIBS | grep -- "-l$lib" >/dev/null 2>&1; then
     RCD_LIBS=`echo $RCD_LIBS | sed "s,-l$lib ,,g"`
+    LIBSOUP_LIBS=`echo $LIBSOUP_LIBS | sed "s,-l$lib ,,g"`
     SHARED_ONLY="$SHARED_ONLY -l$lib"
   fi
 done
