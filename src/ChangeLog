@@ -1,5 +1,17 @@
 2002-12-06  Joe Shaw  <joe@ximian.com>
 
+	* rcd-transfer.[ch]: Add a new transfer error,
+	RCD_TRANSFER_ERROR_NETWORK_DISABLED.
+
+	* rcd-transfer-http.c (http_open): If no_network is set, immediate
+	set an error of NETWORK_DISABLED.
+
+	* rcd.c (option_parsing): Add a no-networking command-line option.
+	(initialize_data): Check to make sure no_network is not set before
+	getting channel list, channel data, and news from the local cache.
+
+2002-12-06  Joe Shaw  <joe@ximian.com>
+
 	* rcd.c (daemonize): Write out the pidfile to /var/run/rcd.pid and
 	set up a shutdown handler to remove it when we quit.
 

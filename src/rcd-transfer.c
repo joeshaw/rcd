@@ -232,6 +232,9 @@ error_to_string(RCDTransfer *t)
     case RCD_TRANSFER_ERROR_INVALID_URI:
         err = "Invalid URI";
         break;
+    case RCD_TRANSFER_ERROR_NETWORK_DISABLED:
+        err = "Networking disabled";
+        break;
     default:
         err = NULL;
         g_assert_not_reached();

@@ -74,6 +74,7 @@ static char *dump_file = NULL;
 char *config_file = NULL;
 int debug_level = -1;
 int syslog_level = -1;
+gboolean no_network = FALSE;
 
 static void
 option_parsing (int argc, const char **argv)
@@ -89,6 +90,8 @@ option_parsing (int argc, const char **argv)
           "to accept connections.", NULL },
         { "allow-non-root", '\0', POPT_ARG_NONE, &non_root_flag, 0,
           "Allow the daemon to be run as a user other than root.", NULL },
+        { "no-network", '\0', POPT_ARG_NONE, &no_network, 0,
+          "Do not download any data from a server.", NULL },
         { "port", 'p', POPT_ARG_INT, &remote_port, 0,
           "Listen for remote connections on a different port", NULL },
         { "no-remote", 'r', POPT_ARG_NONE, &remote_disable, 0,
@@ -502,14 +505,14 @@ initialize_data (void)
 
     supported_distro = is_supported_distro ();
 
-    if (supported_distro) {
+    if (!no_network && supported_distro) {
         if (!rcd_fetch_channel_list_local ())
             rcd_fetch_channel_list ();
     }
     
     rcd_subscriptions_load ();
     
-    if (supported_distro) {
+    if (!no_network && supported_distro) {
         /* This will fall back and download from the net if necessary */
         rcd_fetch_all_channels_local ();
 
@@ -520,7 +523,7 @@ initialize_data (void)
        list of channels. */
     rcd_package_locks_load (rc_get_world ());
 
-    if (!rcd_fetch_news_local ())
+    if (!no_network && !rcd_fetch_news_local ())
         rcd_fetch_news ();
 } /* initialize_data */
 

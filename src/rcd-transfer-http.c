@@ -385,12 +385,19 @@ add_header_cb (gpointer key, gpointer value, gpointer user_data)
 static int
 http_open (RCDTransfer *t)
 {
+    extern gboolean no_network;
     RCDTransferProtocolHTTP *protocol;
     SoupUri *uri;
     SoupContext *context;
     SoupMessage *message;
     const char *proxy_url;
     SoupContext *proxy_context;
+
+    /* The no_network flag is set with a command-line option in rcd.c */
+    if (no_network) {
+        rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_NETWORK_DISABLED, NULL);
+        return -1;
+    }
 
     protocol = (RCDTransferProtocolHTTP *) t->protocol;
 
