@@ -1,3 +1,19 @@
+2004-06-17  Tambet Ingo  <tambet@ximian.com>
+
+	* you-util.[ch]: Add a constant temporary working directory for
+	patches to header file so wrapper.cc can use it.
+
+	* wrapper.cc (rc_you_patch_from_yast_patch): Remove some #ifdef'ed
+	out code. Don't even try to determine whether the patch is installed,
+	it never works correctly. Yay for yast!
+	(rc_you_wrapper_install_patches): Make sure patch name AND version
+	match before installing a patch. Use rc_debug() instead of g_print().
+	(read_installed_patches): Implement. Can't trust PMPatchManager to
+	read installed patches so implement out own version which actually
+	works.
+	(rc_you_wrapper_get_installed_patches): Don't trust yast, use
+	read_installed_patches().
+
 2004-06-16  Tambet Ingo  <tambet@ximian.com>
 
 	* rc-you-query.c: Add new query keywords "name-installed", and

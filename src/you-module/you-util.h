@@ -31,6 +31,8 @@
 #include "rc-you-patch.h"
 #include "rc-world-you.h"
 
+#define TMP_YOU_PATH_PREFIX "/tmp/lib"
+#define TMP_YOU_PATH TMP_YOU_PATH_PREFIX "/YaST2/you/mnt"
 
 #ifdef __cplusplus
 extern "C" {

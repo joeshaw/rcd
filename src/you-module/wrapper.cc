@@ -27,6 +27,7 @@
 
 #include <rc-util.h>
 #include <rc-world.h>
+#include <rc-debug.h>
 
 #include <Y2PM.h>
 
@@ -37,6 +38,11 @@
 #include <y2pm/PMYouPatchInfo.h>
 #include <y2pm/PMYouPatchManager.h>
 #include <y2pm/InstYou.h>
+#include <y2pm/InstTarget.h>
+
+#include "you-util.h"
+
+#define INSTALLED_YOU_PATH "/var/lib/YaST2/you/installed"
 
 extern "C" {
 
@@ -44,12 +50,6 @@ static gchar *
 rc_you_string_to_char (const std::string str)
 {
     return g_strdup (str.c_str ());
-}
-
-static gchar *
-rc_you_ustring_to_char (Ustring ustr)
-{
-    return rc_you_string_to_char (ustr.asString ());
 }
 
 static RCPackageImportance
@@ -91,9 +91,8 @@ rc_you_solvable_to_rc_package_spec (RCPackageSpec *spec, PMSolvablePtr solvable)
 }
 
 static RCYouPatch *
-rc_you_patch_from_selectable (PMSelectablePtr selectable)
+rc_you_patch_from_yast_patch (PMYouPatchPtr source)
 {
-    PMYouPatchPtr source = selectable->theObject ();
     RCYouPatch *patch;
     const gchar *script;
 
@@ -108,8 +107,6 @@ rc_you_patch_from_selectable (PMSelectablePtr selectable)
     patch->summary = g_strdup (rc_you_string_to_char (source->shortDescription ()));
     patch->description = g_strdup (rc_you_string_to_char (source->longDescription ()));
 
-    patch->installed = selectable->has_installed ();
-
     script = rc_you_string_to_char (source->preScript ());
     if (script && strlen (script) > 0)
         patch->pre_script = rc_you_file_new (script);
@@ -117,38 +114,6 @@ rc_you_patch_from_selectable (PMSelectablePtr selectable)
     script = rc_you_string_to_char (source->postScript ());
     if (script && strlen (script) > 0)
         patch->post_script = rc_you_file_new (script);
-
-    /* FIXME: This should probably be deleted altogether */
-#if 0    
-    std::list<PMPackagePtr> packages = source->packages ();
-    std::list<PMPackagePtr>::const_iterator itPkg;
-    for (itPkg = packages.begin (); itPkg != packages.end (); itPkg++) {
-        RCPackageSpec spec;
-        RCYouPatchPackageInfo info;
-        int ret;
-
-        rc_you_solvable_to_rc_package_spec (&spec, (PMSolvablePtr) *itPkg);
-        info.patch = patch;
-        info.spec = &spec;
-
-        ret = rc_world_foreach_package_by_name (rc_get_world (),
-                                                g_quark_to_string (spec.nameq),
-                                                patch->channel,
-                                                you_patch_add_package,
-                                                &info);
-        if (ret != -1) {
-            /* foreach loop was not short-circuit'ed, that means
-               the package was not found. We don't like incomplete
-               patches */
-            g_print ("Can not find package %s, ignoring patch %s",
-                     rc_package_spec_to_str_static (&spec),
-                     rc_package_spec_to_str_static ((RCPackageSpec *) patch));
-            rc_you_patch_unref (patch);
-            patch = NULL;
-            break;
-        }
-    }
-#endif    
 
     return patch;
 }
@@ -166,7 +131,7 @@ rc_you_wrapper_install_patches (RCYouPatchSList  *list,
     settings->setLangCode (LangCode ("en"));
     settings->setReloadPatches (false);
     settings->setCheckSignatures (false);
-    settings->setDryRun (false); /* FIXME: Set this to false if you dare! */
+    settings->setDryRun (false);
     settings->setNoExternalPackages (true);
     settings->setGetAll (false);
     settings->setGetOnly (false);
@@ -174,7 +139,7 @@ rc_you_wrapper_install_patches (RCYouPatchSList  *list,
     InstYou you (patch_info, settings);
     you.initProduct ();
 
-    server.setUrl ("/tmp/lib/YaST2/you/mnt");
+    server.setUrl (TMP_YOU_PATH);
     settings->setPatchServer (server);
 
     you.retrievePatchDirectory();
@@ -184,29 +149,37 @@ rc_you_wrapper_install_patches (RCYouPatchSList  *list,
     for (it = Y2PM::youPatchManager ().begin ();
          it != Y2PM::youPatchManager ().end (); ++it) {
         GSList *iter;
-        guint nameq = g_quark_from_string (rc_you_ustring_to_char ((*it)->name ()));
+        PMYouPatchPtr you_patch;
+        RCYouPatch *patch;
         gboolean install = FALSE;
 
-        for (iter = list; iter; iter = iter->next) {
-            RCYouPatch *patch = (RCYouPatch *) iter->data;
+        you_patch = (*it)->theObject ();
+        patch = rc_you_patch_from_yast_patch (you_patch);
 
-            if (nameq == patch->spec.nameq) {
-                if (!(*it)->has_installed ())
-                    install = TRUE;
+        for (iter = list; iter; iter = iter->next) {
+            RCYouPatch *iter_patch = (RCYouPatch *) iter->data;
+
+            if (rc_package_spec_equal (RC_PACKAGE_SPEC (iter_patch),
+                                       RC_PACKAGE_SPEC (patch))) {
+                install = TRUE;
                 break;
             }
         }
 
         if (install) {
-            g_print ("Installing patch %s\n", g_quark_to_string (nameq));
+            rc_debug (RC_DEBUG_LEVEL_INFO,
+                      "Installing patch %s",
+                      rc_package_spec_to_str_static (RC_PACKAGE_SPEC (patch)));
             (*it)->user_set_install ();
         } else
             (*it)->user_unset ();
+
+        rc_you_patch_unref (patch);
     }
 
     err = you.processPatches ();
     if (err) {
-        gchar *buf = g_strdup_printf ("%s (%s)", 
+        gchar *buf = g_strdup_printf ("%s (%s)",
                                       rc_you_string_to_char (err.errstr ()),
                                       rc_you_string_to_char (err.details ()));
         g_set_error (error, RC_ERROR, RC_ERROR, buf);
@@ -214,47 +187,62 @@ rc_you_wrapper_install_patches (RCYouPatchSList  *list,
     }
 }
 
-RCYouPatchSList *
-rc_you_wrapper_get_installed_patches (RCChannel *channel)
+static RCYouPatchSList *
+read_installed_patches (PMYouPatchInfoPtr patch_info,
+                        RCChannel *channel)
 {
+    GDir *dir;
+    const gchar *filename;
     RCYouPatchSList *list = NULL;
-    PMYouSettingsPtr settings = new PMYouSettings ();
-    PMYouPatchInfoPtr patch_info = new PMYouPatchInfo (settings);
-    PMYouServer server;
+    GError *error = NULL;
 
-    settings->setLangCode (LangCode ("en"));
-    settings->setReloadPatches (true);
-    settings->setCheckSignatures (false);
-    settings->setDryRun (true);
-    settings->setNoExternalPackages (false);
-    settings->setGetAll (true);
-    settings->setGetOnly (true);
+    dir = g_dir_open (INSTALLED_YOU_PATH, 0, &error);
+    if (error) {
+        rc_debug (RC_DEBUG_LEVEL_ERROR,
+                  "Can not read installed patches: %s",
+                  error->message);
+        g_error_free (error);
+        return NULL;
+    }
 
-    InstYou you (patch_info, settings);
-    you.initProduct ();
+    while ((filename = g_dir_read_name (dir))) {
+        PMError you_error;
+        PMYouPatchPtr you_patch;
+        RCYouPatch *patch;
 
-    server.setUrl (""); /* Only list installed patches */
-    settings->setPatchServer (server);
+        you_error = patch_info->readFile (INSTALLED_YOU_PATH,
+                                          filename,
+                                          you_patch);
+        if (you_error) {
+            rc_debug (RC_DEBUG_LEVEL_ERROR,
+                      "Ignoring installed patch '%s': %s (%s)",
+                      filename,
+                      rc_you_string_to_char (you_error.errstr ()),
+                      rc_you_string_to_char (you_error.details ()));
+            continue;
+        }
 
-    you.retrievePatchDirectory();
-    you.retrievePatchInfo();
-    you.selectPatches (PMYouPatch::kind_all);
-
-    PMManager::PMSelectableVec::const_iterator it;
-    for (it = Y2PM::youPatchManager().begin();
-         it != Y2PM::youPatchManager().end(); it++) {
-        RCYouPatch *patch = rc_you_patch_from_selectable (*it);
-
+        patch = rc_you_patch_from_yast_patch (you_patch);
         if (patch) {
-            if ((*it)->has_installed ()) {
-                patch->channel = rc_channel_ref (channel);
-                list = g_slist_prepend (list, patch);
-            } else
-                rc_you_patch_unref (patch);
+            patch->installed = TRUE;
+            patch->channel = rc_channel_ref (channel);
+            list = g_slist_prepend (list, patch);
         }
     }
 
-    list = g_slist_reverse (list);
+    g_dir_close (dir);
+
+    return list;
+}
+
+RCYouPatchSList *
+rc_you_wrapper_get_installed_patches (RCChannel *channel)
+{
+    RCYouPatchSList *list;
+    PMYouSettingsPtr settings = new PMYouSettings ();
+    PMYouPatchInfoPtr patch_info = new PMYouPatchInfo (settings);
+
+    list = read_installed_patches (patch_info, channel);
 
     return list;
 }

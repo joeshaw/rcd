@@ -271,9 +271,6 @@ cleanup:
 /*****************************************************************************/
 /* YaST directory structure */
 
-#define TMP_YOU_PATH_PREFIX "/tmp/lib"
-#define TMP_YOU_PATH TMP_YOU_PATH_PREFIX "/YaST2/you/mnt"
-
 static const gchar *
 get_you_basedir (void)
 {
