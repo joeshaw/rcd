@@ -511,16 +511,17 @@ get_files_to_download (RCYouTransaction *transaction, GError **err)
         RCYouPatch *patch = iter->data;
         RCWorldService *service;
         gchar *channel_path;
-        gchar *url_prefix;
+        gchar *patch_prefix;
+        gchar *pkg_prefix;
 
         service = RC_WORLD_SERVICE (rc_channel_get_world (patch->channel));
 
         channel_path = rc_channel_get_patch_path (patch->channel);
-        url_prefix = rc_maybe_merge_paths (service->url, channel_path);
+        patch_prefix = rc_maybe_merge_paths (service->url, channel_path);
         g_free (channel_path);
 
         rc_you_file_set_url (patch->file,
-                             rc_maybe_merge_paths (url_prefix, patch->file->filename));
+                             rc_maybe_merge_paths (patch_prefix, patch->file->filename));
 
         transaction->files_to_download =
             g_slist_prepend (transaction->files_to_download,
@@ -528,7 +529,7 @@ get_files_to_download (RCYouTransaction *transaction, GError **err)
 
         if (patch->pre_script) {
             rc_you_file_set_url (patch->pre_script,
-                                 rc_maybe_merge_paths (url_prefix,
+                                 rc_maybe_merge_paths (patch_prefix,
                                                        patch->pre_script->filename));
             transaction->files_to_download =
             g_slist_prepend (transaction->files_to_download,
@@ -537,12 +538,15 @@ get_files_to_download (RCYouTransaction *transaction, GError **err)
 
         if (patch->post_script) {
             rc_you_file_set_url (patch->post_script,
-                                 rc_maybe_merge_paths (url_prefix,
+                                 rc_maybe_merge_paths (patch_prefix,
                                                        patch->post_script->filename));
             transaction->files_to_download =
                 g_slist_prepend (transaction->files_to_download,
                                  rc_you_file_ref (patch->post_script));
         }
+
+        pkg_prefix = rc_maybe_merge_paths (service->url,
+                                           rc_channel_get_file_path (patch->channel));
 
         for (pkg_iter = patch->packages; pkg_iter; pkg_iter = pkg_iter->next) {
             RCYouPackage *package = pkg_iter->data;
@@ -551,7 +555,7 @@ get_files_to_download (RCYouTransaction *transaction, GError **err)
 
             if (package->base_package) {
                 rc_you_file_set_url (package->base_package,
-                                     rc_maybe_merge_paths (url_prefix,
+                                     rc_maybe_merge_paths (pkg_prefix,
                                                            package->base_package->filename));
 
                 transaction->files_to_download = 
@@ -559,7 +563,7 @@ get_files_to_download (RCYouTransaction *transaction, GError **err)
                                  rc_you_file_ref (package->base_package));
             } else if (package->patch_rpm) {
                 rc_you_file_set_url (package->patch_rpm,
-                                     rc_maybe_merge_paths (url_prefix,
+                                     rc_maybe_merge_paths (pkg_prefix,
                                                            package->patch_rpm->filename));
 
                 transaction->files_to_download = 
@@ -568,7 +572,8 @@ get_files_to_download (RCYouTransaction *transaction, GError **err)
             }
         }
 
-        g_free (url_prefix);
+        g_free (patch_prefix);
+        g_free (pkg_prefix);
     }
 
     return TRUE;

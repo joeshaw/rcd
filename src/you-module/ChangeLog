@@ -1,3 +1,13 @@
+2004-06-15  Tambet Ingo  <tambet@ximian.com>
+
+	* you-util.c (get_you_basedir): Create directory if it does not
+	exist.
+	(get_you_patchdir): Ditto.
+	(get_you_scriptdir): Ditto.
+
+	* rc-you-transaction.c (get_files_to_download): Use different url
+	prefix for package downloads.
+
 2004-06-14  Tambet Ingo  <tambet@ximian.com>
 
 	* you.c (you_ping): Delete. (Hey Joe!).

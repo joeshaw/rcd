@@ -291,7 +291,9 @@ get_you_basedir (void)
                                "i386",
                                rc_distro_get_version (distro));
         rc_distro_free (distro);
+    }
 
+    if (!rc_file_exists (dir)) {
         if (rc_mkdir (dir, 0755) < 0) {
             g_free (dir);
             dir = NULL;
@@ -306,8 +308,10 @@ get_you_patchdir (void)
 {
     static gchar *dir = NULL;
 
-    if (!dir) {
+    if (!dir)
         dir = rc_maybe_merge_paths (get_you_basedir (), "patches");
+
+    if (!rc_file_exists (dir)) {
         if (rc_mkdir (dir, 0755) < 0) {
             g_free (dir);
             dir = NULL;
@@ -322,8 +326,10 @@ get_you_scriptdir (void)
 {
     static gchar *dir = NULL;
 
-    if (!dir) {
+    if (!dir)
         dir = rc_maybe_merge_paths (get_you_basedir (), "scripts");
+
+    if (!rc_file_exists (dir)) {
         if (rc_mkdir (dir, 0755) < 0) {
             g_free (dir);
             dir = NULL;
