@@ -1,3 +1,10 @@
+2003-07-07  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-system.c (system_execute, system_execute_script): Add
+	execution of programs.
+
+	* rcd-rpc-util.h: Add CANT_EXECUTE pref
+
 2003-06-26  Joe Shaw  <joe@ximian.com>
 
 	* rcd-fetch.c (rcd_fetch_refresh): Change the idle to a timeout so
