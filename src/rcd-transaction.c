@@ -1194,6 +1194,10 @@ transaction_xml (RCDTransactionStatus *status,
                      status->flags & RCD_TRANSACTION_FLAGS_DRY_RUN ?
                      "1" : "0");
 
+    xmlNewTextChild (root, NULL, "pre_position", 
+                     status->flags & RCD_TRANSACTION_FLAGS_DOWNLOAD_ONLY ?
+                     "1" : "0");
+
     tmp = g_strdup_printf ("%ld", status->start_time);
     xmlNewTextChild (root, NULL, "start_time", tmp);
     g_free (tmp);
