@@ -357,16 +357,85 @@ rcd_create_uuid (const char *file)
     chmod (file, 0600);
 } /* rcd_create_uuid */
 
+static gboolean
+is_supported_distro (void)
+{
+    RCDistroStatus status = rc_distro_get_status ();
+    const char *distro_name;
+    time_t death_date = rc_distro_get_death_date ();
+    char *death_str = NULL;
+    gboolean supported = FALSE;
+
+    {
+        char *ctime_sucks;
+        int len;
+
+        ctime_sucks = ctime (&death_date);
+        len = strlen (ctime_sucks);
+        death_str = g_strndup (ctime_sucks, len - 1);
+    }
+
+    if (status != RC_DISTRO_STATUS_SUPPORTED) {
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "*** NOTICE ***");
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "");
+    }
+
+    distro_name = rc_distro_get_target ();
+    if (!distro_name)
+        distro_name = "unknown";
+
+    switch (status) {
+    case RC_DISTRO_STATUS_UNSUPPORTED:
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "The distribution you are running (%s) is not", distro_name);
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "supported.  Channel data will not be downloaded.");
+        break;
+    case RC_DISTRO_STATUS_PRESUPPORTED:
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "The distribution you are running (%s) is not", distro_name);
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "yet supported.  Channel data will not be downloaded.");
+        break;
+    case RC_DISTRO_STATUS_SUPPORTED:
+        supported = TRUE;
+        break;
+    case RC_DISTRO_STATUS_DEPRECATED:
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "Support for the distribution you are running (%s) has ", distro_name);
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "been deprecated and will be discontinued on %s.", death_str);
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "After that date you will need to upgrade your distribution to continue");
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "using channels for package installations and upgrades.");
+        supported = TRUE;
+        break;
+    case RC_DISTRO_STATUS_RETIRED:
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "As of %s, support for the distribution you are", death_str);
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "running (%s) has been discontinued.  You must upgrade", distro_name);
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "your distribution to use channels for package installations and");
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "upgrades.  Channel data will not be downloaded.");
+        break;
+    }
+
+    if (status != RC_DISTRO_STATUS_SUPPORTED) {
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "");
+    }
+
+    g_free (death_str);
+
+    return supported;
+} /* is_supported_distro */
+
 static void
 initialize_data (void)
 {
+    gboolean supported_distro = FALSE;
+
     /* If we have loaded a dump file, we don't want to initialize
        any of this stuff. */
     if (dump_file != NULL)
         return;
 
-    if (!rcd_fetch_channel_list_local ())
-        rcd_fetch_channel_list ();
+    supported_distro = is_supported_distro ();
+
+    if (supported_distro) {
+        if (!rcd_fetch_channel_list_local ())
+            rcd_fetch_channel_list ();
+    }
     
     rcd_subscriptions_load ();
     
@@ -386,10 +455,12 @@ initialize_data (void)
         rcd_prefs_get_org_id ())
         rcd_fetch_register ();
 
-    /* This will fall back and download from the net if necessary */
-    rcd_fetch_all_channels_local ();
+    if (supported_distro) {
+        /* This will fall back and download from the net if necessary */
+        rcd_fetch_all_channels_local ();
 
-    rcd_fetch_all_channel_icons (FALSE);
+        rcd_fetch_all_channel_icons (FALSE);
+    }
 
     if (!rcd_fetch_news_local ())
         rcd_fetch_news ();
@@ -527,7 +598,7 @@ main (int argc, const char **argv)
 
     /* We have to fetch this before the RCWorld gets initialized. */
     rcd_fetch_distro ();
-    
+
     initialize_rc_world ();
     initialize_rpc ();
     initialize_data ();
