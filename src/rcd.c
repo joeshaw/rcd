@@ -150,7 +150,7 @@ daemonize (void)
 }
 
 static void
-debug_message_handler (const char *str, gpointer user_data)
+debug_message_handler (const char *str, RCDebugLevel level, gpointer user_data)
 {
     static int pid = 0;
     char *log_msg;
@@ -166,6 +166,13 @@ debug_message_handler (const char *str, gpointer user_data)
     write (STDERR_FILENO, log_msg, strlen (log_msg));
     fsync (STDERR_FILENO);
 
+    /* FIXME: Use RCDebug's display_level instead of hardcoding value here? */
+    if (!non_daemon_flag && level <= RC_DEBUG_LEVEL_MESSAGE) {
+        openlog ("rcd", 0, LOG_DAEMON);
+        syslog (LOG_INFO, "%s", log_msg);
+        closelog ();
+    }
+
     g_free (log_msg);
 }
 
@@ -179,13 +186,6 @@ initialize_logging (void)
 
     rc_debug (RC_DEBUG_LEVEL_ALWAYS, "%s", rcd_about_name ());
     rc_debug (RC_DEBUG_LEVEL_ALWAYS, "%s", rcd_about_copyright ());
-    
-    if (! non_daemon_flag) {
-        openlog ("rcd", 0, LOG_DAEMON);
-        syslog (LOG_INFO, "Starting %s", rcd_about_name());
-        closelog ();
-    }
-    
 } /* initialize_logging */
 
 static void

@@ -1,5 +1,16 @@
 2002-07-22  Joe Shaw  <joe@ximian.com>
 
+	* rcd-rpc.c (serialize_fault): Fix a compiler warning.
+	(run_server_thread): Set the debug level of the "Starting server"
+	message to MESSAGE instead of INFO.
+
+	* rcd.c (debug_message_handler): Change the callback to match the new
+	signature.  If the message is MESSAGE or more severe, syslog the
+	message.
+	(initialize_logging): Remove the old syslogging.
+
+2002-07-22  Joe Shaw  <joe@ximian.com>
+
 	* rcd-rpc-packsys.c (packsys_transact): Block shutdowns, since we
 	don't want to be quitting in the middle of a transaction.
 	(run_transaction): After the transaction is finished, allow

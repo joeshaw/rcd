@@ -67,7 +67,7 @@ serialize_fault (int fault_code, const char *fault_string)
     output = xmlrpc_mem_block_new (&tmp_env, 0);
     XMLRPC_FAIL_IF_FAULT (&tmp_env);
 
-    xmlrpc_env_set_fault (&fault, fault_code, fault_string);
+    xmlrpc_env_set_fault (&fault, fault_code, (char *) fault_string);
 
     xmlrpc_serialize_fault (&tmp_env, output, &fault);
     XMLRPC_FAIL_IF_FAULT (&tmp_env);
@@ -307,7 +307,7 @@ run_server_thread(gpointer user_data)
     SoupServer *server;
     SoupServerAuthContext auth_ctx = { 0 };
 
-    rc_debug (RC_DEBUG_LEVEL_INFO, "Starting server");
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Starting server");
 
     server = soup_server_new(SOUP_PROTOCOL_HTTP, 5505);
 
