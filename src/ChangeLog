@@ -1,5 +1,8 @@
 2003-05-27  Joe Shaw  <joe@ximian.com>
 
+	* rcd-rpc.c (rcd_rpc_init): Bump up the XML-RPC size limit from 2
+	megs to 10 megs.  (Fixes #43640)
+
 	* rcd-fetch.c (rcd_fetch_refresh): Refresh transient channels on
 	the real world, not our temporary world.  (Fixes #43734)
 
