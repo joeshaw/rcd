@@ -3,9 +3,7 @@
 .SH "NAME"
 rcd.conf \- RCD configuration file
 .SH "DESCRIPTION"
-.B rcd
-uses a system\-wide configuration file for setting various options
-related to its operation.
+.B rcd uses a system\-wide configuration file for setting various options related to its operation. Options can be set by rcd clients; the most common mechanism for doing so is the \fIrc set<fr> command. See the rc man page for more information.
 .SH "CONFIGURATION FILE FORMAT"
 .LP 
 The configuration file is in the GNOME config file format, similar to
@@ -63,8 +61,7 @@ is not true.
 The URL for a proxy.  Valid protocols are "http", "https", "socks4",
 and "socks5."  For example, if you're running squid on your local
 machine, you'll want to set this to http://localhost:3128.  This is
-unset and ignored by default.  This key can be set through rcd's
-preferences mechanism.
+unset and ignored by default.
 
 .TP 
 .B proxy\-username=<username>

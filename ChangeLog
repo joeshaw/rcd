@@ -1,3 +1,8 @@
+2002-12-05  Aaron Weber  <aaron@ximian.com>
+
+	* rcd.conf.5: Adjust instructions on how to set the options. ("use
+	any rcd client").
+	
 2002-12-02  Joe Shaw  <joe@ximian.com>
 
 	* Makefile.am: Install rcd.pc.
