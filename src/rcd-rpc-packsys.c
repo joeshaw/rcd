@@ -188,6 +188,8 @@ refresh_channels_cb (gpointer user_data)
         return;
     }
 
+    rcd_fetch_news();
+
     rcd_subscriptions_load ();
 
     rcd_fetch_all_channel_icons (TRUE);

@@ -1,3 +1,7 @@
+2003-03-05  Tambet Ingo  <tambet@ximian.com>
+
+	* rcd-rpc-packsys.c (refresh_channels_cb): Refresh news as well.
+
 2003-03-01  Tambet Ingo  <tambet@ximian.com>
 
 	* Makefile.am (rcdinclude_HEADERS): Add rcd-identity.h.
