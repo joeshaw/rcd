@@ -283,9 +283,9 @@ add_package_cb (RCPackage *package, gpointer user_data)
 } /* add_package_cb */
 
 static xmlrpc_value *
-packsys_query (xmlrpc_env   *env,
-               xmlrpc_value *param_array,
-               void         *user_data)
+packsys_search (xmlrpc_env   *env,
+                xmlrpc_value *param_array,
+                void         *user_data)
 {
     RCWorld *world = (RCWorld *) user_data;
     xmlrpc_value *value;
@@ -339,7 +339,7 @@ cleanup:
         return NULL;
 
     return xmlrpc_packages;
-} /* packsys_query */
+} /* packsys_search */
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
@@ -537,11 +537,16 @@ run_transaction(gpointer user_data)
         G_CALLBACK (transact_progress_cb), status);
 
     if (rc_packman_get_error (status->packman)) {
+        char *msg;
+
         rc_debug (RC_DEBUG_LEVEL_MESSAGE,
                   "packman error: %s",
                   rc_packman_get_reason (status->packman));
 
-        rcd_pending_add_message (status->pending, "Transaction failed");
+        msg = g_strdup_printf("Transaction failed: %s",
+                              rc_packman_get_reason (status->packman));
+        rcd_pending_add_message (status->pending, msg);
+        g_free (msg);
         rcd_pending_fail (status->pending, -1,
                           rc_packman_get_reason (status->packman));
     }
@@ -858,8 +863,8 @@ cleanup:
 void
 rcd_rpc_packsys_register_methods(RCWorld *world)
 {
-    rcd_rpc_register_method("rcd.packsys.query",
-                            packsys_query,
+    rcd_rpc_register_method("rcd.packsys.search",
+                            packsys_search,
                             rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
                             world);
 
@@ -873,14 +878,14 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
                             rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
                             world);
 
-    rcd_rpc_register_method("rcd.packsys.transact",
-                            packsys_transact,
-                            rcd_auth_action_list_from_1 (RCD_AUTH_NONE),
-                            world);
-
     rcd_rpc_register_method("rcd.packsys.get_updates",
                             packsys_get_updates,
                             rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            world);
+
+    rcd_rpc_register_method("rcd.packsys.transact",
+                            packsys_transact,
+                            rcd_auth_action_list_from_1 (RCD_AUTH_NONE),
                             world);
 
     rcd_rpc_register_method("rcd.packsys.get_channels",

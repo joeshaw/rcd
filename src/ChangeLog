@@ -1,3 +1,10 @@
+2002-06-12  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-packsys.c (packsys_search): Renamed from packsys_query
+	to match the design doc.
+	(run_transaction): Send down the reason for the transaction
+	failure in the message.
+
 2002-06-12  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-rpc-packsys.c (build_updates_list): Send the relevant
