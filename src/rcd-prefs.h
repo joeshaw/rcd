@@ -33,65 +33,65 @@ void     rcd_prefs_set_auto_save (gboolean auto_save);
 void     rcd_prefs_save          (void);
 
 gboolean     rcd_prefs_get_remote_server_enabled (void);
-gboolean     rcd_prefs_set_remote_server_enabled (gboolean);
+gboolean     rcd_prefs_set_remote_server_enabled (gboolean, GError **);
 
 int          rcd_prefs_get_remote_server_port (void);
-gboolean     rcd_prefs_set_remote_server_port (int);
+gboolean     rcd_prefs_set_remote_server_port (int, GError **);
 
 const gchar *rcd_prefs_get_bind_ipaddress     (void);
-gboolean     rcd_prefs_set_bind_ipaddress     (const char *);
+gboolean     rcd_prefs_set_bind_ipaddress     (const char *, GError **);
 
 const gchar *rcd_prefs_get_cache_dir          (void);
-gboolean     rcd_prefs_set_cache_dir          (const char *);
+gboolean     rcd_prefs_set_cache_dir          (const char *, GError **);
 
 gboolean     rcd_prefs_get_cache_enabled      (void);
-gboolean     rcd_prefs_set_cache_enabled      (gboolean);
+gboolean     rcd_prefs_set_cache_enabled      (gboolean, GError **);
 
 const gchar *rcd_prefs_get_proxy              (void);
 
 const gchar *rcd_prefs_get_proxy_url          (void);
-gboolean     rcd_prefs_set_proxy_url          (const char *);
+gboolean     rcd_prefs_set_proxy_url          (const char *, GError **);
 
 const gchar *rcd_prefs_get_proxy_username     (void);
-gboolean     rcd_prefs_set_proxy_username     (const char *);
+gboolean     rcd_prefs_set_proxy_username     (const char *, GError **);
 
 const gchar *rcd_prefs_get_proxy_password     (void);
-gboolean     rcd_prefs_set_proxy_password     (const char *);
+gboolean     rcd_prefs_set_proxy_password     (const char *, GError **);
 
 const gchar *rcd_prefs_get_org_id             (void);
 
 gboolean     rcd_prefs_get_http10_enabled     (void);
-gboolean     rcd_prefs_set_http10_enabled     (gboolean);
+gboolean     rcd_prefs_set_http10_enabled     (gboolean, GError **);
 
 gboolean     rcd_prefs_get_require_verified_certificates (void);
-gboolean     rcd_prefs_set_require_verified_certificates (gboolean);
+gboolean     rcd_prefs_set_require_verified_certificates (gboolean, GError **);
 
 guint32      rcd_prefs_get_heartbeat_interval (void);
-gboolean     rcd_prefs_set_heartbeat_interval (guint32);
+gboolean     rcd_prefs_set_heartbeat_interval (guint32, GError **);
 
 int          rcd_prefs_get_max_downloads (void);
-gboolean     rcd_prefs_set_max_downloads (int);
+gboolean     rcd_prefs_set_max_downloads (int, GError **);
 
 gboolean     rcd_prefs_get_require_signed_packages (void);
-gboolean     rcd_prefs_set_require_signed_packages (gboolean);
+gboolean     rcd_prefs_set_require_signed_packages (gboolean, GError **);
 
 gint         rcd_prefs_get_debug_level        (void);
-gboolean     rcd_prefs_set_debug_level        (gint);
+gboolean     rcd_prefs_set_debug_level        (gint, GError **);
 
 gint         rcd_prefs_get_syslog_level       (void);
-gboolean     rcd_prefs_set_syslog_level       (gint);
+gboolean     rcd_prefs_set_syslog_level       (gint, GError **);
 
 gboolean     rcd_prefs_get_cache_cleanup_enabled (void);
-gboolean     rcd_prefs_set_cache_cleanup_enabled (gboolean);
+gboolean     rcd_prefs_set_cache_cleanup_enabled (gboolean, GError **);
 
 gint         rcd_prefs_get_cache_max_age_in_days (void);
-gboolean     rcd_prefs_set_cache_max_age_in_days (gint);
+gboolean     rcd_prefs_set_cache_max_age_in_days (gint, GError **);
 
 gint         rcd_prefs_get_cache_max_size_in_mb (void);
-gboolean     rcd_prefs_set_cache_max_size_in_mb (gint);
+gboolean     rcd_prefs_set_cache_max_size_in_mb (gint, GError **);
 
 gboolean     rcd_prefs_get_rollback (void);
-gboolean     rcd_prefs_set_rollback (gboolean);
+gboolean     rcd_prefs_set_rollback (gboolean, GError **);
 
 /* These aren't really prefs, but there here for lack of a better place */
 const gchar *rcd_prefs_get_mid                (void);

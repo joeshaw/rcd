@@ -39,8 +39,20 @@
 
 #define DEFAULT_CONFIG_FILE SYSCONFDIR "/rcd.conf"
 #define SYNC_CONFIG if (prefs_auto_save) gnome_config_sync_file ((char *) get_config_path (NULL))
+#define RCD_PREFS_ERROR rcd_prefs_error_quark()
 
 static gboolean prefs_auto_save = TRUE;
+
+static GQuark
+rcd_prefs_error_quark (void)
+{
+    static GQuark quark;
+
+    if (!quark)
+        quark = g_quark_from_static_string ("rcd_prefs_error");
+
+    return quark;
+}
 
 static const char *
 get_config_path (const char *path)
@@ -138,7 +150,7 @@ rcd_prefs_get_remote_server_enabled (void)
 } /* rcd_prefs_get_remote_server_enabled */
 
 gboolean
-rcd_prefs_set_remote_server_enabled (gboolean enabled)
+rcd_prefs_set_remote_server_enabled (gboolean enabled, GError **err)
 {
     /* Don't obey the command-line option anymore */
     rcd_options_reset_remote_disable_flag ();
@@ -167,7 +179,7 @@ rcd_prefs_get_remote_server_port (void)
 } /* rcd_prefs_get_remote_server_port */
 
 gboolean
-rcd_prefs_set_remote_server_port (int new_port)
+rcd_prefs_set_remote_server_port (int new_port, GError **err)
 {
     int old_port = rcd_prefs_get_remote_server_port ();
 
@@ -207,7 +219,7 @@ rcd_prefs_get_bind_ipaddress (void)
 } /* rcd_prefs_get_bind_ipaddress */
 
 gboolean
-rcd_prefs_set_bind_ipaddress (const char *new_ip)
+rcd_prefs_set_bind_ipaddress (const char *new_ip, GError **err)
 {
     const char *old_ip = rcd_prefs_get_bind_ipaddress ();
     gboolean diff;
@@ -257,10 +269,12 @@ rcd_prefs_get_cache_dir (void)
 }
 
 gboolean
-rcd_prefs_set_cache_dir (const char *cache_dir)
+rcd_prefs_set_cache_dir (const char *cache_dir, GError **err)
 {
     if (!cache_dir) {
-        rc_debug (RC_DEBUG_LEVEL_WARNING, "Can't set empty cache directory!");
+        g_set_error (err, RCD_PREFS_ERROR, RCD_PREFS_ERROR,
+                     "Can't set empty cache directory");
+        rc_debug (RC_DEBUG_LEVEL_WARNING, "Can't set empty cache directory");
         return FALSE;
     }
 
@@ -279,7 +293,7 @@ rcd_prefs_get_cache_enabled (void)
 }
 
 gboolean
-rcd_prefs_set_cache_enabled (gboolean enabled)
+rcd_prefs_set_cache_enabled (gboolean enabled, GError **err)
 {
     gnome_config_set_bool (get_config_path ("/Cache/enabled"), enabled);
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Cache dir enabled: %s",
@@ -287,7 +301,7 @@ rcd_prefs_set_cache_enabled (gboolean enabled)
 
     SYNC_CONFIG;
 
-    return FALSE;
+    return TRUE;
 }
 
 const char *
@@ -359,7 +373,7 @@ rcd_prefs_get_proxy_url (void)
 } /* rcd_prefs_get_proxy_url */
 
 gboolean
-rcd_prefs_set_proxy_url (const char *proxy_url)
+rcd_prefs_set_proxy_url (const char *proxy_url, GError **err)
 {
     if (proxy_url) {
         gnome_config_set_string (
@@ -394,7 +408,7 @@ rcd_prefs_get_proxy_username (void)
 } /* rcd_prefs_get_proxy_username */
 
 gboolean
-rcd_prefs_set_proxy_username (const char *proxy_username)
+rcd_prefs_set_proxy_username (const char *proxy_username, GError **err)
 {
     if (proxy_username) {
         gnome_config_set_string (get_config_path ("/Network/proxy-user"),
@@ -431,7 +445,7 @@ rcd_prefs_get_proxy_password (void)
 } /* rcd_prefs_get_proxy_password */
 
 gboolean
-rcd_prefs_set_proxy_password (const char *proxy_password)
+rcd_prefs_set_proxy_password (const char *proxy_password, GError **err)
 {
     if (proxy_password) {
         gnome_config_set_string (
@@ -455,7 +469,7 @@ rcd_prefs_get_http10_enabled (void)
 }
 
 gboolean
-rcd_prefs_set_http10_enabled (gboolean enabled)
+rcd_prefs_set_http10_enabled (gboolean enabled, GError **err)
 {
     gnome_config_set_bool (get_config_path ("/Network/http10"), enabled);
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "HTTP 1.0 enabled: %s",
@@ -479,7 +493,7 @@ rcd_prefs_get_require_verified_certificates (void)
 }
 
 gboolean
-rcd_prefs_set_require_verified_certificates (gboolean enabled)
+rcd_prefs_set_require_verified_certificates (gboolean enabled, GError **err)
 {
     gnome_config_set_bool (get_config_path ("/Network/require-verified-certificates"), enabled);
 
@@ -503,14 +517,17 @@ rcd_prefs_get_heartbeat_interval (void)
 
 #define HEARTBEAT_MINIMUM 1800
 gboolean
-rcd_prefs_set_heartbeat_interval (guint32 interval)
+rcd_prefs_set_heartbeat_interval (guint32 interval, GError **err)
 {
     guint32 old_interval;
 
     if (interval != 0 && interval < HEARTBEAT_MINIMUM) {
+        g_set_error (err, RCD_PREFS_ERROR, RCD_PREFS_ERROR,
+                     "Heartbeat frequences of less than %d seconds are not "
+                     "allowed", HEARTBEAT_MINIMUM);
         rc_debug (RC_DEBUG_LEVEL_WARNING,
-                  "Heartbeat frequencies less than %d are not allowed.",
-                  HEARTBEAT_MINIMUM);
+                  "Heartbeat frequencies of less than %d seconds are not "
+                  "allowed.", HEARTBEAT_MINIMUM);
         return FALSE;
     }
 
@@ -540,7 +557,7 @@ rcd_prefs_get_max_downloads (void)
 } /* rcd_prefs_get_max_downloads */
 
 gboolean
-rcd_prefs_set_max_downloads (int max_downloads)
+rcd_prefs_set_max_downloads (int max_downloads, GError **err)
 {
     if (max_downloads < 0)
         max_downloads = 0;
@@ -561,7 +578,7 @@ rcd_prefs_get_require_signed_packages (void)
 } /* rcd_prefs_get_require_signed_packages */
 
 gboolean
-rcd_prefs_set_require_signed_packages (gboolean enabled)
+rcd_prefs_set_require_signed_packages (gboolean enabled, GError **err)
 {
     gnome_config_set_bool (
         get_config_path ("/System/require-signatures"), enabled);
@@ -587,7 +604,7 @@ rcd_prefs_get_debug_level (void)
 } /* rcd_prefs_get_debug_level */
 
 gboolean
-rcd_prefs_set_debug_level (gint level)
+rcd_prefs_set_debug_level (gint level, GError **err)
 {
     /* Don't obey the command-line option anymore */
     rcd_options_reset_debug_level ();
@@ -613,7 +630,7 @@ rcd_prefs_get_syslog_level (void)
 } /* rcd_prefs_get_syslog_level */
 
 gboolean
-rcd_prefs_set_syslog_level (gint level)
+rcd_prefs_set_syslog_level (gint level, GError **err)
 {
     /* Don't obey the command-line option anymore */
     rcd_options_reset_syslog_level ();
@@ -634,7 +651,7 @@ rcd_prefs_get_cache_cleanup_enabled (void)
 }
 
 gboolean
-rcd_prefs_set_cache_cleanup_enabled (gboolean enabled)
+rcd_prefs_set_cache_cleanup_enabled (gboolean enabled, GError **err)
 {
     gnome_config_set_bool (
         get_config_path ("/System/cache-cleanup"), enabled);
@@ -652,7 +669,7 @@ rcd_prefs_get_cache_max_age_in_days (void)
 }
 
 gboolean
-rcd_prefs_set_cache_max_age_in_days (gint days)
+rcd_prefs_set_cache_max_age_in_days (gint days, GError **err)
 {
     if (days < 0)
         days = 0;
@@ -673,7 +690,7 @@ rcd_prefs_get_cache_max_size_in_mb (void)
 }
 
 gboolean
-rcd_prefs_set_cache_max_size_in_mb (gint size)
+rcd_prefs_set_cache_max_size_in_mb (gint size, GError **err)
 {
     if (size < 0)
         size = 0;
@@ -693,7 +710,7 @@ rcd_prefs_get_rollback (void)
 }
 
 gboolean
-rcd_prefs_set_rollback (gboolean enabled)
+rcd_prefs_set_rollback (gboolean enabled, GError **err)
 {
     gnome_config_set_bool (get_config_path ("/System/rollback"), enabled);
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Rollback enabled: %s",

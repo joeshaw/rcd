@@ -1,5 +1,13 @@
 2003-09-25  Joe Shaw  <joe@ximian.com>
 
+	* rcd-prefs.c (rcd_prefs_set_*): Make the non-generic set
+	functions take a GError so we can pass good error messages back to
+	clients.
+
+	* rcd-rpc-prefs.c (prefs_set_pref): Pass in a GError to the set
+	function and if it fails, append the error message to the fault
+	string.
+
 	* rcd-rpc-packsys.c (synth_package_from_update): Don't reset the
 	channel, we'll need it later.
 

@@ -255,6 +255,7 @@ prefs_set_pref (xmlrpc_env   *env,
     for (i = 0; i < pref_table_size; i++) {
         RCDPrefTable pt = pref_table[i];
         gpointer v;
+        GError *err = NULL;
 
         if (g_strcasecmp (pt.name, pref_name) != 0)
             continue;
@@ -270,9 +271,11 @@ prefs_set_pref (xmlrpc_env   *env,
         if (env->fault_occurred)
             return NULL;
 
-        if (!pt.set_pref_func (v)) {
-            xmlrpc_env_set_fault (env, RCD_RPC_FAULT_CANT_SET_PREFERENCE,
-                                  "Unable to set preference: invalid setting");
+        if (!pt.set_pref_func (v, &err)) {
+            xmlrpc_env_set_fault_formatted (env,
+                                            RCD_RPC_FAULT_CANT_SET_PREFERENCE,
+                                            "Unable to set preference: %s",
+                                            err->message);
             return NULL;
         }
 
