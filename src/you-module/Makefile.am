@@ -30,5 +30,14 @@ librcd_you_la_SOURCES =	\
 	wrapper.h		\
 	you.c
 
+librcd_you_laincludedir = $(includedir)/rcd
+librcd_you_lainclude_HEADERS =	\
+	rc-you-file.h		\
+	rc-you-package.h	\
+	rc-you-patch.h		\
+	rc-world-you.h		\
+	rc-you-transaction.h \
+	you-util.h
+
 librcd_you_la_LDFLAGS = -module -avoid-version $(YAST_LIBS)
 

@@ -428,7 +428,7 @@ rc_you_transaction_transaction (RCYouTransaction *transaction)
     if (error)
         goto cleanup;
 
-    if (transaction->flags != RCD_TRANSACTION_FLAGS_DRY_RUN)
+    if (transaction->flags != RCD_TRANSACTION_FLAGS_DOWNLOAD_ONLY)
         rc_you_wrapper_install_patches (transaction->patches, &error);
     if (error)
         goto cleanup;
