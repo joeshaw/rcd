@@ -41,9 +41,10 @@
 #define RCX_ACTIVATION_ROOT "https://activation.rc.ximian.com"
 
 gboolean
-rcd_fetch_register (const char *activation_code,
-                    const char *email,
-                    const char *alias)
+rcd_fetch_register (const char  *activation_code,
+                    const char  *email,
+                    const char  *alias,
+                    char       **err_msg)
 {
     const char *server;
     char *url;
@@ -128,17 +129,26 @@ rcd_fetch_register (const char *activation_code,
     status = rcd_transfer_protocol_http_get_response_header (protocol,
                                                              "X-RC-Status");
     if (!status || atoi (status) != 1) {
-        char *msg;
+        const char *msg;
 
         if (rcd_transfer_get_error (t))
-            msg = g_strdup (rcd_transfer_get_error_string (t));
-        else
-            msg = g_strndup (data->data, data->len);
+            msg = rcd_transfer_get_error_string (t);
+        else {
+            msg = rcd_transfer_protocol_http_get_response_header (protocol,
+                                                                  "X-RC-Error");
+        }
 
-        rc_debug (RC_DEBUG_LEVEL_WARNING,
-                  "Unable to register with server: %s", msg);
+        if (msg) {
+            rc_debug (RC_DEBUG_LEVEL_WARNING,
+                      "Unable to register with server: %s", msg);
+        }
+        else {
+            rc_debug (RC_DEBUG_LEVEL_WARNING,
+                      "Unable to register with server");
+        }
 
-        g_free (msg);
+        if (err_msg)
+            *err_msg = g_strdup (msg);
 
         success = FALSE;
     }

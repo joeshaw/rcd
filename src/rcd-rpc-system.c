@@ -294,11 +294,18 @@ system_activate (xmlrpc_env   *env,
 {
     char *activation_code, *email;
     gboolean success = FALSE;
+    char *err_msg = NULL;
 
     xmlrpc_parse_value (env, param_array, "(ss)", &activation_code, &email);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    success = rcd_fetch_register (activation_code, email, NULL);
+    success = rcd_fetch_register (activation_code, email, NULL, &err_msg);
+
+    if (err_msg) {
+        xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_CANT_ACTIVATE,
+                                        "%s", err_msg);
+        g_free (err_msg);
+    }
 
 cleanup:
     if (env->fault_occurred)
@@ -314,12 +321,19 @@ system_activate_with_alias (xmlrpc_env   *env,
 {
     char *activation_code, *email, *alias;
     gboolean success = FALSE;
+    char *err_msg = NULL;
 
     xmlrpc_parse_value (env, param_array, "(sss)",
                         &activation_code, &email, &alias);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    success = rcd_fetch_register (activation_code, email, alias);
+    success = rcd_fetch_register (activation_code, email, alias, &err_msg);
+
+    if (err_msg) {
+        xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_CANT_ACTIVATE,
+                                        "%s", err_msg);
+        g_free (err_msg);
+    }
 
 cleanup:
     if (env->fault_occurred)
@@ -378,6 +392,7 @@ get_recurring_cb (RCDRecurring *rec,
     xmlrpc_array_append_item (info->env, info->array, item);
 
  cleanup:
+    ;
 }
 
 static xmlrpc_value *

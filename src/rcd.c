@@ -531,7 +531,7 @@ initialize_data (void)
      */
     if (rcd_prefs_get_premium () &&
         rcd_prefs_get_org_id ())
-        rcd_fetch_register (NULL, NULL, NULL);
+        rcd_fetch_register (NULL, NULL, NULL, NULL);
 
     supported_distro = is_supported_distro ();
 

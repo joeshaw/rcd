@@ -46,6 +46,7 @@
 #define RCD_RPC_FAULT_CANT_AUTHENTICATE      -610
 #define RCD_RPC_FAULT_CANT_REFRESH           -611
 #define RCD_RPC_FAULT_NO_ICON                -612
+#define RCD_RPC_FAULT_CANT_ACTIVATE          -613
 
 #define is_empty_string(x)     (!(x) || !(*(x)))
 #define RC_STRING_TO_XMLRPC(x) ((x) == NULL ? "" : (x))
