@@ -1,3 +1,14 @@
+2002-07-08  Joe Shaw  <joe@ximian.com>
+
+	* Makefile.am: Add gnome-config.[ch] and parse-path.cP.
+
+	* rcd-prefs.c: Make all of the getters read from the config file
+	and all the setters write to it.
+
+	* gnome-config.[ch], parse-path.cP: Added.  Mostly cut-and-pasted
+	from libgnome, because we don't have a good reason to have a
+	dependency upon it.
+
 2002-07-07  Joe Shaw  <joe@ximian.com>
 
 	* Makefile.am: Define SYSCONFDIR, install the rcd binary.

@@ -32,57 +32,81 @@
 
 #include <rc-debug.h>
 
+#include "gnome-config.h"
+
+#define CONFIG_PATH "=" SYSCONFDIR "/rcd.config="
+#define SYNC_CONFIG (gnome_config_sync_file (CONFIG_PATH))
+
 const char *
 rcd_prefs_get_cache_dir (void)
 {
-    /* return "/var/cache/redcarpet"; */ /* FIXME */
-    return "/tmp/rcd-cache";
+    static char *cache_dir = NULL;
+
+    g_free (cache_dir);
+
+    /* FIXME: /var/cache/redcarpet as the default instead */
+    cache_dir = gnome_config_get_string (
+        CONFIG_PATH "/Cache/directory=/tmp/rcd-cache");
+
+    return cache_dir;
 }
 
 void
 rcd_prefs_set_cache_dir (const char *cache_dir)
 {
-    /* FIXME */
+    gnome_config_set_string (CONFIG_PATH "/Cache/directory", cache_dir);
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Cache dir set: %s", cache_dir);
+
+    SYNC_CONFIG;
 }
 
 gboolean
 rcd_prefs_get_cache_enabled (void)
 {
-    return TRUE;
+    return gnome_config_get_bool (CONFIG_PATH "/Cache/enabled=TRUE");
 }
 
 void
 rcd_prefs_set_cache_enabled (gboolean enabled)
 {
-    /* FIXME */
+    gnome_config_set_bool (CONFIG_PATH "/Cache/enabled", enabled);
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Cache dir enabled: %s",
               enabled ? "TRUE" : "FALSE");
+
+    SYNC_CONFIG;
 }
 
 const char *
 rcd_prefs_get_host (void)
 {
-    char *host;
+    static char *host = NULL;
 
-    if ((host = getenv ("RC_MAGIC")))
-        return host;
-    else
-        return "http://red-carpet.ximian.com";
+    g_free (host);
+    host = NULL;
+
+    if (getenv ("RC_MAGIC"))
+        return getenv ("RC_MAGIC");
+
+    host = gnome_config_get_string (
+        CONFIG_PATH "/Network/host=http://red-carpet.ximian.com");
+
+    return host;
 }
 
 gboolean
 rcd_prefs_get_http10_enabled (void)
 {
-    return FALSE;
+    return gnome_config_get_bool (CONFIG_PATH "/Network/http10=FALSE");
 }
 
 void
 rcd_prefs_set_http10_enabled (gboolean enabled)
 {
-    /* FIXME */
+    gnome_config_set_bool (CONFIG_PATH "/Network/http10", enabled);
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "HTTP 1.0 enabled: %s",
               enabled ? "TRUE" : "FALSE");
+
+    SYNC_CONFIG;
 }
 
 gboolean
@@ -94,18 +118,22 @@ rcd_prefs_get_priority (void)
 guint32
 rcd_prefs_get_heartbeat_interval (void)
 {
-    return 3000;
+    return (guint32) gnome_config_get_int (
+        CONFIG_PATH "/System/heartbeat=3000");
 } /* rcd_prefs_get_heartbeat_interval */
 
 void
 rcd_prefs_set_heartbeat_interval (guint32 interval)
 {
-    /* FIXME */
-    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "heartbeat: %d", interval);
+    gnome_config_set_int (CONFIG_PATH "/System/heartbeat", (int) interval);
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "heartbeat: %u", interval);
+
+    SYNC_CONFIG;
 }
 
 gboolean
 rcd_prefs_get_require_verified_packages (void)
 {
-    return FALSE;
+    return gnome_config_get_bool (
+        CONFIG_PATH "/System/require-verified=FALSE");
 } /* rcd_prefs_get_require_verified_packages */

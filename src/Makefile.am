@@ -15,6 +15,9 @@ BUILT_SOURCES =			\
 	rcd-marshal.c
 
 rcd_SOURCES = 			\
+	gnome-config.c		\
+	gnome-config.h		\
+	parse-path.cP		\
 	rcd-marshal.c		\
 	rcd-marshal.h		\
 	rcd-about.c		\
