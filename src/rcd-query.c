@@ -214,8 +214,6 @@ rcd_query_match_string_ci (RCDQueryPart *part,
                                          0);
     }
 
-    g_print ("(%d) %s vs %s\n", rv, str_folded, part->query_str_folded);
-
     g_free (str_folded);
 
     return rv;
