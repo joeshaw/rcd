@@ -2258,18 +2258,19 @@ packsys_mount_directory(xmlrpc_env   *env,
 {
     RCWorld *world = (RCWorld *) user_data;
     char *path, *name, *alias;
+    gboolean recursive;
     char *url;
     GError *err = NULL;
     gboolean success;
     RCChannel *channel;
     xmlrpc_value *retval;
 
-    xmlrpc_parse_value (env, param_array, "(sss)",
-                        &path, &name, &alias);
+    xmlrpc_parse_value (env, param_array, "(sssi)",
+                        &path, &name, &alias, &recursive);
 
-    url = g_strdup_printf ("%s%s?name=%s;alias=%s",
+    url = g_strdup_printf ("%s%s?name=%s;alias=%s;recursive=%d",
                            path[0] == '/' ? "file://" : "",
-                           path, name, alias);
+                           path, name, alias, recursive);
 
     success = rc_world_multi_mount_service (RC_WORLD_MULTI (world), url, &err);
 

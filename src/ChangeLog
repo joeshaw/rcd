@@ -1,5 +1,8 @@
 2003-09-11  Joe Shaw  <joe@ximian.com>
 
+	* rcd-rpc-packsys.c (packsys_mount_directory): Add a recursive
+	flag to the mount_directory RPC method.
+
 	* rcd-rpc-util.c (rcd_rpc_block_on_pending_list): Make the pending
 	check a timeout instead of an idle so we don't hit the main loop
 	excessively and wedge at 100% CPU on a transact_blocking() call.
