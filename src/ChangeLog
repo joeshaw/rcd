@@ -1,3 +1,9 @@
+2002-12-09  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-autopull.c (rcd_autopull_fetch_channel_list): Re-load
+	our subscriptions after fetching the channel list.  (Fixes
+	bug #33387)
+
 2002-12-06  Joe Shaw  <joe@ximian.com>
 
 	* rcd-transfer.[ch]: Add a new transfer error,

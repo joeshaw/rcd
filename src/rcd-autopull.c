@@ -33,6 +33,7 @@
 #include "rcd-recurring.h"
 #include "rcd-transaction.h"
 #include "rcd-transfer.h"
+#include "rcd-subscriptions.h"
 #include "rcd-prefs.h"
 
 static RCDModule *rcd_module = NULL;
@@ -460,6 +461,11 @@ rcd_autopull_fetch_channel_list (void (*finished_cb) (gpointer),
 {
     if (! rcd_fetch_channel_list ()) 
         return FALSE;
+
+    /* Calling rcd_fetch_channel_list blows away our subscriptions,
+       so we have to re-load them. */
+    rcd_subscriptions_load ();
+
     rcd_autopull_fetch_all_channels (finished_cb, user_data);
 
     return TRUE;
