@@ -1,3 +1,18 @@
+2002-06-03  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-rpc-packsys.c (packsys_refresh_channel): Added.  Given a
+	channel id, reloads the channel's package info.
+	(rcd_rpc_packsys_register_methods): Register the refresh_channel
+	method.
+
+	* rcd-fetch.c (rcd_fetch_channel): Return the id of the RCDPending
+	associated with the package info transfer.
+
+	* rcd-rpc-system.c (system_ping): Return the system time along
+	with the other 'ping' info.
+	(system_poll_pending): Pass along more information from the
+	RCDPending object.
+
 2002-06-03  Joe Shaw  <joe@ximian.com>
 
 	* rcd-auth.c (auth_action_requirements_met): Fix a braindead goto.

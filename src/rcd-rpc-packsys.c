@@ -7,6 +7,7 @@
 
 #include <xmlrpc.h>
 
+#include "rcd-fetch.h"
 #include "rcd-pending.h"
 #include "rcd-query-packages.h"
 #include "rcd-rpc.h"
@@ -68,6 +69,34 @@ packsys_get_channels (xmlrpc_env   *env,
         return NULL;
 
     return channel_array;
+}
+
+static xmlrpc_value *
+packsys_refresh_channel (xmlrpc_env   *env,
+                         xmlrpc_value *param_array,
+                         void         *user_data)
+{
+    RCWorld *world = user_data;
+    xmlrpc_value *value = NULL;
+    RCChannel *channel;
+    guint32 channel_id;
+    gint pending_id = -1;
+
+    xmlrpc_parse_value (env, param_array, "(i)", &channel_id);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    channel = rc_world_get_channel_by_id (world, channel_id);
+    if (channel) {
+        pending_id = rcd_fetch_channel (channel);
+    }
+
+    value = xmlrpc_build_value (env, "i", pending_id);
+
+ cleanup:
+    if (env->fault_occurred)
+        return NULL;
+
+    return value;
 }
 
 static void
@@ -575,6 +604,11 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
 
     rcd_rpc_register_method("rcd.packsys.get_channels",
                             packsys_get_channels,
+                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            world);
+
+    rcd_rpc_register_method("rcd.packsys.refresh_channel",
+                            packsys_refresh_channel,
                             rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
                             world);
 

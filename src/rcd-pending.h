@@ -47,6 +47,8 @@ enum _RCDPendingStatus {
 
 const char *rcd_pending_status_to_string (RCDPendingStatus status);
 
+#define RCD_INVALID_PENDING_ID 0
+
 
 struct _RCDPending {
     GObject parent;

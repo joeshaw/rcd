@@ -40,6 +40,7 @@ system_ping(xmlrpc_env   *env,
             void         *user_data)
 {
     xmlrpc_value *value = NULL;
+    time_t now;
 
     value = xmlrpc_struct_new(env);
 
@@ -51,6 +52,10 @@ system_ping(xmlrpc_env   *env,
     RCD_XMLRPC_STRUCT_SET_STRING(env, value, "copyright", rcd_about_copyright ());
     XMLRPC_FAIL_IF_FAULT(env);
 
+    time (&now);
+    RCD_XMLRPC_STRUCT_SET_INT(env, value, "current_time", (gint) now);
+    XMLRPC_FAIL_IF_FAULT(env);
+    
  cleanup: 
     if (env->fault_occurred) {
         if (value)
@@ -97,36 +102,47 @@ system_poll_pending(xmlrpc_env   *env,
         return NULL;
 
     pending = rcd_pending_lookup_by_id (pending_id);
-    if (pending == NULL)
-        return NULL;
-
+    
     value = xmlrpc_struct_new (env);
 
-    RCD_XMLRPC_STRUCT_SET_INT (env, value, "id",
-                               rcd_pending_get_id (pending));
+    if (pending != NULL) {
 
-    RCD_XMLRPC_STRUCT_SET_STRING (env, value, "description",
-                                  rcd_pending_get_description (pending));
+        RCD_XMLRPC_STRUCT_SET_INT (env, value, "id",
+                                   rcd_pending_get_id (pending));
 
-    RCD_XMLRPC_STRUCT_SET_DOUBLE (env, value, "percent_complete",
-                                  rcd_pending_get_percent_complete (pending));
+        RCD_XMLRPC_STRUCT_SET_STRING (env, value, "description",
+                                      rcd_pending_get_description (pending));
 
-    RCD_XMLRPC_STRUCT_SET_STRING (env, value, "status",
-                                  rcd_pending_status_to_string (rcd_pending_get_status (pending)));
+        RCD_XMLRPC_STRUCT_SET_DOUBLE (env, value, "percent_complete",
+                                      rcd_pending_get_percent_complete (pending));
 
-    if (rcd_pending_get_elapsed_secs (pending) >= 0) {
-        RCD_XMLRPC_STRUCT_SET_INT (env, value, "elased_sec",
-                                   rcd_pending_get_elapsed_secs (pending));
-    }
+        RCD_XMLRPC_STRUCT_SET_STRING (env, value, "status",
+                                      rcd_pending_status_to_string (rcd_pending_get_status (pending)));
 
-    if (rcd_pending_get_remaining_secs (pending) >= 0) {
-        RCD_XMLRPC_STRUCT_SET_INT (env, value, "remaining_sec",
-                                   rcd_pending_get_remaining_secs (pending));
-    }
+        if (rcd_pending_get_elapsed_secs (pending) >= 0) {
+            RCD_XMLRPC_STRUCT_SET_INT (env, value, "elased_sec",
+                                       rcd_pending_get_elapsed_secs (pending));
+        }
+        
+        if (rcd_pending_get_remaining_secs (pending) >= 0) {
+            RCD_XMLRPC_STRUCT_SET_INT (env, value, "remaining_sec",
+                                       rcd_pending_get_remaining_secs (pending));
+        }
 
-    if (rcd_pending_get_expected_secs (pending) >= 0) {
-        RCD_XMLRPC_STRUCT_SET_INT (env, value, "expected_sec",
-                                   rcd_pending_get_expected_secs (pending));
+        if (rcd_pending_get_expected_secs (pending) >= 0) {
+            RCD_XMLRPC_STRUCT_SET_INT (env, value, "expected_sec",
+                                       rcd_pending_get_expected_secs (pending));
+        }
+
+        if (rcd_pending_get_start_time (pending)) {
+            RCD_XMLRPC_STRUCT_SET_INT (env, value, "start_time",
+                                       (gint) rcd_pending_get_start_time (pending));
+        }
+
+        if (rcd_pending_get_last_time (pending)) {
+            RCD_XMLRPC_STRUCT_SET_INT (env, value, "last_time",
+                                       (gint) rcd_pending_get_last_time (pending));
+        }
     }
 
  cleanup: 

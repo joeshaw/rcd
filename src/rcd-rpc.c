@@ -107,9 +107,14 @@ process_rpc_call (xmlrpc_env  *env,
                   gsize        size,
                   RCDIdentity *identity)
 {
+    static int call_num = 1;
+
     xmlrpc_mem_block *output;
+    time_t start_time, finish_time;
 
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Handling RPC connection");
+
+    time (&start_time);
 
     if (caller_identity)
         g_warning ("A caller identity was already set!");
@@ -121,6 +126,13 @@ process_rpc_call (xmlrpc_env  *env,
 
     output = xmlrpc_registry_process_call (
         env, registry, NULL, (char *) data, size);
+    
+    time (&finish_time);
+
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE,
+              "Call #%d processed.  (t=%ds)",
+              call_num, finish_time - start_time);
+    ++call_num;
 
     caller_identity = NULL;
 

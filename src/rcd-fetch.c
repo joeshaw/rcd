@@ -125,15 +125,14 @@ process_channel_cb (RCDTransfer *t, gpointer user_data)
 
 }
 
-void
+gint
 rcd_fetch_channel (RCChannel *channel)
 {
     RCDTransfer *t;
     gchar *url, *desc;
     RCDPending *pending;
-    gint id;
 
-    g_return_if_fail (channel != NULL);
+    g_return_val_if_fail (channel != NULL, RCD_INVALID_PENDING_ID);
 
     t = rcd_transfer_new (0,
                           rcd_cache_get_normal_cache ());
@@ -158,10 +157,8 @@ rcd_fetch_channel (RCChannel *channel)
     rcd_pending_set_description (pending, desc);
     g_free (desc);
     
-
-    /* g_object_unref (t); */ /* FIXME: how does memory management work here. */
-
- }
+    return rcd_pending_get_id (pending);
+}
 
 static void
 all_channels_cb (RCChannel *channel, gpointer user_data)

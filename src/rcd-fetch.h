@@ -39,9 +39,10 @@ void rcd_fetch_channel_list (void);
 
 /* 
    Download a channel's package data from the server,
-   storing the packages in our RCWorld.
+   storing the packages in our RCWorld.  Returns the id
+   of the RCDPending.
 */
-void rcd_fetch_channel (RCChannel *channel);
+gint rcd_fetch_channel (RCChannel *channel);
 
 /*
   Download channel package data for all channels.
