@@ -300,6 +300,14 @@ rcd_transaction_set_flags (RCDTransaction *transaction,
     transaction->flags = flags;
 }
 
+void rcd_transaction_set_rollback (RCDTransaction *transaction,
+                                   gboolean rollback)
+{
+    g_return_if_fail (RCD_IS_TRANSACTION (transaction));
+
+    transaction->rollback = rollback;
+}
+
 void
 rcd_transaction_set_client_info (RCDTransaction *transaction,
                                  const char     *client_id,
@@ -1342,17 +1350,20 @@ transaction_xml (xmlrpc_env     *env,
     RCD_XMLRPC_STRUCT_SET_STRING (env, xtrans, "log_type", "package");
     XMLRPC_FAIL_IF_FAULT (env);
 
-#if 0
-    RCD_XMLRPC_STRUCT_SET_INT(
-            env, xtrans, "dry_run",
-            transaction->flags & RCD_TRANSACTION_FLAGS_DRY_RUN ? 1 : 0);
-    XMLRPC_FAIL_IF_FAULT (env);
+    if (transaction->rollback) {
+        RCD_XMLRPC_STRUCT_SET_INT (env, xtrans, "rollback", 1);
+        XMLRPC_FAIL_IF_FAULT (env);
+    }
 
-    RCD_XMLRPC_STRUCT_SET_INT(
-            env, xtrans, "pre_position",
-            transaction->flags & RCD_TRANSACTION_FLAGS_DOWNLOAD_ONLY ? 1 : 0);
-    XMLRPC_FAIL_IF_FAULT (env);
-#endif
+    if (transaction->flags & RCD_TRANSACTION_FLAGS_DRY_RUN) {
+        RCD_XMLRPC_STRUCT_SET_INT (env, xtrans, "dry_run", 1);
+        XMLRPC_FAIL_IF_FAULT (env);
+    }
+
+    if (transaction->flags & RCD_TRANSACTION_FLAGS_DOWNLOAD_ONLY) {
+        RCD_XMLRPC_STRUCT_SET_INT (env, xtrans, "preposition", 1);
+        XMLRPC_FAIL_IF_FAULT (env);
+    }
 
     xmanifests = xmlrpc_build_value (env, "()");
     XMLRPC_FAIL_IF_FAULT (env);

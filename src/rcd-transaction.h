@@ -56,6 +56,7 @@ struct _RCDTransaction {
     RCPackageSList *packages_to_download;
 
     RCDTransactionFlags flags;
+    gboolean rollback;
 
     RCDTransferPool *pool;
 
@@ -111,6 +112,8 @@ void rcd_transaction_set_remove_packages  (RCDTransaction *transaction,
                                            RCPackageSList *remove_packages);
 void rcd_transaction_set_flags            (RCDTransaction *transaction,
                                            RCDTransactionFlags flags);
+void rcd_transaction_set_rollback         (RCDTransaction *transaction,
+                                           gboolean rollback);
 void rcd_transaction_set_client_info      (RCDTransaction *transaction,
                                            const char     *client_id,
                                            const char     *client_version,

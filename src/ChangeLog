@@ -1,5 +1,12 @@
 2003-09-23  Tambet Ingo  <tambet@ximian.com>
 
+	* rcd-transaction.c (rcd_transaction_set_rollback): Implement.
+	(transaction_xml): Send transaction's rollback, dry run, and
+	prepostion information.
+
+	* rcd-rpc-packsys.c (setup_rollback): Set new transaction type
+	to rollback.
+
 	* rcd-transaction.c (transaction_xml): Change "endtime" type to
 	integer from float. For some mysterious reason float wasn't good
 	enough.

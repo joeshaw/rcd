@@ -1741,6 +1741,7 @@ setup_rollback (xmlrpc_env   *env,
     XMLRPC_FAIL_IF_FAULT (env);
 
     transaction = rcd_transaction_new ();
+    rcd_transaction_set_rollback (transaction, TRUE);
     rcd_transaction_set_id (transaction, trid);
     rcd_transaction_set_install_packages (transaction, install_packages);
     rcd_transaction_set_remove_packages (transaction, remove_packages);
