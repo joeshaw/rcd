@@ -1,5 +1,10 @@
 2004-11-03  James Willcox  <james@ximian.com>
 
+	* configure.in: strip -lpthread from the libsoup libs, as it messes
+	up static linking.
+
+2004-11-03  James Willcox  <james@ximian.com>
+
 	* configure.in: Link to libm dynamically since static linking is
 	busted for it on some SUSE platforms.
 

@@ -87,6 +87,7 @@ if test "x$with_libsoup" != "x"; then
 else
   PKG_CHECK_MODULES(LIBSOUP, libsoup-2.2)
   RCD_CFLAGS="${RCD_CFLAGS:+$RCD_CFLAGS }$LIBSOUP_CFLAGS"
+  LIBSOUP_LIBS=`echo $LIBSOUP_LIBS | sed 's/-lpthread//g'`
 fi
 
 RCD_LIBS="$RCD_LIBS $LIBSOUP_LIBS"
