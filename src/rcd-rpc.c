@@ -262,7 +262,7 @@ soup_auth_callback (SoupServerAuthContext *auth_ctx,
     return TRUE;
 } /* auth_callback */
 
-static gpointer
+static gboolean
 run_server_thread(gpointer user_data)
 {
     SoupServer *server;
@@ -288,7 +288,7 @@ run_server_thread(gpointer user_data)
 
     rcd_unix_server_run_async(unix_rpc_callback);
 
-    return NULL;
+    return FALSE;
 } /* run_server_thread */
 
 RCDIdentity *
@@ -338,7 +338,7 @@ void
 rcd_rpc_init(void)
 {
     xmlrpc_env env;
-    GThread *thread;
+    /* GThread *thread; */
 
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Initializing RPC system");
 

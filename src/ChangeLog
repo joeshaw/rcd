@@ -1,3 +1,12 @@
+2002-06-07  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-packsys.c:
+	* rcd-rpc.c:
+	* rcd-unix-server.c: Fix up warnings
+
+	* rcd.c (remove_channel_cb): Uncomment the remove channel call.
+	Requires updated libredcarpet.
+
 2002-06-06  Joe Shaw  <joe@ximian.com>
 
 	* rcd-heartbeat.c: Added.  Runs a heartbeat process which modules

@@ -7,6 +7,8 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <sys/un.h>
 #include <unistd.h>
 

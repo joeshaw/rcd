@@ -83,12 +83,7 @@ initialize_rc_world (void)
 static void
 remove_channel_cb (RCChannel *channel, gpointer user_data)
 {
-    printf("id: %p\n", channel);
-
-    /* FIXME: Doesn't actually work to do a foreach remove for channels */
-#if 0
     rc_world_remove_channel (rc_get_world (), channel);
-#endif
 } /* remove_channel_cb */
 
 static void

@@ -12,6 +12,7 @@
 #include "rcd-query-packages.h"
 #include "rcd-rpc.h"
 #include "rcd-rpc-util.h"
+#include "rcd-subscriptions.h"
 
 typedef struct {
     RCPackman *packman;
