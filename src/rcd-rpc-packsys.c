@@ -1006,10 +1006,20 @@ run_transaction(gpointer user_data)
         g_free (msg);
         rcd_pending_fail (status->pending, -1,
                           rc_packman_get_reason (status->packman));
+
+        if (!status->dry_run && status->log_tid) {
+            rcd_transact_log_send_success (
+                status->log_tid, FALSE,
+                rc_packman_get_reason (status->packman));
+        }
     }
     else {
-        if (! status->dry_run)
+        if (!status->dry_run) {
             update_log (status);
+            
+            if (status->log_tid)
+                rcd_transact_log_send_success (status->log_tid, TRUE, NULL);
+        }
     }
 
     cleanup_after_transaction (status);
@@ -1060,6 +1070,13 @@ verify_packages (RCDTransactionStatus *status)
             rcd_pending_fail (status->pending, -1, msg);
             g_free (msg);
 
+            if (!status->dry_run && status->log_tid) {
+                msg = g_strdup_printf ("Verification of '%s' failed",
+                                       package->spec.name);
+                rcd_transact_log_send_success (status->log_tid, FALSE, msg);
+                g_free (msg);
+            }
+
             cleanup_after_transaction (status);
             return;
         }
@@ -1075,6 +1092,14 @@ verify_packages (RCDTransactionStatus *status)
                 rcd_pending_add_message (status->pending, msg);
                 rcd_pending_fail (status->pending, -1, msg);
                 g_free (msg);
+
+                if (!status->dry_run && status->log_tid) {
+                    msg = g_strdup_printf ("Verification of '%s' failed",
+                                           package->spec.name);
+                    rcd_transact_log_send_success (
+                        status->log_tid, FALSE, msg);
+                    g_free (msg);
+                }
 
                 cleanup_after_transaction (status);
                 return;
@@ -1098,10 +1123,23 @@ download_completed (gboolean    successful,
         return;
     }
 
-    msg = g_strdup_printf ("failed:Download failed - %s", error_message);
-    rcd_pending_add_message (status->pending, msg);
-    rcd_pending_fail (status->pending, -1, msg);
-    g_free (msg);
+    /* A NULL error message indicates that it was cancelled, not a failure */
+    if (!error_message) {
+        rcd_pending_abort (status->pending, -1);
+        error_message = "Cancelled by user";
+    }
+    else {
+        msg = g_strdup_printf ("failed:Download failed - %s", error_message);
+        rcd_pending_add_message (status->pending, msg);
+        rcd_pending_fail (status->pending, -1, msg);
+        g_free (msg);
+    }
+
+    if (!status->dry_run && status->log_tid) {
+        msg = g_strdup_printf ("Download failed - %s", error_message);
+        rcd_transact_log_send_success (status->log_tid, FALSE, msg);
+        g_free (msg);
+    }
 
     cleanup_after_transaction (status);
 } /* download_completed */

@@ -34,6 +34,6 @@ void rcd_transact_log_send_transaction (RCPackageSList  *install_packages,
 
 void rcd_transact_log_send_success     (char            *tid,
                                         gboolean         successful,
-                                        char            *msg);
+                                        const char      *msg);
 
 #endif /* __RCD_TRANSACT_LOG_H__ */

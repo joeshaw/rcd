@@ -31,6 +31,20 @@
 
 2002-07-31  Joe Shaw  <joe@ximian.com>
 
+	* rcd-fetch.c (package_completed_cb): Call the completed callback
+	regardless of whether the transfers were successful or not.
+
+	* rcd-rpc-packsys.c (run_transaction, verify_packages,
+	download_completed): call rcd_transact_log_send_success() with the
+	transaction id when the transaction has finished.
+	(download_completed): Handle cancelled downloads as well as failed
+	downloads.
+
+	* rcd-transact-log.c (success_xml): Make tid and message const.
+	(rcd_transact_log_send_success): Make msg const.
+
+2002-07-31  Joe Shaw  <joe@ximian.com>
+
 	* rcd-rpc-packsys.c (download_packages): Don't call g_file_test()
 	if the package filename is NULL.
 

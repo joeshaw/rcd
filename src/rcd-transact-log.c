@@ -304,7 +304,10 @@ rcd_transact_log_send_transaction (RCPackageSList  *install_packages,
 } /* rcd_transact_log_send_transaction */
 
 static xmlChar *
-success_xml(char *tid, gboolean successful, char *message, int *bytes)
+success_xml(const char *tid,
+            gboolean    successful,
+            const char *message,
+            int        *bytes)
 {
     xmlDoc *doc;
     xmlNode *root;
@@ -348,7 +351,9 @@ success_sent_cb(SoupMessage *message, gpointer data)
 } /* transaction_sent_cb */
 
 void
-rcd_transact_log_send_success (char *tid, gboolean successful, char *msg)
+rcd_transact_log_send_success (char       *tid,
+                               gboolean    successful, 
+                               const char *msg)
 {
     xmlChar *xml_string;
     int bytes;

@@ -636,7 +636,7 @@ package_completed_cb (RCDTransfer *t, gpointer user_data)
     if (rcd_transfer_get_error (t) == RCD_TRANSFER_ERROR_CANCELLED) {
         rc_debug (RC_DEBUG_LEVEL_INFO, "Download of %s cancelled", t->url);
 
-        if (!closure->running_transfers && !closure->successful) {
+        if (!closure->running_transfers) {
             closure->completed_callback (
                 FALSE, closure->error_message, closure->user_data);
             g_free (closure->error_message);
