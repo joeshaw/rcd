@@ -39,6 +39,7 @@
 #include "rcd-transfer.h"
 #include "rcd-subscriptions.h"
 #include "rcd-fetch.h"
+#include "rcd-heartbeat.h"
 
 static void
 debug_message_handler (const char *str, gpointer user_data)
@@ -77,10 +78,33 @@ initialize_rc_world (void)
     rc_world_get_system_packages (world);
 
     rcd_rpc_packsys_register_methods (world);
-
-    /* rcd_query_test (); */
-
 } /* initialize_rc_world */
+
+static void
+remove_channel_cb (RCChannel *channel, gpointer user_data)
+{
+    printf("id: %p\n", channel);
+
+    /* FIXME: Doesn't actually work to do a foreach remove for channels */
+#if 0
+    rc_world_remove_channel (rc_get_world (), channel);
+#endif
+} /* remove_channel_cb */
+
+static void
+refresh_channels_cb (gpointer user_data)
+{
+    rc_world_foreach_channel (rc_get_world (), remove_channel_cb, NULL);
+
+    rcd_fetch_channel_list ();
+    rcd_fetch_all_channels ();
+} /* refresh_channels_cb */
+
+static void
+initialize_heartbeat_funcs (void)
+{
+    rcd_heartbeat_register_func (refresh_channels_cb, NULL);
+} /* initialize_heartbeat_funcs */
 
 int
 main (int argc, char *argv[])
@@ -95,6 +119,9 @@ main (int argc, char *argv[])
     rcd_subscriptions_load ();
 
     rcd_fetch_all_channels ();
+
+    initialize_heartbeat_funcs ();
+    rcd_heartbeat_start ();
 
     rcd_module_init ();
     initialize_rc_world ();

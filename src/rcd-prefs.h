@@ -30,14 +30,16 @@
 
 #include <glib.h>
 
-const gchar *rcd_prefs_get_cache_dir      (void);
-gboolean     rcd_prefs_get_cache_enabled  (void);
+const gchar *rcd_prefs_get_cache_dir          (void);
+gboolean     rcd_prefs_get_cache_enabled      (void);
 
-const gchar *rcd_prefs_get_host           (void);
+const gchar *rcd_prefs_get_host               (void);
 
-gboolean     rcd_prefs_get_http10_enabled (void);
+gboolean     rcd_prefs_get_http10_enabled     (void);
 
-gboolean     rcd_prefs_get_priority       (void);
+gboolean     rcd_prefs_get_priority           (void);
+
+guint32      rcd_prefs_get_heartbeat_interval (void);
 
 #endif /* __RCD_PREFS_H__ */
 

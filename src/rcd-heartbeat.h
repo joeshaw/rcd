@@ -1,7 +1,7 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
 /*
- * rcd-module.h
+ * rcd-heartbeat.h
  *
  * Copyright (C) 2002 Ximian, Inc.
  *
@@ -23,26 +23,16 @@
  * USA.
  */
 
-#ifndef __RCD_MODULE_H__
-#define __RCD_MODULE_H__
+#ifndef __RCD_HEARTBEAT_H__
+#define __RCD_HEARTBEAT_H__
 
-#include <gmodule.h>
+#include <glib.h>
 
-typedef struct _RCDModule RCDModule;
+typedef void (*RCDHeartbeatFunc) (gpointer user_data);
 
-typedef void (*RCDModuleLoadFunc)(RCDModule *module);
+void rcd_heartbeat_start (void);
+void rcd_heartbeat_stop  (void);
 
-struct _RCDModule {
-    GModule *g_module;
+void rcd_heartbeat_register_func (RCDHeartbeatFunc func, gpointer user_data);
 
-    const char *name;
-    const char *description;
-};
-
-/* Loads the modules */
-void rcd_module_init(void);
-
-/* Query to see if a module is on this system */
-gboolean rcd_module_query(const char *name);
-
-#endif /* __RCD_MODULE_H__ */
+#endif /* __RCD_HEARTBEAT_H__ */

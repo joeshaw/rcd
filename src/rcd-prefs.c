@@ -64,3 +64,9 @@ rcd_prefs_get_priority (void)
 {
     return FALSE;
 }
+
+guint32
+rcd_prefs_get_heartbeat_interval (void)
+{
+    return 300;
+} /* rcd_prefs_get_heartbeat_interval */

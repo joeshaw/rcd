@@ -1,3 +1,13 @@
+2002-06-06  Joe Shaw  <joe@ximian.com>
+
+	* rcd-heartbeat.c: Added.  Runs a heartbeat process which modules
+	can register against.
+
+	* rcd-prefs.c (rcd_prefs_get_heartbeat_interval): Added.
+
+	* rcd.c (main): Set up the heartbeat function for refreshing the
+	channels and start it.
+
 2002-06-05  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-packsys.c (packsys_query_file): Call
