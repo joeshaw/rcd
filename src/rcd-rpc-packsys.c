@@ -153,6 +153,14 @@ refresh_channels_cb (gpointer user_data)
     GSList *id_list;
     GSList **ret_list = user_data;
 
+    if (rcd_transaction_is_locked ()) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Can't refresh channels while a transaction is running");
+        if (ret_list)
+            *ret_list = NULL;
+        return;
+    }
+
     /* If we're on an unsupported distro, don't refresh channels. */
     status = rc_distro_get_status ();
     if (status != RC_DISTRO_STATUS_SUPPORTED &&

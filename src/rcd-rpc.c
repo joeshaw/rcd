@@ -406,13 +406,28 @@ rcd_rpc_server_start (int port)
      */
 
     if (port != -1 && rcd_prefs_get_remote_server_enabled ()) {
+        /* Command-line argument, externed.  Ew. */
+        extern char *bind_ipaddress;
+        const char *bind_ip;
+
         if (!port)
             port = rcd_prefs_get_remote_server_port ();
 
         soup_set_ssl_cert_files(SHAREDIR "/rcd.pem",
                                 SHAREDIR "/rcd.pem");
 
-        server = soup_server_new(SOUP_PROTOCOL_HTTPS, port);
+        if (bind_ipaddress)
+            bind_ip = bind_ipaddress;
+        else
+            bind_ip = rcd_prefs_get_string ("/Server/bind-ip");
+
+        if (bind_ip) {
+            server = soup_server_new_with_host (bind_ip,
+                                                SOUP_PROTOCOL_HTTPS,
+                                                port);
+        }
+        else
+            server = soup_server_new(SOUP_PROTOCOL_HTTPS, port);
 
         if (!server) {
             rc_debug (RC_DEBUG_LEVEL_ERROR, "Could not start RPC server on port %d", port);

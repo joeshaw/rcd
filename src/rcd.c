@@ -65,6 +65,7 @@
 /* global variables related to option parsing */
 /* If it isn't declared "static", then it's used "extern" somewhere.  Ew. */
 
+static gboolean show_version = FALSE;
 static gboolean non_daemon_flag = FALSE;
 static gboolean late_background = FALSE;
 static gboolean non_root_flag = FALSE;
@@ -76,35 +77,54 @@ int debug_level = -1;
 int syslog_level = -1;
 gboolean no_network = FALSE;
 gboolean no_modules = FALSE;
+char *bind_ipaddress = NULL;
 
 static void
 option_parsing (int argc, const char **argv)
 {
     const struct poptOption command_line_options[] = {
         POPT_AUTOHELP
+
         { "config", 'f', POPT_ARG_STRING, &config_file, 0,
-          "Specify an alternate config file to read.", NULL },
+          "Specify an alternate config file to read.", "config file" },
+
         { "non-daemon", 'n', POPT_ARG_NONE, &non_daemon_flag, 0,
           "Don't run the daemon in the background.", NULL },
+
         { "late-background", '\0', POPT_ARG_NONE, &late_background, 0,
           "Run the daemon in the background, but not until it is ready "
           "to accept connections.", NULL },
+
         { "allow-non-root", '\0', POPT_ARG_NONE, &non_root_flag, 0,
           "Allow the daemon to be run as a user other than root.", NULL },
+
         { "no-network", '\0', POPT_ARG_NONE, &no_network, 0,
           "Do not download any data from a server.", NULL },
+
         { "no-modules", 'm', POPT_ARG_NONE, &no_modules, 0,
           "Do not load any plugin modules.", NULL },
+
+        { "ipaddress", 'i', POPT_ARG_STRING, &bind_ipaddress, 0,
+          "Bind the remote server only to this IP address.", "ip address" },
+
         { "port", 'p', POPT_ARG_INT, &remote_port, 0,
           "Listen for remote connections on a different port", NULL },
+
         { "no-remote", 'r', POPT_ARG_NONE, &remote_disable, 0,
           "Don't listen for remote connections", NULL },
+
         { "debug", 'd', POPT_ARG_INT, &debug_level, 0,
-          "Set the verbosity of debugging output.", NULL },
+          "Set the verbosity of debugging output.", "0-6" },
+
         { "syslog", 's', POPT_ARG_INT, &syslog_level, 0,
-          "Set the verbosity of syslog output.", NULL },
+          "Set the verbosity of syslog output.", "0-6" },
+
         { "undump", '\0', POPT_ARG_STRING, &dump_file, 0,
           "Initialize daemon from a dump file.", "filename" },
+
+        { "version", '\0', POPT_ARG_NONE, &show_version, 0,
+          "Show version information", NULL },
+
         { NULL, '\0', 0, 0, 0, NULL, NULL }
     };
 
@@ -652,6 +672,12 @@ main (int argc, const char **argv)
                               main_loop);
 
     option_parsing (argc, argv);
+
+    if (show_version) {
+        g_print ("%s\n", rcd_about_name ());
+        g_print ("%s\n\n", rcd_about_copyright ());
+        exit (0);
+    }
 
     if (config_file && !g_file_test (config_file, G_FILE_TEST_EXISTS)) {
         g_printerr ("Unable to find config file '%s'\n", config_file);

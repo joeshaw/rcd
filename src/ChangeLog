@@ -1,3 +1,17 @@
+2002-12-20  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-packsys.c (refresh_channels_cb): We don't want to
+	recurse refreshing channels during multiple heartbeats due to a
+	time warp.
+
+	* rcd-rpc.c (rcd_rpc_server_start): Get the host to bind to first
+	from the command-line, then from rcd.conf.
+
+	* rcd.c (option_parsing): Add -i for binding to only one network
+	interface and --version because we didn't have it before.
+	(main): If --version is passed, print out version and copyright
+	info and exit happily.
+
 2002-12-17  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-autopull.c (rcd_autopull_resolve_and_transact): We need to
