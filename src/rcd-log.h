@@ -32,6 +32,8 @@
 /* If log_path is NULL, use the default path */
 void rcd_log_init (const char *log_path);
 
+void rcd_log_reinit (void);
+
 void rcd_log (RCDLogEntry *entry);
 
 void rcd_log_query (RCDQueryPart *query_parts,

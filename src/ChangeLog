@@ -1,3 +1,25 @@
+2002-07-31  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd.c (option_parsing): Added late-background option to options
+	table.
+	(debug_message_handler): Moved the static PID variable out of the
+	function (and renamed it slightly) so that we won't keep using the
+	parent's PID if we daemonize late.
+	(daemonize): Actually set /tmp/rcd-messages so that it is
+	O_WRONLY.  That allows us to actually write stuff to it. :)
+	(main): Support late-backgrounding.  This requires us to change
+	the order of things slightly.
+	(hello): Broke out the few lines of code that print the greeting
+	so that we don't have to duplicate them for late-backgrounding in
+	main.  Added printing the time, because that just seemed like a
+	nice thing to print.
+
+	* rcd-log.c (rcd_log_reinit): Added.  A small hack to help support
+	--late-background.
+
+	* rcd-rpc.c (rcd_rpc_register_method): Make the "Registering
+	method foo" message level DEBUG, not INFO.
+
 2002-07-31  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-packsys.c (download_packages): Don't call g_file_test()

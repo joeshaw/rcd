@@ -59,6 +59,7 @@
 /* global variables related to option parsing */
 
 static gboolean non_daemon_flag = FALSE;
+static gboolean late_background = FALSE;
 static gboolean non_root_flag = FALSE;
 static int remote_port = 0;
 static gboolean remote_disable = FALSE;
@@ -73,6 +74,8 @@ option_parsing (int argc, const char **argv)
         POPT_AUTOHELP
         { "non-daemon", 'n', POPT_ARG_NONE, &non_daemon_flag, 0,
           "Don't run the daemon in the background.", NULL },
+        { "late-background", '\0', POPT_ARG_NONE, &late_background, 0,
+          "Run the daemon in the background, but not until it is ready to accept connections.", NULL },
         { "allow-non-root", '\0', POPT_ARG_NONE, &non_root_flag, 0,
           "Allow the daemon to be run as a user other than root.", NULL },
         { "port", 'p', POPT_ARG_INT, &remote_port, 0,
@@ -132,58 +135,17 @@ root_check (void)
     }
 }
 
-static void
-daemonize (void)
-{
-    int fork_rv;
-    int i;
-    int log_fd;
-
-    /* We never daemonize when we initialize from a dump file. */
-    if (dump_file != NULL)
-        return;
-
-    if (non_daemon_flag)
-        return;
-
-    fork_rv = fork ();
-    if (fork_rv < 0) {
-        g_printerr ("rcd: fork failed!\n");
-        exit (-1);
-    }
-
-    /* The parent exits. */
-    if (fork_rv > 0)
-        exit (0);
-    
-    /* A daemon should always be in its own process group. */
-    setsid ();
-
-    /* Close all file descriptors. */
-    for (i = getdtablesize (); i >= 0; --i)
-        close (i);
-
-    open ("/dev/null", O_RDWR); /* open /dev/null as stdin*/
-
-    /* Open a new file for our logging file descriptor. */
-    log_fd = open ("/tmp/rcd-messages",
-                   O_CREAT | O_APPEND,
-                   S_IRUSR | S_IWUSR);
-
-    dup (log_fd); /* dup log_fd to stdout */
-    dup (log_fd); /* dup log_fd to stderr */
-}
+static int pid_for_messages = 0;
 
 static void
 debug_message_handler (const char *str, RCDebugLevel level, gpointer user_data)
 {
-    static int pid = 0;
     char *log_msg;
 
-    if (pid == 0)
-        pid = getpid ();
+    if (pid_for_messages == 0)
+        pid_for_messages = getpid ();
 
-    log_msg = g_strdup_printf ("[%d] %s\n", pid, str);
+    log_msg = g_strdup_printf ("[%d] %s\n", pid_for_messages, str);
 
     if (level <= rcd_prefs_get_debug_level ()) {
         /* If we've daemonized, stderr has been redirected to the
@@ -204,15 +166,76 @@ debug_message_handler (const char *str, RCDebugLevel level, gpointer user_data)
 }
 
 static void
+hello (void)
+{
+    time_t t;
+    char *time_str;
+    
+    rc_debug (RC_DEBUG_LEVEL_ALWAYS, "%s", rcd_about_name ());
+    rc_debug (RC_DEBUG_LEVEL_ALWAYS, "%s", rcd_about_copyright ());
+
+    time (&t);
+    time_str = ctime (&t);
+    time_str[strlen(time_str)-1] = '\0'; /* trim off the newline */
+
+    rc_debug (RC_DEBUG_LEVEL_ALWAYS, "Start time: %s", time_str);
+}
+
+static void
 initialize_logging (void)
 {
     rcd_log_init (NULL); /* use default path */
 
     rc_debug_add_handler (debug_message_handler, RC_DEBUG_LEVEL_ALWAYS, NULL);
 
-    rc_debug (RC_DEBUG_LEVEL_ALWAYS, "%s", rcd_about_name ());
-    rc_debug (RC_DEBUG_LEVEL_ALWAYS, "%s", rcd_about_copyright ());
+    hello ();
+
 } /* initialize_logging */
+
+static void
+daemonize (void)
+{
+    int fork_rv;
+    int i;
+    int log_fd;
+    
+    /* We never daemonize when we initialize from a dump file. */
+    if (dump_file != NULL)
+        return;
+
+    if (non_daemon_flag)
+        return;
+
+    fork_rv = fork ();
+    if (fork_rv < 0) {
+        g_printerr ("rcd: fork failed!\n");
+        exit (-1);
+    }
+
+    /* The parent exits. */
+    if (fork_rv > 0)
+        exit (0);
+
+    /* Clear out the PID, just in case we are daemonizing late. */
+    pid_for_messages = 0;
+    
+    /* A daemon should always be in its own process group. */
+    setsid ();
+
+    /* Close all file descriptors. */
+    for (i = getdtablesize (); i >= 0; --i)
+        close (i);
+
+    open ("/dev/null", O_RDWR); /* open /dev/null as stdin */
+
+    /* Open a new file for our logging file descriptor.  This
+       will be the fd 1, stdout. */
+    log_fd = open ("/tmp/rcd-messages",
+                   O_WRONLY | O_CREAT | O_APPEND,
+                   S_IRUSR | S_IWUSR);
+    
+    dup (log_fd); /* dup log_fd to stdout */
+}
 
 static void
 shutdown_world (gpointer user_data)
@@ -340,7 +363,8 @@ main (int argc, const char **argv)
     option_parsing (argc, argv);
 
     root_check ();
-    daemonize ();
+    if (! late_background)
+        daemonize ();
 
     /* Set up SIGTERM and SIGQUIT handlers */
     sig_action.sa_handler = signal_handler;
@@ -361,6 +385,21 @@ main (int argc, const char **argv)
     initialize_rc_world ();
     initialize_rpc ();
     initialize_data ();
+
+    /* We can't daemonize any later than this, so hopefully module initialization
+       won't be slow. */
+    if (late_background) {
+        
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "Running daemon in background.");
+        daemonize ();
+
+        /* We need to reinit logging, since the file descriptor gets closed
+           when we daemonize. */
+        rcd_log_reinit ();
+
+        /* Say hello again, so it gets stored in the log file. */
+        hello ();
+    }
 
     rcd_module_init ();
 

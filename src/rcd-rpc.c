@@ -323,7 +323,7 @@ rcd_rpc_register_method(const char   *method_name,
     if (!registry)
         rcd_rpc_init ();
 
-    rc_debug (RC_DEBUG_LEVEL_INFO,
+    rc_debug (RC_DEBUG_LEVEL_DEBUG,
               "Registering method %s", method_name);
 
     if (privilege_str == NULL)

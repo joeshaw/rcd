@@ -84,6 +84,13 @@ rcd_log_init (const char *log_path)
 }
 
 void
+rcd_log_reinit (void)
+{
+    /* Yeah, this is stupid. */
+    rcd_open_log_file ();
+}
+
+void
 rcd_log (RCDLogEntry *entry)
 {
     char *str;
