@@ -1,3 +1,10 @@
+2004-04-07  Tambet Ingo  <tambet@ximian.com>
+
+	* rcd-rpc-packsys.c (dep_get_package_info_cb): Removed most of the
+	code, it's already in libredcarpet.
+
+	* rcd-rpc.c (soup_auth_callback): Don't leak the identity.
+
 2004-04-07  James Willcox  <james@ximian.com>
 
 	* rcd-transaction.c: (get_packages_to_download):

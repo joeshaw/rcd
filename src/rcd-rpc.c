@@ -349,6 +349,8 @@ soup_auth_callback (SoupServerAuthContext *auth_ctx,
             return FALSE;
     }
 
+    rcd_identity_free (identity);
+
     return TRUE;
 } /* auth_callback */
 

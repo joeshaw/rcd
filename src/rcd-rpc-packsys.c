@@ -1193,51 +1193,9 @@ static void
 dep_get_package_info_cb (RCResolverInfo *info, gpointer user_data)
 {
     GSList **info_list = user_data;
-    char *pkgs;
     char *info_str;
 
-    switch (info->type) {
-    case RC_RESOLVER_INFO_TYPE_NEEDED_BY:
-        pkgs = rc_resolver_info_packages_to_string (info, FALSE);
-        info_str = g_strconcat ("needed by: ", pkgs, NULL);
-        g_free (pkgs);
-        break;
-
-    case RC_RESOLVER_INFO_TYPE_CONFLICTS_WITH:
-        pkgs = rc_resolver_info_packages_to_string (info, FALSE);
-        info_str = g_strconcat ("conflicts with: ", pkgs, NULL);
-        g_free (pkgs);
-        break;
-        
-    case RC_RESOLVER_INFO_TYPE_OBSOLETES:
-        pkgs = rc_resolver_info_packages_to_string (info, FALSE);
-        info_str = g_strconcat ("replaced by: ", pkgs, NULL);
-        g_free (pkgs);
-        break;
-
-    case RC_RESOLVER_INFO_TYPE_DEPENDS_ON:
-        pkgs = rc_resolver_info_packages_to_string (info, FALSE);
-        info_str = g_strconcat ("depended on: ", pkgs, NULL);
-        g_free (pkgs);
-        break;
-
-    case RC_RESOLVER_INFO_TYPE_CHILD_OF:
-        pkgs = rc_resolver_info_packages_to_string (info, FALSE);
-        info_str = g_strconcat ("part of: ", pkgs, NULL);
-        g_free (pkgs);
-        break;    
-
-    case RC_RESOLVER_INFO_TYPE_MISSING_REQ:
-        info_str = g_strconcat ("missing requirement: ",
-                                rc_package_dep_to_string_static (info->missing_req),
-                                NULL);
-        break;
- 
-    default:
-        info_str = rc_resolver_info_to_string (info);
-        break;
-    }
-
+    info_str = rc_resolver_info_to_string (info);
     *info_list = g_slist_append (*info_list, info_str);
 } /* dep_get_package_info_cb */
 
@@ -1480,7 +1438,7 @@ resolve_deps (xmlrpc_env         *env,
         }
         iter = next;
     }
-    
+
     *packages_to_install = rcd_rc_package_slist_to_xmlrpc_op_array (
         extra_install_packages, RCD_PACKAGE_OP_INSTALL, resolver, env);
     XMLRPC_FAIL_IF_FAULT(env);
