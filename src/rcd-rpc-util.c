@@ -494,8 +494,8 @@ rcd_rc_package_to_xmlrpc (RCPackage *package, xmlrpc_env *env)
                                                 package);
 
         if (guess != NULL)
-            RCD_XMLRPC_STRUCT_SET_INT(env, value, "channel_guess",
-                                      rc_channel_get_id (guess));
+            RCD_XMLRPC_STRUCT_SET_STRING(env, value, "channel_guess",
+                                         rc_channel_get_id (guess));
 
         name_installed = 1;
 
