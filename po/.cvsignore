@@ -1,0 +1,6 @@
+*.gmo
+rcd.pot
+POTFILES
+Makefile.in.in
+Makefile.in
+Makefile
