@@ -53,6 +53,26 @@ rcd_recurring_execute (RCDRecurring *recurring)
 }
 
 static void
+rcd_recurring_clean (void)
+{
+    GList *iter;
+
+    iter = recurring_list;
+    while (iter != NULL) {
+        RCDRecurring *recurring = iter->data;
+        GList *next = iter->next;
+
+        if (recurring->removed) {
+            if (recurring->destroy)
+                recurring->destroy (recurring);
+            recurring_list = g_list_delete_link (recurring_list, iter);
+        }
+
+        iter = next;
+    }
+}
+
+static void
 rcd_recurring_execute_list (void)
 {
     static gboolean exec_lock = FALSE;
@@ -84,20 +104,7 @@ rcd_recurring_execute_list (void)
         }
     }
 
-    /* Do a second pass to clean out removed items. */
-    iter = recurring_list;
-    while (iter != NULL) {
-        RCDRecurring *recurring = iter->data;
-        GList *next = iter->next;
-        
-        if (recurring->removed) {
-            if (recurring->destroy)
-                recurring->destroy (recurring);
-            recurring_list = g_list_delete_link (recurring_list, iter);
-        }
-
-        iter = next;
-    }
+    rcd_recurring_clean ();
 
     exec_lock = FALSE;
 }
@@ -242,6 +249,13 @@ rcd_recurring_foreach (GQuark         tag,
     }
 }
 
+static gboolean
+recurring_remove_cb (gpointer user_data)
+{
+    rcd_recurring_clean ();
+    return FALSE;
+}
+
 /* The object is just flagged as removed; the actual removal occurs
    the next time that recurring_list is processed.  This ensures that
    it is safe to remove items from inside of _foreach iterators,
@@ -259,6 +273,11 @@ rcd_recurring_remove (RCDRecurring *recurring)
         return;
 
     recurring->removed = TRUE;
+
+    g_idle_add_full (G_PRIORITY_LOW,
+                     recurring_remove_cb,
+                     NULL,
+                     NULL);
 
     rcd_recurring_setup_timeout ();
 }

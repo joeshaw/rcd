@@ -1,3 +1,11 @@
+2003-09-10  Tambet Ingo  <tambet@ximian.com>
+
+	* rcd-recurring.c (rcd_recurring_clean): New. Remove recurring
+	items which are marked for removal.
+	(rcd_recurring_execute_list): Use rcd_recurring_clean.
+	(rcd_recurring_remove): Add idle callback with low priority to
+	remove item from list.
+
 2003-09-10  Joe Shaw  <joe@ximian.com>
 
 	* rcd-world-remote.c (rcd_world_remote_refresh): Call
