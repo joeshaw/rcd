@@ -38,7 +38,7 @@ int rcd_rpc_register_method (const char        *method_name,
                              RCDAuthActionList *required_privileges,
                              gpointer           user_data);
 
-/* Begins the RPC server thread */
+void rcd_rpc_server_start (void);
 void rcd_rpc_init (void);
 
 #endif /* __RCD_RPC_H__ */

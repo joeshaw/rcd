@@ -1,5 +1,20 @@
 2002-07-01  Joe Shaw  <joe@ximian.com>
 
+	* rcd-fetch.c: Make all the channel metadata functions reference
+	last known good files in /var/lib/rcd, not the cache, and always
+	write them out, even if caching is turned off.
+	(all_channels_cb): If we can't get data for a channel locally,
+	download it.
+
+	* rcd-rpc.c (rcd_rpc_server_start): Split the server starting
+	stuff out of the init function.
+
+	* rcd.c (main): Always try the local functions for channel list,
+	channel data, and news.  Remove a big FIXME since it's fixed,
+	explicitly call the rpc server start function.
+
+2002-07-01  Joe Shaw  <joe@ximian.com>
+
 	* rcd-rpc-packsys.c (find_latest_version): If subscribed_only is
 	set, skip over packages in unsubscribed channels.
 	(packsys_find_latest_version): Take a second parameter: whether to

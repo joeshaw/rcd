@@ -95,26 +95,23 @@ main (int argc, char *argv[])
     initialize_logging ();
     initialize_rc_world ();
 
-    rcd_fetch_news ();
-
     rcd_rpc_log_register_methods ();
     rcd_rpc_news_register_methods ();
 
-    /* FIXME!: if the channel list is in the cache, we are assuming
-       that the individual channel files are also cached.  If they
-       aren't, we will silently fail to load any package info. */
-    if (rcd_fetch_channel_list_local ()) {
-        rcd_subscriptions_load ();
-        rcd_fetch_all_channels_local ();
-    }
-    else {
+    if (!rcd_fetch_channel_list_local ())
         rcd_fetch_channel_list ();
-        rcd_subscriptions_load ();
-        rcd_fetch_all_channels ();
-    }
+
+    rcd_subscriptions_load ();
+
+    /* This will fall back and download from the net if necessary */
+    rcd_fetch_all_channels_local ();
+
+    if (!rcd_fetch_news_local ())
+        rcd_fetch_news ();
 
     rcd_module_init ();
 
+    rcd_rpc_server_start ();
     rcd_heartbeat_start ();
 
     main_loop = g_main_loop_new (NULL, TRUE);

@@ -355,15 +355,22 @@ rcd_rpc_register_method(const char        *method_name,
 } /* rcd_rpc_register_method */
 
 void
+rcd_rpc_server_start (void)
+{
+    run_server_thread (NULL);
+} /* rcd_rpc_server_start */
+
+void
 rcd_rpc_init(void)
 {
     xmlrpc_env env;
-    /* GThread *thread; */
 
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Initializing RPC system");
 
+#if 0
     if (!g_thread_supported())
         g_thread_init(NULL);
+#endif
 
     xmlrpc_env_init(&env);
     registry = xmlrpc_registry_new(&env);
@@ -378,7 +385,4 @@ rcd_rpc_init(void)
 
     /* Register the basic RPC calls (ping, querying for modules, etc.) */
     rcd_rpc_system_register_methods();
-
-    /* FIXME: Probably use g_thread_create() here */
-    g_idle_add(run_server_thread, NULL);
 } /* rcd_rpc_init */

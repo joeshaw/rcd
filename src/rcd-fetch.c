@@ -28,13 +28,40 @@
 #include <config.h>
 #include "rcd-fetch.h"
 
+#include <fcntl.h>
 #include <stdlib.h>
+#include <sys/types.h>
 
 #include <libredcarpet.h>
 #include "rcd-transfer.h"
 #include "rcd-cache.h"
 #include "rcd-news.h"
 #include "rcd-prefs.h"
+
+static void
+write_file_contents (const char *filename, GByteArray *data)
+{
+    char *dir;
+    int fd;
+
+    dir = g_path_get_dirname (filename);
+    if (!g_file_test (dir, G_FILE_TEST_EXISTS) && rc_mkdir (dir, 0755) < 0) {
+        g_warning ("Couldn't create '%s'", dir);
+        g_free (dir);
+        return;
+    }
+    g_free (dir);
+
+    fd = open (filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd < 0) {
+        g_warning ("Couldn't open '%s' for writing", filename);
+        return;
+    }
+
+    rc_write (fd, data->data, data->len);
+
+    rc_close (fd);
+} /* write_file_contents */
 
 static char *
 get_channel_list_url (void)
@@ -85,10 +112,10 @@ rcd_fetch_channel_list (void)
     t = rcd_transfer_new (0, rcd_cache_get_normal_cache ());
     data = rcd_transfer_begin_blocking (t, url);
 
-    if (data == NULL || rcd_transfer_get_error (t)) {
-        /* FIXME: can we give more detail about the problem? */
+    if (rcd_transfer_get_error (t)) {
         rc_debug (RC_DEBUG_LEVEL_CRITICAL,
-                  "Attempt to download the channel list failed.");
+                  "Attempt to download the channel list failed: %s",
+                  rcd_transfer_get_error_string (t));
         goto cleanup;
     }
 
@@ -107,6 +134,7 @@ rcd_fetch_channel_list (void)
     }
 
     rc_world_add_channels_from_xml (rc_get_world (), root->xmlChildrenNode);
+    write_file_contents ("/var/lib/rcd/channels.xml.gz", data);
 
  cleanup:
 
@@ -133,10 +161,8 @@ rcd_fetch_channel_list_local (void)
     xmlNode *root;
     gboolean success = FALSE;
 
-    url = get_channel_list_url ();
-    local_file = rcd_cache_get_local_filename (
-        rcd_cache_get_normal_cache (), url);
-    
+    local_file = "/var/lib/rcd/channels.xml.gz";
+
     if (!g_file_test (local_file, G_FILE_TEST_EXISTS))
         goto cleanup;
         
@@ -163,9 +189,6 @@ rcd_fetch_channel_list_local (void)
     if (url)
         g_free (url);
 
-    if (local_file)
-        g_free (local_file);
-    
     if (buf)
         rc_buffer_unmap_file (buf);
     
@@ -194,11 +217,14 @@ process_channel_cb (RCDTransfer *t, gpointer user_data)
     ChannelFetchClosure *closure = user_data;
     GByteArray *data = closure->data;
     RCChannel *channel = closure->channel;
+    char *local_file;
 
-    g_assert (data != NULL); /* FIXME? */
+    g_assert (data != NULL);
 
     if (rcd_transfer_get_error (t)) {
-        g_assert_not_reached (); /* FIXME */
+        rc_debug (RC_DEBUG_LEVEL_CRITICAL,
+                  "Unable to download %s: %s", t->url,
+                  rcd_transfer_get_error_string (t));
     }
     
     data = g_byte_array_append (data, "\0", 1);
@@ -220,6 +246,19 @@ process_channel_cb (RCDTransfer *t, gpointer user_data)
                                            0);
 
     }
+
+    /* 
+     * FIXME: The above add_packages functions should return success
+     * or failure, and we should only write out the following on
+     * success.  We should ensure that these files are always the last
+     * known good files.
+     */
+    local_file = g_strdup_printf (
+        "/var/lib/rcd/channel-%d.xml%s",
+        rc_channel_get_id (channel),
+        rc_channel_get_pkginfo_compressed (channel) ? ".gz" : "");
+    write_file_contents (local_file, data);
+    g_free (local_file);
 
     rc_debug (RC_DEBUG_LEVEL_INFO,
               "Loaded channel '%s'",
@@ -275,22 +314,20 @@ rcd_fetch_channel (RCChannel *channel)
 gboolean
 rcd_fetch_channel_local (RCChannel *channel)
 {
-    char *url;
     char *local_file;
     RCBuffer *buf;
 
     g_return_val_if_fail (channel != NULL, FALSE);
 
-    /* FIXME: deal with mirrors */
-    url = g_strdup_printf ("%s/%s",
-                           rcd_prefs_get_host (),
-                           rc_channel_get_pkginfo_file (channel));
-    local_file = rcd_cache_get_local_filename (
-        rcd_cache_get_normal_cache (), url);
-    g_free (url);
+    local_file = g_strdup_printf (
+        "/var/lib/rcd/channel-%d.xml%s",
+        rc_channel_get_id (channel),
+        rc_channel_get_pkginfo_compressed (channel) ? ".gz" : "");
 
-    if (!g_file_test (local_file, G_FILE_TEST_EXISTS))
+    if (!g_file_test (local_file, G_FILE_TEST_EXISTS)) {
+        g_free (local_file);
         return FALSE;
+    }
 
     buf = rc_buffer_map_file (local_file);
     g_free (local_file);
@@ -334,9 +371,10 @@ all_channels_cb (RCChannel *channel, gpointer user_data)
 {
     struct FetchAllInfo *info = user_data;
 
-
-    if (info->local)
-        rcd_fetch_channel_local (channel);
+    if (info->local) {
+        if (!rcd_fetch_channel_local (channel))
+            rcd_fetch_channel (channel);
+    }
     else {
         gint id = rcd_fetch_channel (channel);
         if (id != RCD_INVALID_PENDING_ID)
@@ -415,11 +453,13 @@ rcd_fetch_news (void)
     t = rcd_transfer_new (0, rcd_cache_get_normal_cache ());
     data = rcd_transfer_begin_blocking (t, url);
 
-    if (data == NULL || rcd_transfer_get_error (t)) {
+    g_assert (data);
 
-        /* FIXME: we could be a bit more specific here. */
+    if (rcd_transfer_get_error (t)) {
+
         rc_debug (RC_DEBUG_LEVEL_CRITICAL,
-                  "Attempt to download news failed.");
+                  "Attempt to download news failed: %s",
+                  rcd_transfer_get_error_string (t));
         
         goto cleanup;
     }
@@ -443,6 +483,7 @@ rcd_fetch_news (void)
     }
 
     parse_news_xml (doc);
+    write_file_contents ("/var/lib/rcd/news.rdf", data);
 
  cleanup:
 
@@ -462,20 +503,16 @@ rcd_fetch_news (void)
 gboolean
 rcd_fetch_news_local (void)
 {
-    gchar *url, *local_file;
+    gchar *local_file;
     RCBuffer *buf;
     xmlDoc *doc;
 
-    url = get_news_url ();
-    local_file = rcd_cache_get_local_filename (rcd_cache_get_normal_cache (),
-                                               url);
-    g_free (url);
+    local_file = "/var/lib/rcd/news.rdf";
 
     if (! g_file_test (local_file, G_FILE_TEST_EXISTS))
         return FALSE;
     
     buf = rc_buffer_map_file (local_file);
-    g_free (local_file);
 
     if (! buf)
         return FALSE;
