@@ -1130,6 +1130,45 @@ cleanup:
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 static void
+append_dep_info (RCResolverInfo *info, gpointer user_data)
+{
+    char **dep_failure_info = user_data;
+    gboolean debug = FALSE;
+    char *new_info;
+
+    g_assert (dep_failure_info && *dep_failure_info);
+
+    if (getenv ("RCD_DEBUG_DEPS"))
+        debug = TRUE;
+
+    if (debug ||
+        rc_resolver_info_is_error (info) ||
+        rc_resolver_info_is_important (info)) {
+        char *msg = rc_resolver_info_to_str (info);
+
+        new_info = g_strconcat (*dep_failure_info, "\n", msg, NULL);
+
+        g_free (*dep_failure_info);
+        *dep_failure_info = new_info;
+    }
+} /* append_dep_info */
+
+static char *
+get_dep_failure_info (RCResolver *resolver)
+{
+    RCResolverQueue *queue;
+    char *dep_failure_info = g_strdup ("Unresolved dependencies:\n");
+
+    /* FIXME: Choose a best invalid queue */
+    queue = (RCResolverQueue *) resolver->invalid_queues->data;
+
+    rc_resolver_context_foreach_info (queue->context, NULL, -1,
+                                      append_dep_info, &dep_failure_info);
+
+    return dep_failure_info;
+} /* get_dep_failure_info */
+
+static void
 prepend_pkg (RCPackage *pkg, RCPackageStatus status, gpointer user_data)
 {
     GHashTable **hash = user_data;
@@ -1225,7 +1264,11 @@ resolve_deps (xmlrpc_env *env,
         rc_resolver_resolve_dependencies (resolver);
 
     if (!resolver->best_context) {
-        xmlrpc_env_set_fault(env, -604, "Unresolved dependencies");
+        char *dep_failure_info;
+
+        dep_failure_info = get_dep_failure_info (resolver);
+        xmlrpc_env_set_fault(env, -604, dep_failure_info);
+        g_free (dep_failure_info);
         goto cleanup;
     }
 

@@ -296,9 +296,8 @@ rcd_fetch_channel (RCChannel *channel)
                       closure);
 
     /* FIXME: deal with mirrors */
-    url = g_strdup_printf ("%s/%s",
-                           rcd_prefs_get_host (),
-                           rc_channel_get_pkginfo_file (channel));
+    url = rc_maybe_merge_paths (rcd_prefs_get_host (),
+                                rc_channel_get_pkginfo_file (channel));
 
     rcd_transfer_begin (t, url);
     g_free (url);
@@ -619,9 +618,7 @@ download_package_file (RCPackage           *package,
                       closure);
 
     /* FIXME: deal with mirrors */
-    url = g_strdup_printf ("%s/%s",
-                           rcd_prefs_get_host (),
-                           file_url);
+    url = rc_maybe_merge_paths (rcd_prefs_get_host (), file_url);
     rcd_transfer_begin (t, url);
 
     /* Attach a more meaningful description to our pending object. */

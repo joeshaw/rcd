@@ -1,3 +1,12 @@
+2002-07-08  Joe Shaw  <joe@ximian.com>
+
+	* rcd-fetch.c (rcd_fetch_channel, download_package_file): Use
+	rc_maybe_merge_paths() to build the correct paths for downloading
+	channel data and packages not on the host server.
+
+	* rcd-rpc-packsys.c (resolve_deps): Get details on the dependency
+	failure and send them along in the fault.
+
 2002-07-08  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd.c (main): Add a shutdown handler to quit the main loop.
