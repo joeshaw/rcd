@@ -72,6 +72,8 @@ struct _RCDWorldRemote {
 
 struct _RCDWorldRemoteClass {
     RCWorldServiceClass parent_class;
+
+    void (*activated) (RCDWorldRemote *remote);
 };
 
 GType rcd_world_remote_get_type (void);

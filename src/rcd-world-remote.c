@@ -33,6 +33,7 @@
 #include <libredcarpet.h>
 
 #include "rcd-license.h"
+#include "rcd-marshal.h"
 #include "rcd-news.h"
 #include "rcd-prefs.h"
 #include "rcd-transfer-pool.h"
@@ -40,6 +41,13 @@
 #include "rcd-xmlrpc.h"
 
 static RCWorldServiceClass *parent_class;
+
+enum {
+    ACTIVATED,
+    LAST_SIGNAL
+};
+
+static guint signals[LAST_SIGNAL] = { 0 };
 
 static RCPending *rcd_world_remote_fetch (RCDWorldRemote  *remote,
                                           gboolean         local,
@@ -161,9 +169,18 @@ rcd_world_remote_class_init (RCDWorldRemoteClass *klass)
 
     object_class->finalize = rcd_world_remote_finalize;
 
-    world_class->refresh_fn    = rcd_world_remote_refresh;
+    world_class->refresh_fn = rcd_world_remote_refresh;
 
     service_class->assemble_fn = rcd_world_remote_assemble;
+
+    signals[ACTIVATED] =
+        g_signal_new ("activated",
+                      G_TYPE_FROM_CLASS (klass),
+                      G_SIGNAL_RUN_LAST,
+                      G_STRUCT_OFFSET (RCDWorldRemoteClass, activated),
+                      NULL, NULL,
+                      rcd_marshal_VOID__VOID,
+                      G_TYPE_NONE, 0);
 }
 
 static void
@@ -585,8 +602,11 @@ cleanup:
             *err_msg = g_strdup (env.fault_string);
 
         success = FALSE;
-    } else
+    } else {
+        g_signal_emit (remote, signals[ACTIVATED], 0);
+
         xmlrpc_DECREF (value);
+    }
 
     xmlrpc_server_info_free (server);
     xmlrpc_env_clean (&env);

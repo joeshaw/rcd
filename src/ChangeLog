@@ -1,5 +1,10 @@
 2003-09-26  Joe Shaw  <joe@ximian.com>
 
+	* rcd-world-remote.c: Add an "activated" signal for when the
+	RCDWorldRemote successfully activates against an RCE server.
+
+2003-09-26  Joe Shaw  <joe@ximian.com>
+
 	* rcd-world-remote.c (rcd_world_remote_parse_serviceinfo): Don't
 	download privileges in here anymore.  It'll be handed by a module.
 
