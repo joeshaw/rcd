@@ -34,8 +34,8 @@ AC_ARG_WITH(xmlrpc-prefix,
   [  --with-xmlrpc-prefix=PREFIX],
   with_xmlrpc_prefix="$withval")
 
-AC_ARG_WITH(soup, 
-  [  --with-soup=<path>])
+AC_ARG_WITH(libsoup, 
+  [  --with-libsoup=<path>])
 
 ### basic checks
 
@@ -52,40 +52,40 @@ AM_PROG_LIBTOOL
 PKG_CHECK_MODULES(RCD, glib-2.0 gmodule-2.0 gobject-2.0 libxml-2.0 libredcarpet)
 
 ###
-### soup magic
+### libsoup magic
 ###
-if test "x$with_soup" != "x"; then
-  AC_MSG_CHECKING(soup configuration in $with_soup/soup.pc)
+if test "x$with_libsoup" != "x"; then
+  AC_MSG_CHECKING(libsoup configuration in $with_libsoup/soup-2.0.pc)
 
-  if test -f $with_soup/soup.pc || test -l $with_soup/soup.pc; then 
+  if test -f $with_libsoup/soup-2.0.pc || test -l $with_libsoup/soup-2.0.pc; then 
     true
   else
-    echo "couldn't find $with_soup/soup.pc"
-    AC_MSG_ERROR($with_soup must be the top of a built soup tree)
+    echo "couldn't find $with_libsoup/soup-2.0.pc"
+    AC_MSG_ERROR($with_libsoup must be the top of a built libsoup tree)
   fi
 
   AC_MSG_RESULT(done)
 
-  PKG_CONFIG_PATH=${with_soup}${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}
+  PKG_CONFIG_PATH=${with_libsoup}${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}
 
   export PKG_CONFIG_PATH
 
-  PKG_CHECK_MODULES(SOUP, soup >= 0.7.5)
+  PKG_CHECK_MODULES(LIBSOUP, soup-2.0)
 
-  real_with_soup=`cd $with_soup && pwd`
+  real_with_libsoup=`cd $with_libsoup && pwd`
 
-  CPPFLAGS="${CPPFLAGS:+$CPPFLAGS }-I$real_with_soup/src"
+  CPPFLAGS="${CPPFLAGS:+$CPPFLAGS }-I$real_with_libsoup"
 
-  SOUP_LIBS=`echo $SOUP_LIBS | sed 's/-L[[^ ]]* *//g'`
-  SOUP_LIBS=`echo $SOUP_LIBS | sed "s,-lsoup,$real_with_soup/src/libsoup/.libs/libsoup.a,g"`
+  LIBSOUP_LIBS=`echo $LIBSOUP_LIBS | sed 's/-L[[^ ]]* *//g'`
+  LIBSOUP_LIBS=`echo $LIBSOUP_LIBS | sed "s,-lsoup-2.0,$real_with_libsoup/libsoup/.libs/libsoup-2.0.a,g"`
 
   RCD_LIBS=`echo $RCD_LIBS | sed 's/-lsoup//g'`
 else
-  PKG_CHECK_MODULES(SOUP, soup >= 0.7.5)
-  RCD_CFLAGS="${RCD_CFLAGS:+$RCD_CFLAGS }$SOUP_CFLAGS"
+  PKG_CHECK_MODULES(LIBSOUP, soup-2.0)
+  RCD_CFLAGS="${RCD_CFLAGS:+$RCD_CFLAGS }$LIBSOUP_CFLAGS"
 fi
 
-RCD_LIBS="$RCD_LIBS $SOUP_LIBS"
+RCD_LIBS="$RCD_LIBS $LIBSOUP_LIBS"
 
 ###
 ### xmlrpc 
