@@ -28,6 +28,6 @@ rcd_module_load(RCDModule *module)
     module->description = "A Sample Module";
 
     /* Register RPC methods */
-    rcd_rpc_register_method("rcd.sample.add", sample_add, RCD_AUTH_NONE, NULL);
+    rcd_rpc_register_method ("rcd.sample.add", sample_add, NULL, NULL);
 } /* rcd_module_load */
 

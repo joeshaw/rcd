@@ -52,7 +52,7 @@ rcd_module_init(void)
     GDir *dir;
     const char *file_name;
 
-    printf("[%d]: Initializing modules system\n", getpid());
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Initializing modules");
 
     if (!g_module_supported()) {
         g_warning("Modules are not supported on this platform");

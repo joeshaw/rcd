@@ -26,6 +26,7 @@
  */
 
 #include <config.h>
+#include <stdlib.h>
 #include "rcd-prefs.h"
 
 const char *
@@ -44,7 +45,12 @@ rcd_prefs_get_cache_enabled (void)
 const char *
 rcd_prefs_get_host (void)
 {
-    return "http://red-carpet.ximian.com";
+    char *host;
+
+    if ((host = getenv ("RC_MAGIC")))
+        return host;
+    else
+        return "http://red-carpet.ximian.com";
 }
 
 gboolean

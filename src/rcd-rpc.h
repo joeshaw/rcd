@@ -8,10 +8,10 @@
 
 #include "rcd-auth.h"
 
-int rcd_rpc_register_method (const char    *method_name,
-                             xmlrpc_method  method,
-                             RCDAuthAction  required_privileges,
-                             gpointer       user_data);
+int rcd_rpc_register_method (const char        *method_name,
+                             xmlrpc_method      method,
+                             RCDAuthActionList *required_privileges,
+                             gpointer           user_data);
 
 /* Begins the RPC server thread */
 void rcd_rpc_init (void);

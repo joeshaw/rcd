@@ -1,3 +1,21 @@
+2002-05-29  Joe Shaw  <joe@ximian.com>
+
+	* rcd-auth.c: Made more extensible for modules by making ACLs
+	GQuark based and passing around lists of GQuarks for privileges.
+
+	* rcd-identity.c (rcd_identity_from_password_file):
+	* rcd-rpc-packsys.c (rcd_rpc_packsys_register_methods):
+	* rcd-rpc-sample.c (rcd_module_load): 
+	* rcd-rpc-system.c (rcd_rpc_system_register_methods): Update to
+	reflect changes in auth API.
+
+	* rcd-module.c (rcd_module_init): Use rc_debug
+
+	* rcd-prefs.c (rcd_prefs_get_host): Use RC_MAGIC if it is set.
+
+	* rcd-rpc.c (process_rpc_call): Move some shared code between the
+	protocols here.
+
 2002-05-29  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-rpc-packsys.c (packsys_get_channels): Added.

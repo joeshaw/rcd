@@ -468,12 +468,12 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
     rcd_rpc_register_method(
         "rcd.packsys.query",
         packsys_query,
-        RCD_AUTH_VIEW,
+        rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
         world);
 
     rcd_rpc_register_method("rcd.packsys.get_channels",
                             packsys_get_channels,
-                            RCD_AUTH_VIEW,
+                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
                             world);
 
 #if 0

@@ -40,44 +40,13 @@
 #include "rcd-unix-server.h"
 
 typedef struct {
-    const char    *method_name;
-    xmlrpc_method  method;
-    RCDAuthAction  req_privs;
+    const char        *method_name;
+    xmlrpc_method      method;
+    RCDAuthActionList *req_privs;
 } RCDRPCMethodInfo;
 
 static xmlrpc_registry *registry = NULL;
 GHashTable *method_info_hash = NULL;
-
-static GByteArray *
-unix_rpc_callback (GByteArray *in_data)
-{
-    xmlrpc_env env;
-    xmlrpc_mem_block *output;
-    GByteArray *out_data;
-
-    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Handling RPC connection");
-
-    xmlrpc_env_init(&env);
-
-    output = xmlrpc_registry_process_call(
-        &env, registry, NULL, in_data->data, in_data->len);
-
-    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Call processed");
-
-    if (env.fault_occurred) {
-        g_warning ("Some weird fault during registry processing");
-        return NULL;
-    }
-
-    out_data = g_byte_array_new();
-    g_byte_array_append(out_data, 
-                        XMLRPC_TYPED_MEM_BLOCK_CONTENTS(char, output),
-                        XMLRPC_TYPED_MEM_BLOCK_SIZE(char, output));
-
-    xmlrpc_mem_block_free(output);
-
-    return out_data;
-} /* unix_rpc_callback */    
 
 static xmlrpc_mem_block *
 serialize_permission_fault (void)
@@ -103,7 +72,72 @@ cleanup:
     return NULL;
 } /* serialize_permission_fault */
 
+static xmlrpc_mem_block *
+process_rpc_call (xmlrpc_env  *env,
+                  const char  *data,
+                  gsize        size,
+                  RCDIdentity *identity)
+{
+    char *method_name;
+    xmlrpc_value *param_array;
+    RCDRPCMethodInfo *method_info;
+    xmlrpc_mem_block *output;
 
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Handling RPC connection");
+
+    if (getenv ("RCD_ENFORCE_AUTH")) {
+        /* Kind of lame just to get the method name */
+        xmlrpc_parse_call (
+            env, (char *) data, size, &method_name, &param_array);
+        xmlrpc_DECREF (param_array);
+
+        method_info = g_hash_table_lookup (method_info_hash, method_name);
+
+        if (method_info &&
+            !rcd_auth_approve_action (identity,
+                                      method_info->req_privs,
+                                      NULL)) {
+            output = serialize_permission_fault ();
+
+            rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Unable to approve action");
+
+            return output;
+        }
+    }
+        
+    output = xmlrpc_registry_process_call (
+        env, registry, NULL, (char *) data, size);
+
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Call processed");
+
+    return output;
+} /* process_rpc_call */
+    
+static GByteArray *
+unix_rpc_callback (GByteArray *in_data)
+{
+    xmlrpc_env env;
+    xmlrpc_mem_block *output;
+    GByteArray *out_data;
+
+    xmlrpc_env_init(&env);
+
+    output = process_rpc_call (&env, in_data->data, in_data->len, NULL);
+
+    if (env.fault_occurred) {
+        g_warning ("Some weird fault during registry processing");
+        return NULL;
+    }
+
+    out_data = g_byte_array_new();
+    g_byte_array_append(out_data, 
+                        XMLRPC_TYPED_MEM_BLOCK_CONTENTS(char, output),
+                        XMLRPC_TYPED_MEM_BLOCK_SIZE(char, output));
+
+    xmlrpc_mem_block_free(output);
+
+    return out_data;
+} /* unix_rpc_callback */    
 
 static void
 soup_rpc_callback (SoupServerContext *context, SoupMessage *msg, gpointer data)
@@ -111,9 +145,6 @@ soup_rpc_callback (SoupServerContext *context, SoupMessage *msg, gpointer data)
     const char *username;
     RCDIdentity *identity;
     xmlrpc_env env;
-    char *method_name;
-    xmlrpc_value *param_array;
-    RCDRPCMethodInfo *method_info;
     xmlrpc_mem_block *output;
 
     xmlrpc_env_init (&env);
@@ -134,30 +165,13 @@ soup_rpc_callback (SoupServerContext *context, SoupMessage *msg, gpointer data)
             goto finish_request;
         }
     }
+    else
+        identity = NULL;
 
-    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Handling RPC connection");
+    output = process_rpc_call (
+        &env, msg->request.body, msg->request.length, identity);
 
-    if (getenv ("RCD_ENFORCE_AUTH")) {
-        /* Kind of lame just to get the method name */
-        xmlrpc_parse_call (&env, msg->request.body, msg->request.length,
-                           &method_name, &param_array);
-        xmlrpc_DECREF (param_array);
-
-        method_info = g_hash_table_lookup (method_info_hash, method_name);
-
-        if (!rcd_auth_approve_action (identity,
-                                      method_info->req_privs,
-                                      NULL)) {
-            output = serialize_permission_fault ();
-
-            goto finish_request;
-        }
-    }
-        
-    output = xmlrpc_registry_process_call(
-        &env, registry, NULL, msg->request.body, msg->request.length);
-
-    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Call processed");
+    rcd_identity_free (identity);
 
     if (env.fault_occurred) {
         soup_message_set_error(msg, SOUP_ERROR_BAD_REQUEST);
@@ -228,8 +242,10 @@ run_server_thread(gpointer user_data)
 } /* run_server_thread */
 
 int
-rcd_rpc_register_method(const char *method_name, xmlrpc_method method,
-                        RCDAuthAction required_privs, gpointer user_data)
+rcd_rpc_register_method(const char        *method_name,
+                        xmlrpc_method      method,
+                        RCDAuthActionList *required_privs,
+                        gpointer           user_data)
 {
     xmlrpc_env env;
     RCDRPCMethodInfo *info;

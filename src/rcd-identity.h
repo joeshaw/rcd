@@ -36,7 +36,7 @@ struct _RCDIdentity {
     gchar *username;
     gchar *password;
 
-    int privileges;
+    RCDAuthActionList *privileges;
 };
 
 RCDIdentity *rcd_identity_new  (void);

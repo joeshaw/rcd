@@ -83,7 +83,7 @@ rcd_identity_from_password_file (const char *username)
         id = rcd_identity_new ();
         id->username = g_strdup (user_info[0]);
         id->password = g_strdup (user_info[1]);
-        id->privileges = rcd_string_to_auth_action (user_info[2]);
+        id->privileges = rcd_string_to_auth_action_list (user_info[2]);
 
         g_strfreev (user_info);
         break;
