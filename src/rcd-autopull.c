@@ -23,9 +23,13 @@
  */
 
 #include <config.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/types.h>
 #include <libredcarpet.h>
 
 #include "rcd-module.h"
+#include "rcd-fetch.h"
 #include "rcd-recurring.h"
 #include "rcd-transaction.h"
 #include "rcd-transfer.h"
@@ -37,6 +41,8 @@ typedef struct _RCDAutopull RCDAutopull;
 
 struct _RCDAutopull {
     RCDRecurring recurring;
+
+    int refs;
 
     char *name;
 
@@ -53,6 +59,11 @@ struct _RCDAutopull {
        packages */
     GSList *all_to_add;
     GSList *all_to_subtract;
+
+    /* This keeps an autopull session from being re-executed before
+       the previous run is finished.  This can only happen if the
+       interval is stupidly short. */
+    gboolean locked; 
 };
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
@@ -368,28 +379,135 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
+struct FetchChannels {
+    void (*finished_cb) (gpointer);
+    gpointer user_data;
+    GSList *ids;
+};
+
+static int
+fetch_channels_cb (gpointer user_data)
+{
+    struct FetchChannels *frc = user_data;
+    gboolean working = FALSE;
+    GSList *iter;
+
+    for (iter = frc->ids; iter && ! working; iter = iter->next) {
+        gint pend_id = GPOINTER_TO_INT (iter->data);
+        if (pend_id != RCD_INVALID_PENDING_ID) {
+            RCDPending *pending = rcd_pending_lookup_by_id (pend_id);
+            if (pending && rcd_pending_is_active (pending)) {
+                working = TRUE;
+            }
+        }
+    }
+
+    if (! working) {
+        if (frc->finished_cb)
+            frc->finished_cb (frc->user_data);
+        g_slist_free (frc->ids);
+        g_free (frc);
+
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+static void
+rcd_autopull_fetch_all_channels (RCDAutopull *pull,
+                                 void (*finished_cb) (gpointer),
+                                 gpointer user_data)
+{
+    struct FetchChannels *frc;
+
+    g_return_if_fail (pull != NULL);
+
+
+    frc = g_new0 (struct FetchChannels, 1);
+    
+    frc->finished_cb = finished_cb;
+    frc->user_data   = user_data;
+
+    /* Start the package info downloads */
+    frc->ids         = rcd_fetch_all_channels ();
+
+    /* Launch our timeout that waits for the download to finish
+       before proceeding. */
+
+    g_timeout_add (500, fetch_channels_cb, frc);
+}
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+static RCDAutopull *
+rcd_autopull_ref (RCDAutopull *pull)
+{
+    if (pull != NULL) {
+        g_assert (pull->refs >= 0);
+        ++pull->refs;
+    }
+    return pull;
+}
+
+static void
+rcd_autopull_unref (RCDAutopull *pull)
+{
+    if (pull == NULL)
+        return;
+
+    g_assert (pull->refs > 0);
+    --pull->refs;
+
+    if (pull->refs == 0) {
+
+        g_free (pull->name);
+
+        g_slist_foreach (pull->channels_to_update,
+                         (GFunc) rc_channel_unref,
+                         NULL);
+        g_slist_free (pull->channels_to_update);
+
+        rc_package_slist_unref (pull->packages_to_update);
+        g_slist_free (pull->packages_to_update);
+
+        rc_package_slist_unref (pull->packages_to_hold);
+        g_slist_free (pull->packages_to_hold);
+        
+        rc_package_slist_unref (pull->packages_to_install);
+        g_slist_free (pull->packages_to_install);
+
+        rc_package_slist_unref (pull->packages_to_remove);
+        g_slist_free (pull->packages_to_remove);
+
+        rc_package_slist_unref (pull->all_to_add);
+        g_slist_free (pull->all_to_add);
+
+        rc_package_slist_unref (pull->all_to_subtract);
+        g_slist_free (pull->all_to_subtract);
+    }
+}
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
 static void
 ap_rec_destroy (RCDRecurring *rec)
 {
     RCDAutopull *pull = (RCDAutopull *) rec;
 
-    g_free (pull->name);
+    rcd_autopull_unref (pull);
+}
 
-    g_slist_foreach (pull->channels_to_update,
-                     (GFunc) rc_channel_unref,
-                     NULL);
-
-    rc_package_slist_unref (pull->packages_to_update);
-    g_slist_free (pull->packages_to_update);
-
-    rc_package_slist_unref (pull->packages_to_hold);
-    g_slist_free (pull->packages_to_hold);
-
-    rc_package_slist_unref (pull->all_to_add);
-    g_slist_free (pull->all_to_add);
-
-    rc_package_slist_unref (pull->all_to_subtract);
-    g_slist_free (pull->all_to_subtract);
+/* This gets executed after we finish refreshing the channel
+   data for this pull. */
+static void
+ap_rec_execute_part_two (gpointer user_data)
+{
+    RCDAutopull *pull = user_data;
+    rcd_autopull_find_targets (pull);
+    rcd_autopull_resolve_and_transact (pull);
+    pull->locked = FALSE;
+    rcd_autopull_unref (pull);
 }
 
 static void
@@ -397,8 +515,14 @@ ap_rec_execute (RCDRecurring *rec)
 {
     RCDAutopull *pull = (RCDAutopull *) rec;
 
-    rcd_autopull_find_targets (pull);
-    rcd_autopull_resolve_and_transact (pull);
+    if (pull->locked)
+        return;
+    pull->locked = TRUE;
+
+    rcd_autopull_ref (pull);
+    rcd_autopull_fetch_all_channels (pull,
+                                     ap_rec_execute_part_two,
+                                     pull);
 }
 
 static time_t
@@ -419,6 +543,16 @@ ap_rec_first (RCDRecurring *rec, time_t now)
 
         adjust = ((now - first) % pull->interval == 0) ? 0 : 1;
         first += ((now - first) / pull->interval + adjust) * pull->interval;
+    }
+
+    /* If this is a recurring pull with an interval > 14 minutes, add
+       a random amount of time between 0 and 14 minutes to the
+       start-time.  Nobody should have these kind of short autopull
+       intervals except for QA purposes.
+    */
+    if (first != 0 && pull->interval >= 14*60) {
+        /* Another unpardonable sin of random number generation. */
+        first += random () % (14 * 60);
     }
 
     return first;
@@ -442,6 +576,8 @@ rcd_autopull_new (time_t first_pull, guint interval, const char *name)
     RCDAutopull *pull;
 
     pull = g_new0 (RCDAutopull, 1);
+
+    pull->refs = 1;
 
     pull->recurring.tag = g_quark_from_static_string ("autopull");
     
@@ -709,6 +845,40 @@ autopull_from_session_xml_node (xmlNode *node)
     return pull;
 }
 
+/* Walk down through our XML looking for package or channel tags that
+   mention unknown channels.  If we find such a tag, re-fetch our
+   channel list and return. 
+*/
+static void
+rcd_autopull_check_xml_for_unknown_channels (xmlNode *node)
+{
+    xmlNode *node2;
+
+    g_return_if_fail (node != NULL);
+
+    for (node = node->xmlChildrenNode; node; node = node->next) {
+
+        if (! g_strcasecmp (node->name, "session")) {
+
+            for (node2 = node->xmlChildrenNode; node2; node2 = node2->next) {
+
+                if (! g_strcasecmp (node2->name, "package")
+                    || ! g_strcasecmp (node2->name, "channel")) {
+
+                    if (channel_from_xml_props (node2) == NULL) {
+                        /* Channel?  I've never heard of it! */
+
+                        /* FIXME: At this point we need to re-load the
+                           channel list and refresh all of our package
+                           data. */
+                        return;
+                    }
+                }
+            }
+        }
+    }
+}
+
 static void
 rcd_autopull_process_xml (xmlNode *node)
 {
@@ -719,6 +889,8 @@ rcd_autopull_process_xml (xmlNode *node)
                   "This doesn't look like autopull XML!");
         return;
     }
+
+    rcd_autopull_check_xml_for_unknown_channels (node);
 
     /* We reset the check-in interval to the default every time. */
     autopull_checkin_interval = AUTOPULL_CHECKIN_DEFAULT;
@@ -903,6 +1075,9 @@ void rcd_module_load (RCDModule *);
 void
 rcd_module_load (RCDModule *module)
 {
+    int fd;
+    unsigned int seed;
+
     /* Initialize the module */
     module->name = "rcd.autopull";
     module->description = "Autopull";
@@ -911,6 +1086,16 @@ rcd_module_load (RCDModule *module)
     module->interface_minor = 0;
 
     rcd_module = module;
+
+    /* We don't really need to seed srandom from /dev/urandom, but
+       it makes me feel all cool and 31337. */
+    fd = open ("/dev/urandom", O_RDONLY);
+    if (fd >= 0) {
+        read (fd, &seed, sizeof (seed));
+    } else {
+        seed = (guint) time (NULL) + (guint) getpid();
+    }
+    srandom (seed);
 
     recurring_autopull_xml_fetch_init ();
 }

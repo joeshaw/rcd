@@ -1,3 +1,27 @@
+2002-09-20  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-autopull.c (rcd_autopull_fetch_all_channels): Added.
+	Downloads package info for all channels and executes a callback
+	when finishes.
+	(rcd_autopull_ref): Added.
+	(rcd_autopull_unref): Added.  RCDAutopull objects are now
+	reference-counted.
+	(ap_rec_destroy): Changed to just unref the RCDAutopull.
+	(ap_rec_execute): Refresh all channels, then execute a callback
+	which actually does the autopull.
+	(ap_rec_execute_part_two): Added.  This is the callback that gets
+	executed post-refresh.
+	(ap_rec_first): Add 0-14 minutes of fuzz to our start time.
+	(rcd_autopull_new): Initialize ->refs to 1.
+	(rcd_autopull_check_xml_for_unknown_channels): Walk the XML
+	looking for unknown channels.  If we find one we need to re-load
+	the channel list, but this is not implemented yet.
+	(rcd_autopull_process_xml): Call
+	rcd_autopull_check_xml_for_unknown_channels.
+	(rcd_module_load): Seed the random number generator, so that all
+	clients don't get the same amount of fuzz added to their start
+	time.  That would be bad.
+
 2002-09-18  Joe Shaw  <joe@ximian.com>
 
 	* rcd-transaction.c (verify_packages): Check for an RCPackman
