@@ -1501,6 +1501,9 @@ what_provides_cb (RCPackage *pkg,
     xmlrpc_value *spec_value;
     xmlrpc_value *pkg_spec_pair;
 
+    if (info->env->fault_occurred)
+        return;
+
     pkg_value = rcd_rc_package_to_xmlrpc (pkg, info->env);
 
     spec_value = xmlrpc_struct_new (info->env);
@@ -1528,16 +1531,22 @@ packsys_what_provides (xmlrpc_env   *env,
     xmlrpc_value *dep_value;
     RCPackageDep *dep;
 
+    info.array = NULL;
+
+    XMLRPC_FAIL_IF_FAULT (env);
+
     xmlrpc_parse_value (env, param_array, "(V)", &dep_value);
-    if (env->fault_occurred)
-        return NULL;
+    XMLRPC_FAIL_IF_FAULT (env);
 
     dep = rcd_xmlrpc_to_rc_package_dep (dep_value, env);
-
-    info.env = env;
-    info.array = xmlrpc_build_value (env, "()");
+    XMLRPC_FAIL_IF_FAULT (env);
 
     if (dep != NULL) {
+
+        info.env = env;
+        info.array = xmlrpc_build_value (env, "()");
+        XMLRPC_FAIL_IF_FAULT (env);
+
         rc_world_foreach_providing_package (world,
                                             dep,
                                             RC_WORLD_ANY_CHANNEL,
@@ -1546,6 +1555,8 @@ packsys_what_provides (xmlrpc_env   *env,
 
         rc_package_dep_unref (dep);
     }
+
+ cleanup:
 
     return info.array;
 }
@@ -1564,6 +1575,9 @@ what_requires_or_conflicts_cb (RCPackage    *pkg,
     xmlrpc_value *pkg_value;
     xmlrpc_value *dep_value;
     xmlrpc_value *pkg_dep_pair;
+
+    if (info->env->fault_occurred)
+        return;
 
     pkg_value = rcd_rc_package_to_xmlrpc (pkg, info->env);
 
@@ -1592,16 +1606,20 @@ packsys_what_requires (xmlrpc_env   *env,
     xmlrpc_value *dep_value;
     RCPackageDep *dep;
 
+    info.array = NULL;
+
     xmlrpc_parse_value (env, param_array, "(V)", &dep_value);
-    if (env->fault_occurred)
-        return NULL;
+    XMLRPC_FAIL_IF_FAULT (env);
     
     dep = rcd_xmlrpc_to_rc_package_dep (dep_value, env);
-
-    info.env = env;
-    info.array = xmlrpc_build_value (env, "()");
+    XMLRPC_FAIL_IF_FAULT (env);
 
     if (dep != NULL) {
+
+        info.env = env;
+        info.array = xmlrpc_build_value (env, "()");
+        XMLRPC_FAIL_IF_FAULT (env);
+
         rc_world_foreach_requiring_package (world,
                                             dep,
                                             RC_WORLD_ANY_CHANNEL,
@@ -1611,6 +1629,7 @@ packsys_what_requires (xmlrpc_env   *env,
         rc_package_dep_unref (dep);
     }
 
+ cleanup:
     return info.array;
 }
 
@@ -1624,16 +1643,20 @@ packsys_what_conflicts (xmlrpc_env   *env,
     xmlrpc_value *dep_value;
     RCPackageDep *dep;
 
+    info.array = NULL;
+
     xmlrpc_parse_value (env, param_array, "(V)", &dep_value);
-    if (env->fault_occurred)
-        return NULL;
+    XMLRPC_FAIL_IF_FAULT (env);
     
     dep = rcd_xmlrpc_to_rc_package_dep (dep_value, env);
-
-    info.env = env;
-    info.array = xmlrpc_build_value (env, "()");
+    XMLRPC_FAIL_IF_FAULT (env);
 
     if (dep != NULL) {
+
+        info.env = env;
+        info.array = xmlrpc_build_value (env, "()");
+        XMLRPC_FAIL_IF_FAULT (env);
+
         rc_world_foreach_conflicting_package (world,
                                               dep,
                                               RC_WORLD_ANY_CHANNEL,
@@ -1643,6 +1666,7 @@ packsys_what_conflicts (xmlrpc_env   *env,
         rc_package_dep_unref (dep);
     }
 
+ cleanup:
     return info.array;
 }
 

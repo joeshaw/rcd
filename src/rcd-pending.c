@@ -266,9 +266,7 @@ rcd_pending_lookup_by_id (gint id)
 {
     RCDPending *pending;
 
-    g_return_val_if_fail (id > 0, NULL);
-
-    if (id_hash == NULL)
+    if (id <= 0 || id_hash == NULL)
         return NULL;
 
     pending = g_hash_table_lookup (id_hash, GINT_TO_POINTER (id));

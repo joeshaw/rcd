@@ -1,3 +1,17 @@
+2002-09-05  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-rpc-packsys.c (what_requires_or_conflicts_cb): Don't do
+	anything if a fault has occured.
+	(packsys_what_requires): Be more careful about checking for xmlrpc
+	faults.
+	(packsys_what_conflicts): Ditto.
+	(what_provides_cb): Don't do anything if a fault has occured.
+	(packsys_what_provides): Be more careful about checking for xmlrpc
+	faults.
+
+	* rcd-pending.c (rcd_pending_lookup_by_id): Silently return NULL
+	if the passed-in ID is <= 0.
+
 2002-09-04  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-rpc-util.c (rcd_rc_channel_to_xmlrpc): Add the channel's
