@@ -1,3 +1,11 @@
+2002-11-08  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-packsys.c (packsys_get_channel_icon): If the channel
+	just doesn't have an icon, throw a fault before we go around
+	dereferencing NULL pointers.  Also fix a potential leak.
+	(parse_rollback_package_array): Fix the formatting of a thrown
+	fault.
+
 2002-11-06  Joe Shaw  <joe@ximian.com>
 
 	* rcd.c (debug_message_handler): When logging rcd-messages,

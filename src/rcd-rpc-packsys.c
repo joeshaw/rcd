@@ -240,7 +240,7 @@ packsys_get_channel_icon (xmlrpc_env   *env,
     RCWorld *world = user_data;
     int channel_id;
     RCChannel *channel;
-    char *local_file;
+    char *local_file = NULL;
     RCBuffer *buf;
     xmlrpc_value *value = NULL;
 
@@ -251,6 +251,15 @@ packsys_get_channel_icon (xmlrpc_env   *env,
     if (!channel) {
         xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_INVALID_CHANNEL,
                                         "Unable to find channel %d",
+                                        channel_id);
+        goto cleanup;
+    }
+
+    if (!rc_channel_get_icon_file (channel)) {
+        xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_NO_ICON,
+                                        "There is ot icon for channel "
+                                        "'%s' (%d)",
+                                        rc_channel_get_name (channel),
                                         channel_id);
         goto cleanup;
     }
@@ -284,6 +293,8 @@ packsys_get_channel_icon (xmlrpc_env   *env,
     XMLRPC_FAIL_IF_FAULT (env);
 
 cleanup:
+    g_free (local_file);
+    
     if (env->fault_occurred)
         return NULL;
 
@@ -1560,8 +1571,11 @@ parse_rollback_package_array (xmlrpc_value *package_names, xmlrpc_env *env)
         package = rcd_rollback_get_package_by_name (package_name);
 
         if (!package) {
-            xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PACKAGE_NOT_FOUND,
-                                  "No rollback package found by name name");
+            xmlrpc_env_set_fault_formatted (env,
+                                            RCD_RPC_FAULT_PACKAGE_NOT_FOUND,
+                                            "No rollback package found by "
+                                            "name '%s'",
+                                            package_name);
             goto cleanup;
         }
 
