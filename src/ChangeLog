@@ -1,5 +1,24 @@
 2002-08-20  Jon Trowbridge  <trow@ximian.com>
 
+	* rcd-rpc-packsys.c: Ugh... there was some deeply broken code in
+	here.
+	(prepend_pkg): Go back to just appending packages to a list,
+	instead of trying to do fancy hash stuff.  Use the
+	rc_package_status_is_to_be_uninstalled and rc_package_is_installed
+	functions to check the status... looking directly inside of the
+	structs is unreliable and will give you the wrong answer in some
+	cases.
+	(prepend_pkg_pair): Just append packages to a list, instead of
+	trying to do fancy hash stuff.
+	(remove_duplicate_packages): Given a list of packages, remove any
+	duplicates.  Yes, this function is O(N^2)... but it has the
+	decided advantage of actually being correct. :)
+	(resolve_deps): Remove all of the hash cleverness, and just go
+	back to accumulating our packages in lists.  The main problem was
+	that the hashes were keyed on the package spec's quark...  but
+	that is dangerously broken, since multiple packages with the same
+	name can appear in the install/remove lists in some cases.
+
 	* rcd.c (crash_handler): Restore the default SIGSEGV, SIGFPE and
 	SIGBUS handlers after we enter our crash handler.  This makes our
 	crash handling somewhat less flaky.

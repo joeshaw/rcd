@@ -1015,13 +1015,14 @@ dep_get_failure_info (RCResolver *resolver)
 static void
 prepend_pkg (RCPackage *pkg, RCPackageStatus status, gpointer user_data)
 {
-    GHashTable **hash = user_data;
+    GSList **slist = user_data;
 
     if (status == RC_PACKAGE_STATUS_TO_BE_INSTALLED ||
-        (status == RC_PACKAGE_STATUS_TO_BE_UNINSTALLED && pkg->installed)) {
-        g_hash_table_insert (*hash, GINT_TO_POINTER (pkg->spec.nameq), pkg);
-        rc_package_ref (pkg);
-    }
+        (rc_package_status_is_to_be_uninstalled (status)
+         && rc_package_is_installed (pkg))) {
+
+        *slist = g_slist_prepend (*slist, rc_package_ref (pkg));
+    } 
 } /* prepend_pkg */
 
 static void
@@ -1031,32 +1032,12 @@ prepend_pkg_pair (RCPackage *pkg_to_add,
                   RCPackageStatus status_to_remove, 
                   gpointer user_data)
 {
-    GHashTable **hash = user_data;
-
-    g_hash_table_insert (*hash, GINT_TO_POINTER (pkg_to_add->spec.nameq),
-                         pkg_to_add);
-    rc_package_ref (pkg_to_add);
+    GSList **slist = user_data;
+    
+    *slist = g_slist_prepend (*slist, rc_package_ref (pkg_to_add));
 
     /* We don't need to do the removal part of the upgrade */
 } /* prepend_pkg_pair */
-
-static void
-hash_to_list_cb (gpointer key, gpointer value, gpointer user_data)
-{
-    RCPackageSList **list = user_data;
-
-    *list = g_slist_append (*list, value);
-} /* hash_to_list_cb */
-
-static RCPackageSList *
-hash_to_list (GHashTable *hash)
-{
-    RCPackageSList *list = NULL;
-
-    g_hash_table_foreach (hash, hash_to_list_cb, &list);
-
-    return list;
-} /* hash_to_list */
 
 typedef enum {
     RCD_PACKAGE_OP_INSTALL,
@@ -1208,6 +1189,33 @@ cleanup:
 } /* rc_package_slist_to_xmlrpc_op_array */
 
 static void
+remove_duplicate_packages (RCPackageSList **slist)
+{
+    GSList *iter, *iter2;
+
+    /* Yes, this is brazenly O(N^2). */
+
+    iter = *slist;
+    while (iter != NULL) {
+        GSList *next = iter->next;
+
+        for (iter2 = next; iter2 != NULL; iter2 = iter2->next) {
+            RCPackage *pkg = iter->data;
+            RCPackage *pkg2 = iter2->data;
+
+            if (rc_package_spec_equal (RC_PACKAGE_SPEC (pkg),
+                                       RC_PACKAGE_SPEC (pkg2))) {
+                rc_package_unref (pkg);
+                *slist = g_slist_delete_link (*slist, iter);
+                break;
+            }
+        }
+
+        iter = next;
+    }
+}
+
+static void
 resolve_deps (xmlrpc_env         *env,
               xmlrpc_value      **packages_to_install,
               xmlrpc_value      **packages_to_remove,
@@ -1219,8 +1227,6 @@ resolve_deps (xmlrpc_env         *env,
     RCPackageSList *install_packages = NULL;
     RCPackageSList *remove_packages = NULL;
     RCResolver *resolver = NULL;
-    GHashTable *install_hash;
-    GHashTable *remove_hash;
     RCPackageSList *iter;
 
     g_return_if_fail (packages_to_install);
@@ -1286,46 +1292,15 @@ resolve_deps (xmlrpc_env         *env,
         goto cleanup;
     }
 
-    install_hash = g_hash_table_new (NULL, NULL);
-    remove_hash = g_hash_table_new (NULL, NULL);
-
     rc_resolver_context_foreach_install(
-        resolver->best_context, prepend_pkg, &install_hash);
+        resolver->best_context, prepend_pkg, &install_packages);
     rc_resolver_context_foreach_uninstall(
-        resolver->best_context, prepend_pkg, &remove_hash);
+        resolver->best_context, prepend_pkg, &remove_packages);
     rc_resolver_context_foreach_upgrade(
-        resolver->best_context, prepend_pkg_pair, &install_hash);
+        resolver->best_context, prepend_pkg_pair, &install_packages);
 
-    for (iter = install_packages; iter; iter = iter->next) {
-        RCPackage *p = iter->data;
-
-        if (g_hash_table_lookup (install_hash,
-                                 GINT_TO_POINTER (p->spec.nameq))) {
-            g_hash_table_remove (install_hash,
-                                 GINT_TO_POINTER (p->spec.nameq));
-            rc_package_unref (p);
-        }
-    }
-
-    for (iter = remove_packages; iter; iter = iter->next) {
-        RCPackage *p = iter->data;
-
-        if (g_hash_table_lookup (remove_hash,
-                                 GINT_TO_POINTER (p->spec.nameq))) {
-            g_hash_table_remove (remove_hash,
-                                 GINT_TO_POINTER (p->spec.nameq));
-            rc_package_unref (p);
-        }
-    }
-
-    rc_package_slist_unref (install_packages);
-    rc_package_slist_unref (remove_packages);
-
-    install_packages = hash_to_list (install_hash);
-    remove_packages = hash_to_list (remove_hash);
-    
-    g_hash_table_destroy (install_hash);
-    g_hash_table_destroy (remove_hash);
+    remove_duplicate_packages (&install_packages);
+    remove_duplicate_packages (&remove_packages);
 
     *packages_to_install = rcd_rc_package_slist_to_xmlrpc_op_array (
         install_packages, RCD_PACKAGE_OP_INSTALL, resolver, env);
