@@ -1,3 +1,11 @@
+2002-08-28  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-rpc-packsys.c (prepend_pkg): Use the
+	rc_package_status_is_to_be_installed macro.
+
+	* rcd-autopull.c (pkg_install): Use the
+	rc_package_status_is_to_be_installed macro.
+
 2002-08-28  Joe Shaw  <joe@ximian.com>
 
 	* rcd-prefs.c: Add get/set preferences for the three proxy

@@ -140,7 +140,7 @@ pkg_install (RCPackage *pkg, RCPackageStatus status, gpointer user_data)
 {
     GSList **slist = user_data;
 
-    if (status == RC_PACKAGE_STATUS_TO_BE_INSTALLED)
+    if (rc_package_status_is_to_be_installed (status))
         *slist = g_slist_prepend (*slist,
                                   rc_package_ref (pkg));
 }

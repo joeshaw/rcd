@@ -1093,7 +1093,7 @@ prepend_pkg (RCPackage *pkg, RCPackageStatus status, gpointer user_data)
 {
     GSList **slist = user_data;
 
-    if (status == RC_PACKAGE_STATUS_TO_BE_INSTALLED ||
+    if (rc_package_status_is_to_be_installed (status) ||
         (rc_package_status_is_to_be_uninstalled (status)
          && rc_package_is_installed (pkg))) {
 
