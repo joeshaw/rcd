@@ -54,10 +54,11 @@ struct _RCDWorldRemote {
     gboolean premium_service;
     char *activation_root_url;
 
-    char *distributions_file;
-    char *mirrors_file;
-    char *licenses_file;
-    char *news_file;
+    char *distributions_url;
+    char *mirrors_url;
+    char *licenses_url;
+    char *news_url;
+    char *channels_url;
 
     RCDistro *distro;
     GSList *mirrors;

@@ -39,6 +39,8 @@
 
 #define RCD_WORLD_REMOTE_FETCH_FAILED ((gpointer) 0xdeadbeef)
 
+#define RCD_WORLD_REMOTE_VALID_PENDING(p) ((p) != NULL && (p) != RCD_WORLD_REMOTE_FETCH_FAILED)
+
 static RCWorldServiceClass *parent_class;
 
 static RCPending *rcd_world_remote_fetch (RCDWorldRemote *remote,
@@ -51,10 +53,11 @@ rcd_world_remote_finalize (GObject *obj)
 
     g_free (remote->contact_email);
     g_free (remote->activation_root_url);
-    g_free (remote->distributions_file);
-    g_free (remote->mirrors_file);
-    g_free (remote->licenses_file);
-    g_free (remote->news_file);
+    g_free (remote->distributions_url);
+    g_free (remote->mirrors_url);
+    g_free (remote->licenses_url);
+    g_free (remote->news_url);
+    g_free (remote->channels_url);
 
     if (remote->distro)
         rc_distro_free (remote->distro);
@@ -74,6 +77,9 @@ rcd_world_remote_refresh (RCWorld *world)
     RCPending *pending;
 
     pending = rcd_world_remote_fetch (remote, FALSE);
+
+    if (pending == RCD_WORLD_REMOTE_FETCH_FAILED)
+        return NULL;
 
     return pending;
 }
@@ -161,19 +167,16 @@ rcd_world_remote_get_channel_icon_url (RCDWorldRemote *remote,
 static void
 rcd_world_remote_fetch_distributions (RCDWorldRemote *remote)
 {
-    char *url;
     RCDCacheEntry *entry;
     RCDTransfer *t;
     const GByteArray *data;
 
-    url = rc_maybe_merge_paths (RC_WORLD_SERVICE (remote)->url,
-                                remote->distributions_file);
     entry = rcd_cache_lookup (rcd_cache_get_normal_cache (),
                               "distro_info",
                               RC_WORLD_SERVICE (remote)->unique_id,
                               TRUE);
-    t = rcd_transfer_new (url, RCD_TRANSFER_FLAGS_NONE, entry);
-    g_free (url);
+    t = rcd_transfer_new (remote->distributions_url,
+                          RCD_TRANSFER_FLAGS_NONE, entry);
 
     data = rcd_transfer_begin_blocking (t);
 
@@ -198,18 +201,14 @@ cleanup:
 static void
 rcd_world_remote_fetch_licenses (RCDWorldRemote *remote)
 {
-    char *url;
     RCDCacheEntry *entry;
     RCDTransfer *t;
     const GByteArray *data;
 
-    url = rc_maybe_merge_paths (RC_WORLD_SERVICE (remote)->url,
-                                remote->licenses_file);
     entry = rcd_cache_lookup (rcd_cache_get_normal_cache (),
                               "licenses", RC_WORLD_SERVICE (remote)->unique_id,
                               TRUE);
-    t = rcd_transfer_new (url, RCD_TRANSFER_FLAGS_NONE, entry);
-    g_free (url);
+    t = rcd_transfer_new (remote->licenses_url, RCD_TRANSFER_FLAGS_NONE, entry);
 
     data = rcd_transfer_begin_blocking (t);
 
@@ -230,20 +229,16 @@ cleanup:
 static void
 rcd_world_remote_fetch_news (RCDWorldRemote *remote)
 {
-    char *url;
     RCDCacheEntry *entry;
     RCDTransfer *t;
     const GByteArray *data;
     xmlDoc *doc;
     xmlNode *node;
 
-    url = rc_maybe_merge_paths (RC_WORLD_SERVICE (remote)->url,
-                                remote->news_file);
     entry = rcd_cache_lookup (rcd_cache_get_normal_cache (),
                               "news", RC_WORLD_SERVICE (remote)->unique_id,
                               TRUE);
-    t = rcd_transfer_new (url, RCD_TRANSFER_FLAGS_NONE, entry);
-    g_free (url);
+    t = rcd_transfer_new (remote->news_url, RCD_TRANSFER_FLAGS_NONE, entry);
 
     data = rcd_transfer_begin_blocking (t);
 
@@ -254,6 +249,7 @@ rcd_world_remote_fetch_news (RCDWorldRemote *remote)
         goto cleanup;
     }
 
+#if 0
     {
         /* FIXME!  A silly hack to get around the fact that the
            current RDF file isn't valid utf-8 */
@@ -264,6 +260,7 @@ rcd_world_remote_fetch_news (RCDWorldRemote *remote)
                 data->data[i] = '_';
         }
     }
+#endif
 
     doc = rc_parse_xml_from_buffer (data->data, data->len);
     if (doc == NULL) {
@@ -298,18 +295,14 @@ rcd_world_remote_fetch_mirrors (RCDWorldRemote *remote)
 {
     RCDCacheEntry *entry;
     RCDTransfer *t;
-    gchar *url = NULL;
     const GByteArray *data = NULL;
     xmlDoc *doc = NULL;
     xmlNode *node;
 
-    url = rc_maybe_merge_paths (RC_WORLD_SERVICE (remote)->url,
-                                remote->mirrors_file);
     entry = rcd_cache_lookup (rcd_cache_get_normal_cache (),
                               "mirrors", RC_WORLD_SERVICE (remote)->unique_id,
                               TRUE);
-    t = rcd_transfer_new (url, 0, entry);
-    g_free (url);
+    t = rcd_transfer_new (remote->mirrors_url, 0, entry);
 
     data = rcd_transfer_begin_blocking (t);
 
@@ -542,49 +535,103 @@ rcd_world_remote_per_channel_cb (RCChannel *channel,
 }
 
 static void
-extract_service_info (RCDWorldRemote *remote,
-                      const guint8   *buffer,
-                      gint            buffer_len)
+pending_complete_cb (RCPending *pending, gpointer user_data)
 {
-    RCWorldService *service = RC_WORLD_SERVICE (remote);
-    xmlDoc *doc;
-    xmlNode *root;
-    char *tmp;
+    RCWorld *world = RC_WORLD (user_data);
 
-    doc = rc_parse_xml_from_buffer (buffer, buffer_len);
-    if (!doc)
-        return;
+    rc_world_refresh_complete (world);
 
-    root = xmlDocGetRootElement (doc);
+    g_object_unref (world);
+}
 
-    service->name = xml_get_prop (root, "name");
+static RCPending *
+rcd_world_remote_fetch_channels (RCDWorldRemote *remote, gboolean local)
+{
+    RCDCacheEntry *entry;
+    RCDTransfer *t = NULL;
+    RCPending *pending = NULL;
+    ChannelData channel_data;
+    int N;
+    RCBuffer *buf = NULL;
+    const guint8 *buffer;
+    gsize buffer_len;
 
-    if (!service->name)
-        service->name = g_strdup (service->url);
+    entry = rcd_cache_lookup (rcd_cache_get_normal_cache (),
+                              "channel_list",
+                              RC_WORLD_SERVICE (remote)->unique_id,
+                              TRUE);
 
-    service->unique_id = xml_get_prop (root, "unique_id");
+    if (local) {
+        buf = rcd_cache_entry_map_file (entry);
 
-    if (!service->unique_id)
-        service->unique_id = g_strdup (service->url);
+        if (buf) {
+            buffer = buf->data;
+            buffer_len = buf->size;
+        }
+    }
 
-    remote->contact_email = xml_get_prop (root, "contact_email");
+    if (!buf) {
+        const GByteArray *data;
 
-    tmp = xml_get_prop (root, "premium_service");
-    if (tmp && atoi (tmp) == 1)
-        remote->premium_service = TRUE;
-    g_free (tmp);
+        t = rcd_transfer_new (remote->channels_url,
+                              RCD_TRANSFER_FLAGS_NONE, entry);
 
-    remote->activation_root_url = xml_get_prop (root, "activation_root_url");
+        data = rcd_transfer_begin_blocking (t);
 
-    if (!remote->activation_root_url)
-        remote->activation_root_url = g_strdup (service->url);
+        if (rcd_transfer_get_error (t)) {
+            rc_debug (RC_DEBUG_LEVEL_CRITICAL,
+                      "Unable to downloaded channel list: %s",
+                      rcd_transfer_get_error_string (t));
+            pending = RCD_WORLD_REMOTE_FETCH_FAILED;
+            goto cleanup;
+        }
 
-    remote->distributions_file = xml_get_prop (root, "distributions_file");
-    remote->mirrors_file = xml_get_prop (root, "mirrors_file");
-    remote->licenses_file = xml_get_prop (root, "licenses_file");
-    remote->news_file = xml_get_prop (root, "news_file");
+        buffer = data->data;
+        buffer_len = data->len;
+    }
 
-    xmlFreeDoc (doc);
+    channel_data.remote = remote;
+    channel_data.local = local;
+    channel_data.pool = NULL; /* May be set in _per_channel_cb() */
+
+    N = rc_extract_channels_from_helix_buffer (buffer, buffer_len,
+                                               rcd_world_remote_per_channel_cb,
+                                               &channel_data);
+
+    rc_debug (RC_DEBUG_LEVEL_DEBUG, "Got %d channels files", N);
+
+    if (N < 0) {
+        /* Don't cache invalid data */
+        rcd_cache_entry_invalidate (entry);
+
+        /* Set the pending to failed */
+        pending = RCD_WORLD_REMOTE_FETCH_FAILED;
+    }
+
+    if (channel_data.pool != NULL) {
+        rcd_transfer_pool_begin (channel_data.pool);
+        pending = rcd_transfer_pool_get_pending (channel_data.pool);
+
+        g_object_unref (channel_data.pool);
+    }
+
+    if (rc_world_is_refreshing (RC_WORLD (remote))) {
+        if (RCD_WORLD_REMOTE_VALID_PENDING (pending)) {
+            g_signal_connect (pending, "complete",
+                              (GCallback) pending_complete_cb,
+                              g_object_ref (remote));
+        } else
+            rc_world_refresh_complete (RC_WORLD (remote));
+    }
+
+cleanup:
+    if (buf)
+        rc_buffer_unmap_file (buf);
+
+    if (t)
+        g_object_unref (t);
+
+    return pending;
 }
 
 static gboolean
@@ -677,33 +724,100 @@ is_supported_distro (RCDistro *distro)
     return download_data;
 }
 
-static void
-pending_complete_cb (RCPending *pending, gpointer user_data)
+static gboolean
+extract_service_info (RCDWorldRemote *remote,
+                      const guint8   *buffer,
+                      gint            buffer_len)
 {
-    RCWorld *world = RC_WORLD (user_data);
+    RCWorldService *service = RC_WORLD_SERVICE (remote);
+    xmlDoc *doc;
+    xmlNode *root;
+    char *tmp;
 
-    rc_world_refresh_complete (world);
+    doc = rc_parse_xml_from_buffer (buffer, buffer_len);
+    if (!doc)
+        return FALSE;
 
-    g_object_unref (world);
+    root = xmlDocGetRootElement (doc);
+
+    if (g_strcasecmp (root->name, "service") != 0)
+        return FALSE;
+
+    service->name = xml_get_prop (root, "name");
+
+    if (!service->name)
+        service->name = g_strdup (service->url);
+
+    service->unique_id = xml_get_prop (root, "unique_id");
+
+    if (!service->unique_id)
+        service->unique_id = g_strdup (service->url);
+
+    remote->contact_email = xml_get_prop (root, "contact_email");
+
+    tmp = xml_get_prop (root, "premium_service");
+    if (tmp && atoi (tmp) == 1)
+        remote->premium_service = TRUE;
+    g_free (tmp);
+
+    remote->activation_root_url = xml_get_prop (root, "activation_root_url");
+
+    if (!remote->activation_root_url)
+        remote->activation_root_url = g_strdup (service->url);
+
+    tmp = xml_get_prop (root, "distributions_file");
+    if (tmp) {
+        remote->distributions_url = rc_maybe_merge_paths (service->url, tmp);
+        g_free (tmp);
+    }
+
+    tmp = xml_get_prop (root, "mirrors_file");
+    if (tmp) {
+        remote->mirrors_url = rc_maybe_merge_paths (service->url, tmp);
+        g_free (tmp);
+    }
+
+    tmp = xml_get_prop (root, "licenses_file");
+    if (tmp) {
+        remote->licenses_url = rc_maybe_merge_paths (service->url, tmp);
+        g_free (tmp);
+    }
+
+    tmp = xml_get_prop (root, "news_file");
+    if (tmp) {
+        remote->news_url = rc_maybe_merge_paths (service->url, tmp);
+        g_free (tmp);
+    }
+
+    tmp = xml_get_prop (root, "channels_file");
+    if (tmp) {
+        remote->channels_url = rc_maybe_merge_paths (service->url, tmp);
+        g_free (tmp);
+    }
+
+    xmlFreeDoc (doc);
+    
+    return TRUE;
 }
 
 static RCPending *
-rcd_world_remote_parse_channels_xml (RCDWorldRemote *remote,
-                                     gboolean        local,
-                                     const guint8   *buffer,
-                                     gint            buffer_len)
+rcd_world_remote_parse_serviceinfo (RCDWorldRemote *remote,
+                                    gboolean        local,
+                                    const guint8   *buffer,
+                                    gint            buffer_len)
 {
-    ChannelData channel_data;
-    int N;
     RCPending *pending = NULL;
 
-    extract_service_info (remote, buffer, buffer_len);
+    if (!extract_service_info (remote, buffer, buffer_len)) {
+        rc_debug (RC_DEBUG_LEVEL_CRITICAL, "Unable to parse service info");
+        return RCD_WORLD_REMOTE_FETCH_FAILED;
+    }
 
     if (remote->premium_service && rcd_prefs_get_org_id ()) {
         rcd_fetch_register (NULL, NULL, NULL, NULL);
     }
 
-    if (remote->distributions_file)
+    if (remote->distributions_url)
         rcd_world_remote_fetch_distributions (remote);
     else
         remote->distro = rc_distro_parse_xml (NULL, 0);
@@ -717,46 +831,23 @@ rcd_world_remote_parse_channels_xml (RCDWorldRemote *remote,
                   "Unknown distro info for '%s' [%s], not downloading "
                   "channel data", RC_WORLD_SERVICE (remote)->name,
                   RC_WORLD_SERVICE (remote)->unique_id);
-        return NULL;
+        return RCD_WORLD_REMOTE_FETCH_FAILED;
     } else {
         if (!is_supported_distro (remote->distro))
-            return NULL;
+            return RCD_WORLD_REMOTE_FETCH_FAILED;
     }
 
-    if (remote->mirrors_file)
+    if (remote->mirrors_url)
         rcd_world_remote_fetch_mirrors (remote);
 
-    if (remote->licenses_file)
+    if (remote->licenses_url)
         rcd_world_remote_fetch_licenses (remote);
 
-    if (remote->news_file)
+    if (remote->news_url)
         rcd_world_remote_fetch_news (remote);
 
-    channel_data.remote = remote;
-    channel_data.local = local;
-    channel_data.pool = NULL; /* May be set in _per_channel_cb() */
-
-    N = rc_extract_channels_from_helix_buffer (buffer, buffer_len,
-                                               rcd_world_remote_per_channel_cb,
-                                               &channel_data);
-
-    rc_debug (RC_DEBUG_LEVEL_DEBUG, "Got %d channels files", N);
-
-    if (channel_data.pool != NULL) {
-        rcd_transfer_pool_begin (channel_data.pool);
-        pending = rcd_transfer_pool_get_pending (channel_data.pool);
-
-        g_object_unref (channel_data.pool);
-    }
-
-    if (rc_world_is_refreshing (RC_WORLD (remote))) {
-        if (pending) {
-            g_signal_connect (pending, "complete",
-                              (GCallback) pending_complete_cb,
-                              g_object_ref (remote));
-        } else
-            rc_world_refresh_complete (RC_WORLD (remote));
-    }
+    if (remote->channels_url)
+        pending = rcd_world_remote_fetch_channels (remote, local);
 
     return pending;
 }
@@ -768,9 +859,10 @@ rcd_world_remote_fetch (RCDWorldRemote *remote, gboolean local)
     RCDCacheEntry *entry;
     RCDTransfer *t;
     const GByteArray *data;
+    RCPending *pending;
 
     url = g_strconcat (RC_WORLD_SERVICE (remote)->url,
-                       "/channels.xml.gz", NULL);
+                       "/serviceinfo.xml.gz", NULL);
     entry = rcd_cache_lookup_by_url (rcd_cache_get_normal_cache (),
                                      url, TRUE);
 
@@ -782,14 +874,16 @@ rcd_world_remote_fetch (RCDWorldRemote *remote, gboolean local)
         if (buf) {
             RCPending *pending;
 
-            pending = rcd_world_remote_parse_channels_xml (remote, TRUE,
-                                                           buf->data,
-                                                           buf->size);
+            pending = rcd_world_remote_parse_serviceinfo (remote, TRUE,
+                                                          buf->data,
+                                                          buf->size);
 
             rc_buffer_unmap_file (buf);
-            g_free (url);
 
-            return pending;
+            if (pending != RCD_WORLD_REMOTE_FETCH_FAILED) {
+                g_free (url);
+                return pending;
+            }
         }
     }
 
@@ -800,13 +894,19 @@ rcd_world_remote_fetch (RCDWorldRemote *remote, gboolean local)
 
     if (rcd_transfer_get_error (t)) {
         rc_debug (RC_DEBUG_LEVEL_CRITICAL,
-                  "Attempt to download channel data failed: %s",
+                  "Attempt to download service info failed: %s",
                   rcd_transfer_get_error_string (t));
         return RCD_WORLD_REMOTE_FETCH_FAILED;
     }
 
-    return rcd_world_remote_parse_channels_xml (remote, FALSE,
-                                                data->data, data->len);
+    pending = rcd_world_remote_parse_serviceinfo (remote, FALSE,
+                                                  data->data, data->len);
+
+    /* We don't want to cache bad data */
+    if (pending == RCD_WORLD_REMOTE_FETCH_FAILED)
+        rcd_cache_entry_invalidate (entry);
+
+    return pending;
 }
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */

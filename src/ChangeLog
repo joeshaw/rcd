@@ -1,3 +1,20 @@
+2003-08-26  Joe Shaw  <joe@ximian.com>
+
+	* rcd-world-remote.c (rcd_world_remote_refresh): If the pending is
+	RCD_WORLD_REMOTE_FETCH_FAILED, return NULL.
+	(rcd_world_remote_fetch): Download serviceinfo.xml.gz instead of
+	channels.xml.gz.  If loading the cached data fails, go out and
+	download it again.  Call rcd_world_remote_parse_serviceinfo().
+	(extract_service_info): Get the "channels_file" attribute, which
+	points to the corresponding channels.xml.gz file.  Instead of just
+	storing the filenames and then building the URLs at request time,
+	build them here, ahead of time.
+	(rcd_world_remote_parse_serviceinfo): Added.  Parses out the
+	service info and then fires off transfers for things like
+	channels, licenses, news, mirrors, and distro info.
+	(rcd_world_remote_fetch_channels): Added.  Downloads and parses
+	the channels.xml.gz file.
+
 2003-08-26  Tambet Ingo  <tambet@ximian.com>
 
 	* rcd-xmlrpc.c (soup_request_done): Call callback only if it's
