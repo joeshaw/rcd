@@ -329,8 +329,15 @@ identity_update_cb (RCDIdentity *old_id,
             info->failed = TRUE;
         } else {
             info->out = fopen (PASSWORD_FILE, "w");
+            
             if (info->out == NULL)
                 info->failed = TRUE;
+            else {
+                
+                /* Since we are re-opening the password file,
+                   we have to re-set the permissions. */
+                chmod (PASSWORD_FILE, S_IRUSR | S_IWUSR);
+            }
         }
     }
 

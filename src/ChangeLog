@@ -1,3 +1,8 @@
+2002-07-22  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-identity.c (identity_update_cb): Chmod the password file to
+	600 after we re-open it.
+
 2002-07-21  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-pending.c (rcd_pending_cleanup): There seems to be some
