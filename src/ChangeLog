@@ -1,3 +1,23 @@
+2002-09-26  Joe Shaw  <joe@ximian.com>
+
+	* rcd-fetch.c (rcd_fetch_channel_list_local): Clean out the
+	world's channels before we add our own.
+
+2002-09-25  Joe Shaw  <joe@ximian.com>
+
+	* rcd-transaction.c (fail_transaction): Make this call
+	cleanup_after_transaction() so we don't leak RCDTransactionStatus
+	objects.
+	(download_packages): If the package we're installing is a local
+	one and the integrity of a package can't be confirmed, we have to
+	fail the transaction, since we can't fallback to one from the
+	'net.  Fix a refcount leak in the case where we fail due to
+	insufficient disk space.
+	(rcd_transaction_begin): Because fail_transaction() calls
+	cleanup_after_transaction() which unrefs the status, we have to
+	ref it before we actually start the transaction and unref it after
+	we're done using it.
+
 2002-09-24  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-autopull.c (rcd_autopull_fetch_channel_list): Pass along the

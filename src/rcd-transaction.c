@@ -525,6 +525,8 @@ fail_transaction (RCDTransactionStatus *status,
     if (status->flags == RCD_TRANSACTION_FLAGS_NONE &&
         rcd_prefs_get_premium ())
         rcd_transaction_send_log (status, FALSE, msg);
+
+    cleanup_after_transaction (status);
 } /* fail_transaction */
 
 static gboolean
@@ -535,7 +537,7 @@ run_transaction(gpointer user_data)
     if (rcd_transaction_is_locked ()) {
         fail_transaction (status, status->transaction_pending,
                           "Another transaction is already in progress");
-        goto cleanup;
+        return FALSE;
     }
 
     rcd_transaction_lock ();
@@ -574,7 +576,8 @@ run_transaction(gpointer user_data)
     if (rc_packman_get_error (status->packman)) {
         fail_transaction (status, status->transaction_pending,
                           rc_packman_get_reason (status->packman));
-        goto unlock_and_cleanup;
+        rcd_transaction_unlock ();
+        return FALSE;
     }
     else {
         if (status->flags != RCD_TRANSACTION_FLAGS_DRY_RUN) {
@@ -589,10 +592,7 @@ run_transaction(gpointer user_data)
     if (status->flags != RCD_TRANSACTION_FLAGS_DRY_RUN)
         rc_world_get_system_packages (rc_get_world ());
 
-unlock_and_cleanup:
     rcd_transaction_unlock ();
-
-cleanup:
     cleanup_after_transaction (status);
 
     return FALSE;
@@ -896,6 +896,27 @@ download_packages (RCPackageSList *packages, RCDTransactionStatus *status)
                     if (entry)
                         rcd_cache_entry_invalidate (entry);
 
+                    /*
+                     * We can't download another version of this package
+                     * because it isn't in a channel, and therefore has
+                     * nothing in its history section.
+                     */
+                    if (!rc_package_get_latest_update (package)) {
+                        char *msg;
+
+                        msg = g_strdup_printf ("%s is not a valid package",
+                                               package->package_filename);
+                        /* We begin the transaction pending just to fail it. */
+                        rcd_pending_begin (status->transaction_pending);
+                        fail_transaction (status, status->transaction_pending,
+                                          msg);
+                        g_free (msg);
+                        g_free (package->package_filename);
+                        package->package_filename = NULL;
+
+                        return -1;
+                    }
+
                     g_free (package->package_filename);
                     package->package_filename = NULL;
                 }
@@ -924,6 +945,8 @@ download_packages (RCPackageSList *packages, RCDTransactionStatus *status)
                                rcd_prefs_get_cache_dir ());
         fail_transaction (status, status->download_pending, msg);
         g_free (msg);
+
+        rc_package_slist_unref (status->packages_to_download);
 
         return -1;
     }
@@ -994,6 +1017,7 @@ rcd_transaction_begin (const char          *name,
      * return a negative value (and not triggering the run_transaction()
      * call).
      */
+    rcd_transaction_status_ref (status);
     download_count = download_packages (status->install_packages, status);
 
     if (download_pending_id) {
@@ -1026,6 +1050,7 @@ rcd_transaction_begin (const char          *name,
     if (!download_count &&
         status->flags != RCD_TRANSACTION_FLAGS_DOWNLOAD_ONLY)
         verify_packages (status);
+    rcd_transaction_status_unref (status);
 } /* rcd_transaction_begin */
 
 static RCDTransactionStatus *

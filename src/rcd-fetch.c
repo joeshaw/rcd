@@ -281,6 +281,7 @@ rcd_fetch_channel_list_local (void)
     if (!root)
         goto cleanup;
 
+    rc_world_foreach_channel (rc_get_world (), remove_channel_cb, NULL);
     rc_world_add_channels_from_xml (rc_get_world (), root->xmlChildrenNode);
 
     success = TRUE;
