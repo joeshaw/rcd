@@ -1,3 +1,12 @@
+2002-09-05  Jon Trowbridge  <trow@ximian.com>
+
+	* rugburn/tests/argumentabusetest.py: Added.  This is a test that
+	throws a bunch of bogus arguments at our xmlrpc methods to make
+	sure that the daemon doesn't crash.
+
+	* rugburn/rugburn: Connect to the daemon at /var/run/rcd.  Handle
+	short-circuit failures properly.
+
 2002-09-04  Joe Shaw  <joe@ximian.com>
 
 	* rcd.logrotate: Set a 5 meg limit on the rcd-messages logfile

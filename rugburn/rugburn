@@ -31,7 +31,7 @@ import burntest
 
 ## Make contact with the daemon.
 ## We assume local access only
-url = "/tmp/rcd"
+url = "/var/run/rcd"
 username = None
 password = None
 
@@ -45,7 +45,6 @@ try:
 except:
     sys.stderr.write("Unable to connect to the daemon.\n")
     sys.exit(1)
-
 
 ###
 ### Load anything in 'path' that looks like a test module
@@ -99,7 +98,7 @@ for test in burntest.get_all():
     summary.append([name, errors])
 
     if test.short_circuit:
-        continue
+        break
 
 
 ###
