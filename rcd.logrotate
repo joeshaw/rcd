@@ -1,6 +1,7 @@
 /var/log/rcd/rcd-messages {
 	rotate 5
 	weekly
+	size 5M
 	notifempty
 	missingok
 }
