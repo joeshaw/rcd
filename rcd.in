@@ -1,0 +1,71 @@
+#!/bin/bash
+#
+# Startup script for the Ximian Red Carpet Daemon
+#
+# description: RCD is a daemon through which users can manage software \
+#              their systems.
+#
+# chkconfig: 2345 97 03
+#
+# processname: rcd
+#
+# $Id$
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+# Source additional OPTIONS if we have them.
+if [ -f /etc/sysconfig/rcd ] ; then
+	. /etc/sysconfig/rcd
+fi
+
+$rcd=@prefix@/bin/rcd
+prog=rcd
+RETVAL=0
+
+# Basic function defintions
+
+start() {
+        echo -n $"Starting $prog: "
+        daemon $rcd $OPTIONS
+        RETVAL=$?
+        echo
+        [ $RETVAL = 0 ] && touch /var/lock/subsys/rcd
+        return $RETVAL
+}
+stop() {
+	echo -n $"Stopping $prog: "
+	killproc $rcd
+	RETVAL=$?
+	echo
+        [ $RETVAL = 0 ] && rm -f /var/lock/subsys/rcd
+}
+reload() {
+	echo -n $"Reloading $prog: "
+	killproc $rcd -HUP
+	RETVAL=$?
+	echo
+}
+
+# See how we were called.
+case "$1" in
+  start)
+	start
+	;;
+  stop)
+	stop
+	;;
+  status)
+        status $rcd
+	RETVAL=$?
+	;;
+  restart)
+	stop
+	start
+	;;
+  *)
+	echo $"Usage: $prog {start|stop|restart|status}"
+	exit 1
+esac
+
+exit $RETVAL

@@ -1,7 +1,16 @@
-2002-07-17 Aaron Weber <aaron@ximian.com>
+2002-07-22  Joe Shaw  <joe@ximian.com>
+
+	* Makefile.am: Added the init.d file to be disted.
+
+	* configure.in: Run rcd.in through configure to set the prefix.
+
+	* rcd.in: Added.  chkconfig-compatible init.d file, shamelessly
+	copied from Aidan's postgres-replicator, which was shamelessly
+	copied from the httpd one in Red Hat.
+
+2002-07-17  Aaron Weber <aaron@ximian.com>
 
 	* rcd.8: slight expansion.
-
 	
 2002-07-16  Frank Belew  <frb@ximian.com>
 

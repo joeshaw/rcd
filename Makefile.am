@@ -3,6 +3,9 @@ SUBDIRS = src
 passwddir = $(sysconfdir)/ximian
 passwd_DATA = rc-passwd
 
-EXTRA_DIST = $(passwd_DATA) rcd.8
+initdir = $(sysconfdir)/init.d
+init_DATA = rcd
+
+EXTRA_DIST = $(passwd_DATA) $(init_DATA) rcd.8
 
 man_MANS = rcd.8

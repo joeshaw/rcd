@@ -76,6 +76,7 @@ AC_SUBST(RCD_LIBS)
 AC_OUTPUT([
 Makefile
 src/Makefile
+rcd
 ])
 
 echo "
@@ -83,6 +84,7 @@ echo "
 Configuration:
 
   Source code location: ${srcdir}
+  Prefix:               ${prefix}
   Compiler:             ${CC}
 
   Build CFLAGS:         ${RCD_CFLAGS}
