@@ -4,6 +4,8 @@
 
 	* rcd.passwd: Renamed from rc-passwd
 
+	* Makefile.am: Updated for the above.
+
 2002-08-29  Joe Shaw  <joe@ximian.com>
 
 	* rcd.8: Update a little bit.
