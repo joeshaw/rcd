@@ -1,0 +1,25 @@
+# This is the Red Carpet Daemon password file.  It allows administrators to
+# grant privileges to users perform various actions on the daemon.
+#
+# The file is in the format:
+#
+# username:MD5 hash of password:comma-delimited list of privileges
+#
+# The default list of privileges is below.  Note that privileges are
+# extensible by daemon modules, so if a module registers the "sunshine"
+# privilege, it can be granted to users.
+#
+# none: no privileges
+# view: ability to view settings, channels, and system packages
+# install: ability to install new packages on the system
+# upgrade: ability to upgrade existing packages on the system
+# remove: ability to remove existing packages from the system
+# superuser: ability to do everything
+#
+# Note: root always has superuser privileges when accessing locally, so
+# unless you plan to grant normal users or remote users privileges on your
+# system, you probably don't have to touch this file.
+#
+# (to get the md5 hash of a password, run 'echo -n <password> | md5sum')
+
+# joeuser:76a2173be6393254e72ffa4d6df1030a:view,install,remove,upgrade
