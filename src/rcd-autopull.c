@@ -269,6 +269,7 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
     GSList *to_install = NULL;
     GSList *to_remove = NULL;
     RCDTransactionFlags flags;
+    RCDIdentity *dummy_identity;
 
     g_return_if_fail (pull != NULL);
 
@@ -345,11 +346,13 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
         goto cleanup;
     }
 
+    dummy_identity = rcd_identity_new ();
+    dummy_identity->username = g_strdup ("autopull " VERSION);
+    dummy_identity->privileges = \
+        rcd_privileges_from_string ("install, remove, upgrade");
 
     if (to_install != NULL || to_remove != NULL) {
         GSList *iter;
-        RCDIdentity *dummy_identity;
-        RCDTransactionFlags flags;
 
         rc_debug (RC_DEBUG_LEVEL_INFO,
                   "Beginning Autopull '%s'", pull->name);
@@ -364,33 +367,25 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
                       rc_package_to_str_static (iter->data));
         }
 
-        dummy_identity = rcd_identity_new ();
-        dummy_identity->username = g_strdup ("autopull " VERSION);
-        dummy_identity->privileges = rcd_privileges_from_string (
-            "install, remove, upgrade");
-
-        flags = RCD_TRANSACTION_FLAGS_NONE;
-        if (pull->dry_run)
-            flags |= RCD_TRANSACTION_FLAGS_DRY_RUN;
-
-        rcd_transaction_begin (pull->name,
-                               rc_get_world (),
-                               to_install,
-                               to_remove,
-                               flags,
-                               rcd_module->description,
-                               VERSION,
-                               "localhost",
-                               dummy_identity,
-                               NULL, NULL, NULL);
-        
-        rcd_identity_free (dummy_identity);
-
     } else {
+
         rc_debug (RC_DEBUG_LEVEL_INFO,
                   "Autopull '%s': no action necessary.",
                   pull->name);
     }
+
+    rcd_transaction_begin (pull->name,
+                           rc_get_world (),
+                           to_install,
+                           to_remove,
+                           flags,
+                           rcd_module->description,
+                           VERSION,
+                           "localhost",
+                           dummy_identity,
+                           NULL, NULL, NULL);
+    
+    rcd_identity_free (dummy_identity);
 
     /* FIXME: Do we want to use the transaction ID for anything? */
 

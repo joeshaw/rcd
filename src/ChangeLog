@@ -1,5 +1,12 @@
 2002-12-17  Jon Trowbridge  <trow@ximian.com>
 
+	* rcd-autopull.c (rcd_autopull_resolve_and_transact): We need to
+	send a log message back to the server, even if no action is
+	necessary.  (Fixes bug #35743)
+
+	* rcd-transaction.c (rcd_transaction_begin): If the transaction is
+	empty, just send a success message back to the server.
+
 	* rcd-recurring.c (rcd_recurring_execute): Removed an unused
 	variable's declaration.
 

@@ -1115,6 +1115,22 @@ rcd_transaction_begin (const char          *name,
     status->identity = rcd_identity_copy (identity);
     status->start_time = time (NULL);
 
+    if (install_packages == NULL && remove_packages == NULL) {
+
+        if (download_pending_id)
+            *download_pending_id = -1;
+        if (transaction_pending_id)
+            *transaction_pending_id = -1;
+        if (step_pending_id)
+            *step_pending_id = -1;
+
+        if (rcd_prefs_get_premium ())
+            rcd_transaction_send_log (status, TRUE, "No action required.");
+
+        rcd_transaction_status_unref (status);
+        return;
+    }
+
     /*
      * We don't want to allow the shutting down of the daemon while we're
      * in the middle of a transaction.
