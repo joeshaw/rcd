@@ -1,5 +1,13 @@
 2002-06-14  Joe Shaw  <joe@ximian.com>
 
+	* rcd-fetch.c: Added _local functions which read channel data from
+	only the cache and return success.
+
+	* rcd.c (main): Try to load the channels off of disk first and
+	then fetch from the net if they're unavailable.
+
+2002-06-14  Joe Shaw  <joe@ximian.com>
+
 	* rcd-cache.c: Mostly redone.  Most actions are now performed on a
 	per-transfer RCDCacheEntry.  Entity tag and modification data are
 	now kept in a in-memory cache.

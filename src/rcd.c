@@ -114,10 +114,15 @@ main (int argc, char *argv[])
 
     initialize_logging ();
 
-    rcd_fetch_channel_list ();
-    rcd_subscriptions_load ();
-
-    rcd_fetch_all_channels ();
+    if (rcd_fetch_channel_list_local ()) {
+        rcd_subscriptions_load ();
+        rcd_fetch_all_channels_local ();
+    }
+    else {
+        rcd_fetch_channel_list ();
+        rcd_subscriptions_load ();
+        rcd_fetch_all_channels ();
+    }
 
     initialize_heartbeat_funcs ();
     rcd_heartbeat_start ();

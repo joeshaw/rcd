@@ -30,24 +30,32 @@
 
 #include <libredcarpet.h>
 
+/*
+ * Functions marked "local" try to read the data from a last known good
+ * file and return FALSE if unable to load from it.
+ */
+
 /* 
    Download the channel list from the server, then
    add the channels corresponding to our disto to the global
    RCWorld. 
 */
-void rcd_fetch_channel_list (void);
+void     rcd_fetch_channel_list       (void);
+gboolean rcd_fetch_channel_list_local (void);
 
 /* 
    Download a channel's package data from the server,
    storing the packages in our RCWorld.  Returns the id
    of the RCDPending.
 */
-gint rcd_fetch_channel (RCChannel *channel);
+gint     rcd_fetch_channel     (RCChannel *channel);
+gboolean rcd_fet_channel_local (RCChannel *channel);
 
 /*
   Download channel package data for all channels.
 */
-void rcd_fetch_all_channels (void);
+void rcd_fetch_all_channels       (void);
+void rcd_fetch_all_channels_local (void);
 
 /*
  * Download a list of packages and call the specified callback when they

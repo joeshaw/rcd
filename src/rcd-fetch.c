@@ -33,15 +33,11 @@
 #include "rcd-cache.h"
 #include "rcd-prefs.h"
 
-void
-rcd_fetch_channel_list (void)
+static char *
+get_channel_list_url (void)
 {
     RCDistroType *dt;
-    RCDTransfer *t;
-    gchar *url;
-    GByteArray *data = NULL;
-    xmlDoc *doc;
-    xmlNode *root;
+    char *url;
 
     dt = rc_figure_distro ();
     g_assert (dt != NULL); /* FIXME */
@@ -52,8 +48,6 @@ rcd_fetch_channel_list (void)
         rc_debug (RC_DEBUG_LEVEL_INFO, "Distro is %s", dt->unique_name);
     }
 
-    t = rcd_transfer_new (0, rcd_cache_get_normal_cache ());
-
     if (rcd_prefs_get_priority ()) {
         url = g_strdup_printf ("%s/channels.php?distro_target=%s",
                                rcd_prefs_get_host (),
@@ -63,6 +57,21 @@ rcd_fetch_channel_list (void)
                                rcd_prefs_get_host ());
     }
 
+    return url;
+} /* get_channel_list_url */
+
+void
+rcd_fetch_channel_list (void)
+{
+    RCDTransfer *t;
+    gchar *url;
+    GByteArray *data = NULL;
+    xmlDoc *doc;
+    xmlNode *root;
+
+    url = get_channel_list_url ();
+
+    t = rcd_transfer_new (0, rcd_cache_get_normal_cache ());
     data = rcd_transfer_begin_blocking (t, url);
     g_free (url);
 
@@ -85,6 +94,47 @@ rcd_fetch_channel_list (void)
     
     xmlFreeDoc (doc);
 }
+
+gboolean
+rcd_fetch_channel_list_local (void)
+{
+    gchar *url;
+    gchar *local_file;
+    RCBuffer *buf;
+    xmlDoc *doc;
+    xmlNode *root;
+
+    url = get_channel_list_url ();
+    local_file = rcd_cache_get_local_filename (
+        rcd_cache_get_normal_cache (), url);
+    g_free (url);
+
+    if (!g_file_test (local_file, G_FILE_TEST_EXISTS))
+        return FALSE;
+        
+    buf = rc_buffer_map_file (local_file);
+    g_free (local_file);
+
+    if (!buf)
+        return FALSE;
+
+    doc = rc_uncompress_xml (buf->data, buf->size);
+
+    rc_buffer_unmap_file (buf);
+
+    if (!doc)
+        return FALSE;
+
+    root = xmlDocGetRootElement (doc);
+    if (!root)
+        return FALSE;
+
+    rc_world_add_channels_from_xml (rc_get_world (), root->xmlChildrenNode);
+    
+    xmlFreeDoc (doc);
+
+    return TRUE;
+}    
 
 typedef struct {
     GByteArray *data;
@@ -183,10 +233,67 @@ rcd_fetch_channel (RCChannel *channel)
     return rcd_pending_get_id (pending);
 }
 
+gboolean
+rcd_fetch_channel_local (RCChannel *channel)
+{
+    char *url;
+    char *local_file;
+    RCBuffer *buf;
+
+    g_return_val_if_fail (channel != NULL, FALSE);
+
+    /* FIXME: deal with mirrors */
+    url = g_strdup_printf ("%s/%s",
+                           rcd_prefs_get_host (),
+                           rc_channel_get_pkginfo_file (channel));
+    local_file = rcd_cache_get_local_filename (
+        rcd_cache_get_normal_cache (), url);
+    g_free (url);
+
+    if (!g_file_test (local_file, G_FILE_TEST_EXISTS))
+        return FALSE;
+
+    buf = rc_buffer_map_file (local_file);
+    g_free (local_file);
+
+    if (!buf)
+        return FALSE;
+
+    /* Clear any old channel info out of the world. */
+    rc_world_remove_packages (rc_get_world (), channel);
+
+    if (rc_channel_get_pkginfo_compressed (channel)) {
+
+        rc_world_add_packages_from_buffer (rc_get_world (),
+                                           channel,
+                                           buf->data,
+                                           buf->size);
+    } else {
+
+        rc_world_add_packages_from_buffer (rc_get_world (),
+                                           channel,
+                                           buf->data,
+                                           0);
+    }
+
+    rc_debug (RC_DEBUG_LEVEL_INFO,
+              "Loaded channel '%s'",
+              rc_channel_get_name (channel));
+
+    rc_buffer_unmap_file (buf);
+
+    return TRUE;
+}
+
 static void
 all_channels_cb (RCChannel *channel, gpointer user_data)
 {
-    rcd_fetch_channel (channel);
+    gboolean local = GPOINTER_TO_INT (user_data);
+
+    if (local)
+        rcd_fetch_channel_local (channel);
+    else
+        rcd_fetch_channel (channel);
 }
 
 void
@@ -194,7 +301,15 @@ rcd_fetch_all_channels (void)
 {
     rc_world_foreach_channel (rc_get_world (),
                               all_channels_cb,
-                              NULL);
+                              GINT_TO_POINTER (FALSE));
+}
+
+void
+rcd_fetch_all_channels_local (void)
+{
+    rc_world_foreach_channel (rc_get_world (),
+                              all_channels_cb,
+                              GINT_TO_POINTER (TRUE));
 }
 
 typedef struct {
