@@ -277,18 +277,21 @@ rc_you_transaction_set_patches (RCYouTransaction *transaction,
     for (iter = patches; iter; iter = iter->next) {
         RCYouPatch *patch = iter->data;
 
-        if (patch->installed)
-            rc_debug (RC_DEBUG_LEVEL_WARNING,
-                      "Patch '%s' already installed, ignoring",
-                      rc_package_spec_get_name (RC_PACKAGE_SPEC (patch)));
-        else if (rc_channel_is_wildcard (patch->channel))
+        if (rc_channel_is_wildcard (patch->channel))
             rc_debug (RC_DEBUG_LEVEL_WARNING,
                       "Could not find channel for patch '%s', ignoring",
                       rc_package_spec_get_name (RC_PACKAGE_SPEC (patch)));
         else
+        {
+            if (patch->installed)
+                rc_debug (RC_DEBUG_LEVEL_WARNING,
+                          "Reinstalling already installed patch '%s'",
+                          rc_package_spec_get_name (RC_PACKAGE_SPEC (patch)));
+
             /* ok, accept */
             transaction->patches = g_slist_prepend (transaction->patches,
                                                     rc_you_patch_ref (patch));
+        }
     }
 }
 

@@ -1,3 +1,8 @@
+2004-09-07  Peter Teichman  <peter@ximian.com>
+
+	* rc-you-transaction.c (rc_you_transaction_set_patches): Allow
+	already-installed patches to be reinstalled
+
 2004-09-01  Tambet Ingo  <tambet@ximian.com>
 
 	* rc-you-transaction.c (you_patch_to_xmlrpc): Implement.
