@@ -135,8 +135,20 @@ rcd_fetch_register (const char *activation_code, const char *email)
 
         success = FALSE;
     }
-    else
+    else {
+        const char *new_host;
+
         rc_debug (RC_DEBUG_LEVEL_INFO, "System registered successfully");
+
+        new_host =
+            rcd_transfer_protocol_http_get_response_header (protocol,
+                                                            "X-RC-Host");
+
+        if (new_host) {
+            rc_debug (RC_DEBUG_LEVEL_INFO, "Setting new host to %s", new_host);
+            rcd_prefs_set_host (new_host);
+        }
+    }
 
     g_byte_array_free (data, TRUE);
 

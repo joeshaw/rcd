@@ -1,5 +1,10 @@
 2002-12-03  Joe Shaw  <joe@ximian.com>
 
+	* rcd-fetch.c (rcd_fetch_register): After activating, if the
+	X-RC-Host header is set, set the machine's host to that value.
+
+2002-12-03  Joe Shaw  <joe@ximian.com>
+
 	* rcd-rpc-util.c (rcd_rc_package_from_xmlrpc_package): Don't
 	bother looking at the installed bit at all.  If the channel id is
 	set, always look for the package in that channel.  Otherwise, fall
