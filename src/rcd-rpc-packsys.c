@@ -33,6 +33,7 @@
 #include "rcd-cache.h"
 #include "rcd-fetch.h"
 #include "rcd-heartbeat.h"
+#include "rcd-package-locks.h"
 #include "rcd-pending.h"
 #include "rcd-prefs.h"
 #include "rcd-query-packages.h"
@@ -1666,6 +1667,70 @@ packsys_what_conflicts (xmlrpc_env   *env,
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
+struct GetLocksInfo {
+    xmlrpc_env *env;
+    xmlrpc_value *array;
+};
+
+static void
+get_lock_cb (RCPackageMatch *match,
+             gpointer        user_data)
+{
+    struct GetLocksInfo *info = user_data;
+    xmlrpc_value *match_value;
+
+    match_value = rcd_rc_package_match_to_xmlrpc (match,
+                                                  info->env);
+    
+    xmlrpc_array_append_item (info->env, info->array, match_value);
+}
+
+static xmlrpc_value *
+packsys_get_locks (xmlrpc_env   *env,
+                   xmlrpc_value *param_array,
+                   void         *user_data)
+{
+    RCWorld *world = user_data;
+    struct GetLocksInfo info;
+
+    info.env = env;
+    info.array = xmlrpc_build_value (env, "()");
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    rc_world_foreach_lock (world,
+                           get_lock_cb,
+                           &info);
+
+ cleanup:
+    return info.array;
+}
+
+static xmlrpc_value *
+packsys_add_lock (xmlrpc_env   *env,
+                  xmlrpc_value *param_array,
+                  void         *user_data)
+{
+    RCWorld *world = user_data;
+    xmlrpc_value *match_value;
+    RCPackageMatch *match;
+    gboolean success = FALSE;
+
+    xmlrpc_parse_value(env, param_array, "(V)", &match_value);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    match = rcd_xmlrpc_to_rc_package_match (match_value, env);
+    if (match) {
+        rc_world_add_lock (world, match);
+        rcd_package_locks_save (world);
+        success = TRUE;
+    }
+
+ cleanup:
+    return xmlrpc_build_value (env, "i", success);
+}
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
 static xmlNode *
 extra_dump_info (void)
 {
@@ -1734,6 +1799,75 @@ packsys_dump(xmlrpc_env   *env,
 
     return value;
 } /* packsys_dump */
+
+static xmlrpc_value *
+packsys_mount_directory(xmlrpc_env   *env,
+                        xmlrpc_value *param_array,
+                        void         *user_data)
+{
+    RCWorld *world = (RCWorld *) user_data;
+    RCChannel *channel = NULL;
+    char *path, *name, *alias;
+    xmlrpc_value *retval;
+
+    xmlrpc_parse_value (env, param_array, "(sss)",
+                        &path, &name, &alias);
+
+    if (g_file_test (path, G_FILE_TEST_IS_DIR)) {
+        channel = rc_world_add_channel_from_directory (world,
+                                                       name, alias,
+                                                       path);
+    }
+
+    retval = xmlrpc_build_value (env, "i", 
+                                 channel ? rc_channel_get_id (channel) : 0);
+    return retval;
+}
+
+static xmlrpc_value *
+packsys_unmount_directory(xmlrpc_env   *env,
+                          xmlrpc_value *param_array,
+                          void         *user_data)
+{
+    RCWorld *world = user_data;
+    RCChannel *channel = NULL;
+    gint cid;
+    xmlrpc_value *retval;
+
+    retval = xmlrpc_build_value (env, "i", 0);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    xmlrpc_parse_value (env, param_array, "(i)", &cid);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    channel = rc_world_get_channel_by_id (world, cid);
+    if (channel == NULL)
+        goto cleanup;
+
+    /* OK, this is sort of a hack.  We only want to allow the user to
+       remove directory-mounted channels, so we only allow the unmount
+       to succeed if the selected channel:
+       (0) actually exists (duh)
+       (1) is transient
+       (2) has refresh magic
+       (3) has a description where the first character is '/'.
+       This is sort of a hack, but should be good enough for 99.9% of
+       all real-life cases. */
+
+    if (channel
+        && rc_channel_get_transient (channel)
+        && rc_channel_has_refresh_magic (channel)) {
+        const char *desc = rc_channel_get_description (channel);
+        if (desc && *desc == '/') {
+            rc_world_remove_channel (world, channel);
+            xmlrpc_DECREF (retval);
+            retval = xmlrpc_build_value (env, "i", 1);
+        }
+    }
+    
+ cleanup:
+    return retval;
+}
 
 static xmlrpc_value *
 packsys_world_sequence_numbers (xmlrpc_env   *env,
@@ -1826,6 +1960,16 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
                             "view",
                             world);
 
+    rcd_rpc_register_method("rcd.packsys.get_locks",
+                            packsys_get_locks,
+                            "view",
+                            world);
+
+    rcd_rpc_register_method("rcd.packsys.add_lock",
+                            packsys_add_lock,
+                            "subscribe", /* FIXME */
+                            world);
+
     rcd_rpc_register_method("rcd.packsys.dump",
                             packsys_dump,
                             "view",
@@ -1859,6 +2003,16 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
     rcd_rpc_register_method("rcd.packsys.unsubscribe",
                             packsys_unsubscribe,
                             "subscribe",
+                            world);
+
+    rcd_rpc_register_method("rcd.packsys.mount_directory",
+                            packsys_mount_directory,
+                            "superuser",
+                            world);
+
+    rcd_rpc_register_method("rcd.packsys.unmount_directory",
+                            packsys_unmount_directory,
+                            "superuser",
                             world);
 
     rcd_rpc_register_method("rcd.packsys.world_sequence_numbers",

@@ -71,6 +71,12 @@ RCPackageDep *rcd_xmlrpc_to_rc_package_dep(xmlrpc_value *value,
 RCPackageDepSList *rcd_xmlrpc_array_to_rc_package_dep_slist(xmlrpc_value *value,
                                                             xmlrpc_env   *env);
 
+xmlrpc_value *rcd_rc_package_match_to_xmlrpc(RCPackageMatch *match,
+                                             xmlrpc_env     *env);
+
+RCPackageMatch *rcd_xmlrpc_to_rc_package_match(xmlrpc_value *value,
+                                               xmlrpc_env   *env);
+
 xmlrpc_value *rcd_rc_package_to_xmlrpc(RCPackage  *package, 
                                        xmlrpc_env *env);
 

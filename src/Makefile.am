@@ -40,6 +40,8 @@ rcd_SOURCES = 			\
 	rcd-module.h		\
 	rcd-news.c		\
 	rcd-news.h		\
+	rcd-package-locks.c	\
+	rcd-package-locks.h	\
 	rcd-pending.c		\
 	rcd-pending.h		\
 	rcd-prefs.c		\

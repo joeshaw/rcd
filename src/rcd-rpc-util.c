@@ -218,6 +218,152 @@ cleanup:
     return dep_list;
 } /* rcd_xmlrpc_array_to_rc_package_dep_slist */
 
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+xmlrpc_value *
+rcd_rc_package_match_to_xmlrpc (RCPackageMatch *match,
+                                xmlrpc_env     *env)
+{
+    xmlrpc_value *value = NULL;
+
+    g_return_val_if_fail (match != NULL, NULL);
+
+    value = xmlrpc_struct_new (env);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    if (rc_package_match_get_dep (match) != NULL) {
+
+        xmlrpc_value *dep_value = xmlrpc_struct_new (env);
+        rcd_rc_package_dep_to_xmlrpc (rc_package_match_get_dep (match),
+                                      dep_value, env);
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        xmlrpc_struct_set_value (env, value, "dep", dep_value);
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        xmlrpc_DECREF (dep_value);
+    }
+
+    if (rc_package_match_get_glob (match) != NULL) {
+        RCD_XMLRPC_STRUCT_SET_STRING (env, value, "glob",
+                                      rc_package_match_get_glob (match));
+    }
+
+    if (rc_package_match_get_channel (match) != NULL) {
+        gint cid = rc_channel_get_id (rc_package_match_get_channel (match));
+        RCD_XMLRPC_STRUCT_SET_INT (env, value, "channel", cid);
+    }
+
+    if (rc_package_match_get_importance (match, NULL) != RC_IMPORTANCE_INVALID) {
+        RCPackageImportance imp;
+        gboolean imp_gteq;
+        imp = rc_package_match_get_importance (match, &imp_gteq);
+        RCD_XMLRPC_STRUCT_SET_INT (env, value, "importance_num",
+                                   (gint) imp);
+        RCD_XMLRPC_STRUCT_SET_STRING (env, value, "importance_str",
+                                      rc_package_importance_to_string (imp));
+        RCD_XMLRPC_STRUCT_SET_INT (env, value, "importance_gteq", imp_gteq);
+    }    
+
+ cleanup:
+    if (env->fault_occurred) /* FIXME: leaks */
+        return NULL;
+
+    return value;
+}
+
+RCPackageMatch *
+rcd_xmlrpc_to_rc_package_match (xmlrpc_value *value,
+                                xmlrpc_env   *env)
+{
+    RCPackageMatch *match;
+    char *glob = NULL;
+    int cid;
+    gboolean did_something = FALSE;
+    
+    g_return_val_if_fail (value != NULL, NULL);
+    g_return_val_if_fail (env != NULL, NULL);
+
+    match = rc_package_match_new ();
+
+    if (xmlrpc_struct_has_key (env, value, "dep")) {
+
+        RCPackageDep *dep;
+        xmlrpc_value *dep_value;
+        dep_value = xmlrpc_struct_get_value (env, value, "dep");
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        dep = rcd_xmlrpc_to_rc_package_dep (dep_value, env);
+        rc_package_match_set_dep (match, dep);
+        rc_package_dep_unref (dep);
+        did_something = TRUE;
+    }
+
+    if (xmlrpc_struct_has_key (env, value, "glob")) {
+
+        RCD_XMLRPC_STRUCT_GET_STRING (env, value, "glob", glob);
+        if (glob && *glob) {
+            rc_package_match_set_glob (match, glob);
+            did_something = TRUE;
+        }
+    }
+
+    if (xmlrpc_struct_has_key (env, value, "channel")) {
+
+        RCChannel *channel;
+        RCD_XMLRPC_STRUCT_GET_INT (env, value, "channel", cid);
+        channel = rc_world_get_channel_by_id (rc_get_world (), cid);
+        if (channel) {
+            rc_package_match_set_channel (match, channel);
+            did_something = TRUE;
+        } else
+            rc_debug (RC_DEBUG_LEVEL_WARNING,
+                      "Unknown channel '%d' in match", cid);
+    }
+
+    if (xmlrpc_struct_has_key (env, value, "importance_str")
+        || xmlrpc_struct_has_key (env, value, "importance_num")) {
+
+        RCPackageImportance imp;
+        gint imp_gteq = 1;
+
+        if (xmlrpc_struct_has_key (env, value, "importance_str")) {
+            char *imp_str;
+            RCD_XMLRPC_STRUCT_GET_STRING (env, value, "importance_str",
+                                          imp_str);
+            imp = rc_string_to_package_importance (imp_str);
+            g_free (imp_str);
+        } else { /* has_key "importance_num" */
+            RCD_XMLRPC_STRUCT_GET_INT (env, value, "importance_num", imp);
+        }
+
+        if (xmlrpc_struct_has_key (env, value, "importance_gteq")) {
+            RCD_XMLRPC_STRUCT_GET_INT (env, value, "importance_gteq",
+                                       imp_gteq);
+        }
+
+        rc_package_match_set_importance (match, imp, imp_gteq);
+
+        did_something = TRUE;
+    }
+
+    if (! did_something) {
+        rc_package_match_free (match);
+        match = NULL;
+    }
+
+ cleanup:
+    if (env->fault_occurred) {
+        rc_package_match_free (match);
+        match = NULL;
+    }
+    g_free (glob);
+    
+    return match;
+}
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
 struct InstalledFlags {
     RCPackage *pkg;
     int installed;
@@ -335,6 +481,9 @@ rcd_rc_package_to_xmlrpc (RCPackage *package, xmlrpc_env *env)
     }
     RCD_XMLRPC_STRUCT_SET_INT(env, value, "installed", installed);
     RCD_XMLRPC_STRUCT_SET_INT(env, value, "name_installed", name_installed);
+
+    RCD_XMLRPC_STRUCT_SET_INT(env, value, "locked",
+                              rc_world_package_is_locked (rc_get_world (), package) ? 1 : 0);
         
 cleanup:
     if (env->fault_occurred) {

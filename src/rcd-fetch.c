@@ -196,7 +196,9 @@ get_channel_list_url (void)
 static void
 remove_channel_cb (RCChannel *channel, gpointer user_data)
 {
-    rc_world_remove_channel (rc_get_world (), channel);
+    if (! rc_channel_has_refresh_magic (channel)) {
+        rc_world_remove_channel (rc_get_world (), channel);
+    }
 } /* remove_channel_cb */
 
 gboolean
@@ -442,6 +444,11 @@ rcd_fetch_channel (RCChannel *channel)
 
     g_return_val_if_fail (channel != NULL, RCD_INVALID_PENDING_ID);
 
+    if (rc_channel_has_refresh_magic (channel)) {
+        rc_channel_use_refresh_magic (channel);
+        return RCD_INVALID_PENDING_ID;
+    }
+
     url = merge_paths (rcd_prefs_get_host (),
                        rc_channel_get_pkginfo_file (channel));
 
@@ -493,6 +500,11 @@ rcd_fetch_channel_local (RCChannel *channel)
     RCBuffer *buf;
 
     g_return_val_if_fail (channel != NULL, FALSE);
+
+    if (rc_channel_has_refresh_magic (channel)) {
+        rc_channel_use_refresh_magic (channel);
+        return TRUE;
+    }
 
     local_file = g_strdup_printf (
         "/var/lib/rcd/channel-%d.xml%s",

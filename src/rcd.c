@@ -43,6 +43,7 @@
 #include "rcd-identity.h"
 #include "rcd-log.h"
 #include "rcd-module.h"
+#include "rcd-package-locks.h"
 #include "rcd-prefs.h"
 #include "rcd-privileges.h"
 #include "rcd-query.h"
@@ -322,6 +323,8 @@ initialize_rc_world (void)
         rc_world_get_system_packages (world);
         
     }
+
+    rcd_package_locks_load (world);
     
     
 } /* initialize_rc_world */
@@ -647,7 +650,7 @@ main (int argc, const char **argv)
 
     if (remote_disable)
         remote_port = -1;
-
+    
     rcd_rpc_server_start (remote_port);
 
     /* No heartbeat if we have initialized from a dump file. */

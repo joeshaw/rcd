@@ -1,3 +1,29 @@
+2002-10-10  Jon Trowbridge  <trow@ximian.com>
+
+	* Makefile.am: Add rcd-package-locks.h and rcd-package-locks.c to
+	the build.
+
+	* rcd-package-locks.h:
+	* rcd-package-locks.c: Added.  Contains code to load/save lists
+	of locks as XML.
+
+	* rcd-fetch.c (remove_channel_cb): Don't remove channels that have
+	refresh magic.
+	(rcd_fetch_channel): If a channel has refresh magic, use it.
+	(rcd_fetch_channel_local): Ditto.
+
+	* rcd-rpc-packsys.c (packsys_get_locks): Added.
+	(packsys_add_lock): Added.
+	(packsys_mount_directory): Added.
+	(packsys_unmount_directory): Added.
+	(rcd_rpc_packsys_register_methods): Register our new xmlrpc
+	methods.
+
+	* rcd-rpc-util.c (rcd_rc_package_match_to_xmlrpc): Added.
+	(rcd_xmlrpc_to_rc_package_match): Added.
+	(rcd_rc_package_to_xmlrpc): Set the "locked" attribute indicating
+	whether or not the package is locked.
+
 2002-10-08  Joe Shaw  <joe@ximian.com>
 
 	* rcd-fetch.c (rcd_fetch_distro): Make this return a gboolean,
