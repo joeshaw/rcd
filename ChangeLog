@@ -1,3 +1,7 @@
+2004-02-11  Joe Shaw  <joe@ximian.com>
+
+	* configure.in: 2.0.2
+
 2004-02-05 Aaron Weber <aaron@ximian.com>
 
 	* rcd.8: remove late-background option, bug 53766
@@ -9,10 +13,6 @@
 2004-01-23  Joe Shaw  <joe@ximian.com>
 
 	* rcd.pc.in: Fix to require libsoup-2.2.
-
-2004-01-23  Joe Shaw  <joe@ximian.com>
-
-	* configure.in: 2.0.2
 
 2004-01-23  Joe Shaw  <joe@ximian.com>
 
