@@ -42,6 +42,8 @@
 #include "rcd-xmlrpc.h"
 #include "rcd-prefs.h"
 #include "rcd-world-remote.h"
+#include "rcd-transfer.h"
+#include "rcd-transfer-http.h"
 
 /*=========================================================================
 **  xmlrpc_server_info
@@ -122,12 +124,12 @@ xmlrpc_server_info_copy (xmlrpc_server_info *server)
 
 /******************************************************************************/
 
-static void do_soup_request (xmlrpc_env *env,
-                             char *uri,
-                             char *xml_data,
-                             size_t xml_len,
-                             char **response,
-                             size_t *response_len);
+static void send_request (xmlrpc_env *env,
+                          char *uri,
+                          char *xml_data,
+                          size_t xml_len,
+                          char **response,
+                          size_t *response_len);
 
 xmlrpc_value *
 xmlrpc_client_call (xmlrpc_env *env,
@@ -293,11 +295,11 @@ xmlrpc_client_call_server_params (xmlrpc_env *env,
 	XMLRPC_FAIL_IF_FAULT(env);
 
 	/* Perform actual call */
-	do_soup_request(env, server->_server_url,
-                    xmlrpc_mem_block_contents(serialized_xml),
-                    xmlrpc_mem_block_size(serialized_xml),
-                    &response_xml,
-                    &response_len);
+	send_request (env, server->_server_url,
+                  xmlrpc_mem_block_contents(serialized_xml),
+                  xmlrpc_mem_block_size(serialized_xml),
+                  &response_xml,
+                  &response_len);
 
 	XMLRPC_FAIL_IF_FAULT(env);
 
@@ -320,40 +322,49 @@ cleanup:
 }
 
 static void
-do_soup_request (xmlrpc_env *env,
-                 char *uri,
-                 char *xml_data,
-                 size_t xml_len,
-                 char **response,
-                 size_t *response_len)
+send_request (xmlrpc_env *env,
+              char *uri,
+              char *xml_data,
+              size_t xml_len,
+              char **response,
+              size_t *response_len)
 {
+    RCDTransfer *t;
+    RCDTransferProtocolHTTP *protocol;
+    const GByteArray *data;
 
-    SoupContext *ctx;
-    SoupMessage *msg = NULL;
-    
-    ctx = soup_context_get (uri);
+    t = rcd_transfer_new (uri,
+                          RCD_TRANSFER_FLAGS_DONT_CACHE
+                          | RCD_TRANSFER_FLAGS_NO_PENDING,
+                          NULL);
 
-    msg = soup_message_new_full (ctx, SOUP_METHOD_POST,
-                                 SOUP_BUFFER_USER_OWNED, xml_data,
-                                 xml_len);
-
-    soup_context_unref(ctx);
-    soup_message_send(msg);
-
-    if (SOUP_ERROR_IS_SUCCESSFUL (msg->errorcode)) {
-	    *response_len = msg->response.length;
-	    *response = g_strndup (msg->response.body, msg->response.length);
-    } else {
-        XMLRPC_FAIL(env, msg->errorcode, (char *) msg->errorphrase);
+    if (!t->protocol || strcmp (t->protocol->name, "http") != 0) {
+        XMLRPC_FAIL (env, rcd_transfer_get_error (t),
+                     (char *) rcd_transfer_get_error_string (t));
     }
-    
+
+    protocol = (RCDTransferProtocolHTTP *) t->protocol;
+
+    rcd_transfer_protocol_http_set_method (protocol, SOUP_METHOD_POST);
+    rcd_transfer_protocol_http_set_request_body (protocol, xml_data,
+                                                 xml_len);
+
+    data = rcd_transfer_begin_blocking (t);
+
+    if (rcd_transfer_get_error (t)) {
+        XMLRPC_FAIL (env, rcd_transfer_get_error (t),
+                     (char *) rcd_transfer_get_error_string (t));
+    } else {
+        *response_len = data->len;
+        *response = g_memdup (data->data, data->len);
+    }
+
 cleanup:
-    if (msg)
-	    soup_message_free (msg);
+    g_object_unref (t);
 
     if (env->fault_occurred) {
-        response_len = 0;
-        response = NULL;
+        *response_len = 0;
+        *response = NULL;
     }
 }
 
@@ -370,7 +381,7 @@ typedef struct {
     xmlrpc_mem_block *serialized_xml;
 } RequestInfo;
 
-static void do_soup_request_async (RequestInfo *info);
+static void send_request_async (RequestInfo *info);
 
 
 void
@@ -523,7 +534,7 @@ xmlrpc_client_call_server_asynch_params (xmlrpc_server_info *server,
 
     info->serialized_xml = xml;
 
-    do_soup_request_async (info);
+    send_request_async (info);
 
 cleanup:
     if (mungled_params)
@@ -542,7 +553,7 @@ cleanup:
 }
 
 static void
-soup_request_done (SoupMessage *msg, gpointer user_data)
+file_done_cb (RCDTransfer *t, gpointer user_data)
 {
     RequestInfo *info = user_data;
     xmlrpc_env env;
@@ -552,26 +563,29 @@ soup_request_done (SoupMessage *msg, gpointer user_data)
 
     xmlrpc_env_init (&env);
 
-    if (SOUP_ERROR_IS_SUCCESSFUL (msg->errorcode)) {
+    if (rcd_transfer_get_error (t)) {
+        xmlrpc_env_set_fault (&env, rcd_transfer_get_error (t),
+                              (char *) rcd_transfer_get_error_string (t));
+    } else {
         result = xmlrpc_parse_response (&env,
-                                        msg->response.body,
-                                        msg->response.length);
-    } else
-        xmlrpc_env_set_fault (&env, msg->errorcode, (char *) msg->errorphrase);
+                                        t->data->data,
+                                        t->data->len);
+    }
 
     if (info->callback) {
-        (*info->callback)(info->server->_server_url,
-                          info->method_name,
-                          info->param_array,
-                          info->user_data,
-                          &env,
-                          result);
+        (*info->callback) (info->server->_server_url,
+                           info->method_name,
+                           info->param_array,
+                           info->user_data,
+                           &env,
+                           result);
     }
 
     xmlrpc_DECREF (info->param_array);
     g_free (info->method_name);
     xmlrpc_server_info_free (info->server);
     g_free (info);
+
     if (result)
         xmlrpc_DECREF (result);
 
@@ -579,19 +593,29 @@ soup_request_done (SoupMessage *msg, gpointer user_data)
 }
 
 static void
-do_soup_request_async (RequestInfo *info)
+send_request_async (RequestInfo *info)
 {
-    SoupContext *ctx;
-    SoupMessage *msg;
-	
-    ctx = soup_context_get (info->server->_server_url);
-    msg = soup_message_new_full (ctx, SOUP_METHOD_POST,
-                                 SOUP_BUFFER_USER_OWNED,
-                                 xmlrpc_mem_block_contents (info->serialized_xml),
-                                 xmlrpc_mem_block_size (info->serialized_xml));
-    soup_context_unref (ctx);
+    RCDTransfer *t;
 
-    soup_message_queue (msg, soup_request_done, info);
+    t = rcd_transfer_new (info->server->_server_url,
+                          RCD_TRANSFER_FLAGS_DONT_CACHE
+                          | RCD_TRANSFER_FLAGS_NO_PENDING
+                          | RCD_TRANSFER_FLAGS_BUFFER_DATA,
+                          NULL);
+
+    if (t->protocol && strcmp (t->protocol->name, "http") == 0) {
+        RCDTransferProtocolHTTP *protocol =
+            (RCDTransferProtocolHTTP *) t->protocol;
+
+        rcd_transfer_protocol_http_set_method (protocol, SOUP_METHOD_POST);
+        rcd_transfer_protocol_http_set_request_body (protocol, 
+                                                     xmlrpc_mem_block_contents (info->serialized_xml),
+                                                     xmlrpc_mem_block_size (info->serialized_xml));
+    }
+
+    g_signal_connect (t, "file_done", G_CALLBACK (file_done_cb), info);
+
+    rcd_transfer_begin (t);
 }
 
 /*****************************************************************************/

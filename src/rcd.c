@@ -485,6 +485,7 @@ main (int argc, const char **argv)
     const char *config_file;
     char *python_path;
 
+    g_thread_init (NULL);
     g_type_init ();
 
     rcd_executable_name = g_strdup (argv[0]);
@@ -545,10 +546,6 @@ main (int argc, const char **argv)
 
     /* Set the GPG keyring for package verification */
     rc_verification_set_keyring (SHAREDIR "/rcd.gpg");
-
-    /* Set up the CA verification dir if we're requiring it */
-    if (rcd_prefs_get_require_verified_certificates ())
-        soup_set_ssl_ca_file (SHAREDIR "/rcd-ca-bundle.pem");
 
     /* Create mid and secret */
     if (!g_file_test (SYSCONFDIR "/mcookie", G_FILE_TEST_EXISTS))

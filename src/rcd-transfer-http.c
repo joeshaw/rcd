@@ -40,26 +40,22 @@
  *   - Resuming partial transfers: Need to write
  */
 
-#define HTTP_RESPONSE_SUCCESSFUL(x)   ((x) >= 200 && (x) < 300)
-#define HTTP_RESPONSE_REDIRECT(x)     ((x) >= 300 && (x) < 400)
-#define HTTP_RESPONSE_CLIENT_ERROR(x) ((x) >= 400 && (x) < 400)
-#define HTTP_RESPONSE_SERVER_ERROR(x) ((x) >= 500 && (x) < 600)
-
 #define HTTP_RESPONSE_AUTH_FAILURE(x) ((x) == 401 || (x) == 407)
 #define HTTP_RESPONSE_NOT_MODIFIED(x) ((x) == 304)
 
 #define RCD_SOUP_MESSAGE_IS_ERROR(msg) \
-   msg->errorclass != SOUP_ERROR_CLASS_SUCCESS &&       \
-   msg->errorclass != SOUP_ERROR_CLASS_INFORMATIONAL && \
-   msg->errorclass != SOUP_ERROR_CLASS_REDIRECT
+   (SOUP_STATUS_IS_TRANSPORT_ERROR((msg)->status_code) ||   \
+    SOUP_STATUS_IS_CLIENT_ERROR((msg)->status_code) ||      \
+    SOUP_STATUS_IS_SERVER_ERROR((msg)->status_code))
 
 static GHashTable *rc_auth_header_table = NULL;
+static SoupSession *session = NULL;
 
 static void
 print_header (gpointer name, gpointer value, gpointer user_data)
 {
     rc_debug (RC_DEBUG_LEVEL_DEBUG,
-              "[%p]: %s: %s",
+              "[%p]: > %s: %s",
               user_data, (char *) name, (char *) value);
 } /* print_header */
 
@@ -69,10 +65,10 @@ http_debug_pre_handler (SoupMessage *message, gpointer user_data)
     rc_debug (RC_DEBUG_LEVEL_DEBUG, "[%p]: Receiving response.", message);
 
     rc_debug (RC_DEBUG_LEVEL_DEBUG,
-              "[%p]: %d %s",
+              "[%p]: > %d %s",
               message,
-              message->errorcode,
-              message->errorphrase);
+              message->status_code,
+              message->reason_phrase);
 
     soup_message_foreach_header (message->response_headers,
                                  print_header, message);
@@ -95,20 +91,16 @@ http_debug_post_handler (SoupMessage *message, gpointer user_data)
 } /* http_debug_post_handler */
 
 static void
-http_debug (SoupMessage *message)
+http_debug_request_handler (SoupMessage *message, gpointer user_data)
 {
-    const SoupUri *uri = soup_context_get_uri (message->context);
+    const SoupUri *uri = soup_message_get_uri (message);
 
     rc_debug (RC_DEBUG_LEVEL_DEBUG,
-              "[%p]: Queuing up new transfer",
-              message);
-
-    rc_debug (RC_DEBUG_LEVEL_DEBUG,
-              "[%p]: %s %s%s%s HTTP/%s",
+              "[%p]: > %s %s%s%s HTTP/%s",
               message,
               message->method, uri->path,
-              uri->querystring ? "?" : "",
-              uri->querystring ? uri->querystring : "",
+              uri->query ? "?" : "",
+              uri->query ? uri->query : "",
               rcd_prefs_get_http10_enabled () ? "1.0" : "1.1");
 
     soup_message_foreach_header (message->request_headers,
@@ -121,13 +113,21 @@ http_debug (SoupMessage *message)
                   (int) message->request.length,
                   message->request.body);
     }
+    
+    rc_debug (RC_DEBUG_LEVEL_DEBUG, "[%p]: Request sent.", message);
+}
 
+static void
+http_debug (SoupMessage *message)
+{
+    rc_debug (RC_DEBUG_LEVEL_DEBUG, "[%p]: Request queued", message);
+
+    soup_message_add_handler (message, SOUP_HANDLER_POST_REQUEST,
+                              http_debug_request_handler, NULL);
     soup_message_add_handler (message, SOUP_HANDLER_PRE_BODY,
                               http_debug_pre_handler, NULL);
     soup_message_add_handler (message, SOUP_HANDLER_PRE_BODY,
                               http_debug_post_handler, NULL);
-    
-    rc_debug (RC_DEBUG_LEVEL_DEBUG, "[%p]: Request sent.", message);
 } /* http_debug */
 
 static void
@@ -135,50 +135,43 @@ map_soup_error_to_rcd_transfer_error (SoupMessage *message, RCDTransfer *t)
 {
     const char *soup_err;
     const char *url = NULL;
-    const char *display_url = NULL;
     char *err;
 
-    soup_err = message->errorphrase;
+    soup_err = message->reason_phrase;
 
-    switch (message->errorcode) {
-    case SOUP_ERROR_CANCELLED:
+    switch (message->status_code) {
+    case SOUP_STATUS_CANCELLED:
         rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_CANCELLED, NULL);
         break;
-    case SOUP_ERROR_CANT_CONNECT:
-        url = display_url = t->url;
-    case SOUP_ERROR_CANT_CONNECT_PROXY:
-        if (!url) {
-            url = rcd_prefs_get_proxy ();
-            /* We can't use 'url' because it may contain users's password */
-            display_url = rcd_prefs_get_proxy_url ();
-        }
+    case SOUP_STATUS_CANT_CONNECT:
+        url = t->url;
+    case SOUP_STATUS_CANT_CONNECT_PROXY:
+        if (!url)
+            url = rcd_prefs_get_proxy_url ();
 
-        err = g_strdup_printf ("%s (%s)", soup_err, display_url);
+        err = g_strdup_printf ("%s (%s)", soup_err, url);
         rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_CANT_CONNECT, err);
         g_free (err);
         break;
 
-    case SOUP_ERROR_CANT_AUTHENTICATE:
-        url = display_url = t->url;
-    case SOUP_ERROR_CANT_AUTHENTICATE_PROXY:
-        if (!url) {
-            url = rcd_prefs_get_proxy ();
-            /* We can't use 'url' because it may contain users's password */
-            display_url = rcd_prefs_get_proxy_url ();
-        }
+    case SOUP_STATUS_UNAUTHORIZED:
+        url = t->url;
+    case SOUP_STATUS_PROXY_UNAUTHORIZED:
+        if (!url)
+            url = rcd_prefs_get_proxy_url ();
 
-        err = g_strdup_printf ("%s (%s)", soup_err, display_url);
+        err = g_strdup_printf ("%s (%s)", soup_err, url);
         rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_CANT_AUTHENTICATE, err);
         g_free (err);
         break;
 
-    case SOUP_ERROR_NOT_FOUND:
+    case SOUP_STATUS_NOT_FOUND:
         rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_FILE_NOT_FOUND, t->url);
         break;
 
     default:
-        err = g_strdup_printf (
-            "Soup error: %s (%d)", soup_err, message->errorcode);
+        err = g_strdup_printf ("Soup error: %s (%d)", soup_err,
+                               message->status_code);
         rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_IO, err);
         g_free (err);
         break;
@@ -217,7 +210,7 @@ http_done (SoupMessage *message, gpointer user_data)
         message->response_headers, copy_header_cb, protocol);
 
     if (RCD_SOUP_MESSAGE_IS_ERROR (message) &&
-        !message->errorcode != SOUP_ERROR_NOT_MODIFIED)
+        !message->status_code != SOUP_STATUS_NOT_MODIFIED)
         map_soup_error_to_rcd_transfer_error (message, t);
 
     if (!rcd_transfer_get_error (t)) {
@@ -270,10 +263,6 @@ http_content_length(SoupMessage *message, gpointer data)
 
     cl = soup_message_get_header (message->response_headers, "Content-Length");
     t->file_size = atoi (cl);
-
-    rc_debug (
-        RC_DEBUG_LEVEL_DEBUG, "[%p]: Got Content-Length: %s",
-        message, cl);
 } /* http_content_length */
 
 static void
@@ -284,10 +273,6 @@ http_etag(SoupMessage *message, gpointer data)
 
     etag = soup_message_get_header (message->response_headers, "ETag");
     rcd_cache_entry_set_entity_tag (entry, etag);
-
-    rc_debug (
-        RC_DEBUG_LEVEL_DEBUG, "[%p]: Got ETag: %s",
-        message, etag);
 } /* http_etag */
 
 static void
@@ -299,10 +284,6 @@ http_last_modified(SoupMessage *message, gpointer data)
     last_modified = soup_message_get_header (message->response_headers,
                                              "Last-Modified");
     rcd_cache_entry_set_modification_time (entry, last_modified);
-
-    rc_debug (
-        RC_DEBUG_LEVEL_DEBUG, "[%p]: Got Last-Modified: %s",
-        message, last_modified);
 } /* http_last_modified */
 
 static void
@@ -325,7 +306,7 @@ http_info (SoupMessage *message,
     /* Reset various settings */
     t->file_size = 0;
 
-    if (HTTP_RESPONSE_SUCCESSFUL (message->errorcode) && t->cache_entry)
+    if (SOUP_STATUS_IS_SUCCESSFUL (message->status_code) && t->cache_entry)
         rcd_cache_entry_open (t->cache_entry);
 
     auth_header = soup_message_get_header (
@@ -340,14 +321,12 @@ http_info (SoupMessage *message,
                                                           g_free, g_free);
         }
 
-        uri = soup_context_get_uri (message->context);
+        uri = soup_message_get_uri (message);
         
         g_hash_table_replace (rc_auth_header_table,
                               g_strdup (uri->host),
                               g_strdup (auth_header));
     }
-
-    rc_debug (RC_DEBUG_LEVEL_DEBUG, "[%p]: http_info called", message);
 } /* http_info */
 
 static void
@@ -356,7 +335,7 @@ http_read_data (SoupMessage *message,
 {
     RCDTransfer *t = user_data;
 
-    if (HTTP_RESPONSE_SUCCESSFUL (message->errorcode) &&
+    if (SOUP_STATUS_IS_SUCCESSFUL (message->status_code) &&
         t->cache_entry && rcd_cache_entry_is_open (t->cache_entry))
     {
         rcd_cache_entry_append (
@@ -376,25 +355,36 @@ http_abort (RCDTransfer *t)
     rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_CANCELLED, NULL);
 
     if (protocol->message)
-        soup_message_cancel (protocol->message);
+        soup_session_cancel_message (session, protocol->message);
 } /* http_abort */
 
-static SoupUri *
-get_uri_with_auth_info (const char *url)
+static void
+http_authenticate (SoupSession *session, SoupMessage *message,
+                   const char *auth_type, const char *auth_realm,
+                   char **username, char **password, gpointer user_data)
 {
-    SoupUri *uri;
+    /* We only want to do digest authentication for end-point auth */
+    if (g_strcasecmp (auth_type, "Digest") != 0) {
+        *username = NULL;
+        *password = NULL;
+        
+        return;
+    }
+    
+    *username = g_strdup (rcd_prefs_get_mid ());
+    *password = g_strdup (rcd_prefs_get_secret ());
+}
 
-    uri = soup_uri_new (url);
+static void
+http_message_restarted (SoupMessage *message, gpointer user_data)
+{
+    RCDTransfer *t = user_data;
 
-    /* An invalid URL was passed to us */
-    if (!uri)
-        return NULL;
-
-    uri->authmech = g_strdup ("Digest");
-    uri->user = g_strdup (rcd_prefs_get_mid ());
-    uri->passwd = g_strdup (rcd_prefs_get_secret ());
-
-    return uri;
+    /* Flush any previously fetched data */
+    if (t->data) {
+        g_byte_array_free (t->data, TRUE);
+        t->data = g_byte_array_new ();
+    }
 }
 
 static void
@@ -412,11 +402,7 @@ http_open (RCDTransfer *t)
 {
     gboolean no_network = rcd_options_get_no_network_flag ();
     RCDTransferProtocolHTTP *protocol;
-    SoupUri *uri;
-    SoupContext *context;
-    SoupMessage *message;
     const char *proxy_url;
-    SoupContext *proxy_context;
 
     /* The no_network flag is set with a command-line option in rcd.c */
     if (no_network) {
@@ -426,32 +412,17 @@ http_open (RCDTransfer *t)
 
     protocol = (RCDTransferProtocolHTTP *) t->protocol;
 
-    uri = get_uri_with_auth_info (t->url);
-
-    context = soup_context_from_uri (uri);
-
-    soup_uri_free (uri);
-
-    /* No context?  Probably a bad URL. */
-    if (!context) {
-        rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_INVALID_URI, t->url);
-        return -1;
-    }
-    
-    protocol->message = message = soup_message_new_full (
-        context,
-        protocol->method,
-        SOUP_BUFFER_USER_OWNED,
-        protocol->request_body,
-        protocol->request_length);
+    if (!session)
+        session = soup_session_async_new ();
 
     /* Set up the proxy */
-    proxy_url = rcd_prefs_get_proxy ();
+    proxy_url = rcd_prefs_get_proxy_url ();
     if (proxy_url) {
-        proxy_context = soup_context_get (proxy_url);
+        SoupUri *uri;
 
-        /* No context?  Probably a bad URL. */
-        if (!proxy_context) {
+        uri = soup_uri_new (proxy_url);
+
+        if (!uri) {
             char *err_str;
 
             /* 
@@ -463,14 +434,42 @@ http_open (RCDTransfer *t)
 
             rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_INVALID_URI,
                                     err_str);
+
             g_free (err_str);
             return -1;
-        }
+        }            
 
-        soup_set_proxy (proxy_context);
-    }
-    else
-        soup_set_proxy (NULL);
+        uri->user = g_strdup (rcd_prefs_get_proxy_username ());
+        uri->passwd = g_strdup (rcd_prefs_get_proxy_password ());
+
+        g_object_set (session, SOUP_SESSION_PROXY_URI, uri, NULL);
+    } else
+        g_object_set (session, SOUP_SESSION_PROXY_URI, NULL, NULL);
+
+    /*
+     * Set the CA file on the session if requiring verified
+     * certificates is set.
+     */
+    if (rcd_prefs_get_require_verified_certificates ()) {
+        g_object_set (session, SOUP_SESSION_SSL_CA_FILE,
+                      SHAREDIR "/rcd-ca-bundle.pem", NULL);
+    } else
+        g_object_set (session, SOUP_SESSION_SSL_CA_FILE, NULL, NULL);
+
+    /* Connect to the authenticate signals */
+    g_signal_connect (session, "authenticate",
+                      G_CALLBACK (http_authenticate), t);
+
+    protocol->message = soup_message_new (protocol->method, t->url);
+
+    g_signal_connect (protocol->message, "restarted",
+                      G_CALLBACK (http_message_restarted), t);
+
+    soup_message_set_request (protocol->message,
+                              "application/data", 
+                              SOUP_BUFFER_USER_OWNED,
+                              protocol->request_body,
+                              protocol->request_length);
 
     if (rcd_prefs_get_http10_enabled ()) {
         soup_message_set_http_version (protocol->message, SOUP_HTTP_1_0);
@@ -479,7 +478,7 @@ http_open (RCDTransfer *t)
     }
 
     /* We want to get the chunks out seperately */
-    soup_message_set_flags (message, SOUP_MESSAGE_OVERWRITE_CHUNKS);
+    soup_message_set_flags (protocol->message, SOUP_MESSAGE_OVERWRITE_CHUNKS);
 
     if (t->cache_entry && (t->flags & RCD_TRANSFER_FLAGS_FORCE_CACHE ||
         (rcd_prefs_get_cache_enabled () &&
@@ -492,9 +491,9 @@ http_open (RCDTransfer *t)
 
         if (modtime || entity_tag) {
             /* Handler for 304 Not Modified messages */
-            soup_message_add_error_code_handler (
-                message, 304, SOUP_HANDLER_PRE_BODY,
-                http_response_not_modified, t);
+            soup_message_add_status_code_handler (
+                protocol->message, SOUP_STATUS_NOT_MODIFIED,
+                SOUP_HANDLER_PRE_BODY, http_response_not_modified, t);
         }
         
         if (modtime) {
@@ -512,68 +511,69 @@ http_open (RCDTransfer *t)
         }
 
         soup_message_add_header_handler (
-            message, "ETag", SOUP_HANDLER_PRE_BODY,
+            protocol->message, "ETag", SOUP_HANDLER_PRE_BODY,
             http_etag, t->cache_entry);
 
         soup_message_add_header_handler (
-            message, "Last-Modified", SOUP_HANDLER_PRE_BODY,
+            protocol->message, "Last-Modified", SOUP_HANDLER_PRE_BODY,
             http_last_modified, t->cache_entry);
     }
 
 #if 0
     /* Handler for normal 200 OK messages */
-    soup_message_add_error_code_handler (
-        message, 200, SOUP_HANDLER_PRE_BODY, http_response_ok, t);
+    soup_message_add_status_code_handler (
+        protocol->message, 200, SOUP_HANDLER_PRE_BODY,
+        http_response_ok, t);
 
     /* Handler for 206 Partial Content messages */
-    soup_message_add_error_code_handler (
-        message, 206, SOUP_HANDLER_PRE_BODY, http_response_partial_content, t);
+    soup_message_add_status_code_handler (
+        protocol->message, 206, SOUP_HANDLER_PRE_BODY,
+        http_response_partial_content, t);
 #endif
 
     soup_message_add_header_handler (
-        message, "Content-Length", SOUP_HANDLER_PRE_BODY,
+        protocol->message, "Content-Length", SOUP_HANDLER_PRE_BODY,
         http_content_length, t);
 
 #if 0
     soup_message_add_header_handler (
-        message, "Content-Range", SOUP_HANDLER_PRE_BODY,
+        protocol->message, "Content-Range", SOUP_HANDLER_PRE_BODY,
         http_content_range, t);
 #endif
 
     soup_message_add_handler (
-        message, SOUP_HANDLER_PRE_BODY, http_info, t);
+        protocol->message, SOUP_HANDLER_PRE_BODY, http_info, t);
 
     soup_message_add_handler (
-        message, SOUP_HANDLER_BODY_CHUNK,
+        protocol->message, SOUP_HANDLER_BODY_CHUNK,
         http_read_data, t);
 
     soup_message_add_header (
-        message->request_headers, "User-Agent", "Red Carpet Daemon/"VERSION);
+        protocol->message->request_headers, "User-Agent",
+        "Red Carpet Daemon/"VERSION);
 
     if (rc_auth_header_table) {
         const SoupUri *uri;
         const char *auth_header;
 
-        uri = soup_context_get_uri (context);
+        uri = soup_message_get_uri (protocol->message);
         
         auth_header = g_hash_table_lookup (rc_auth_header_table, uri->host);
 
         if (auth_header) {
-            soup_message_add_header (message->request_headers,
+            soup_message_add_header (protocol->message->request_headers,
                                      "X-RC-Auth", auth_header);
         }
     }
 
     if (protocol->request_headers) {
         g_hash_table_foreach (protocol->request_headers,
-                              add_header_cb, message);
+                              add_header_cb, protocol->message);
     }
+    
+    http_debug (protocol->message);
 
-    soup_context_unref (context);
-
-    http_debug (message);
-
-    soup_message_queue (message, http_done, t);
+    soup_session_queue_message (session, protocol->message, http_done, t);
 
     return 0;
 } /* http_open */

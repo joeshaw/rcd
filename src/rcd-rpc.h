@@ -32,7 +32,7 @@
 #include "rcd-identity.h"
 
 typedef struct {
-    char *host;
+    const char *host;
 
     RCDIdentity *identity;
 } RCDRPCMethodData;

@@ -32,7 +32,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <libsoup/soup-message.h>
 #include <libsoup/soup-server.h>
+#include <libsoup/soup-server-auth.h>
 #include <libsoup/soup-socket.h>
 
 #include <libredcarpet.h>
@@ -254,14 +256,13 @@ soup_rpc_callback (SoupServerContext *context, SoupMessage *msg, gpointer data)
         &env, msg->request.body, msg->request.length, method_data);
 
     rcd_identity_free (method_data->identity);
-    g_free (method_data->host);
     g_free (method_data);
 
     soup_message_add_header (msg->response_headers,
                              "Server", "Red Carpet Daemon/"VERSION);
 
     if (env.fault_occurred) {
-        soup_message_set_error(msg, SOUP_ERROR_BAD_REQUEST);
+        soup_message_set_status (msg, SOUP_STATUS_BAD_REQUEST);
         return;
     }
 
@@ -271,7 +272,7 @@ soup_rpc_callback (SoupServerContext *context, SoupMessage *msg, gpointer data)
     msg->response.body = g_memdup(
         XMLRPC_TYPED_MEM_BLOCK_CONTENTS(char, output), msg->response.length);
 
-    soup_message_set_error(msg, SOUP_ERROR_OK);
+    soup_message_set_status (msg, SOUP_STATUS_OK);
 
     xmlrpc_mem_block_free(output);
 } /* soup_rpc_callback */
@@ -281,7 +282,7 @@ soup_default_callback(SoupServerContext *context, SoupMessage *msg, gpointer dat
 {
     soup_message_add_header (msg->response_headers,
                              "Server", "Red Carpet Daemon/"VERSION);
-    soup_message_set_error(msg, SOUP_ERROR_NOT_FOUND);
+    soup_message_set_status (msg, SOUP_STATUS_NOT_FOUND);
 } /* default_callback */
 
 static gboolean
@@ -458,18 +459,20 @@ rcd_rpc_remote_server_start (void)
 
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Starting remote server");
 
-    soup_set_ssl_cert_files(SHAREDIR "/rcd.pem",
-                            SHAREDIR "/rcd.pem");
-
     bind_ip = rcd_prefs_get_bind_ipaddress ();
 
     if (bind_ip) {
-        soup_server = soup_server_new_with_host (bind_ip,
-                                                 SOUP_PROTOCOL_HTTPS,
-                                                 port);
+        soup_server = soup_server_new (SOUP_SERVER_INTERFACE, bind_ip,
+                                       SOUP_SERVER_PORT, port,
+                                       SOUP_SERVER_SSL_CERT_FILE, SHAREDIR"/rcd.pem",
+                                       SOUP_SERVER_SSL_KEY_FILE, SHAREDIR"/rcd.pem",
+                                       NULL);
+    } else {
+        soup_server = soup_server_new (SOUP_SERVER_PORT, port,
+                                       SOUP_SERVER_SSL_CERT_FILE, SHAREDIR"/rcd.pem",
+                                       SOUP_SERVER_SSL_KEY_FILE, SHAREDIR"/rcd.pem",
+                                       NULL);
     }
-    else
-        soup_server = soup_server_new (SOUP_PROTOCOL_HTTPS, port);
 
     if (!soup_server) {
         rc_debug (RC_DEBUG_LEVEL_ERROR, "Could not start RPC server on port %d", port);
@@ -485,13 +488,13 @@ rcd_rpc_remote_server_start (void)
     auth_ctx.digest_info.allow_algorithms = SOUP_ALGORITHM_MD5;
     auth_ctx.digest_info.force_integrity = FALSE;
         
-    soup_server_register (soup_server, "/RPC2", &auth_ctx,
-                          soup_rpc_callback, NULL, NULL);
-    soup_server_register (soup_server, NULL, NULL,
-                          soup_default_callback, NULL, NULL);
+    soup_server_add_handler (soup_server, "/RPC2", &auth_ctx,
+                             soup_rpc_callback, NULL, NULL);
+    soup_server_add_handler (soup_server, NULL, NULL,
+                             soup_default_callback, NULL, NULL);
         
     soup_server_run_async (soup_server);
-    soup_server_unref (soup_server);
+    g_object_unref (soup_server);
 
     notify_port_change (port);
 
@@ -506,7 +509,7 @@ rcd_rpc_remote_server_stop (void)
 
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Shutting down remote server");
 
-    soup_server_unref (soup_server);
+    g_object_unref (soup_server);
     soup_server = NULL;
 }
 

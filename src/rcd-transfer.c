@@ -41,6 +41,8 @@
 #include "rcd-transfer-file.h"
 #include "rcd-transfer-http.h"
 
+#define RCD_SOUP_PROTOCOL_FILE (g_quark_from_static_string ("file"))
+
 static GObjectClass *parent_class;
 
 enum {
@@ -329,18 +331,13 @@ rcd_transfer_get_protocol_from_url (const char *url)
     if (!uri)
         return NULL;
 
-    switch (uri->protocol) {
-    case SOUP_PROTOCOL_HTTP:
-    case SOUP_PROTOCOL_HTTPS:
+    if (uri->protocol == SOUP_PROTOCOL_HTTP
+        || uri->protocol == SOUP_PROTOCOL_HTTPS)
         protocol = rcd_transfer_protocol_http_new ();
-        break;
-    case SOUP_PROTOCOL_FILE:
+    else if (uri->protocol == RCD_SOUP_PROTOCOL_FILE)
         protocol = rcd_transfer_protocol_file_new ();
-        break;
-    default:
+    else
         protocol = NULL;
-        break;
-    }
 
     soup_uri_free (uri);
 
@@ -361,12 +358,16 @@ rcd_transfer_begin (RCDTransfer *t)
 
     rc_debug(RC_DEBUG_LEVEL_DEBUG, "Transfer URL: %s\n", t->url);
 
-    if (t->protocol->open_func (t)) {
-        /* An error occurred in the open call. It's the open call's
-           responsibility to rcd_transfer_set_error() the appropriate
-           error. */
-        return -1;
-    }
+    /*
+     * Add a ref so that people can safely unref it after beginning
+     * the transfer if they don't care about it afterward.  This ref
+     * is cleaned up in rcd_transfer_file_done().  It's important that
+     * we do this ref before the protocol's open_func is called, since
+     * it's possible (at least with the HTTP backend) to synchonously
+     * call the rcd_transfer_file_done() function from within it.  If
+     * open_func returns -1, however, we'll clean up the ref.
+     */
+    g_object_ref (t);
 
     /* Create associated RCPending object */
     if (!t->pending && ! (t->flags & RCD_TRANSFER_FLAGS_NO_PENDING)) {
@@ -389,11 +390,14 @@ rcd_transfer_begin (RCDTransfer *t)
         t->data = g_byte_array_new ();
     }
 
-    /*
-     * Add a ref so that people can safely unref it after beginning if
-     * they don't care about it afterward.
-     */
-    g_object_ref (t);
+
+    if (t->protocol->open_func (t)) {
+        /* An error occurred in the open call. It's the open call's
+           responsibility to rcd_transfer_set_error() the appropriate
+           error. */
+        g_object_unref (t);
+        return -1;
+    }
 
     return t->pending ? rc_pending_get_id (t->pending) : 0;
 } /* rcd_transfer_begin */

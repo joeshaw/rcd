@@ -51,8 +51,6 @@ gboolean     rcd_prefs_set_cache_dir          (const char *, GError **);
 gboolean     rcd_prefs_get_cache_enabled      (void);
 gboolean     rcd_prefs_set_cache_enabled      (gboolean, GError **);
 
-const gchar *rcd_prefs_get_proxy              (void);
-
 const gchar *rcd_prefs_get_proxy_url          (void);
 gboolean     rcd_prefs_set_proxy_url          (const char *, GError **);
 

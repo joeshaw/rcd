@@ -326,45 +326,6 @@ rcd_prefs_get_org_id (void)
 } /* rcd_prefs_get_org_id */
 
 const char *
-rcd_prefs_get_proxy (void)
-{
-    static char *proxy_url = NULL;
-    char *proxy;
-    SoupUri *proxy_uri;
-    char *proxy_user;
-    char *proxy_passwd;
-
-    g_free (proxy_url);
-    proxy_url = NULL;
-
-    proxy = gnome_config_get_string (get_config_path ("/Network/proxy"));
-
-    if (!proxy)
-        return NULL;
-
-    proxy_user = gnome_config_get_string (
-        get_config_path ("/Network/proxy-user"));
-    proxy_passwd = gnome_config_get_string (
-        get_config_path ("/Network/proxy-password"));
-
-    proxy_uri = soup_uri_new (proxy);
-
-    if (!proxy_uri) {
-        rc_debug (RC_DEBUG_LEVEL_WARNING, "Invalid proxy URL: %s", proxy);
-        return proxy;
-    }
-
-    proxy_uri->user = proxy_user;
-    proxy_uri->passwd = proxy_passwd;
-    g_free (proxy);
-
-    proxy_url = soup_uri_to_string (proxy_uri, TRUE);
-    soup_uri_free (proxy_uri);
-
-    return proxy_url;
-} /* rcd_prefs_get_proxy */
-
-const char *
 rcd_prefs_get_proxy_url (void)
 {
     static char *proxy = NULL;
@@ -495,8 +456,6 @@ rcd_prefs_get_require_verified_certificates (void)
 
     enabled = gnome_config_get_bool (get_config_path ("/Network/require-verified-certificates=TRUE"));
 
-    soup_set_ssl_ca_file (enabled ? SHAREDIR "/rcd-ca-bundle.pem" : NULL);
-
     return enabled;
 }
 
@@ -504,8 +463,6 @@ gboolean
 rcd_prefs_set_require_verified_certificates (gboolean enabled, GError **err)
 {
     gnome_config_set_bool (get_config_path ("/Network/require-verified-certificates"), enabled);
-
-    soup_set_ssl_ca_file (enabled ? SHAREDIR "/rcd-ca-bundle.pem" : NULL);
 
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "SSL Certificate verification %s",
               enabled ? "enabled" : "disabled");
