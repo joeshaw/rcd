@@ -1,3 +1,11 @@
+2002-07-03  Jon Trowbridge  <trow@ximian.com>
+	
+	* rcd-log.c (cutoff_time_init, cutoff_time_match, rcd_log_query):
+	Make the argument to the cutoff_time query part be a number of
+	seconds in the past, instead of an absolute time.  Then we use
+	this number, combined with the local time on the server, to
+	compute the cut-off time. 
+
 2002-07-03  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc.c (unix_rpc_callback): Serialize a permission fault if

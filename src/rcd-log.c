@@ -113,12 +113,17 @@ rcd_log (RCDLogEntry *entry)
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
+/* Cutoff time: the number of seconds in the past beyond which to ignore
+   log items */
+
 static void
 cutoff_time_init (RCDQueryPart *part)
 {
     long x = atol (part->query_str);
     time_t *t = g_new0 (time_t, 1); 
-    *t = (time_t) x;
+    
+    time (t);
+    *t = (time_t) ((long)*t - x);
     part->data = t;
 }
 
@@ -135,7 +140,7 @@ cutoff_time_match (RCDQueryPart *part,
     RCDLogEntry *entry = data;
     time_t t = *(time_t *)part->data;
     return rcd_query_type_int_compare (part->type,
-                                       (int) entry->timestamp, (int) t);
+                                       (int) t, (int) entry->timestamp);
 }
 
 static gboolean
@@ -281,6 +286,7 @@ rcd_log_query (RCDQueryPart *query_parts,
                RCDLogEntryFn entry_fn,
                gpointer      user_data)
 {
+    long secs_back, sb;
     time_t cutoff;
     int i;
 
@@ -294,37 +300,39 @@ rcd_log_query (RCDQueryPart *query_parts,
     }
 
     /*
-      Look at our query parts and check for any cutoff_time > or >=.
+      Look at our query parts and check for any cutoff_time < or <=.
       If we find any, extract them (by setting the 'processed' flag
       as TRUE) and use them for the fixed cutoff that tells us when
       we can stop walking back across rotated log files.
     */
 
-    cutoff = 0;
+    secs_back = 0;
 
-    /* check for other cutoffs in the query */
+    /* check for other secs_backs in the query */
     for (i = 0; query_parts[i].type != RCD_QUERY_LAST; ++i) {
         if (query_parts[i].key
             && ! g_strcasecmp (query_parts[i].key, "cutoff_time")
-            && (query_parts[i].type == RCD_QUERY_GT || query_parts[i].type == RCD_QUERY_GT_EQ)) {
+            && (query_parts[i].type == RCD_QUERY_LT || query_parts[i].type == RCD_QUERY_LT_EQ)) {
 
-            time_t c = (time_t) atol (query_parts[i].query_str);
-            if (cutoff == 0 || difftime (cutoff, c) > 0)
-                cutoff = c;
+            sb = atol (query_parts[i].query_str);
+            if (secs_back < sb)
+                secs_back = sb;
 
             query_parts[i].processed = TRUE;
         }
     }
 
     /*
-      If there is no appropriate cutoff_time parts, we use a default cutoff
+      If there is no appropriate cutoff_time parts, we use a default secs_back
       of 30 days.
     */
 
-    if (cutoff == 0) {
-        time (&cutoff);
-        cutoff -= 60*60*24*30;
+    if (secs_back == 0) {
+        secs_back = 60 * 60 * 24 * 30;
     }
+
+    time (&cutoff);
+    cutoff = (time_t)((long) cutoff - secs_back);
 
     /* 
        Now we scan the main log file, followed by the older rotated logs.
