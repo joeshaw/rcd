@@ -1,3 +1,24 @@
+2003-10-07  Joe Shaw  <joe@ximian.com>
+
+	* rcd-cache.c (rcd_cache_entry_open): Check to make sure that the
+	cache path is absolute before trying to open it.
+	(rcd_cache_entry_is_open): Added.
+	(rcd_cache_entry_append): Fix a broken assertion.
+
+	* rcd-prefs.c (rcd_prefs_set_cache_dir): Set an error if the cache
+	directory is not an absolute path.
+
+	* rcd-transaction.c (check_download_space): If the path isn't
+	absolute, set an error and fail the transaction.  If the statvfs()
+	call fails, set an error or else we'll segfault.
+
+	* rcd-transfer-http.c (http_done, http_read_data): Check to make
+	sure the cache entry is open before trying to append data to it or
+	closing it... this fixes some failed assertions.
+
+	* rcd-world-remote.c (save_target): Check to make sure the entry
+	is open before writing to it and closing it.
+
 2003-10-06  Joe Shaw  <joe@ximian.com>
 
 	* rcd-unix-server.c (rcd_unix_server_run_async): When we mkdir()

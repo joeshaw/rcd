@@ -251,7 +251,7 @@ http_done (SoupMessage *message, gpointer user_data)
             return;
         }
 
-        if (protocol->entry)
+        if (protocol->entry && rcd_cache_entry_is_open (protocol->entry))
             rcd_cache_entry_close (protocol->entry);
     }
     else {
@@ -357,7 +357,9 @@ http_read_data (SoupMessage *message,
     RCDTransferProtocolHTTP *protocol =
         (RCDTransferProtocolHTTP *) t->protocol;
 
-    if (HTTP_RESPONSE_SUCCESSFUL (message->errorcode) && protocol->entry) {
+    if (HTTP_RESPONSE_SUCCESSFUL (message->errorcode) &&
+        protocol->entry && rcd_cache_entry_is_open (protocol->entry))
+    {
         rcd_cache_entry_append (
             protocol->entry, message->response.body, message->response.length);
     }

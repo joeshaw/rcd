@@ -41,10 +41,14 @@ void rcd_cache_entry_append     (RCDCacheEntry *entry,
 void rcd_cache_entry_close      (RCDCacheEntry *entry);
 void rcd_cache_entry_cancel     (RCDCacheEntry *entry);
 void rcd_cache_entry_invalidate (RCDCacheEntry *entry);
+
+gboolean rcd_cache_entry_is_open (RCDCacheEntry *entry);
+
 const char *rcd_cache_entry_get_modification_time (RCDCacheEntry *entry);
-const char *rcd_cache_entry_get_entity_tag        (RCDCacheEntry *entry);
 void        rcd_cache_entry_set_modification_time (RCDCacheEntry *entry,
                                                    const char    *modtime);
+
+const char *rcd_cache_entry_get_entity_tag        (RCDCacheEntry *entry);
 void        rcd_cache_entry_set_entity_tag        (RCDCacheEntry *entry,
                                                    const char    *etag);
 

@@ -278,6 +278,15 @@ rcd_prefs_set_cache_dir (const char *cache_dir, GError **err)
         return FALSE;
     }
 
+    if (!g_path_is_absolute (cache_dir)) {
+        g_set_error (err, RCD_PREFS_ERROR, RCD_PREFS_ERROR,
+                     "Cache directory must be an absolute path");
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Cache directory must be an absolute path (got '%s')",
+                  cache_dir);
+        return FALSE;
+    }
+
     gnome_config_set_string (get_config_path ("/Cache/directory"), cache_dir);
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Cache dir set: %s", cache_dir);
 

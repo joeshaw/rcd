@@ -898,11 +898,25 @@ check_download_space (RCDTransaction *transaction, GError **err)
     if (!transaction->total_download_size)
         return TRUE;
 
+    if (!g_path_is_absolute (cache_dir)) {
+        g_set_error (err, RCD_TRANSACTION_ERROR_DOMAIN,
+                     RCD_TRANSACTION_ERROR_DOWNLOAD,
+                     "Cache directory is invalid: '%s'",
+                     cache_dir);
+        return FALSE;
+    }
+
     if (!g_file_test (cache_dir, G_FILE_TEST_EXISTS))
         rc_mkdir (cache_dir, 0755);
 
-    if (statvfs (rcd_prefs_get_cache_dir (), &vfs_info))
+    if (statvfs (cache_dir, &vfs_info)) {
+        g_set_error (err, RCD_TRANSACTION_ERROR_DOMAIN,
+                     RCD_TRANSACTION_ERROR_DOWNLOAD,
+                     "Unable to get disk space info for '%s'",
+                     cache_dir);
         return FALSE;
+    }
+
     block_size = vfs_info.f_frsize;
     avail_blocks = vfs_info.f_bavail;
 
@@ -911,7 +925,7 @@ check_download_space (RCDTransaction *transaction, GError **err)
                      RCD_TRANSACTION_ERROR_DOWNLOAD,
                      "Insufficient disk space: %s needed in %s",
                      format_size (transaction->total_download_size),
-                     rcd_prefs_get_cache_dir ());
+                     cache_dir);
 
         return FALSE;
     }

@@ -915,8 +915,11 @@ save_target (RCDWorldRemote *remote)
                               TRUE);
 
     rcd_cache_entry_open (entry);
-    rcd_cache_entry_append (entry, target, strlen (target));
-    rcd_cache_entry_close (entry);
+
+    if (rcd_cache_entry_is_open (entry)) {
+        rcd_cache_entry_append (entry, target, strlen (target));
+        rcd_cache_entry_close (entry);
+    }
 }
 
 static RCPending *

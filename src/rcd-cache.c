@@ -185,6 +185,14 @@ rcd_cache_entry_open (RCDCacheEntry *entry)
     g_return_if_fail (entry->fd == -1);
 
     cache_dir = g_path_get_dirname (entry->local_file);
+
+    if (!g_path_is_absolute (cache_dir)) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Cache directory '%s' is not absolute",
+                  cache_dir);
+        return;
+    }
+
     if (!g_file_test (cache_dir, G_FILE_TEST_EXISTS)) {
         rc_mkdir (cache_dir, 0755);
     }
@@ -203,12 +211,20 @@ rcd_cache_entry_open (RCDCacheEntry *entry)
     fchmod (entry->fd, 0644);
 } /* rcd_cache_entry_open */
 
+gboolean
+rcd_cache_entry_is_open (RCDCacheEntry *entry)
+{
+    g_return_val_if_fail (entry != NULL, FALSE);
+
+    return entry->fd != -1;
+}
+
 void
 rcd_cache_entry_append (RCDCacheEntry *entry, const char *data, gsize size)
 {
     g_return_if_fail (entry != NULL);
     g_return_if_fail (entry->fd != -1);
-    g_return_if_fail (entry != NULL || size == 0);
+    g_return_if_fail (data != NULL || size == 0);
 
     if (size > 0)
         rc_write (entry->fd, data, size);
@@ -236,6 +252,7 @@ void
 rcd_cache_entry_cancel (RCDCacheEntry *entry)
 {
     g_return_if_fail (entry != NULL);
+
     if (entry->fd != -1) {
         rc_close (entry->fd);
         entry->fd = -1;
