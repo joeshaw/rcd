@@ -53,6 +53,9 @@ void         rcd_prefs_set_http10_enabled     (gboolean);
 guint32      rcd_prefs_get_heartbeat_interval (void);
 void         rcd_prefs_set_heartbeat_interval (guint32);
 
+int          rcd_prefs_get_max_downloads (void);
+void         rcd_prefs_set_max_downloads (int);
+
 gboolean     rcd_prefs_get_require_verified_packages (void);
 
 gint         rcd_prefs_get_debug_level        (void);

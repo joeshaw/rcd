@@ -100,7 +100,7 @@ rcd_pending_update_handler (RCDPending *pending)
 static void
 rcd_pending_complete_handler (RCDPending *pending)
 {
-    rc_debug (RC_DEBUG_LEVEL_INFO,
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE,
               "id=%d COMPLETE '%s' time=%ds (%s)",
               pending->id, pending->description,
               rcd_pending_get_elapsed_secs (pending),
@@ -331,6 +331,11 @@ rcd_pending_begin (RCDPending *pending)
     time (&pending->start_time);
 
     rcd_pending_update (pending, 0);
+
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE,
+              "id=%d BEGIN '%s' (%s)",
+              pending->id, pending->description,
+              rcd_pending_status_to_string (pending->status));
 }
 
 void

@@ -636,6 +636,7 @@ typedef struct {
     int refs;
 
     GSList *running_transfers;
+    GSList *queued_transfers;
 
     RCDFetchProgressFunc  progress_callback;
     RCDFetchCompletedFunc completed_callback;
@@ -697,6 +698,51 @@ package_completed_cb (RCDTransfer *t, gpointer user_data)
         package = g_object_get_data (G_OBJECT (t), "package");
         package->package_filename = rcd_transfer_get_local_filename (t);
 
+        /* Fire off a queued transfer if there are any */
+        if (closure->queued_transfers) {
+            RCDTransfer *queued_transfer = closure->queued_transfers->data;
+
+            closure->queued_transfers = g_slist_remove (
+                closure->queued_transfers, queued_transfer);
+
+            closure->running_transfers = g_slist_append (
+                closure->running_transfers, queued_transfer);
+
+            rc_debug (RC_DEBUG_LEVEL_INFO,
+                      "Beginning queued download of package %s", t->url);
+
+            rcd_transfer_begin (queued_transfer);
+
+            if (rcd_transfer_get_error (queued_transfer)) {
+                rc_debug (RC_DEBUG_LEVEL_CRITICAL,
+                          "Attempt to download package failed: %s",
+                          rcd_transfer_get_error_string (t));
+
+                closure->successful = FALSE;
+                closure->error_message = g_strdup (
+                    rcd_transfer_get_error_string (t));
+#if 0
+                /* FIXME: The soup cancel crasher forces this to be commented out for now */
+                rcd_fetch_packages_abort (closure->transfer_id);
+#endif
+            }
+            else {
+                if (!rcd_transfer_get_error (t)) {
+                    RCDPending *pending;
+                    char *desc;
+
+                    /*
+                     * Attach a more meaningful description to our
+                     * pending object.
+                     */
+                    pending = rcd_transfer_get_pending (t);
+                    desc = g_strdup_printf ("Downloading package %s", t->url);
+                    rcd_pending_set_description (pending, desc);
+                    g_free (desc);
+                }
+            }
+        }
+
         if (!closure->running_transfers) {
             rc_debug (RC_DEBUG_LEVEL_INFO,
                       "No more pending transfers, calling callback");
@@ -726,6 +772,7 @@ download_package_file (RCPackage           *package,
     RCDTransfer *t;
     char *url, *desc;
     RCDPending *pending;
+    int max_downloads;
 
     url = merge_paths (rcd_prefs_get_host (), file_url);
 
@@ -735,9 +782,6 @@ download_package_file (RCPackage           *package,
         RCD_TRANSFER_FLAGS_RESUME_PARTIAL,
         rcd_cache_get_package_cache ());
     g_object_set_data (G_OBJECT (t), "package", package);
-
-    closure->running_transfers = g_slist_append (
-        closure->running_transfers, t);
 
     g_signal_connect (t,
                       "file_data",
@@ -749,7 +793,33 @@ download_package_file (RCPackage           *package,
                       (GCallback) package_completed_cb,
                       closure);
 
-    rcd_transfer_begin (t);
+    max_downloads = rcd_prefs_get_max_downloads ();
+
+    if (max_downloads &&
+        g_slist_length (closure->running_transfers) >= max_downloads) {
+        rc_debug (RC_DEBUG_LEVEL_INFO, "Queuing up package %s", url);
+
+        closure->queued_transfers = g_slist_append (
+            closure->queued_transfers, t);
+    }
+    else {
+        closure->running_transfers = g_slist_append (
+            closure->running_transfers, t);
+
+        rc_debug (RC_DEBUG_LEVEL_INFO,
+                  "Beginning immediate download of package %s", url);
+
+        rcd_transfer_begin (t);
+
+        if (!rcd_transfer_get_error (t)) {
+            /* Attach a more meaningful description to our pending object. */
+            pending = rcd_transfer_get_pending (t);
+            desc = g_strdup_printf ("Downloading package %s", url);
+            rcd_pending_set_description (pending, desc);
+            g_free (desc);
+            g_free (url);
+        }
+    }
 
     if (rcd_transfer_get_error (t)) {
         rc_debug (RC_DEBUG_LEVEL_CRITICAL,
@@ -758,13 +828,6 @@ download_package_file (RCPackage           *package,
         g_free (url);
         return;
     }
-
-    /* Attach a more meaningful description to our pending object. */
-    pending = rcd_transfer_get_pending (t);
-    desc = g_strdup_printf ("Downloading package %s", url);
-    rcd_pending_set_description (pending, desc);
-    g_free (desc);
-    g_free (url);
 } /* download_package_file */
 
 int

@@ -221,6 +221,25 @@ rcd_prefs_set_heartbeat_interval (guint32 interval)
     SYNC_CONFIG;
 }
 
+int
+rcd_prefs_get_max_downloads (void)
+{
+    return gnome_config_get_int (
+        CONFIG_PATH "/Network/max-downloads=5");
+} /* rcd_prefs_get_max_downloads */
+
+void
+rcd_prefs_set_max_downloads (int max_downloads)
+{
+    if (max_downloads < 0)
+        max_downloads = 0;
+
+    gnome_config_set_int (
+        CONFIG_PATH "/Network/max-downloads", max_downloads);
+
+    SYNC_CONFIG;
+} /* rcd_prefs_set_max_downloads */
+
 gboolean
 rcd_prefs_get_require_verified_packages (void)
 {
@@ -232,7 +251,7 @@ gint
 rcd_prefs_get_debug_level (void)
 {
     return gnome_config_get_int (
-        CONFIG_PATH "/System/debug-level=5");
+        CONFIG_PATH "/System/debug-level=4");
 } /* rcd_prefs_get_debug_level */
 
 void

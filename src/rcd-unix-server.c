@@ -68,24 +68,16 @@ read_cred (GIOChannel *channel, RCDUnixServerHandle *handle)
     size = sizeof (cred);
     rc = getsockopt (sockfd, SOL_SOCKET, SO_PEERCRED, &cred, &size);
 
-    if (size != sizeof (cred)) {
-        rc_debug (RC_DEBUG_LEVEL_WARNING, "### Size of the cred was bad; expected %d, got %d", sizeof (cred), size);
-    }
-
     if (rc < 0 || size != sizeof (cred)) {
         handle->cred_available = FALSE;
 
-        rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Couldn't get credentials");
+        rc_debug (RC_DEBUG_LEVEL_WARNING, "Couldn't get credentials");
     }
     else {
         handle->cred_available = TRUE;
         handle->pid = cred.pid;
         handle->uid = cred.uid;
         handle->gid = cred.gid;
-
-        rc_debug (RC_DEBUG_LEVEL_MESSAGE,
-                  "size: %d  PID: %d  UID: %d  GID: %d", size,
-                  cred.pid, cred.uid, cred.gid);
     }
 } /* read_cred */
 

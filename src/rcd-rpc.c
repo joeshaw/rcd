@@ -93,19 +93,19 @@ access_control_check (xmlrpc_env   *env,
 
     method_info = g_hash_table_lookup (method_info_hash, method_name);
 
-    rc_debug (RC_DEBUG_LEVEL_MESSAGE, 
+    rc_debug (RC_DEBUG_LEVEL_INFO, 
               "Method being called: %s", method_name);
 
     if (method_info) {
         str = rcd_privileges_to_string (method_info->req_privs);
-        rc_debug (RC_DEBUG_LEVEL_MESSAGE,
+        rc_debug (RC_DEBUG_LEVEL_INFO,
                   "Requires Privileges: %s", str);
         g_free (str);
               
     }
 
     str = rcd_privileges_to_string (identity->privileges);
-    rc_debug (RC_DEBUG_LEVEL_MESSAGE,
+    rc_debug (RC_DEBUG_LEVEL_INFO,
               "    User Privileges: %s", str);
     g_free (str);
 
@@ -127,7 +127,7 @@ process_rpc_call (xmlrpc_env       *env,
 {
     xmlrpc_mem_block *output;
 
-    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Handling RPC connection");
+    rc_debug (RC_DEBUG_LEVEL_INFO, "Handling RPC connection");
 
     if (current_method_data)
         rc_debug (RC_DEBUG_LEVEL_CRITICAL, 
@@ -143,7 +143,7 @@ process_rpc_call (xmlrpc_env       *env,
     
     current_method_data = NULL;
 
-    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Call processed");
+    rc_debug (RC_DEBUG_LEVEL_INFO, "Call processed");
 
     return output;
 } /* process_rpc_call */
@@ -239,7 +239,7 @@ soup_rpc_callback (SoupServerContext *context, SoupMessage *msg, gpointer data)
         || !identity
         || !soup_server_auth_check_passwd (context->auth,
                                            identity->password)) {
-        rc_debug (RC_DEBUG_LEVEL_MESSAGE,
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
                   "Couldn't authenticate %s", username);
         
         rcd_identity_free (identity);

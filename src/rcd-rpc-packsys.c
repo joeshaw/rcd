@@ -1320,7 +1320,7 @@ packsys_transact(xmlrpc_env   *env,
     status->install_packages = install_packages;
     status->remove_packages = remove_packages;
     status->dry_run = (gboolean) dry_run;
-    status->pending = rcd_pending_new ("Beginning transaction");
+    status->pending = rcd_pending_new ("Package Download");
     status->client_host = g_strdup (method_data->host);
     status->client_user = g_strdup (method_data->identity->username);
 

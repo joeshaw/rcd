@@ -275,7 +275,7 @@ initialize_rc_world (void)
     if (dump_file != NULL) {
         char *dump_file_contents;
 
-        rc_debug (RC_DEBUG_LEVEL_INFO,
+        rc_debug (RC_DEBUG_LEVEL_MESSAGE,
                   "Loading dump file '%s'",
                   dump_file);
         
@@ -396,7 +396,7 @@ signal_handler (int sig_num)
     else
         g_assert_not_reached ();
 
-    rc_debug (RC_DEBUG_LEVEL_INFO, "Received %s... Shutting down.", sig_name);
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Received %s... Shutting down.", sig_name);
     rcd_shutdown ();
 } /* signal_handler */
 

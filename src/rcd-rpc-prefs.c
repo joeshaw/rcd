@@ -311,6 +311,11 @@ rcd_rpc_prefs_register_methods(void)
         (RCDPrefSetFunc) rcd_prefs_set_heartbeat_interval);
 
     rcd_rpc_prefs_register_pref (
+        "max-downloads", RCD_PREF_INT,
+        (RCDPrefGetFunc) rcd_prefs_get_max_downloads,
+        (RCDPrefSetFunc) rcd_prefs_set_max_downloads);
+
+    rcd_rpc_prefs_register_pref (
         "debug-level", RCD_PREF_INT,
         (RCDPrefGetFunc) rcd_prefs_get_debug_level,
         (RCDPrefSetFunc) rcd_prefs_set_debug_level);
