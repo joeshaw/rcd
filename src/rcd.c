@@ -50,10 +50,10 @@ rcd_query_test (void)
     parts[0].query_str = "GNOME";
     parts[0].negate = FALSE;
 
-    parts[1].key = "name";
-    parts[1].type = RCD_QUERY_SUBSTR;
-    parts[1].query_str = "gnome";
-    parts[1].negate = TRUE;
+    parts[1].key = "channel";
+    parts[1].type = RCD_QUERY_IS;
+    parts[1].query_str = "$";
+    parts[1].negate = FALSE;
 
     parts[2].type = RCD_QUERY_LAST;
 

@@ -37,24 +37,33 @@ typedef enum {
     RCD_QUERY_LT,
     RCD_QUERY_GT_EQ,
     RCD_QUERY_LT_EQ,
-    RCD_QUERY_LAST
+    RCD_QUERY_LAST,
+    RCD_QUERY_INVALID
 } RCDQueryType;
 
 typedef struct _RCDQueryPart RCDQueryPart;
 struct _RCDQueryPart {
-    char *key;
+    char        *key;
     RCDQueryType type;
-    char *query_str;
+    char        *query_str;
+    guint        negate : 1;
 
-    guint negate : 1;
-
-    guint processed : 1; /* for internal use only */
+    /* for internal use only */
+    guint    processed : 1; 
+    gpointer data;
 };
 
-gint rcd_query (RCWorld     *world,
+RCDQueryType rcd_query_type_from_string (const char *str);
+
+const char  *rcd_query_type_to_string   (RCDQueryType type);
+
+gboolean     rcd_query_type_compare     (RCDQueryType type,
+                                         gint x, gint y);
+
+gint rcd_query (RCWorld      *world,
                 RCDQueryPart *parts_array,
-                RCPackageFn  fn,
-                gpointer     user_data);
+                RCPackageFn   fn,
+                gpointer      user_data);
 
 #endif /* __RC_QUERY_H__ */
 

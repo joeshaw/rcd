@@ -34,41 +34,109 @@ typedef struct _RCDQueryEngine RCDQueryEngine;
 struct _RCDQueryEngine {
     const char *key;
 
-    gboolean  (*valid_type) (RCDQueryType type);
-    gboolean  (*valid_str)  (RCDQueryType type,
-                             const char *query_str);
-    gboolean  (*match)      (RCPackage  *package, 
-                             RCDQueryType type,
-                             const char *query_str);
-    gboolean  (*quickstart) (RCDQueryPart *part, GSList **);
+    gboolean  (*initialize) (RCDQueryPart *part);
+
+    void      (*finalize)   (RCDQueryPart *part);
+
+    gboolean  (*match)      (RCPackage    *package, 
+                             RCDQueryPart *part);
+
+    gboolean  (*quickstart) (RCWorld      *world,
+                             RCDQueryPart *part,
+                             GSList      **inital_list);
 
     gint        quickstart_score;
 };
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
-static gboolean
-bool_valid_type (RCDQueryType type)
+struct QueryTypeStrings {
+    RCDQueryType type;
+    const char *str;
+};
+
+struct QueryTypeStrings query2str[] = {
+    { RCD_QUERY_IS,     "is" },
+    { RCD_QUERY_SUBSTR, "substr" },
+    { RCD_QUERY_LAST,   NULL }
+};
+        
+
+RCDQueryType
+rcd_query_type_from_string (const char *str)
 {
-    return type == RCD_QUERY_IS;
+    int i;
+    g_return_val_if_fail (str && *str, RCD_QUERY_INVALID);
+    for (i = 0; query2str[i].type != RCD_QUERY_LAST; ++i) {
+        if (! g_strcasecmp (str, query2str[i].str))
+            return query2str[i].type;
+    }
+    return RCD_QUERY_INVALID;
 }
 
-static gboolean
-bool_valid_str (RCDQueryType type,
-                const char *query_str)
+const char *
+rcd_query_type_to_string (RCDQueryType type)
 {
-    return !g_strcasecmp (query_str, "true") || !g_strcasecmp (query_str, "false");
+    int i;
+
+    g_return_val_if_fail (type != RCD_QUERY_INVALID, "[Invalid]");
+    g_return_val_if_fail (type != RCD_QUERY_LAST, "[Invalid:Last]");
+
+    for (i = 0; query2str[i].type != RCD_QUERY_LAST; ++i) {
+        if (query2str[i].type == type)
+            return query2str[i].str;
+    }
+
+    return "[Invalid:NotFound]";
+}
+
+gboolean
+rcd_query_type_compare (RCDQueryType type,
+                        gint x, gint y)
+{
+    g_return_val_if_fail (type != RCD_QUERY_SUBSTR, FALSE);
+
+    switch (type) {
+
+    case RCD_QUERY_IS:
+        return x == y;
+
+    case RCD_QUERY_GT:
+        return x > y;
+
+    case RCD_QUERY_LT:
+        return x < y;
+
+    case RCD_QUERY_GT_EQ:
+        return x >= y;
+
+    case RCD_QUERY_LT_EQ:
+        return x <= y;
+
+    default:
+    }
+
+    g_assert_not_reached ();
+    return FALSE;
+}
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+static gboolean
+bool_initialize (RCDQueryPart *part)
+{
+    return part->type == RCD_QUERY_IS
+        && (!g_strcasecmp (part->query_str, "true") || !g_strcasecmp (part->query_str, "false"));
 }
 
 static gboolean
 bool_match (gboolean val,
-            RCDQueryType type,
-            const char *query_str)
+            RCDQueryPart *part)
 {
-    if (! g_strcasecmp (query_str, "true"))
+    if (! g_strcasecmp (part->query_str, "true"))
         return val;
 
-    if (! g_strcasecmp (query_str, "false"))
+    if (! g_strcasecmp (part->query_str, "false"))
         return ! val;
 
     g_assert_not_reached ();
@@ -80,21 +148,21 @@ bool_match (gboolean val,
 /* Name matching */
 
 static gboolean
-name_valid_type (RCDQueryType type)
+name_initialize (RCDQueryPart *part)
 {
-    return type == RCD_QUERY_IS || type == RCD_QUERY_SUBSTR;
+    return part->type == RCD_QUERY_IS
+        || part->type == RCD_QUERY_SUBSTR;
 }
 
 static gboolean
 name_match (RCPackage *package,
-            RCDQueryType type,
-            const char *query_str)
+            RCDQueryPart *part)
 {
-    if (type == RCD_QUERY_IS)
-        return ! strcmp (package->spec.name, query_str);
+    if (part->type == RCD_QUERY_IS)
+        return ! strcmp (package->spec.name, part->query_str);
 
-    if (type == RCD_QUERY_SUBSTR)
-        return strstr (package->spec.name, query_str) != NULL;
+    if (part->type == RCD_QUERY_SUBSTR)
+        return strstr (package->spec.name, part->query_str) != NULL;
 
     g_assert_not_reached ();
     return FALSE;
@@ -105,21 +173,21 @@ name_match (RCPackage *package,
 /* Summary matching */
 
 static gboolean
-summary_valid_type (RCDQueryType type)
+summary_initialize (RCDQueryPart *part)
 {
-    return type == RCD_QUERY_IS || type == RCD_QUERY_SUBSTR;
+    return part->type == RCD_QUERY_IS
+        || part->type == RCD_QUERY_SUBSTR;
 }
 
 static gboolean
 summary_match (RCPackage *package,
-               RCDQueryType type,
-               const char *query_str)
+               RCDQueryPart *part)
 {
-    if (type == RCD_QUERY_IS) /* Not very useful */
-        return package->summary && ! strcmp (package->summary, query_str);
+    if (part->type == RCD_QUERY_IS) /* Not very useful */
+        return package->summary && ! strcmp (package->summary, part->query_str);
 
-    if (type == RCD_QUERY_SUBSTR)
-        return package->summary && strstr (package->summary, query_str) != NULL;
+    if (part->type == RCD_QUERY_SUBSTR)
+        return package->summary && strstr (package->summary, part->query_str) != NULL;
 
     g_assert_not_reached ();
     return FALSE;
@@ -130,21 +198,62 @@ summary_match (RCPackage *package,
 /* Description matching */
 
 static gboolean
-description_valid_type (RCDQueryType type)
+description_initialize (RCDQueryPart *part)
 {
-    return type == RCD_QUERY_IS || type == RCD_QUERY_SUBSTR;
+    return part->type == RCD_QUERY_IS 
+        || part->type == RCD_QUERY_SUBSTR;
 }
 
 static gboolean
 description_match (RCPackage *package,
-                   RCDQueryType type,
-                   const char *query_str)
+                   RCDQueryPart *part)
 {
-    if (type == RCD_QUERY_IS) /* Not very useful */
-        return package->description && ! strcmp (package->description, query_str);
+    if (part->type == RCD_QUERY_IS) /* Not very useful */
+        return package->description && ! strcmp (package->description, part->query_str);
 
-    if (type == RCD_QUERY_SUBSTR)
-        return package->description && strstr (package->description, query_str) != NULL;
+    if (part->type == RCD_QUERY_SUBSTR)
+        return package->description && strstr (package->description, part->query_str) != NULL;
+
+    g_assert_not_reached ();
+    return FALSE;
+}
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+/* Channel matching */
+
+static gboolean
+channel_initialize (RCDQueryPart *part)
+{
+    return part->type == RCD_QUERY_IS || part->type == RCD_QUERY_SUBSTR;
+}
+
+static gboolean
+channel_match (RCPackage *package,
+               RCDQueryPart *part)
+{
+    RCChannel *channel = package->channel;
+    
+    /* $ is a magic character for system packages.  This is very lame. */
+    if (part->query_str[0] == '$' && part->query_str[1] == '\0') {
+        return channel == NULL; 
+    }
+    
+    if (channel) {
+        gchar *endptr;
+        guint32 id = strtoul (part->query_str, &endptr, 10);
+        if (endptr == NULL) { /* yes, query_str was a uint */
+            return rc_channel_get_id (channel) == id;
+        }
+    }
+
+    if (part->type == RCD_QUERY_IS) {
+        return ! strcmp (part->query_str, rc_channel_get_name (channel));
+    }
+
+    if (part->type == RCD_QUERY_SUBSTR) {
+        return strstr (part->query_str, rc_channel_get_name (channel)) != NULL;
+    }
 
     g_assert_not_reached ();
     return FALSE;
@@ -156,10 +265,9 @@ description_match (RCPackage *package,
 
 static gboolean
 is_installed_match (RCPackage *package,
-                    RCDQueryType type,
-                    const char *query_str)
+                    RCDQueryPart *part)
 {
-    return bool_match (rc_package_is_installed (package), type, query_str);
+    return bool_match (rc_package_is_installed (package), part);
 }
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
@@ -168,23 +276,92 @@ is_installed_match (RCPackage *package,
 
 static gboolean
 has_update_match (RCPackage *package,
-                  RCDQueryType type,
-                  const char *query_str)
+                  RCDQueryPart *part)
 {
-    return bool_match (rc_package_get_best_upgrade (package) != NULL, type, query_str);
+    return bool_match (rc_package_get_best_upgrade (package) != NULL, part);
+}
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+/* Urgency matching */
+
+static gboolean
+urgency_initialize (RCDQueryPart *part)
+{
+    RCPackageImportance importance;
+
+     if (part->type != RCD_QUERY_IS
+         && part->type == RCD_QUERY_LT
+         && part->type == RCD_QUERY_GT
+         && part->type == RCD_QUERY_LT_EQ
+         && part->type == RCD_QUERY_GT_EQ)
+     return FALSE;
+
+     importance = rc_string_to_package_importance (part->query_str);
+     if (importance == RC_IMPORTANCE_INVALID
+         || importance == RC_IMPORTANCE_LAST)
+         return FALSE;
+
+     part->data = GINT_TO_POINTER ((gint) importance);
+
+     return TRUE;
+}
+
+static gboolean
+urgency_match (RCPackage *package,
+               RCDQueryPart *part)
+{
+    RCPackageUpdate *update;
+    RCPackageImportance this_importance;
+    int imp_num, this_imp_num;
+
+    update = rc_package_get_latest_update (package);
+    if (update == NULL)
+        return FALSE;
+    this_importance = update->importance;
+
+    /* We negate these so that bigger numbers => greater urgency */
+    imp_num = - GPOINTER_TO_INT (part->data);
+    this_imp_num = - (gint) this_importance;
+
+    return rcd_query_type_compare (part->type, this_imp_num, imp_num);
+}
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+/* Version matching */
+
+static gboolean
+version_initialize (RCDQueryPart *part)
+{
+    /* FIXME */
+    g_assert_not_reached ();
+
+    return FALSE;
+}
+
+static gboolean
+version_match (RCPackage *package,
+               RCDQueryPart *part)
+{
+    /* FIXME */
+
+    return FALSE;
 }
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 static RCDQueryEngine engines[] = {
-    { "name", name_valid_type, NULL, name_match, NULL, 0 },
-    { "summary", summary_valid_type, NULL, summary_match, NULL, 0 },
-    { "description", description_valid_type, NULL, description_match, NULL, 0 },
-    { "is_installed", bool_valid_type, bool_valid_str, is_installed_match, NULL, 0 },
-    { "has_update", bool_valid_type, bool_valid_str, has_update_match, NULL, 0 },
+    { "name",         name_initialize,        NULL, name_match,         NULL, 0 },
+    { "summary",      summary_initialize,     NULL, summary_match,      NULL, 0 },
+    { "description",  description_initialize, NULL, description_match,  NULL, 0 },
+    { "channel",      channel_initialize,     NULL, channel_match,      NULL, 0 },
+    { "is_installed", bool_initialize,        NULL, is_installed_match, NULL, 0 },
+    { "has_update",   bool_initialize,        NULL, has_update_match,   NULL, 0 },
+    { "urgency",      urgency_initialize,     NULL, urgency_match,      NULL, 0 },
+    { "version",      version_initialize,     NULL, version_match,      NULL, 0 },
     { NULL, NULL, NULL, NULL, NULL, 0 }
 };
-
 
 void
 build_slist_fn (RCPackage *pkg, gpointer user_data)
@@ -224,6 +401,17 @@ rcd_query (RCWorld     *world,
 
             RCDQueryEngine *engine = NULL;
 
+            if (parts[i].key == NULL) {
+                g_warning ("Skipping part with NULL key");
+                goto after_iteration;
+            }
+
+            if (part[i].query_str == NULL) {
+                g_warning ("Skipping part '%s' with NULL query string",
+                           part[i].key);
+                goto after_iteration;
+            }
+
             /* Find a matching engine, using a crappy linear search */
             for (j = 0; engines[j].key != NULL && engine == NULL; ++j) {
                 if (! g_strcasecmp (parts[i].key, engines[j].key))
@@ -236,18 +424,13 @@ rcd_query (RCWorld     *world,
                 g_warning ("Skipping unknown key '%s'", parts[i].key);
                 goto after_iteration;
             }
-
-            if (engine->valid_type 
-                && ! engine->valid_type (parts[i].type)) {
-                g_warning ("Skipping invalid type: %s %d %s",
-                           parts[i].key, parts[i].type, parts[i].query_str);
-                goto after_iteration;
-            }
-
-            if (engine->valid_str
-                && ! engine->valid_str (parts[i].type, parts[i].query_str)) {
-                g_warning ("Skipping invalid query str: %s %d %s",
-                           parts[i].key, parts[i].type, parts[i].query_str);
+            
+            if (engine->initialize
+                && ! engine->initialize (&parts[i])) {
+                g_warning ("Skipping invalid part: %s %s %s",
+                           parts[i].key, 
+                           rcd_query_type_to_string (parts[i].type),
+                           parts[i].query_str);
                 goto after_iteration;
             }
 
@@ -262,7 +445,7 @@ rcd_query (RCWorld     *world,
                 /* Check to see if this package matches the part's criteria.
                    If not, remove it from the list. */
 
-                match_val = engine->match (pkg, parts[i].type, parts[i].query_str);
+                match_val = engine->match (pkg, &parts[i]);
                 if (parts[i].negate)
                     match_val = ! match_val;
 
@@ -273,6 +456,9 @@ rcd_query (RCWorld     *world,
             }
 
         after_iteration:
+
+            if (engine->finalize)
+                engine->finalize (&parts[i]);
             
             parts[i].processed = TRUE;
         }
