@@ -44,7 +44,7 @@ rcd_news_to_xmlrpc (RCDNews        *news,
     value = xmlrpc_struct_new (env);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    RCD_XMLRPC_STRUCT_SET_STRING (env, value, "server",
+    RCD_XMLRPC_STRUCT_SET_STRING (env, value, "service_name",
                                   RC_WORLD_SERVICE (remote)->name);
 
     RCD_XMLRPC_STRUCT_SET_STRING (env, value, "title", news->title);

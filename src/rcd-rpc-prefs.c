@@ -495,7 +495,7 @@ rcd_rpc_prefs_register_methods (void)
 
     rcd_rpc_prefs_register_pref (
         "bind-ip", RCD_PREF_STRING,
-        "IP address to bind to (empty means \"all\"",
+        "IP address to bind to (empty means \"all\")",
         "Advanced",
         (RCDPrefGetFunc) rcd_prefs_get_bind_ipaddress, "view",
         (RCDPrefSetFunc) rcd_prefs_set_bind_ipaddress, "superuser");

@@ -1,3 +1,10 @@
+2003-09-02  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-news.c (rcd_news_to_xmlrpc): Change server to
+	service_name.
+
+	* rcd-rpc-prefs.c (rcd_rpc_prefs_register_methods): Fix a typo.
+
 2003-08-29  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-system.c (system_protocol_version): Added.  Allows
