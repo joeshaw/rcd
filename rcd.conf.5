@@ -3,7 +3,7 @@
 .SH "NAME"
 rcd.conf \- Red Carpet Daemon (rcd) configuration file.
 .SH "DESCRIPTION"
-The Red Carpet Daemon, rcd, uses a system\-wide configuration file for setting various options related to its operation. You may edit the configuration file directly, or set options using one of the rcd clients. The most obvious mechanism for doing so is the \fIrug set\fR command. See the rug man page for more information.
+The Red Carpet Daemon, rcd, uses a system\-wide configuration file for setting various options related to its operation. You may edit the configuration file directly, or set options using one of the rcd clients. The most obvious mechanism for doing so is the \fIrug set\fR command. See the \fIrug\fR man page for more information.
 .SH "CONFIGURATION FILE FORMAT"
 .LP 
 The configuration file is in the GNOME config file format, similar to Windows .ini files.  Entries are grouped into sections.  A section begins with the line:
@@ -52,7 +52,7 @@ This section contains settings for rcd's network options, including what server 
 
 .TP 
 \fBhost=<url>\fR
-This token specifies the server that rcd should connect to.  This is a URL.  By default rcd contacts \fIhttp://red\-carpet.ximian.com.\fR This token can be set with "rug set" or other rcd client settings tools.
+Deprecated in rcd 1.5 and later. This value is read in only once, for upgrade purposes, and only if the file /var/lib/rcd/services.xml does not exist. All servers are now stored in that file, and if it exists, changes to this value do nothing. Instead of changing this value, use the command \fBrug service\-add\fR or \fBrug service\-delete\fR.
 
 .TP 
 \fBenable\-premium=[true | false]\fR

@@ -69,31 +69,34 @@ Output usage message and then exit.
 Output version information and exit.
 .SH "FILES"
 .TP 
-\fI/etc/ximian/rcd.conf\fP
-Configuration file.  Options such as the server to contact, proxy
-configuration, and other settings can be set through this file. This file is documented in the man page rcd.conf(5).
+\fI/etc/ximian/rcd.conf\fR
+Configuration file.  Options such as proxy and cache settings can be adjusted through this file directly or with the \fBrug set\fR command. This file is documented in the man page rcd.conf(5). Note that the remote server is not set in this file.
 
 .TP 
-\fI/etc/ximian/rc\-passwd\fP
+\fI/etc/ximian/rc\-passwd\fR
 Password file.  This file lists users, passwords for remote access,
 and privileges for various actions.
 
 .TP 
-\fI/etc/init.d/rcd\fP 
+\fI/etc/init.d/rcd\fR 
 Initialization script. It is recommended that you use this script to start and stop rcd, rather than running it directly.
 
 .TP 
-\fI/var/log/rcd/rcd\-messages\fP 
+\fI/var/log/rcd/rcd\-messages\fR 
 Log file.
 
 .TP 
-\fI/var/log/rcd/rcd\-package\-history\fP
+\fI/var/log/rcd/rcd\-package\-history\fR
 Transaction history.  This lists a record of all package
 installations, removals, and upgrades.
 
 .TP 
 \fI/var/lib/rcd\fP
 Cached channel and package data.
+
+.TP 
+\fI/var/lib/rcd/services.xml\fR
+List of servers from which rcd will download software and package information.
 
 .TP 
 \fI/var/lib/redcarpet/subscriptions.xml\fP
