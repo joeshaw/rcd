@@ -481,8 +481,8 @@ service_activate (xmlrpc_env   *env,
                   void         *user_data)
 {
     xmlrpc_value *activation_info;
-    char *activation_code, *email;
-    char *service_identifier = NULL, *alias = NULL;
+    char *activation_code;
+    char *email = NULL, *service_identifier = NULL, *alias = NULL;
     RCWorldService *service;
     char *err_msg;
 
@@ -492,8 +492,10 @@ service_activate (xmlrpc_env   *env,
     RCD_XMLRPC_STRUCT_GET_STRING (env, activation_info,
                                   "activation_code", activation_code);
 
-    RCD_XMLRPC_STRUCT_GET_STRING (env, activation_info,
-                                  "email", email);
+    if (xmlrpc_struct_has_key (env, activation_info, "email")) {
+        RCD_XMLRPC_STRUCT_GET_STRING (env, activation_info,
+                                      "email", email);
+    }
 
     if (xmlrpc_struct_has_key (env, activation_info, "alias")) {
         RCD_XMLRPC_STRUCT_GET_STRING (env, activation_info,

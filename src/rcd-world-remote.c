@@ -36,6 +36,7 @@
 #include "rcd-news.h"
 #include "rcd-prefs.h"
 #include "rcd-transfer-pool.h"
+#include "rcd-rpc-util.h"
 #include "rcd-xmlrpc.h"
 
 #define RCD_WORLD_REMOTE_FETCH_FAILED ((gpointer) 0xdeadbeef)
@@ -471,7 +472,7 @@ build_register_params (xmlrpc_env *env,
     else
         hostname = uname_buf.nodename;
 
-    value = xmlrpc_build_value(env, "()");
+    value = xmlrpc_struct_new (env);
     XMLRPC_FAIL_IF_FAULT (env);
 
     if (!activation_code) {
@@ -483,26 +484,23 @@ build_register_params (xmlrpc_env *env,
           XMLRPC_FAIL_IF_FAULT (env);
         */
     } else {
-        xmlrpc_array_append_item (env, value,
-                                  xmlrpc_build_value(env, "s", activation_code));
+        RCD_XMLRPC_STRUCT_SET_STRING (env, value, "key", activation_code);
         XMLRPC_FAIL_IF_FAULT (env);
     }
  
     if (email) {
-        xmlrpc_array_append_item (env, value,
-                                  xmlrpc_build_value(env, "s", email));
+        RCD_XMLRPC_STRUCT_SET_STRING (env, value, "email", email);
         XMLRPC_FAIL_IF_FAULT (env);
     }
 
-    xmlrpc_array_append_item(env, value,
-                             xmlrpc_build_value(env, "s", hostname));
- 
     if (alias) {
-        xmlrpc_array_append_item (env, value,
-                                  xmlrpc_build_value(env, "s", alias));
+        RCD_XMLRPC_STRUCT_SET_STRING (env, value, "alias", alias);
         XMLRPC_FAIL_IF_FAULT (env);
     }
- 
+
+    RCD_XMLRPC_STRUCT_SET_STRING (env, value, "hostname", hostname);
+    XMLRPC_FAIL_IF_FAULT (env);
+
 cleanup:
     if (env->fault_occurred) {
         xmlrpc_DECREF (value);
@@ -536,9 +534,9 @@ rcd_world_remote_activate (RCDWorldRemote  *remote,
     params = build_register_params (&env, activation_code, email, alias);
     XMLRPC_FAIL_IF_FAULT (&env);
 
-    value = xmlrpc_client_call_server_params (&env, server,
-                                              "rcserver.activate",
-                                              params);
+    value = xmlrpc_client_call_server (&env, server,
+                                       "rcserver.activate",
+                                       "(V)", params);
 
 cleanup:
     if (env.fault_occurred) {

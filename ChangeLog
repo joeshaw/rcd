@@ -1,3 +1,7 @@
+2003-09-05  Tambet Ingo  <tambet@ximian.com>
+
+	* doc/rpc-docs.txt: Update activation method.
+
 2003-08-22  Joe Shaw  <joe@ximian.com>
 
 	* README: Add some info about the licenses covering rcd.

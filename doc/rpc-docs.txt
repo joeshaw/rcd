@@ -574,7 +574,7 @@ rcd.service.refresh_blocking(string identifier [optional])
 
 rcd.service.activate(struct {
 		     activation_code : string,
-		     email : string,
+		     email : string [optional],
 		     alias : string [optional],
 		     service : string [optional] })
 
