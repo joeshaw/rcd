@@ -1,3 +1,12 @@
+2002-07-17  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-util.c (rcd_rc_package_from_xmlrpc_package): If we don't
+	have a channel associated, first check to see if the
+	"package_data" key is set, because then we know it's actually a
+	streamed package.  Else check for a "package_filename" key,
+	because then we know it's actually a reference to a local file.
+	Otherwise, check for system packages like usual.
+
 2002-07-16  Joe Shaw  <joe@ximian.com>
 
 	* rcd-prefs.c (rcd_prefs_get_proxy): Added.
