@@ -1,5 +1,17 @@
 2002-08-07  Joe Shaw  <joe@ximian.com>
 
+	* rcd-fetch.c (process_channel_cb): Unref the transfer.  Fixes a
+	leak.
+
+	* rcd-rpc-packsys.c (cleanup_after_transaction): Free the
+	RCDTransactionStatus struct and free/unref its members.
+	(run_transaction): Move the call of cleanup_after_transaction()
+	after rc_world_get_system_packages().
+	(download_packages): Ref the package before we add it to the
+	packages_to_download list.
+
+2002-08-07  Joe Shaw  <joe@ximian.com>
+
 	* rcd-about.c (rcd_about_copyright): Removed "All rights reserved"
 	as we're not reserving all of our rights (since it's licensed
 	under the GPL).

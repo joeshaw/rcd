@@ -352,6 +352,8 @@ process_channel_cb (RCDTransfer *t, gpointer user_data)
 
     rc_channel_unref (closure->channel);
     g_free (closure);
+
+    g_object_unref (t);
 }
 
 gint

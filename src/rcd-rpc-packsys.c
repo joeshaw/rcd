@@ -914,6 +914,16 @@ cleanup_after_transaction (RCDTransactionStatus *status)
     if (!rcd_prefs_get_cache_enabled ())
         cleanup_temp_package_files (status->packages_to_download);
 
+    rc_package_slist_unref (status->install_packages);
+    rc_package_slist_unref (status->remove_packages);
+    rc_package_slist_unref (status->packages_to_download);
+    g_object_unref (status->pending);
+    g_free (status->client_host);
+    g_free (status->client_user);
+    g_free (status->log_tid);
+
+    g_free (status);
+
     /* Allow shutdowns again. */
     rcd_shutdown_allow ();
 } /* cleanup_after_transaction */    
@@ -1023,11 +1033,11 @@ run_transaction(gpointer user_data)
         }
     }
 
-    cleanup_after_transaction (status);
-
     /* Update the list of system packages */
     if (! status->dry_run)
         rc_world_get_system_packages (rc_get_world ());
+
+    cleanup_after_transaction (status);
 
     packsys_lock = FALSE;
 
@@ -1179,7 +1189,7 @@ download_packages (RCPackageSList *packages, RCDTransactionStatus *status)
 
         if (!package->package_filename) {
             status->packages_to_download = g_slist_prepend (
-                status->packages_to_download, package);
+                status->packages_to_download, rc_package_ref (package));
             status->total_download_size +=
                 rc_package_get_latest_update (package)->package_size;
         }
