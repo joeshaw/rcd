@@ -43,9 +43,11 @@ typedef struct {
 
     RCDPrefGetConversionFunc  get_conv_func;
     RCDPrefGetFunc            get_pref_func;
+    RCDPrivileges             get_privileges;
 
     RCDPrefSetConversionFunc  set_conv_func;
     RCDPrefSetFunc            set_pref_func;
+    RCDPrivileges             set_privileges;
 } RCDPrefTable;
 
 static int pref_table_size = 0;
@@ -122,6 +124,9 @@ get_pref (xmlrpc_env *env, const char *pref_name)
 {
     int i;
     xmlrpc_value *result;
+    RCDRPCMethodData *method_data;
+
+    method_data = rcd_rpc_get_method_data ();
 
     for (i = 0; i < pref_table_size; i++) {
         RCDPrefTable pt = pref_table[i];
@@ -130,6 +135,13 @@ get_pref (xmlrpc_env *env, const char *pref_name)
         if (g_strcasecmp (pt.name, pref_name) != 0)
             continue;
 
+        if (!rcd_identity_approve_action (method_data->identity,
+                                          pt.get_privileges)) {
+            xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PERMISSION_DENIED,
+                                  "Permission denied");
+            return NULL;
+        }
+        
         v = pt.get_pref_func ();
         result = pt.get_conv_func (env, v);
 
@@ -170,10 +182,13 @@ prefs_set_pref (xmlrpc_env   *env,
     char *pref_name;
     xmlrpc_value *value;
     int i;
+    RCDRPCMethodData *method_data;
  
     xmlrpc_parse_value (env, param_array, "(sV)", &pref_name, &value);
     if (env->fault_occurred)
         return NULL;
+
+    method_data = rcd_rpc_get_method_data ();
 
     for (i = 0; i < pref_table_size; i++) {
         RCDPrefTable pt = pref_table[i];
@@ -181,6 +196,13 @@ prefs_set_pref (xmlrpc_env   *env,
 
         if (g_strcasecmp (pt.name, pref_name) != 0)
             continue;
+
+        if (!rcd_identity_approve_action (method_data->identity,
+                                          pt.set_privileges)) {
+            xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PERMISSION_DENIED,
+                                  "Permission denied");
+            return NULL;
+        }
 
         v = pt.set_conv_func (env, value);
         if (env->fault_occurred)
@@ -204,6 +226,7 @@ prefs_list_prefs (xmlrpc_env   *env,
 {
     int i;
     xmlrpc_value *result = NULL;
+    gboolean any_valid = FALSE;
 
     result = xmlrpc_build_value (env, "()");
     XMLRPC_FAIL_IF_FAULT (env);
@@ -214,17 +237,28 @@ prefs_list_prefs (xmlrpc_env   *env,
         xmlrpc_value *value;
         xmlrpc_value *member;
 
+        value = get_pref (env, pt.name);
+
+        /*
+         * This will filter out preferences that we don't have privileges
+         * to view.
+         */
+        if (env->fault_occurred &&
+            env->fault_code == RCD_RPC_FAULT_PERMISSION_DENIED) {
+            xmlrpc_env_clean (env);
+            xmlrpc_env_init (env);
+            continue;
+        }
+        else
+            any_valid = TRUE;
+            
         pref_info = xmlrpc_struct_new (env);
 
         RCD_XMLRPC_STRUCT_SET_STRING (env, pref_info, "name", pt.name);
         XMLRPC_FAIL_IF_FAULT (env);
 
-        value = get_pref (env, pt.name);
-        g_assert (value && !env->fault_occurred);
-
         member = xmlrpc_build_value (env, "V", value);
         XMLRPC_FAIL_IF_FAULT (env);
-
         xmlrpc_DECREF (value);
 
         xmlrpc_struct_set_value (env, pref_info, "value", member);
@@ -236,16 +270,25 @@ prefs_list_prefs (xmlrpc_env   *env,
         xmlrpc_DECREF (pref_info);
     }
 
+    if (!any_valid && pref_table_size) {
+        xmlrpc_DECREF (result);
+        result = NULL;
+        xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PERMISSION_DENIED,
+                              "Permission denied");
+    }
+
 cleanup:
     return result;
 } /* prefs_list_prefs */
 
 void
-rcd_rpc_prefs_register_pref_full (const char  *pref_name,
-                                  RCDPrefGetConversionFunc get_conv_func,
-                                  RCDPrefGetFunc           get_pref_func,
-                                  RCDPrefSetConversionFunc set_conv_func,
-                                  RCDPrefSetFunc           set_pref_func)
+rcd_rpc_prefs_register_pref_full (const char               *pref_name,
+                                  RCDPrefGetConversionFunc  get_conv_func,
+                                  RCDPrefGetFunc            get_pref_func,
+                                  const char               *get_privileges_str,
+                                  RCDPrefSetConversionFunc  set_conv_func,
+                                  RCDPrefSetFunc            set_pref_func,
+                                  const char               *set_privileges_str)
 {
     pref_table_size++;
 
@@ -255,18 +298,30 @@ rcd_rpc_prefs_register_pref_full (const char  *pref_name,
         pref_table = g_realloc (pref_table,
                                 sizeof (RCDPrefTable) * pref_table_size);
 
+    if (get_privileges_str == NULL)
+        get_privileges_str = "";
+
+    if (set_privileges_str == NULL)
+        set_privileges_str = "";
+
     pref_table[pref_table_size - 1].name = pref_name;
     pref_table[pref_table_size - 1].get_conv_func = get_conv_func;
     pref_table[pref_table_size - 1].get_pref_func = get_pref_func;
+    pref_table[pref_table_size - 1].get_privileges =
+        rcd_privileges_from_string (get_privileges_str);
     pref_table[pref_table_size - 1].set_conv_func = set_conv_func;
     pref_table[pref_table_size - 1].set_pref_func = set_pref_func;
+    pref_table[pref_table_size - 1].set_privileges =
+        rcd_privileges_from_string (set_privileges_str);
 } /* rcd_rpc_prefs_register_pref_full */
 
 void
 rcd_rpc_prefs_register_pref (const char     *pref_name,
                              RCDPrefType     pref_type,
                              RCDPrefGetFunc  get_pref_func,
-                             RCDPrefSetFunc  set_pref_func)
+                             const char     *get_privileges_str,
+                             RCDPrefSetFunc  set_pref_func,
+                             const char     *set_privileges_str)
 {
     /* Make sure to keep these in sync with RCDPrefType! */
     RCDPrefGetConversionFunc get_conv_funcs[] = {
@@ -283,76 +338,92 @@ rcd_rpc_prefs_register_pref (const char     *pref_name,
 
     rcd_rpc_prefs_register_pref_full (
         pref_name,
-        get_conv_funcs[pref_type], get_pref_func,
-        set_conv_funcs[pref_type], set_pref_func);
+        get_conv_funcs[pref_type], get_pref_func, get_privileges_str,
+        set_conv_funcs[pref_type], set_pref_func, set_privileges_str);
 } /* rcd_rpc_prefs_register_pref */
 
 void
-rcd_rpc_prefs_register_methods(void)
+rcd_rpc_prefs_register_methods (void)
 {
     rcd_rpc_prefs_register_pref (
+        "proxy-url", RCD_PREF_STRING,
+        (RCDPrefGetFunc) rcd_prefs_get_proxy_url, "superuser",
+        (RCDPrefSetFunc) rcd_prefs_set_proxy_url, "superuser");
+
+    rcd_rpc_prefs_register_pref (
+        "proxy-username", RCD_PREF_STRING,
+        (RCDPrefGetFunc) rcd_prefs_get_proxy_username, "superuser",
+        (RCDPrefSetFunc) rcd_prefs_set_proxy_username, "superuser");
+
+    rcd_rpc_prefs_register_pref (
+        "proxy-password", RCD_PREF_STRING,
+        (RCDPrefGetFunc) rcd_prefs_get_proxy_password, "superuser",
+        (RCDPrefSetFunc) rcd_prefs_set_proxy_password, "superuser");
+
+    rcd_rpc_prefs_register_pref (
         "cache-directory", RCD_PREF_STRING,
-        (RCDPrefGetFunc) rcd_prefs_get_cache_dir,
-        (RCDPrefSetFunc) rcd_prefs_set_cache_dir);
+        (RCDPrefGetFunc) rcd_prefs_get_cache_dir, "view",
+        (RCDPrefSetFunc) rcd_prefs_set_cache_dir, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "cache-enabled", RCD_PREF_BOOLEAN,
-        (RCDPrefGetFunc) rcd_prefs_get_cache_enabled,
-        (RCDPrefSetFunc) rcd_prefs_set_cache_enabled);
+        (RCDPrefGetFunc) rcd_prefs_get_cache_enabled, "view",
+        (RCDPrefSetFunc) rcd_prefs_set_cache_enabled, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "cache-cleanup-enabled", RCD_PREF_BOOLEAN,
-        (RCDPrefGetFunc) rcd_prefs_get_cache_cleanup_enabled,
-        (RCDPrefSetFunc) rcd_prefs_set_cache_cleanup_enabled);
+        (RCDPrefGetFunc) rcd_prefs_get_cache_cleanup_enabled, "view",
+        (RCDPrefSetFunc) rcd_prefs_set_cache_cleanup_enabled, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "cache-max-age-in-days", RCD_PREF_INT,
-        (RCDPrefGetFunc) rcd_prefs_get_cache_max_age_in_days,
-        (RCDPrefSetFunc) rcd_prefs_set_cache_max_age_in_days);
+        (RCDPrefGetFunc) rcd_prefs_get_cache_max_age_in_days, "view",
+        (RCDPrefSetFunc) rcd_prefs_set_cache_max_age_in_days, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "cache-max-size-in-mb", RCD_PREF_INT,
-        (RCDPrefGetFunc) rcd_prefs_get_cache_max_size_in_mb,
-        (RCDPrefSetFunc) rcd_prefs_set_cache_max_size_in_mb);
+        (RCDPrefGetFunc) rcd_prefs_get_cache_max_size_in_mb, "view",
+        (RCDPrefSetFunc) rcd_prefs_set_cache_max_size_in_mb, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "http-1.0", RCD_PREF_BOOLEAN,
-        (RCDPrefGetFunc) rcd_prefs_get_http10_enabled,
-        (RCDPrefSetFunc) rcd_prefs_set_http10_enabled);
+        (RCDPrefGetFunc) rcd_prefs_get_http10_enabled, "view",
+        (RCDPrefSetFunc) rcd_prefs_set_http10_enabled, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "heartbeat-interval", RCD_PREF_INT,
-        (RCDPrefGetFunc) rcd_prefs_get_heartbeat_interval,
-        (RCDPrefSetFunc) rcd_prefs_set_heartbeat_interval);
+        (RCDPrefGetFunc) rcd_prefs_get_heartbeat_interval, "view",
+        (RCDPrefSetFunc) rcd_prefs_set_heartbeat_interval, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "max-downloads", RCD_PREF_INT,
-        (RCDPrefGetFunc) rcd_prefs_get_max_downloads,
-        (RCDPrefSetFunc) rcd_prefs_set_max_downloads);
+        (RCDPrefGetFunc) rcd_prefs_get_max_downloads, "view",
+        (RCDPrefSetFunc) rcd_prefs_set_max_downloads, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "debug-level", RCD_PREF_INT,
-        (RCDPrefGetFunc) rcd_prefs_get_debug_level,
-        (RCDPrefSetFunc) rcd_prefs_set_debug_level);
+        (RCDPrefGetFunc) rcd_prefs_get_debug_level, "view",
+        (RCDPrefSetFunc) rcd_prefs_set_debug_level, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "syslog-level", RCD_PREF_INT,
-        (RCDPrefGetFunc) rcd_prefs_get_syslog_level,
-        (RCDPrefSetFunc) rcd_prefs_set_syslog_level);
+        (RCDPrefGetFunc) rcd_prefs_get_syslog_level, "view",
+        (RCDPrefSetFunc) rcd_prefs_set_syslog_level, "superuser");
 
+    /* We handle more fine grained privileges in these pref functions. */
     rcd_rpc_register_method ("rcd.prefs.get_pref",
                              prefs_get_pref,
-                             "view",
+                             NULL,
                              NULL);
 
     rcd_rpc_register_method ("rcd.prefs.set_pref",
                              prefs_set_pref,
-                             "superuser",
+                             NULL,
                              NULL);
 
     rcd_rpc_register_method ("rcd.prefs.list_prefs",
                              prefs_list_prefs,
-                             "view",
+                             NULL,
                              NULL);
 } /* rcd_rpc_prefs_register_methods */
 

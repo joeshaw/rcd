@@ -1,3 +1,27 @@
+2002-08-28  Joe Shaw  <joe@ximian.com>
+
+	* rcd-prefs.c: Add get/set preferences for the three proxy
+	elements: URL, username, password.
+
+	* rcd-rpc-prefs.c: Add privileges for getting and setting
+	individual preferences.
+	(RCDPrefTable): Add RCDPrivileges fields for getting and setting
+	prefs.
+	(get_pref): Get the method data and approve the get against the
+	user's identity.
+	(prefs_set_pref): Get the method data and approve the set against
+	the user's identity.
+	(prefs_list_prefs): Do a get_pref() on each pref and add it to the
+	list if the user has privileges to see it.  When we're done, if it
+	turns out the list of preferences the user can see is empty, throw
+	a permission denied fault instead of returning an empty list.
+	(rcd_rpc_prefs_register_pref_full, rcd_rpc_prefs_register_pref):
+	Take a list of privileges for getting and setting a pref.
+	(rcd_rpc_prefs_register_methods): Register the proxy prefs, and
+	fix up all of the other prefs to have individual privileges.  Make
+	the RPC calls approve anyone (since handling is done inside the
+	calls now).
+
 2002-08-28  Ian Peters  <itp@ximian.com>
 
 	* rcd-rpc-packsys.c (build_updates_list): use

@@ -171,6 +171,87 @@ rcd_prefs_get_proxy (void)
     return proxy_url;
 } /* rcd_prefs_get_proxy */
 
+const char *
+rcd_prefs_get_proxy_url (void)
+{
+    static char *proxy = NULL;
+
+    g_free (proxy);
+    proxy = NULL;
+
+    proxy = gnome_config_get_string (CONFIG_PATH "/Network/proxy");
+
+    if (!proxy)
+        return NULL;
+
+    return proxy;
+} /* rcd_prefs_get_proxy_url */
+
+void
+rcd_prefs_set_proxy_url (const char *proxy_url)
+{
+    gnome_config_set_string (CONFIG_PATH "/Network/proxy", proxy_url);
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Proxy URL set: %s", proxy_url);
+
+    SYNC_CONFIG;
+}
+
+const char *
+rcd_prefs_get_proxy_username (void)
+{
+    static char *proxy_username = NULL;
+
+    g_free (proxy_username);
+    proxy_username = NULL;
+
+    proxy_username = gnome_config_get_string (
+        CONFIG_PATH "/Network/proxy-user");
+
+    if (!proxy_username)
+        return NULL;
+
+    return proxy_username;
+} /* rcd_prefs_get_proxy_username */
+
+void
+rcd_prefs_set_proxy_username (const char *proxy_username)
+{
+    gnome_config_set_string (
+        CONFIG_PATH "/Network/proxy-user", proxy_username);
+
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Proxy username set: %s",
+              proxy_username);
+
+    SYNC_CONFIG;
+}
+
+const char *
+rcd_prefs_get_proxy_password (void)
+{
+    static char *proxy_password = NULL;
+
+    g_free (proxy_password);
+    proxy_password = NULL;
+
+    proxy_password = gnome_config_get_string (
+        CONFIG_PATH "/Network/proxy-password");
+
+    if (!proxy_password)
+        return NULL;
+
+    return proxy_password;
+} /* rcd_prefs_get_proxy_password */
+
+void
+rcd_prefs_set_proxy_password (const char *proxy_password)
+{
+    gnome_config_set_string (
+        CONFIG_PATH "/Network/proxy-password", proxy_password);
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Proxy password set");
+
+    SYNC_CONFIG;
+}
+
 gboolean
 rcd_prefs_get_http10_enabled (void)
 {

@@ -48,13 +48,17 @@ enum _RCDPrefType {
 void rcd_rpc_prefs_register_pref (const char     *pref_name,
                                   RCDPrefType     pref_type,
                                   RCDPrefGetFunc  get_pref_func,
-                                  RCDPrefSetFunc  set_pref_func);
+                                  const char     *get_privileges_str,
+                                  RCDPrefSetFunc  set_pref_func,
+                                  const char     *set_privileges_str);
 
 void rcd_rpc_prefs_register_pref_full (const char               *pref_name,
                                        RCDPrefGetConversionFunc  get_conv_func,
                                        RCDPrefGetFunc            get_pref_func,
+                                       const char               *get_privs_str,
                                        RCDPrefSetConversionFunc  set_conv_func,
-                                       RCDPrefSetFunc            set_pref_func);
+                                       RCDPrefSetFunc            set_pref_func,
+                                       const char               *set_privs_str);
 
 void rcd_rpc_prefs_register_methods(void);
 
