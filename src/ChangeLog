@@ -1,3 +1,12 @@
+2002-08-05  Ian Peters  <itp@ximian.com>
+
+	* rcd-rpc-packsys.c (packsys_package_dependency_info): change the
+	way we iterate over the deps, since they're arrays now
+
+	* rcd-rpc-util.h, rcd-rpc-util.c: change
+	rcd_rc_package_dep_slist_to_xmlrpc to
+	rcd_rc_package_dep_array_to_xmlrpc.
+
 2002-08-05  Jon Trowbridge  <trow@ximian.com>
 
 	* Makefile.am (install-data-hook): chmod rcd-buddy in the correct

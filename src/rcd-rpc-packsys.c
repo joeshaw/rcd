@@ -782,22 +782,22 @@ packsys_package_dependency_info (xmlrpc_env   *env,
         result = xmlrpc_struct_new (env);
         XMLRPC_FAIL_IF_FAULT (env);
 
-        provides  = rcd_rc_package_dep_slist_to_xmlrpc (package->provides, env);
+        provides  = rcd_rc_package_dep_array_to_xmlrpc (package->provides_a, env);
         xmlrpc_struct_set_value (env, result, "provides", provides);
         XMLRPC_FAIL_IF_FAULT (env);
         xmlrpc_DECREF (provides);
         
-        requires  = rcd_rc_package_dep_slist_to_xmlrpc (package->requires, env);
+        requires  = rcd_rc_package_dep_array_to_xmlrpc (package->requires_a, env);
         xmlrpc_struct_set_value (env, result, "requires", requires);
         XMLRPC_FAIL_IF_FAULT (env);
         xmlrpc_DECREF (requires);
         
-        conflicts = rcd_rc_package_dep_slist_to_xmlrpc (package->conflicts, env);
+        conflicts = rcd_rc_package_dep_array_to_xmlrpc (package->conflicts_a, env);
         xmlrpc_struct_set_value (env, result, "conflicts", conflicts);
         XMLRPC_FAIL_IF_FAULT (env);
         xmlrpc_DECREF (conflicts);
         
-        obsoletes = rcd_rc_package_dep_slist_to_xmlrpc (package->obsoletes, env);
+        obsoletes = rcd_rc_package_dep_array_to_xmlrpc (package->obsoletes_a, env);
         xmlrpc_struct_set_value (env, result, "obsoletes", obsoletes);
         XMLRPC_FAIL_IF_FAULT (env);
         xmlrpc_DECREF (obsoletes);

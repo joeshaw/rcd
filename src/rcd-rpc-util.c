@@ -75,22 +75,21 @@ rcd_rc_package_dep_to_xmlrpc (RCPackageDep *dep,
 }
 
 xmlrpc_value *
-rcd_rc_package_dep_slist_to_xmlrpc (RCPackageDepSList *rc_deps,
+rcd_rc_package_dep_array_to_xmlrpc (RCPackageDepArray *rc_deps,
                                     xmlrpc_env        *env)
 {
     xmlrpc_value *dep_array;
+    int i;
 
     dep_array = xmlrpc_build_value (env, "()");
     
-    while (rc_deps) {
+    for (i = 0; i < rc_deps->len; i++) {
         xmlrpc_value *dep_value;
 
         dep_value = xmlrpc_struct_new (env);
-        rcd_rc_package_dep_to_xmlrpc (rc_deps->data, dep_value, env);
+        rcd_rc_package_dep_to_xmlrpc (rc_deps->data + i, dep_value, env);
         xmlrpc_array_append_item (env, dep_array, dep_value);
         xmlrpc_DECREF (dep_value);
-
-        rc_deps = rc_deps->next;
     }
 
     return dep_array;
