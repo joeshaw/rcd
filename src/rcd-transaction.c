@@ -658,15 +658,23 @@ verify_packages (RCDTransactionStatus *status)
         {
             char *status_msg;
 
-            msg = g_strdup_printf (
-                "Unable to verify package signature for '%s'",
-                g_quark_to_string (package->spec.nameq));
+            if (!gpg_attempted) {
+                msg = g_strdup_printf (
+                    "Package '%s' is not signed",
+                    g_quark_to_string (package->spec.nameq));
+            }
+            else {
+                msg = g_strdup_printf (
+                    "Unable to verify package signature for '%s'",
+                    g_quark_to_string (package->spec.nameq));
+            }
 
             rc_debug (RC_DEBUG_LEVEL_MESSAGE, msg);
 
-            status_msg = g_strconcat ("verify-nosig:",
-                                      g_quark_to_string (package->spec.nameq),
-                                      NULL);
+            status_msg = g_strconcat (
+                gpg_attempted ? "verify-undef:" : "verify-nosig:",
+                g_quark_to_string (package->spec.nameq),
+                NULL);
             rcd_pending_add_message (status->transaction_pending, status_msg);
             g_free (status_msg);
 
@@ -676,7 +684,8 @@ verify_packages (RCDTransactionStatus *status)
                 rcd_prefs_get_require_signed_packages ())
             {
                 status_msg = g_strdup_printf (
-                    "Package signatures are required for installation");
+                    "Verified package signatures are required "
+                    "for installation");
                 rcd_pending_fail (status->transaction_pending, -1, status_msg);
                 g_free (status_msg);
 

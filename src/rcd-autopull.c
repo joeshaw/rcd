@@ -730,7 +730,7 @@ rcd_autopull_download_xml (void)
     url = g_strdup_printf ("%s/autopull.php",
                            rcd_prefs_get_host ());
 
-    t = rcd_transfer_new (url, 0, NULL);
+    t = rcd_transfer_new (url, 0, rcd_cache_get_normal_cache ());
     data = rcd_transfer_begin_blocking (t);
     
     if (rcd_transfer_get_error (t)) {

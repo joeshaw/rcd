@@ -1,3 +1,10 @@
+2002-09-16  Joe Shaw  <joe@ximian.com>
+
+	* rcd-autopull.c: Use the normal log for autopull.php.
+
+	* rcd-transaction.c (verify_packages): Distinguish between an
+	unverified package signature and a non-existent signature.
+
 2002-09-16  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-rpc-packsys.c (packsys_world_sequence_numbers): Renamed from
