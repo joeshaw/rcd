@@ -1,3 +1,12 @@
+2003-10-01  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc.c (rcd_rpc_remote_server_start): Change the error
+	message to avoid a double-negative.
+
+	* rcd-world-remote.c (rcd_world_remote_fetch_channels): Mention
+	that the channels are for all targets in the debug message,
+	because I forgot.
+
 2003-09-30  Joe Shaw  <joe@ximian.com>
 
 	* rcd-recurring.c (rcd_recurring_execute): If the next event is

@@ -473,8 +473,9 @@ rcd_rpc_remote_server_start (void)
 
     if (!soup_server) {
         rc_debug (RC_DEBUG_LEVEL_ERROR, "Could not start RPC server on port %d", port);
-        rc_debug (RC_DEBUG_LEVEL_ERROR, "(This probably means that you're running not as root and not using");
-        rc_debug (RC_DEBUG_LEVEL_ERROR, "a non-privileged port, or another rcd process is already running.)");
+        rc_debug (RC_DEBUG_LEVEL_ERROR, "(This may mean that another rcd process is already running, or that");
+        rc_debug (RC_DEBUG_LEVEL_ERROR, "you are not running as root and do not have the correct privileges");
+        rc_debug (RC_DEBUG_LEVEL_ERROR, "on this port.)");
         return FALSE;
     }
 

@@ -995,7 +995,7 @@ rcd_world_remote_fetch_channels (RCDWorldRemote *remote, gboolean local,
                                                rcd_world_remote_per_channel_cb,
                                                &channel_data);
 
-    rc_debug (RC_DEBUG_LEVEL_DEBUG, "Got %d channels files", N);
+    rc_debug (RC_DEBUG_LEVEL_DEBUG, "Got %d channels (all targets)", N);
 
     if (N < 0) {
         /* Don't cache invalid data */
