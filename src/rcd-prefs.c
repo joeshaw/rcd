@@ -218,6 +218,8 @@ rcd_prefs_set_host (const char *host)
         return;
     }
 
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Host URL changed: %s", host);
+
     gnome_config_set_string (get_config_path ("/Network/host"), host);
     SYNC_CONFIG;
 } /* rcd_prefs_set_host */
@@ -232,6 +234,9 @@ rcd_prefs_get_premium (void)
 void
 rcd_prefs_set_premium (gboolean enabled)
 {
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Premium services %s",
+              enabled ? "enabled" : "disabled");
+
     gnome_config_set_bool (
         get_config_path ("/Network/enable-premium"), enabled);
 

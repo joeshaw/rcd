@@ -598,6 +598,42 @@ packsys_search_by_package_match (xmlrpc_env   *env,
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 static xmlrpc_value *
+packsys_find_package_for_file (xmlrpc_env   *env,
+                               xmlrpc_value *param_array,
+                               void         *user_data)
+{
+    RCWorld *world = user_data;
+    char *filename;
+    RCPackage *rc_package;
+    xmlrpc_value *xmlrpc_package = NULL;
+
+    xmlrpc_parse_value (env, param_array, "(s)", &filename);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    rc_package = rc_packman_find_file (rc_world_get_packman (world),
+                                       filename);
+
+    if (!rc_package) {
+        xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_PACKAGE_NOT_FOUND,
+                                        "%s is not owned by any package",
+                                        filename);
+        return NULL;
+    }
+
+    xmlrpc_package = rcd_rc_package_to_xmlrpc (rc_package, env);
+    
+    rc_package_unref (rc_package);
+
+cleanup:
+    if (env->fault_occurred)
+        return NULL;
+
+    return xmlrpc_package;
+}
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+static xmlrpc_value *
 packsys_query_file (xmlrpc_env   *env,
                     xmlrpc_value *param_array,
                     void         *user_data)
@@ -2307,6 +2343,11 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
 
     rcd_rpc_register_method("rcd.packsys.search_by_package_match",
                             packsys_search_by_package_match,
+                            "view",
+                            world);
+
+    rcd_rpc_register_method("rcd.packsys.find_package_for_file",
+                            packsys_find_package_for_file,
                             "view",
                             world);
 

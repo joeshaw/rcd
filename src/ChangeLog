@@ -1,3 +1,12 @@
+2003-05-29  Joe Shaw  <joe@ximian.com>
+
+	* rcd-prefs.c (rcd_prefs_set_host, rcd_prefs_set_premium): Add
+	some logging for when the host and enable-premium are changed.
+
+	* rcd-rpc-packsys.c (packsys_find_package_for_file): Added.  Given
+	a filename, finds the package that provides it.
+	(rcd_rpc_packsys_register_methods): Added find_package_for_file.
+
 2003-05-28  Joe Shaw  <joe@ximian.com>
 
 	* rcd-prefs.c (rcd_prefs_get_heartbeat_interval): Make the
