@@ -1,3 +1,7 @@
+if HAVE_YAST
+SUBDIRS = you-module
+endif
+
 INCLUDES =						\
 	-I$(top_srcdir) 				\
 	$(RCD_CFLAGS)					\
