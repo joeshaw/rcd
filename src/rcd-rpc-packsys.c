@@ -492,7 +492,8 @@ packsys_search (xmlrpc_env   *env,
         XMLRPC_FAIL_IF_FAULT (env);
 
         if (parts[i].type == RCD_QUERY_INVALID) {
-            xmlrpc_env_set_fault (env, -604, "Invalid search type");
+            xmlrpc_env_set_fault (env, RCD_RPC_FAULT_INVALID_SEARCH_TYPE,
+                                  "Invalid search type");
             goto cleanup;
         }
     }
@@ -540,7 +541,8 @@ packsys_query_file (xmlrpc_env   *env,
     XMLRPC_FAIL_IF_FAULT(env);
 
     if (!rc_package) {
-        xmlrpc_env_set_fault(env, -601, "Couldn't get package from file");
+        xmlrpc_env_set_fault(env, RCD_RPC_FAULT_PACKAGE_NOT_FOUND,
+                             "Couldn't get package from file");
         return NULL;
     }
     
@@ -560,6 +562,7 @@ cleanup:
 typedef struct {
     RCWorld *world;
     RCPackage *package;
+    RCPackage *installed_package;
 
     gboolean subscribed_only;
 } LatestVersionClosure;
@@ -573,6 +576,19 @@ find_latest_version (RCPackage *package, gpointer user_data)
     if (closure->subscribed_only && !rc_channel_subscribed (package->channel))
         return;
 
+    /*
+     * First check to see if we're newer than the version already installed
+     * on the system, if there is one.  That's filled out below, in
+     * find_latest_installed_version().
+     */
+    if (closure->installed_package) {
+        if (rc_packman_version_compare (
+                packman,
+                RC_PACKAGE_SPEC (package),
+                RC_PACKAGE_SPEC (closure->installed_package)) <= 0)
+            return;
+    }
+        
     if (!closure->package)
         closure->package = package;
     else {
@@ -583,6 +599,23 @@ find_latest_version (RCPackage *package, gpointer user_data)
             closure->package = package;
     }
 } /* find_latest_version */
+
+static void
+find_latest_installed_version (RCPackage *package, gpointer user_data)
+{
+    LatestVersionClosure *closure = user_data;
+    RCPackman *packman = rc_world_get_packman (closure->world);
+
+    if (!closure->installed_package)
+        closure->installed_package = package;
+    else {
+        if (rc_packman_version_compare (
+                packman, 
+                RC_PACKAGE_SPEC (package),
+                RC_PACKAGE_SPEC (closure->installed_package)) > 0)
+            closure->installed_package = package;
+    }
+} /* find_latest_installed_version */
 
 static xmlrpc_value *
 packsys_find_latest_version (xmlrpc_env   *env,
@@ -600,12 +633,28 @@ packsys_find_latest_version (xmlrpc_env   *env,
 
     closure.world = world;
     closure.package = NULL;
+    closure.installed_package = NULL;
     closure.subscribed_only = subscribed_only;
+
+    rc_world_foreach_package_by_name (
+        world, name, RC_WORLD_SYSTEM_PACKAGES,
+        find_latest_installed_version, &closure);
     rc_world_foreach_package_by_name (
         world, name, RC_WORLD_ANY_NON_SYSTEM, find_latest_version, &closure);
 
     if (!closure.package) {
-        xmlrpc_env_set_fault(env, -601, "Couldn't get package from file");
+        if (closure.installed_package) {
+            /* No version in a channel newer than what is on the system. */
+            xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PACKAGE_IS_NEWEST,
+                                  "Installed version is newer than the "
+                                  "newest available version");
+        }
+        else {
+            /* Can't find a package by that name at all. */
+            xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PACKAGE_NOT_FOUND,
+                                  "Couldn't find package");
+        }
+
         return NULL;
     }
     
@@ -665,7 +714,8 @@ packsys_package_info (xmlrpc_env   *env,
             env, result, "description", package->description);
     }
     else {
-        xmlrpc_env_set_fault(env, -601, "Couldn't get package");
+        xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PACKAGE_NOT_FOUND,
+                              "Couldn't get package");
         return NULL;
     }
     
@@ -1022,7 +1072,8 @@ check_install_package_auth (xmlrpc_env     *env,
         g_slist_free(req);
     
         if (!approved) {
-            xmlrpc_env_set_fault (env, -610, "Permission denied");
+            xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PERMISSION_DENIED,
+                                  "Permission denied");
             rc_debug (RC_DEBUG_LEVEL_MESSAGE,
                       "Caller does not have permissions to upgrade packages");
         }
@@ -1034,7 +1085,8 @@ check_install_package_auth (xmlrpc_env     *env,
         g_slist_free(req);
     
         if (!approved) {
-            xmlrpc_env_set_fault (env, -610, "Permission denied");
+            xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PERMISSION_DENIED,
+                                  "Permission denied");
             rc_debug (RC_DEBUG_LEVEL_MESSAGE,
                       "Caller does not have permissions to install packages");
         }
@@ -1057,7 +1109,8 @@ check_remove_package_auth (xmlrpc_env     *env,
     g_slist_free(req);
     
     if (!approved) {
-        xmlrpc_env_set_fault (env, -610, "Permission denied");
+        xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PERMISSION_DENIED,
+                              "Permission denied");
         rc_debug (RC_DEBUG_LEVEL_MESSAGE,
                   "Caller does not have permissions to remove packages");
     }
@@ -1163,13 +1216,15 @@ packsys_abort_download(xmlrpc_env   *env,
     pending = rcd_pending_lookup_by_id (transaction_id);
 
     if (!pending) {
-        xmlrpc_env_set_fault (env, -605, "Cannot find transaction for that id");
+        xmlrpc_env_set_fault (env, RCD_RPC_FAULT_INVALID_TRANSACTION_ID,
+                              "Cannot find transaction for that id");
         return NULL;
     }
 
     status = g_object_get_data (G_OBJECT (pending), "status");
     if (!status) {
-        xmlrpc_env_set_fault (env, -605, "Cannot find transaction for that id");
+        xmlrpc_env_set_fault (env, RCD_RPC_FAULT_INVALID_TRANSACTION_ID,
+                              "Cannot find transaction for that id");
         return NULL;
     }
 
@@ -1486,7 +1541,8 @@ resolve_deps (xmlrpc_env         *env,
         char *dep_failure_info;
 
         dep_failure_info = dep_get_failure_info (resolver);
-        xmlrpc_env_set_fault(env, -604, dep_failure_info);
+        xmlrpc_env_set_fault (env, RCD_RPC_FAULT_FAILED_DEPENDENCIES,
+                              dep_failure_info);
         g_free (dep_failure_info);
         goto cleanup;
     }

@@ -152,7 +152,8 @@ log_query_log (xmlrpc_env   *env,
         XMLRPC_FAIL_IF_FAULT (env);
 
         if (parts[i].type == RCD_QUERY_INVALID) {
-            xmlrpc_env_set_fault (env, -604, "Invalid search type");
+            xmlrpc_env_set_fault (env, RCD_RPC_FAULT_INVALID_SEARCH_TYPE,
+                                  "Invalid search type");
             goto cleanup;
         }
     }

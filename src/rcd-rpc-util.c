@@ -272,7 +272,8 @@ rcd_rc_package_from_name (xmlrpc_value *value,
     package = rc_world_get_package (world, RC_WORLD_SYSTEM_PACKAGES, name);
 
     if (!package)
-        xmlrpc_env_set_fault (env, -613, "Unable to find package");
+        xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PACKAGE_NOT_FOUND,
+                              "Unable to find package");
     else
         rc_package_ref (package);
 
@@ -297,7 +298,8 @@ rcd_rc_package_from_file (xmlrpc_value *value,
     if (package)
         package->package_filename = g_strdup (file_name);
     else
-        xmlrpc_env_set_fault (env, -613, "Unable to find package");
+        xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PACKAGE_NOT_FOUND,
+                              "Unable to find package");
 
 cleanup:
     return package;
@@ -327,7 +329,8 @@ rcd_rc_package_from_streamed_package (xmlrpc_value *value,
     if (package)
         package->package_filename = file_name;
     else {
-        xmlrpc_env_set_fault (env, -614, "Unable to read package");
+        xmlrpc_env_set_fault (env, RCD_RPC_FAULT_INVALID_PACKAGE_FILE,
+                              "Unable to read package");
         g_free (file_name);
     }
 
@@ -355,13 +358,15 @@ rcd_rc_package_from_xmlrpc_package (xmlrpc_value *value,
 
         channel = rc_world_get_channel_by_id (world, channel_id);
         if (!channel) {
-            xmlrpc_env_set_fault (env, -612, "Unable to find channel");
+            xmlrpc_env_set_fault (env, RCD_RPC_FAULT_INVALID_CHANNEL,
+                                  "Unable to find channel");
             return NULL;
         }
 
         package = rc_world_get_package (world, channel, name);
         if (!package) {
-            xmlrpc_env_set_fault (env, -611, "Unable to find package");
+            xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PACKAGE_NOT_FOUND,
+                                  "Unable to find package");
             return NULL;
         }
     }
@@ -369,7 +374,8 @@ rcd_rc_package_from_xmlrpc_package (xmlrpc_value *value,
         package = rc_world_get_package (world, RC_WORLD_SYSTEM_PACKAGES, name);
 
         if (!package) {
-            xmlrpc_env_set_fault (env, -611, "Unable to find package");
+            xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PACKAGE_NOT_FOUND,
+                                  "Unable to find package");
             return NULL;
         }
     }
@@ -405,7 +411,8 @@ rcd_xmlrpc_to_rc_package (xmlrpc_value *value,
         }
     }
     else
-        xmlrpc_env_set_fault(env, -503, "Invalid package stream type");
+        xmlrpc_env_set_fault(env, RCD_RPC_FAULT_INVALID_STREAM_TYPE,
+                             "Invalid package stream type");
 
     return package;
 } /* rcd_xmlrpc_to_rc_package */

@@ -1,5 +1,22 @@
 2002-07-12  Joe Shaw  <joe@ximian.com>
 
+	* rcd-rpc-util.h: Added a bunch of #defines for fault codes, to
+	make things a lot more sane.
+
+	* rcd-rpc.c, rcd-rpc-log.c, rcd-rpc-packsys.c, rcd-rpc-prefs.c,
+	rcd-rpc-utils.c: Use the new defines for fault codes instead of
+	numbers.
+
+	* rcd-rpc-packsys.c (packsys_find_latest_version): Find the
+	installed version on the system, and if a version found in a
+	channel isn't newer, throw a PACKAGE_IS_NEWER fault.  If it isn't
+	found at all, throw a PACKAGE_NOT_FOUND fault.
+	(find_latest_version): Check to make sure the package we're
+	iterating over is newer than the installed version, if there is
+	one.
+
+2002-07-12  Joe Shaw  <joe@ximian.com>
+
 	* rcd-rpc-packsys.c (packsys_solve_dependencies): Removed.  It's
 	just silly to have two API calls for this.
 	(packsys_resolve_dependencies): Require a third argument, for a

@@ -169,7 +169,8 @@ get_pref (xmlrpc_env *env,
     }
 
     /* Nothing matched */
-    xmlrpc_env_set_fault (env, -630, "No preference found");
+    xmlrpc_env_set_fault (env, RCD_RPC_FAULT_INVALID_PREFERENCE,
+                          "No preference found");
     return NULL;
 } /* get_pref */
 	
@@ -219,7 +220,8 @@ prefs_set_pref (xmlrpc_env   *env,
     }
 
     /* Nothing matched */
-    xmlrpc_env_set_fault (env, -630, "No preference found");
+    xmlrpc_env_set_fault (env, RCD_RPC_FAULT_INVALID_PREFERENCE,
+                          "No preference found");
     return NULL;
 } /* prefs_set_pref */
 

@@ -25,6 +25,18 @@
 
 #include "rcd-query.h"
 
+/* Keep these in sync with rcfault.py! */
+#define RCD_RPC_FAULT_INVALID_STREAM_TYPE    -503 /* matches xmlrpc-c */
+#define RCD_RPC_FAULT_PERMISSION_DENIED      -600
+#define RCD_RPC_FAULT_PACKAGE_NOT_FOUND      -601
+#define RCD_RPC_FAULT_PACKAGE_IS_NEWEST      -602
+#define RCD_RPC_FAULT_FAILED_DEPENDENCIES    -603
+#define RCD_RPC_FAULT_INVALID_SEARCH_TYPE    -604
+#define RCD_RPC_FAULT_INVALID_PACKAGE_FILE   -605
+#define RCD_RPC_FAULT_INVALID_CHANNEL        -606
+#define RCD_RPC_FAULT_INVALID_TRANSACTION_ID -607
+#define RCD_RPC_FAULT_INVALID_PREFERENCE     -608
+
 #define is_empty_string(x)     (!(x) || !(*(x)))
 #define RC_STRING_TO_XMLRPC(x) ((x) == NULL ? "" : (x))
 #define XMLRPC_STRING_TO_RC(x) (is_empty_string((x)) ? NULL : (x))

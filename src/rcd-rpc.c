@@ -40,6 +40,7 @@
 #include "rcd-auth.h"
 #include "rcd-identity.h"
 #include "rcd-rpc-system.h"
+#include "rcd-rpc-util.h"
 #include "rcd-shutdown.h"
 #include "rcd-unix-server.h"
 
@@ -66,7 +67,8 @@ serialize_permission_fault (void)
     output = xmlrpc_mem_block_new (&tmp_env, 0);
     XMLRPC_FAIL_IF_FAULT (&tmp_env);
 
-    xmlrpc_env_set_fault (&fault, -610, "Permission denied");
+    xmlrpc_env_set_fault (&fault, RCD_RPC_FAULT_PERMISSION_DENIED,
+                          "Permission denied");
 
     xmlrpc_serialize_fault (&tmp_env, output, &fault);
     XMLRPC_FAIL_IF_FAULT (&tmp_env);
@@ -96,7 +98,8 @@ access_control_check (xmlrpc_env   *env,
         !rcd_auth_approve_action (identity,
                                   method_info->req_privs,
                                   NULL)) {
-        xmlrpc_env_set_fault (env, -610, "Permission denied");
+        xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PERMISSION_DENIED, 
+                              "Permission denied");
             
         rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Unable to approve action");
     }
