@@ -1,3 +1,7 @@
+2002-09-26  Joe Shaw  <joe@ximian.com>
+
+	* rcd.logrotate: Make this actually work.
+
 2002-09-23  Joe Shaw  <joe@ximian.com>
 
 	* rugburn/rugburn: Ping the server after every test to make sure

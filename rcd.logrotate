@@ -4,6 +4,15 @@
 	size 5M
 	notifempty
 	missingok
+	sharedscripts
+	postrotate
+                                if [ -x /var/run/rcd.pid ]; then
+                                        kill -HUP `cat /var/run/rcd.pid`
+                                else
+                                        killall -HUP rcd 2>/dev/null || true
+                                fi
+	endscript
+
 }
 
 /var/log/rcd/rcd-package-history {
@@ -12,11 +21,12 @@
 	notifempty
 	missingok
 	nocompress
-}
-
-/var/log/rcd/* {
-	nosharedscripts
+	sharedscripts
 	postrotate
-					kill -HUP `cat /var/run/rcd.pid`
+                                if [ -x /var/run/rcd.pid ]; then
+                                        kill -HUP `cat /var/run/rcd.pid`
+                                else
+                                        killall -HUP rcd 2>/dev/null || true
+                                fi
 	endscript
 }
