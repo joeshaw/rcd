@@ -144,6 +144,12 @@ rcd_cache_entry_close (RCDCacheEntry *entry)
 } /* rcd_cache_entry_close */
 
 void
+rcd_cache_entry_cancel (RCDCacheEntry *entry)
+{
+    rc_close (entry->fd);
+} /* rcd_cache_entry_cancel */
+
+void
 rcd_cache_entry_append (RCDCacheEntry *entry, const char *data, gsize size)
 {
     rc_write (entry->fd, data, size);

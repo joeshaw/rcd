@@ -30,26 +30,33 @@ http_done (SoupMessage *message, gpointer user_data)
     RCDTransferProtocolHTTP *protocol =
         (RCDTransferProtocolHTTP *) t->protocol;
 
-    if (protocol->cache_hit) {
-        char *cache_filename;
-        char *local_url;
+    if (!rcd_transfer_get_error (t)) {
+        if (protocol->cache_hit) {
+            char *cache_filename;
+            char *local_url;
+            
+            cache_filename =
+                rcd_cache_entry_get_local_filename (protocol->entry);
+            local_url = g_strconcat ("file://", cache_filename, NULL);
+            g_free (cache_filename);
+            
+            g_free (protocol);
+            g_free (t->url);
+            g_free (t->filename);
+            
+            rcd_transfer_begin (t, local_url);
+            g_free (local_url);
+            
+            return;
+        }
 
-        cache_filename = rcd_cache_entry_get_local_filename (protocol->entry);
-        local_url = g_strconcat ("file://", cache_filename, NULL);
-        g_free (cache_filename);
-
-        g_free (protocol);
-        g_free (t->url);
-        g_free (t->filename);
-
-        rcd_transfer_begin (t, local_url);
-        g_free (local_url);
-
-        return;
+        if (protocol->entry)
+            rcd_cache_entry_close (protocol->entry);
     }
-
-    if (protocol->entry)
-        rcd_cache_entry_close (protocol->entry);
+    else {
+        if (protocol->entry)
+            rcd_cache_entry_cancel (protocol->entry);
+    }
 
     rcd_transfer_emit_done (t);
 } /* http_done */
@@ -145,11 +152,10 @@ http_abort (RCDTransfer *t)
     RCDTransferProtocolHTTP *protocol =
         (RCDTransferProtocolHTTP *) t->protocol;
 
+    rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_CANCELLED, NULL);
+
     if (protocol->message)
         soup_message_cancel (protocol->message);
-
-    rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_CANCELLED, NULL);
-    rcd_transfer_emit_done (t);
 } /* http_abort */
 
 static int

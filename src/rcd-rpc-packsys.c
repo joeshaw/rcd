@@ -29,6 +29,7 @@ typedef struct {
     RCPackageSList *packages_to_download;
 
     RCDPending *pending;
+    int package_download_id;
 
     gsize total_download_size;
     gsize current_download_size;
@@ -829,7 +830,7 @@ download_packages (RCPackageSList *packages, RCDTransactionStatus *status)
     status->packages_to_download =
         g_slist_reverse (status->packages_to_download);
 
-    rcd_fetch_packages (
+    status->package_download_id = rcd_fetch_packages (
         status->packages_to_download, 
         update_download_progress,
         run_transaction,
@@ -993,6 +994,61 @@ cleanup:
 
     return result;
 } /* packsys_transact */
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+static xmlrpc_value *
+packsys_abort_download(xmlrpc_env   *env,
+                       xmlrpc_value *param_array,
+                       void         *user_data)
+{
+    RCWorld *world = (RCWorld *) user_data;
+    int transaction_id;
+    RCDPending *pending;
+    RCDTransactionStatus *status;
+    xmlrpc_value *result = NULL;
+
+    xmlrpc_parse_value (env, param_array, "(i)", &transaction_id);
+    pending = rcd_pending_lookup_by_id (transaction_id);
+
+    if (!pending) {
+        xmlrpc_env_set_fault (env, -605, "Cannot find transaction for that id");
+        return NULL;
+    }
+
+    status = g_object_get_data (G_OBJECT (pending), "status");
+    if (!status) {
+        xmlrpc_env_set_fault (env, -605, "Cannot find transaction for that id");
+        return NULL;
+    }
+
+    if (!status->install_packages || packsys_lock) {
+        /*
+         * We can only abort downloads, so if we're not installing anything,
+         * or we are in the middle of a transaction, we cannot abort it.
+         */
+        result = xmlrpc_build_value (env, "i", 0);
+        return result;
+    }
+
+    if (getenv ("RCD_ENFORCE_AUTH")) {
+        RCDRPCMethodData *method_data = rcd_rpc_get_method_data ();
+
+        /* Check our permissions to abort this download */
+        check_install_package_auth (
+            env, world, status->install_packages, method_data->identity);
+        XMLRPC_FAIL_IF_FAULT (env);
+    }
+
+    rcd_fetch_packages_abort (status->package_download_id);
+
+    result = xmlrpc_build_value (env, "i", 1);
+
+cleanup:
+    return result;
+} /* packsys_abort_download */
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 static void
 prepend_pkg (RCPackage *pkg, RCPackageStatus status, gpointer user_data)
@@ -1191,6 +1247,11 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
 
     rcd_rpc_register_method("rcd.packsys.transact",
                             packsys_transact,
+                            rcd_auth_action_list_from_1 (RCD_AUTH_NONE),
+                            world);
+
+    rcd_rpc_register_method("rcd.packsys.abort_download",
+                            packsys_abort_download,
                             rcd_auth_action_list_from_1 (RCD_AUTH_NONE),
                             world);
 

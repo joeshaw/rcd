@@ -1,3 +1,30 @@
+2002-06-25  Joe Shaw  <joe@ximian.com>
+
+	* rcd-cache.c (rcd_cache_entry_cancel): Added.  Closes the cache
+	entry, but does not make it valid in the cache.
+
+	* rcd-fetch.c (rcd_fetch_packages): Return a numeric ID of the
+	overall package transfer so it can be cancelled later.
+	(rcd_fetch_packages_abort): Aborts the package transfers
+	associated with an ID.
+
+	* rcd-rpc-packsys.c (packsys_abort_download): Added.  Aborts a
+	download of a package transaction.
+	(rcd_rpc_packsys_register_methods): Register the
+	rcd.packsys.abort_download call.
+
+	* rcd-transfer-http.c (http_done): Only close the cache entry if
+	the download was without error (including abort).  Otherwise,
+	cancel the cache entry.
+	(http_abort): Set the RCD_TRANSFER_ERROR_CANCELLED before
+	cancelling the SoupMessage, and don't emit
+	rcd_transfer_emit_done(), as that'll be done in http_done()
+	unconditionally.
+
+	* rcd-transfer.c (pending_file_done_cb): If the transfer was
+	cancelled rcd_pending_abort() on the pending, otherwise
+	rcd_pending_finished().
+
 2002-06-25  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-fetch.c (rcd_fetch_news): Doh!  It is an error if doc == NULL,

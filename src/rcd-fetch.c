@@ -482,7 +482,12 @@ rcd_fetch_news_local (void)
     return TRUE;
 }
 
+static GHashTable *package_transfer_table = NULL;
+static int package_transfer_id = 0;
+
 typedef struct {
+    int transfer_id;
+
     GSList *running_transfers;
 
     RCDFetchProgressFunc progress_callback;
@@ -507,24 +512,34 @@ package_completed_cb (RCDTransfer *t, gpointer user_data)
     PackageFetchClosure *closure = user_data;
     RCPackage *package;
 
-    rc_debug (RC_DEBUG_LEVEL_INFO, "Download of %s complete", t->url);
-    
-    package = g_object_get_data (G_OBJECT (t), "package");
-    package->package_filename = rcd_transfer_get_local_filename (t);
-
     closure->running_transfers = g_slist_remove (
         closure->running_transfers, t);
 
+    if (rcd_transfer_get_error (t) == RCD_TRANSFER_ERROR_CANCELLED) {
+        rc_debug (RC_DEBUG_LEVEL_INFO, "Download of %s cancelled", t->url);
+    }
+    else {
+        rc_debug (RC_DEBUG_LEVEL_INFO, "Download of %s complete", t->url);
+    
+        package = g_object_get_data (G_OBJECT (t), "package");
+        package->package_filename = rcd_transfer_get_local_filename (t);
+
+        if (!closure->running_transfers) {
+            rc_debug (RC_DEBUG_LEVEL_INFO,
+                      "No more pending transfers, calling callback");
+            closure->completed_callback (closure->user_data);
+            /* g_idle_add (closure->callback, closure->user_data); */
+        }
+    }
+
     if (!closure->running_transfers) {
-        rc_debug (RC_DEBUG_LEVEL_INFO,
-                  "No more pending transfers, calling callback");
-        closure->completed_callback (closure->user_data);
-        /* g_idle_add (closure->callback, closure->user_data); */
+        g_hash_table_remove (package_transfer_table,
+                             GINT_TO_POINTER (closure->transfer_id));
         g_free (closure);
     }
 } /* process_package_cb */
 
-void
+int
 rcd_fetch_packages (RCPackageSList       *packages,
                     RCDFetchProgressFunc  progress_callback,
                     GSourceFunc           completed_callback,
@@ -533,12 +548,20 @@ rcd_fetch_packages (RCPackageSList       *packages,
     PackageFetchClosure *closure;
     RCPackageSList *iter;
 
-    g_return_if_fail (packages != NULL);
+    g_return_val_if_fail (packages != NULL, 0);
 
     closure = g_new0 (PackageFetchClosure, 1);
+    closure->transfer_id = ++package_transfer_id;
     closure->progress_callback = progress_callback;
     closure->completed_callback = completed_callback;
     closure->user_data = user_data;
+
+    if (!package_transfer_table)
+        package_transfer_table = g_hash_table_new (NULL, NULL);
+
+    g_hash_table_insert (package_transfer_table,
+                         GINT_TO_POINTER (closure->transfer_id),
+                         closure);
     
     for (iter = packages; iter; iter = iter->next) {
         RCPackage *package = iter->data;
@@ -581,4 +604,25 @@ rcd_fetch_packages (RCPackageSList       *packages,
         g_free (desc);
         g_free (url);
     }
+
+    return closure->transfer_id;
 }
+
+void
+rcd_fetch_packages_abort (int transfer_id)
+{
+    PackageFetchClosure *closure;
+    GSList *iter;
+    GSList *next;
+
+    closure = g_hash_table_lookup (package_transfer_table,
+                                   GINT_TO_POINTER (transfer_id));
+
+    g_return_if_fail (closure);
+
+    for (iter = closure->running_transfers; iter; iter = next) {
+        next = iter->next;
+
+        rcd_transfer_abort (iter->data);
+    }
+} /* rcd_fetch_packages_abort */

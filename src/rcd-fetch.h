@@ -71,10 +71,12 @@ gboolean rcd_fetch_news_local (void);
  */
 typedef void (*RCDFetchProgressFunc) (gsize size, gpointer user_data);
 
-void rcd_fetch_packages (RCPackageSList *packages,
-                         RCDFetchProgressFunc progress_callback,
-                         GSourceFunc     completed_callback,
-                         gpointer        user_data);
+int rcd_fetch_packages (RCPackageSList *packages,
+                        RCDFetchProgressFunc progress_callback,
+                        GSourceFunc     completed_callback,
+                        gpointer        user_data);
+
+void rcd_fetch_packages_abort (int transaction_id);
 
 
 #endif /* __RCD_FETCH_H__ */

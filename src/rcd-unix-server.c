@@ -35,7 +35,7 @@ read_cred (GIOChannel *channel, RCDUnixServerHandle *handle)
 {
     int sockfd;
     struct ucred cred;
-    int size;
+    socklen_t size;
 
     sockfd = g_io_channel_unix_get_fd (channel);
 
@@ -50,9 +50,16 @@ read_cred (GIOChannel *channel, RCDUnixServerHandle *handle)
         handle->uid = cred.uid;
         handle->gid = cred.gid;
 
+#if 0
         rc_debug (RC_DEBUG_LEVEL_MESSAGE,
                   "size: %d  PID: %d  UID: %d  GID: %d", size,
                   cred.pid, cred.uid, cred.gid);
+#else
+        rc_debug (RC_DEBUG_LEVEL_MESSAGE, "size: %d", size);
+        rc_debug (RC_DEBUG_LEVEL_MESSAGE, "PID: %d", cred.pid);
+        rc_debug (RC_DEBUG_LEVEL_MESSAGE, "UID: %d", cred.uid);
+        rc_debug (RC_DEBUG_LEVEL_MESSAGE, "GID: %d", cred.gid);
+#endif
     }
 } /* read_cred */
 

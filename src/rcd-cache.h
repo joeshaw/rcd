@@ -35,6 +35,7 @@ void rcd_cache_entry_append (RCDCacheEntry *entry,
                              const char    *data, 
                              gsize          size);
 void rcd_cache_entry_close  (RCDCacheEntry *entry);
+void rcd_cache_entry_cancel (RCDCacheEntry *entry);
 
 const char *rcd_cache_entry_get_modification_time (RCDCacheEntry *entry);
 const char *rcd_cache_entry_get_entity_tag        (RCDCacheEntry *entry);

@@ -314,7 +314,10 @@ pending_file_done_cb (RCDTransfer *t, gpointer user_data)
 {
     RCDPending *pending = user_data;
 
-    rcd_pending_finished (pending, 0);
+    if (rcd_transfer_get_error (t) == RCD_TRANSFER_ERROR_CANCELLED)
+        rcd_pending_abort (pending, 0);
+    else
+        rcd_pending_finished (pending, 0);
 } /* pending_file_done_cb */
 
 int
