@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <libsoup/soup.h>
+#include <rc-md5.h>
 
 #define  XMLRPC_WANT_INTERNAL_DECLARATIONS
 #include "rcd-xmlrpc.h"
@@ -61,7 +62,7 @@ xmlrpc_server_info_set_auth (xmlrpc_env *env,
 
 	if (server->_password)
 		g_free (server->_password);
-	server->_password = g_strdup (password);
+	server->_password = rc_md5_digest_from_string (password);
 }
 
 static xmlrpc_server_info *

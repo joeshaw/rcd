@@ -1,5 +1,8 @@
 2003-07-28  Tambet Ingo  <tambet@ximian.com>
 
+	* rcd-xmlrpc.c (xmlrpc_server_info_set_auth): Use md5 sum of
+	password instead of sending it in plain-text.
+
 	* rcd-transaction.c (rcd_transaction_send_log): Use the wrapper
 	function to get the "server".
 
