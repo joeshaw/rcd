@@ -1,3 +1,22 @@
+2002-11-20  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-autopull.c: (struct _RCDAutopull): Added the "dry_run" flag.
+	(get_removal_failure_info): Broke up a few lines to keep the
+	source code < 80 chars/line.
+	(rcd_autopull_resolve_and_transact): If this is a dry run, set the
+	appropriate flags and pass them into any calls to
+	rcd_transaction_log_to_server (when reporting dependency failures)
+	and rcd_transaction_begin (when actually doing the transaction).
+	(autopull_from_session_xml_node): If the dry_run property is set
+	to a non-zero value in the session tag, set the dry_run flag
+	in the RCDAutopull struct.
+
+	* rcd-transaction.c (transaction_xml): When constructing the XML
+	to pass back to the server, report whether or not the
+	RCD_TRANSACTION_FLAGS_DRY_RUN flag is set.
+	(rcd_transaction_log_to_server): Add an argument for passing
+	in the RCDTransactionFlags.
+
 2002-11-20  Joe Shaw  <joe@ximian.com>
 
 	* rcd-prefs.c (rcd_prefs_get_host): Get rid of RCX_MAGIC and

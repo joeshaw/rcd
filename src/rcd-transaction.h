@@ -71,12 +71,13 @@ gboolean rcd_transaction_is_locked (void);
  * Most of the time this is handled internally by rcd_transaction_begin().
  */
 
-void rcd_transaction_log_to_server (const char     *name,
-                                    RCPackageSList *install_packages,
-                                    RCPackageSList *remove_packages,
-                                    const char     *client_id,
-                                    const char     *client_version,
-                                    gboolean        successful,
-                                    const char     *message);
+void rcd_transaction_log_to_server (const char         *name,
+                                    RCPackageSList     *install_packages,
+                                    RCPackageSList     *remove_packages,
+                                    RCDTransactionFlags flags,
+                                    const char         *client_id,
+                                    const char         *client_version,
+                                    gboolean            successful,
+                                    const char         *message);
 
 #endif /* __RCD_TRANSACTION_H__ */

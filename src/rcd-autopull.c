@@ -59,6 +59,9 @@ struct _RCDAutopull {
        packages */
     GSList *all_to_add;
     GSList *all_to_subtract;
+    
+    /* Is this a dry run? */
+    gboolean dry_run;
 
     /* This keeps an autopull session from being re-executed before
        the previous run is finished.  This can only happen if the
@@ -225,7 +228,8 @@ static char *
 get_removal_failure_info (GSList *requested_removals,
                           GSList *extra_removals)
 {
-    GString *info = g_string_new ("This transaction requires the removal of the following packages:");
+    GString *info = g_string_new ("This transaction requires the "
+                                  "removal of the following packages:");
     GSList *req_iter, *ex_iter;
     char *str;
 
@@ -244,8 +248,9 @@ get_removal_failure_info (GSList *requested_removals,
         }
 
         if (! found) {
+            RCPackageSpec *spec = RC_PACKAGE_SPEC (ex_pkg);
             g_string_append_printf (info, "\n%s",
-                                    rc_package_spec_to_str_static (RC_PACKAGE_SPEC (ex_pkg)));
+                                    rc_package_spec_to_str_static (spec));
         }
     }
 
@@ -260,8 +265,13 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
     RCResolver *resolver;
     GSList *to_install = NULL;
     GSList *to_remove = NULL;
+    RCDTransactionFlags flags;
 
     g_return_if_fail (pull != NULL);
+
+    flags = RCD_TRANSACTION_FLAGS_NONE;
+    if (pull->dry_run)
+        flags = RCD_TRANSACTION_FLAGS_DRY_RUN;
 
     resolver = rc_resolver_new ();
 
@@ -282,6 +292,7 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
         rcd_transaction_log_to_server (pull->name,
                                        pull->all_to_add,
                                        pull->all_to_subtract,
+                                       flags,
                                        rcd_module->description,
                                        VERSION,
                                        FALSE,
@@ -317,6 +328,7 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
         rcd_transaction_log_to_server (pull->name,
                                        to_install,
                                        to_remove,
+                                       flags,
                                        rcd_module->description,
                                        VERSION,
                                        FALSE,
@@ -334,6 +346,7 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
     if (to_install != NULL || to_remove != NULL) {
         GSList *iter;
         RCDIdentity *dummy_identity;
+        RCDTransactionFlags flags;
 
         rc_debug (RC_DEBUG_LEVEL_INFO,
                   "Beginning Autopull '%s'", pull->name);
@@ -353,11 +366,15 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
         dummy_identity->privileges = rcd_privileges_from_string (
             "install, remove, upgrade");
 
+        flags = RCD_TRANSACTION_FLAGS_NONE;
+        if (pull->dry_run)
+            flags |= RCD_TRANSACTION_FLAGS_DRY_RUN;
+
         rcd_transaction_begin (pull->name,
                                rc_get_world (),
                                to_install,
                                to_remove,
-                               RCD_TRANSACTION_FLAGS_NONE,
+                               flags,
                                rcd_module->description,
                                VERSION,
                                "localhost",
@@ -640,7 +657,7 @@ rcd_autopull_new (time_t first_pull, guint interval, const char *name)
     <package name="python" />
     <package name="libgal19" remove="1" />
   </session>
-  <session>
+  <session dry_run="1">
     <starttime>0</starttime>
     <interval>0</interval>
     <package bid="598" name="kernel-utils" />
@@ -767,9 +784,12 @@ autopull_from_session_xml_node (xmlNode *node)
     char *name = NULL;
     char *starttime_str = NULL;
     char *interval_str = NULL;
+    guint32 is_dry_run;
     
     if (g_strcasecmp (node->name, "session"))
         return NULL;
+    
+    is_dry_run = xml_get_guint32_prop_default (node, "dry_run", 0);
 
     for (node = node->xmlChildrenNode; node != NULL; node = node->next) {
 
@@ -855,6 +875,7 @@ autopull_from_session_xml_node (xmlNode *node)
             interval = atol (interval_str);
 
             pull = rcd_autopull_new (starttime, interval, name);
+            pull->dry_run = is_dry_run ? TRUE : FALSE;
         }
     }
 

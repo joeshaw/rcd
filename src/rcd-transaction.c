@@ -215,7 +215,11 @@ transaction_xml (RCDTransactionStatus *status,
     xmlNewTextChild (root, NULL, "client_version", status->client_version);
     xmlNewTextChild (root, NULL, "mid", rcd_prefs_get_mid ());
     xmlNewTextChild (root, NULL, "distro", rc_distro_get_target ());
-    
+
+    xmlNewTextChild (root, NULL, "dry_run", 
+                     status->flags & RCD_TRANSACTION_FLAGS_DRY_RUN ?
+                     "1" : "0");
+
     tmp = g_strdup_printf ("%ld", status->start_time);
     xmlNewTextChild (root, NULL, "start_time", tmp);
     g_free (tmp);
@@ -327,13 +331,14 @@ rcd_transaction_send_log (RCDTransactionStatus *status,
  * where we don't have one of these structures.
  */
 void
-rcd_transaction_log_to_server (const char     *name,
-                               RCPackageSList *install_packages,
-                               RCPackageSList *remove_packages,
-                               const char     *client_id,
-                               const char     *client_version,
-                               gboolean        successful,
-                               const char     *message)
+rcd_transaction_log_to_server (const char         *name,
+                               RCPackageSList     *install_packages,
+                               RCPackageSList     *remove_packages,
+                               RCDTransactionFlags flags,
+                               const char         *client_id,
+                               const char         *client_version,
+                               gboolean            successful,
+                               const char         *message)
 {
     RCDTransactionStatus *status;
 
@@ -345,6 +350,7 @@ rcd_transaction_log_to_server (const char     *name,
     status->name = g_strdup (name);
     status->install_packages = rc_package_slist_ref (install_packages);
     status->remove_packages = rc_package_slist_ref (remove_packages);
+    status->flags = flags;
     status->client_id = g_strdup (client_id);
     status->client_version = g_strdup (client_version);
     status->start_time = time (NULL);
