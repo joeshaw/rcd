@@ -993,8 +993,10 @@ run_transaction(gpointer user_data)
         rcd_pending_fail (status->pending, -1,
                           rc_packman_get_reason (status->packman));
     }
-    else
-        update_log (status);
+    else {
+        if (! status->dry_run)
+            update_log (status);
+    }
 
     /*
      * If caching is turned off, we don't want to keep around the package
@@ -1007,7 +1009,8 @@ run_transaction(gpointer user_data)
     rcd_shutdown_allow ();
 
     /* Update the list of system packages */
-    rc_world_get_system_packages (rc_get_world ());
+    if (! status->dry_run)
+        rc_world_get_system_packages (rc_get_world ());
 
     packsys_lock = FALSE;
 
