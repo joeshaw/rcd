@@ -1,3 +1,10 @@
+2004-06-16  Tambet Ingo  <tambet@ximian.com>
+
+	* rc-you-query.c: Add new query keywords "name-installed", and
+	"patch-installed".
+	(name_installed_match): Implement.
+	(patch_installed_match): Implement.
+
 2004-06-15  Tambet Ingo  <tambet@ximian.com>
 
 	* you-util.c (get_you_basedir): Create directory if it does not

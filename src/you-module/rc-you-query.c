@@ -92,6 +92,73 @@ installed_match (RCDQueryPart *part,
 }
 
 static gboolean
+name_installed_match (RCDQueryPart *part,
+                      gpointer      data)
+{
+    RCYouPatch *patch = data;
+    RCYouPatch *sys_patch = rc_world_multi_get_patch
+        (RC_WORLD_MULTI (rc_get_world ()),
+         RC_CHANNEL_SYSTEM,
+         g_quark_to_string (patch->spec.nameq));
+
+    return rcd_query_match_bool (part, sys_patch != NULL);
+} /* name_installed_match */
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+struct InstalledCheck {
+    RCYouPatch *patch;
+    gboolean installed;
+};
+
+static gboolean
+installed_check_cb (RCYouPatch *sys_patch,
+                    gpointer user_data)
+{
+    struct InstalledCheck *check = user_data;
+   
+    if (check->installed)
+        return FALSE;
+
+    if (rc_package_spec_equal (RC_PACKAGE_SPEC (sys_patch),
+                               RC_PACKAGE_SPEC (check->patch)))
+        check->installed = TRUE;
+
+    return TRUE;
+}
+
+static gboolean
+patch_installed_match (RCDQueryPart *part,
+                       gpointer      data)
+{
+    RCYouPatch *patch = data;
+    gboolean installed;
+
+    if (patch->installed) {
+        installed = TRUE;
+    } else {
+        struct InstalledCheck check;
+        const char *name;
+
+        check.patch = patch;
+        check.installed = FALSE;
+
+        name = g_quark_to_string (RC_PACKAGE_SPEC (patch)->nameq);
+        rc_world_multi_foreach_patch_by_name (RC_WORLD_MULTI (rc_get_world ()),
+                                              name,
+                                              RC_CHANNEL_SYSTEM,
+                                              installed_check_cb,
+                                              &check);
+
+        installed = check.installed;
+    }
+
+    return rcd_query_match_bool (part, installed);
+}
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+static gboolean
 importance_validate (RCDQueryPart *part)
 {
     RCPackageImportance imp = rc_string_to_package_importance (part->query_str);
@@ -142,9 +209,19 @@ static RCDQueryEngine query_patches_engine[] = {
       NULL, NULL, NULL,
       channel_match },
 
-    { "installed",  /* This is a system package, essentially. */
+    { "installed",  /* This is a system patch, essentially. */
       rcd_query_validate_bool, NULL, NULL,
       installed_match },
+
+    { "name-installed", /* Any patch by this name installed */
+      rcd_query_validate_bool, NULL, NULL,
+      name_installed_match },
+
+    /* This patch is a system patch, or appears to be the
+       in-channel version of an installed package. */
+    { "patch-installed",  
+      rcd_query_validate_bool, NULL, NULL,
+      patch_installed_match },
 
     { "importance",
       importance_validate, NULL, NULL,
