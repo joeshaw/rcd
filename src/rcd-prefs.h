@@ -41,5 +41,7 @@ gboolean     rcd_prefs_get_priority           (void);
 
 guint32      rcd_prefs_get_heartbeat_interval (void);
 
+gboolean     rcd_prefs_get_require_verified_packages (void);
+
 #endif /* __RCD_PREFS_H__ */
 

@@ -1,3 +1,22 @@
+2002-07-02  Joe Shaw  <joe@ximian.com>
+
+	* rcd-fetch.c (rcd_fetch_packages): Fetch the package signature as
+	well.
+
+	* rcd-prefs.c (rcd_prefs_get_require_verified_packages): Added.
+
+	* rcd-rpc-packsys.c (verify_packages): Added.  Verifies package
+	signatures and calls run_transaction() when successfully completed.
+	(download_packages): Call verify_packages() instead of
+	run_transaction().
+	(resolve_deps): Move most of the logic from
+	packsys_resolve_dependencies() here.
+	(packsys_resolve_dependencies): Mostly a shell around
+	resolve_deps().
+	(package_verify_dependencies): Added.  Mostly a shell around
+	resolve_deps().
+	(rcd_rpc_packsys_register_methods): Register verify_dependencies.
+
 2002-07-01  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-rpc-util.c (rcd_rc_package_to_xmlrpc): If the package

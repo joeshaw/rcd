@@ -588,6 +588,48 @@ package_completed_cb (RCDTransfer *t, gpointer user_data)
     }
 } /* process_package_cb */
 
+static void
+download_package_file (RCPackage           *package,
+                       const char          *file_url,
+                       PackageFetchClosure *closure)
+{
+    RCDTransfer *t;
+    char *url, *desc;
+    RCDPending *pending;
+
+    t = rcd_transfer_new (
+        RCD_TRANSFER_FLAGS_FORCE_CACHE |
+        RCD_TRANSFER_FLAGS_RESUME_PARTIAL,
+        rcd_cache_get_package_cache ());
+    g_object_set_data (G_OBJECT (t), "package", package);
+
+    closure->running_transfers = g_slist_append (
+        closure->running_transfers, t);
+
+    g_signal_connect (t,
+                      "file_data",
+                      (GCallback) package_progress_cb,
+                      closure);
+
+    g_signal_connect (t,
+                      "file_done",
+                      (GCallback) package_completed_cb,
+                      closure);
+
+    /* FIXME: deal with mirrors */
+    url = g_strdup_printf ("%s/%s",
+                           rcd_prefs_get_host (),
+                           file_url);
+    rcd_transfer_begin (t, url);
+
+    /* Attach a more meaningful description to our pending object. */
+    pending = rcd_transfer_get_pending (t);
+    desc = g_strdup_printf ("Downloading package %s", url);
+    rcd_pending_set_description (pending, desc);
+    g_free (desc);
+    g_free (url);
+} /* download_package_file */
+
 int
 rcd_fetch_packages (RCPackageSList       *packages,
                     RCDFetchProgressFunc  progress_callback,
@@ -615,43 +657,11 @@ rcd_fetch_packages (RCPackageSList       *packages,
     for (iter = packages; iter; iter = iter->next) {
         RCPackage *package = iter->data;
         RCPackageUpdate *update = rc_package_get_latest_update (package);
-        RCDTransfer *t;
-        char *url, *desc;
-        RCDPending *pending;
         
-        /* FIXME: We need to download signatures too */
+        download_package_file (package, update->package_url, closure);
 
-        t = rcd_transfer_new (
-            RCD_TRANSFER_FLAGS_FORCE_CACHE |
-            RCD_TRANSFER_FLAGS_RESUME_PARTIAL,
-            rcd_cache_get_package_cache ());
-        g_object_set_data (G_OBJECT (t), "package", package);
-
-        closure->running_transfers = g_slist_append (
-            closure->running_transfers, t);
-
-        g_signal_connect (t,
-                          "file_data",
-                          (GCallback) package_progress_cb,
-                          closure);
-
-        g_signal_connect (t,
-                          "file_done",
-                          (GCallback) package_completed_cb,
-                          closure);
-
-        /* FIXME: deal with mirrors */
-        url = g_strdup_printf ("%s/%s",
-                               rcd_prefs_get_host (),
-                               update->package_url);
-        rcd_transfer_begin (t, url);
-
-        /* Attach a more meaningful description to our pending object. */
-        pending = rcd_transfer_get_pending (t);
-        desc = g_strdup_printf ("Downloading package %s", url);
-        rcd_pending_set_description (pending, desc);
-        g_free (desc);
-        g_free (url);
+        if (update->signature_url)
+            download_package_file (package, update->signature_url, closure);
     }
 
     return closure->transfer_id;

@@ -808,6 +808,69 @@ run_transaction(gpointer user_data)
     return FALSE;
 } /* run_transaction */
 
+static gboolean
+verify_packages (gpointer user_data)
+{
+    RCDTransactionStatus *status = user_data;
+    RCPackageSList *iter;
+
+    for (iter = status->install_packages; iter; iter = iter->next) {
+        RCPackage *package = iter->data;
+        char *msg;
+        RCVerificationSList *vers;
+        RCVerificationStatus worst_status = RC_VERIFICATION_STATUS_PASS;
+        GSList *v;
+
+        msg = g_strconcat ("verify:", package->spec.name, NULL);
+        rcd_pending_add_message (status->pending, msg);
+        g_free (msg);
+
+        vers = rc_packman_verify (
+            status->packman, package, RC_VERIFICATION_TYPE_ALL);
+        for (v = vers; v; v = v->next) {
+            RCVerification *ver = v->data;
+
+            if (worst_status > ver->status)
+                worst_status = ver->status;
+        }
+
+        rc_verification_slist_free (vers);
+
+        if (worst_status == RC_VERIFICATION_STATUS_FAIL) {
+            rc_debug (RC_DEBUG_LEVEL_MESSAGE,
+                      "Verification of '%s' failed",
+                      package->spec.name);
+            msg = g_strdup_printf ("failed:Verification of '%s' failed",
+                                   package->spec.name);
+            rcd_pending_add_message (status->pending, msg);
+            rcd_pending_fail (status->pending, -1, msg);
+            g_free (msg);
+
+            return FALSE;
+        }
+        else if (worst_status == RC_VERIFICATION_STATUS_UNDEF) {
+            rc_debug (RC_DEBUG_LEVEL_MESSAGE,
+                      "Verification of '%s' was inconclusive",
+                      package->spec.name);
+
+            if (rcd_prefs_get_require_verified_packages ()) {
+                msg = g_strdup_printf (
+                    "failed:Verification of '%s' was inconclusive",
+                    package->spec.name);
+                rcd_pending_add_message (status->pending, msg);
+                rcd_pending_fail (status->pending, -1, msg);
+                g_free (msg);
+
+                return FALSE;
+            }
+        }
+    }
+
+    g_idle_add (run_transaction, status);
+
+    return FALSE;
+} /* verify_packages */
+
 static void
 update_download_progress (gsize size, gpointer user_data)
 {
@@ -856,7 +919,7 @@ download_packages (RCPackageSList *packages, RCDTransactionStatus *status)
     status->package_download_id = rcd_fetch_packages (
         status->packages_to_download, 
         update_download_progress,
-        run_transaction,
+        verify_packages,
         status);
 
     return TRUE;
@@ -1118,38 +1181,38 @@ hash_to_list (GHashTable *hash)
     return list;
 } /* hash_to_list */
 
-static xmlrpc_value *
-packsys_resolve_dependencies(xmlrpc_env   *env,
-                             xmlrpc_value *param_array,
-                             void         *user_data)
+static void
+resolve_deps (xmlrpc_env *env,
+              xmlrpc_value **packages_to_install,
+              xmlrpc_value **packages_to_remove,
+              gboolean verification,
+              RCWorld *world)
 {
-    RCWorld *world = (RCWorld *) user_data;
     RCPackman *packman;
-    xmlrpc_value *xmlrpc_install_packages;
-    xmlrpc_value *xmlrpc_remove_packages;
     RCPackageSList *install_packages = NULL;
     RCPackageSList *remove_packages = NULL;
     RCResolver *resolver = NULL;
     GHashTable *install_hash;
     GHashTable *remove_hash;
     RCPackageSList *iter;
-    xmlrpc_value *value = NULL;
 
-    xmlrpc_parse_value(
-        env, param_array, "(AA)",
-        &xmlrpc_install_packages, &xmlrpc_remove_packages);
-    XMLRPC_FAIL_IF_FAULT(env);
+    g_return_if_fail (packages_to_install);
+    g_return_if_fail (packages_to_remove);
 
-    install_packages = rcd_xmlrpc_array_to_rc_package_slist (
-        xmlrpc_install_packages, env,
-        RCD_PACKAGE_FROM_FILE | RCD_PACKAGE_FROM_STREAMED_PACKAGE |
-        RCD_PACKAGE_FROM_XMLRPC_PACKAGE);
-    XMLRPC_FAIL_IF_FAULT (env);
+    if (*packages_to_install) {
+        install_packages = rcd_xmlrpc_array_to_rc_package_slist (
+            *packages_to_install, env,
+            RCD_PACKAGE_FROM_FILE | RCD_PACKAGE_FROM_STREAMED_PACKAGE |
+            RCD_PACKAGE_FROM_XMLRPC_PACKAGE);
+        XMLRPC_FAIL_IF_FAULT (env);
+    }
 
-    remove_packages = rcd_xmlrpc_array_to_rc_package_slist (
-        xmlrpc_remove_packages, env,
-        RCD_PACKAGE_FROM_NAME | RCD_PACKAGE_FROM_XMLRPC_PACKAGE);
-    XMLRPC_FAIL_IF_FAULT (env);
+    if (*packages_to_remove) {
+        remove_packages = rcd_xmlrpc_array_to_rc_package_slist (
+            *packages_to_remove, env,
+            RCD_PACKAGE_FROM_NAME | RCD_PACKAGE_FROM_XMLRPC_PACKAGE);
+        XMLRPC_FAIL_IF_FAULT (env);
+    }
 
     resolver = rc_resolver_new ();
 
@@ -1163,7 +1226,10 @@ packsys_resolve_dependencies(xmlrpc_env   *env,
         RC_PACKMAN_CAP_VIRTUAL_CONFLICTS)
         rc_resolver_allow_virtual_conflicts (resolver, TRUE);
 
-    rc_resolver_resolve_dependencies (resolver);
+    if (verification)
+        rc_resolver_verify_system (resolver);
+    else
+        rc_resolver_resolve_dependencies (resolver);
 
     if (!resolver->best_context) {
         xmlrpc_env_set_fault(env, -604, "Unresolved dependencies");
@@ -1207,13 +1273,40 @@ packsys_resolve_dependencies(xmlrpc_env   *env,
     g_hash_table_destroy (install_hash);
     g_hash_table_destroy (remove_hash);
 
-    xmlrpc_install_packages = rcd_rc_package_slist_to_xmlrpc_array (
+    *packages_to_install = rcd_rc_package_slist_to_xmlrpc_array (
         install_packages, env);
     XMLRPC_FAIL_IF_FAULT(env);
 
-    xmlrpc_remove_packages = rcd_rc_package_slist_to_xmlrpc_array (
+    *packages_to_remove = rcd_rc_package_slist_to_xmlrpc_array (
         remove_packages, env);
     XMLRPC_FAIL_IF_FAULT(env);
+
+cleanup:
+    if (resolver)
+        rc_resolver_free(resolver);
+
+    rc_package_slist_unref (install_packages);
+    rc_package_slist_unref (remove_packages);
+} /* resolve_deps */
+
+static xmlrpc_value *
+packsys_resolve_dependencies(xmlrpc_env   *env,
+                             xmlrpc_value *param_array,
+                             void         *user_data)
+{
+    RCWorld *world = (RCWorld *) user_data;
+    xmlrpc_value *xmlrpc_install_packages;
+    xmlrpc_value *xmlrpc_remove_packages;
+    xmlrpc_value *value = NULL;
+
+    xmlrpc_parse_value(
+        env, param_array, "(AA)",
+        &xmlrpc_install_packages, &xmlrpc_remove_packages);
+    XMLRPC_FAIL_IF_FAULT(env);
+
+    resolve_deps (env, &xmlrpc_install_packages, &xmlrpc_remove_packages,
+                  FALSE, world);
+    XMLRPC_FAIL_IF_FAULT (env);
 
     value = xmlrpc_build_value(
         env, "(VV)", xmlrpc_install_packages, xmlrpc_remove_packages);
@@ -1223,17 +1316,33 @@ packsys_resolve_dependencies(xmlrpc_env   *env,
     xmlrpc_DECREF(xmlrpc_remove_packages);
 
 cleanup:
-    if (resolver)
-        rc_resolver_free(resolver);
-
-    rc_package_slist_unref (install_packages);
-    rc_package_slist_unref (remove_packages);
-
-    if (env->fault_occurred)
-        return NULL;
-
     return value;
 } /* packsys_resolve_dependencies */
+
+static xmlrpc_value *
+packsys_verify_dependencies(xmlrpc_env   *env,
+                            xmlrpc_value *param_array,
+                            void         *user_data)
+{
+    RCWorld *world = (RCWorld *) user_data;
+    xmlrpc_value *xmlrpc_install_packages = NULL;
+    xmlrpc_value *xmlrpc_remove_packages = NULL;
+    xmlrpc_value *value = NULL;
+
+    resolve_deps (env, &xmlrpc_install_packages, &xmlrpc_remove_packages,
+                  TRUE, world);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    value = xmlrpc_build_value(
+        env, "(VV)", xmlrpc_install_packages, xmlrpc_remove_packages);
+    XMLRPC_FAIL_IF_FAULT(env);
+
+    xmlrpc_DECREF(xmlrpc_install_packages);
+    xmlrpc_DECREF(xmlrpc_remove_packages);
+
+cleanup:
+    return value;
+} /* packsys_verify_dependencies */
 
 void
 rcd_rpc_packsys_register_methods(RCWorld *world)
@@ -1265,6 +1374,11 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
 
     rcd_rpc_register_method("rcd.packsys.resolve_dependencies",
                             packsys_resolve_dependencies,
+                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            world);
+
+    rcd_rpc_register_method("rcd.packsys.verify_dependencies",
+                            packsys_verify_dependencies,
                             rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
                             world);
 

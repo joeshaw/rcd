@@ -70,3 +70,9 @@ rcd_prefs_get_heartbeat_interval (void)
 {
     return 3000;
 } /* rcd_prefs_get_heartbeat_interval */
+
+gboolean
+rcd_prefs_get_require_verified_packages (void)
+{
+    return FALSE;
+} /* rcd_prefs_get_require_verified_packages */
