@@ -47,7 +47,8 @@ load_module(const char *file_name)
 
     module = g_module_open(file_name, G_MODULE_BIND_LAZY);
     if (!module) {
-        g_warning("Couldn't load module %s: %s", file_name, g_module_error());
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Couldn't load module %s: %s", file_name, g_module_error());
         
         return NULL;
     }
@@ -55,7 +56,8 @@ load_module(const char *file_name)
     g_module_symbol(
         module, "rcd_module_load", (gpointer *) &module_load_func);
     if (!module_load_func) {
-        g_warning("Couldn't load module %s: %s", file_name, g_module_error());
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Couldn't load module %s: %s", file_name, g_module_error());
         g_module_close(module);
         return NULL;
     }
@@ -77,12 +79,13 @@ rcd_module_init(void)
     GDir *dir;
     const char *file_name;
 
-    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Initializing modules");
-
     if (!g_module_supported()) {
-        g_warning("Modules are not supported on this platform");
+        rc_debug (RC_DEBUG_LEVEL_MESSAGE,
+                  "Modules are not supported on this platform");
         return;
     }
+
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Initializing modules");
 
     dir = g_dir_open(MODULEDIR, 0, NULL);
 

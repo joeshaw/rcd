@@ -30,7 +30,7 @@ sample_add(xmlrpc_env *env, xmlrpc_value *param_array, void *user_data)
 
     xmlrpc_parse_value(env, param_array, "(ii)", &x, &y);
     if (env->fault_occurred)
-        g_error("fuck");
+        rc_debug (RC_DEBUG_LEVEL_MESSAGE, "<expletive deleted>");
 
     z = x + y;
 

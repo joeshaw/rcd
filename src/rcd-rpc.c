@@ -149,7 +149,8 @@ unix_rpc_callback (RCDUnixServerHandle *handle)
             
             pw = getpwuid (handle->uid);
             if (!pw) {
-                g_warning ("Couldn't get info for UID %d\n", handle->uid);
+                rc_debug (RC_DEBUG_LEVEL_WARNING,
+                          "Couldn't get info for UID %d\n", handle->uid);
                 identity = NULL;
             }
             else {
@@ -378,8 +379,10 @@ rcd_rpc_init(void)
     registry = xmlrpc_registry_new(&env);
 
     if (env.fault_occurred) {
-        g_error("Unable to initialize the XML-RPC server "
-                "registry: %s (%d)", env.fault_string, env.fault_code);
+        rc_debug (RC_DEBUG_LEVEL_ERROR, 
+                  "Unable to initialize the XML-RPC server registry: %s (%d)",
+                  env.fault_string, env.fault_code);
+        exit (-1);
     }
 
     /* Create a hash which will be used for registering RPC methods */

@@ -295,7 +295,7 @@ rcd_log_query (RCDQueryPart *query_parts,
     g_return_if_fail (query_parts != NULL);
 
     if (! rcd_query_begin (query_parts, query_log_engine)) {
-        g_warning ("rcd_query_begin failed");
+        rc_debug (RC_DEBUG_LEVEL_WARNING, "rcd_query_begin failed");
         return;
     }
 

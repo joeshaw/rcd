@@ -291,7 +291,8 @@ rcd_query_begin (RCDQueryPart *query_parts,
         if (query_parts[i].type == RCD_QUERY_BEGIN_OR) {
 
             if (or_depth > 0) {
-                g_warning ("Nested 'or' not allowed.");
+                rc_debug (RC_DEBUG_LEVEL_WARNING, 
+                          "Nested 'or' not allowed in queries.");
                 return FALSE;
             }
 
@@ -302,7 +303,8 @@ rcd_query_begin (RCDQueryPart *query_parts,
             --or_depth;
 
             if (or_depth < 0) {
-                g_warning ("Extra 'or' terminator found.");
+                rc_debug (RC_DEBUG_LEVEL_WARNING,
+                          "Extra 'or' terminator found in query.");
                 return FALSE;
             }
 
@@ -316,12 +318,14 @@ rcd_query_begin (RCDQueryPart *query_parts,
                     return FALSE;
 
                 if (eng->match == NULL) {
-                    g_warning ("Key \"%s\" lacks a match function.", query_parts[i].key);
+                    rc_debug (RC_DEBUG_LEVEL_WARNING,
+                              "Key \"%s\" lacks a match function.", query_parts[i].key);
                     return FALSE;
                 }
 
            } else {
-               g_warning ("Unknown part \"%s\"", query_parts[i].key);
+               rc_debug (RC_DEBUG_LEVEL_WARNING,
+                         "Unknown part \"%s\"", query_parts[i].key);
                 return FALSE;
             }
         }
@@ -332,7 +336,8 @@ rcd_query_begin (RCDQueryPart *query_parts,
     }
 
     if (or_depth > 0) {
-        g_warning ("Unterminated 'or' in expression.");
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Unterminated 'or' in expression.");
         return FALSE;
     }
 

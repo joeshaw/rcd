@@ -178,8 +178,10 @@ initialize_rc_world (void)
 
     /* Create a packman, hand it off to the world */
     packman = rc_distman_new ();
-    if (!packman)
-        g_error("Couldn't get a packman");
+    if (! packman) {
+        rc_debug(RC_DEBUG_LEVEL_ERROR, "Couldn't get a packman");
+        exit (-1);
+    }
     rc_packman_set_packman (packman);
 
     world = rc_get_world ();

@@ -171,7 +171,8 @@ rcd_cache_entry_open (RCDCacheEntry *entry)
     entry->fd = open (tmp_fn, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 
     if (entry->fd < 0) {
-        g_warning ("Couldn't open %s for writing", tmp_fn);
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Couldn't open %s for writing", tmp_fn);
         g_free (tmp_fn);
 
         return;
@@ -189,7 +190,8 @@ rcd_cache_entry_new (RCDCache *cache, const char *url)
     g_return_val_if_fail (url, NULL);
 
     if ((entry = g_hash_table_lookup (cache->entries, url))) {
-        g_warning ("Cache entry already exists for %s", url);
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Cache entry already exists for %s", url);
         return entry;
     }
 

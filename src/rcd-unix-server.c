@@ -210,7 +210,8 @@ rcd_unix_server_run_async(RCDUnixServerCallback callback)
 
     sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (sockfd < 0) {
-        g_warning("Unable to open a domain socket");
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Unable to open a domain socket");
         return;
     }
 
@@ -220,14 +221,16 @@ rcd_unix_server_run_async(RCDUnixServerCallback callback)
     strcpy(servaddr.sun_path, SOCKET_PATH);
     
     if (bind (sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0) {
-        g_warning ("Unable to bind to domain socket");
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Unable to bind to domain socket");
         return;
     }
 
     chmod(SOCKET_PATH, 0777);
 
     if (listen (sockfd, 10) < 0) {
-        g_warning ("Unable to listen to domain socket");
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Unable to listen to domain socket");
         return;
     }
 

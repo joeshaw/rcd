@@ -1,5 +1,23 @@
 2002-07-05  Jon Trowbridge  <trow@ximian.com>
 
+	* rcd-cache.c: Replaced g_warning/g_error calls with rc_debug.
+
+	* rcd-fetch.c: Replaced g_warning/g_error calls with rc_debug.
+
+	* rcd-log.c: Replaced g_warning/g_error calls with rc_debug.
+
+	* rcd-module.c: Replaced g_warning/g_error calls with rc_debug.
+
+	* rcd-query.c: Replaced g_warning/g_error calls with rc_debug.
+
+	* rcd-rpc-sample.c: Replaced g_warning/g_error calls with rc_debug.
+
+	* rcd-rpc.c: Replaced g_warning/g_error calls with rc_debug.
+
+	* rcd-unix-server.c: Replaced g_warning/g_error calls with rc_debug.
+
+	* rcd.c: Replaced g_warning/g_error calls with rc_debug.
+
 	* rcd-rpc.c (process_rpc_call): Don't measure the time it takes to
 	process each call.  Replace some g_warnings with rc_debugs.
 	(unix_rpc_callback): Replaced g_warning with rc_debug.

@@ -46,7 +46,8 @@ write_file_contents (const char *filename, GByteArray *data)
 
     dir = g_path_get_dirname (filename);
     if (!g_file_test (dir, G_FILE_TEST_EXISTS) && rc_mkdir (dir, 0755) < 0) {
-        g_warning ("Couldn't create '%s'", dir);
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Couldn't create '%s'", dir);
         g_free (dir);
         return;
     }
@@ -54,7 +55,8 @@ write_file_contents (const char *filename, GByteArray *data)
 
     fd = open (filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (fd < 0) {
-        g_warning ("Couldn't open '%s' for writing", filename);
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Couldn't open '%s' for writing", filename);
         return;
     }
 
