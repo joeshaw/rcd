@@ -38,6 +38,6 @@ struct _RCDUnixServerHandle {
     RCDUnixServerCallback cb;
 };
 
-void rcd_unix_server_run_async(RCDUnixServerCallback callback);
+int rcd_unix_server_run_async(RCDUnixServerCallback callback);
 
 #endif /* __RCD_UNIX_SERVER_H__ */

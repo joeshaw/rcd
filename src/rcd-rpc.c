@@ -309,7 +309,8 @@ run_server_thread(gpointer user_data)
 
     soup_server_run_async(server);
 
-    rcd_unix_server_run_async(unix_rpc_callback);
+    if (rcd_unix_server_run_async(unix_rpc_callback))
+        g_error ("Unable to listen for local connections.");
 
     return FALSE;
 } /* run_server_thread */

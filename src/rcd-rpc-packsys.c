@@ -1458,15 +1458,16 @@ packsys_dump(xmlrpc_env   *env,
 {
     RCWorld *world = (RCWorld *) user_data;
     char *xml;
-    xmlrpc_value *value;
+    GByteArray *ba;
+    xmlrpc_value *value = NULL;
 
     xml = rc_world_dump (world);
-
-    value = xmlrpc_build_value (env, "s", xml);
-    XMLRPC_FAIL_IF_FAULT (env);
+    rc_compress_memory (xml, strlen (xml), &ba);
     g_free (xml);
 
-cleanup:
+    value = xmlrpc_build_value (env, "6", ba->data, ba->len);
+    g_byte_array_free (ba, TRUE);
+
     return value;
 } /* packsys_dump */
 

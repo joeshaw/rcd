@@ -34,6 +34,7 @@
 
 #include "gnome-config.h"
 
+#define OVERRIDE_PATH "=" SYSCONFDIR "/rc.overrides="
 #define CONFIG_PATH "=" SYSCONFDIR "/rcd.config="
 #define SYNC_CONFIG (gnome_config_sync_file (CONFIG_PATH))
 
@@ -84,14 +85,19 @@ rcd_prefs_get_host (void)
     g_free (host);
     host = NULL;
 
+    /* FIXME: This needs to check priority mode */
     if (getenv ("RC_MAGIC"))
         return getenv ("RC_MAGIC");
+
+    host = gnome_config_get_string (OVERRIDE_PATH "/Overrides/DefaultFreeURL");
+    if (host)
+        return host;
 
     host = gnome_config_get_string (
         CONFIG_PATH "/Network/host=http://red-carpet.ximian.com");
 
     return host;
-}
+} /* rcd_prefs_get_host */
 
 gboolean
 rcd_prefs_get_http10_enabled (void)
@@ -112,6 +118,7 @@ rcd_prefs_set_http10_enabled (gboolean enabled)
 gboolean
 rcd_prefs_get_priority (void)
 {
+    /* FIXME: Implement */
     return FALSE;
 }
 

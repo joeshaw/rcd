@@ -55,10 +55,13 @@ read_cred (GIOChannel *channel, RCDUnixServerHandle *handle)
     int sockfd;
     struct ucred cred;
     socklen_t size;
+    int rc;
 
     sockfd = g_io_channel_unix_get_fd (channel);
 
-    if (getsockopt (sockfd, SOL_SOCKET, SO_PEERCRED, &cred, &size) < 0) {
+    rc = getsockopt (sockfd, SOL_SOCKET, SO_PEERCRED, &cred, &size);
+
+    if (rc < 0) {
         handle->cred_available = FALSE;
 
         rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Couldn't get credentials");
@@ -205,7 +208,7 @@ shutdown_server_cb (gpointer user_data)
     unlink (SOCKET_PATH);
 } /* shutdown_server_cb */
 
-void
+int
 rcd_unix_server_run_async(RCDUnixServerCallback callback)
 {
     int sockfd;
@@ -224,7 +227,7 @@ rcd_unix_server_run_async(RCDUnixServerCallback callback)
     if (sockfd < 0) {
         rc_debug (RC_DEBUG_LEVEL_WARNING,
                   "Unable to open a domain socket");
-        return;
+        return -1;
     }
 
     unlink(SOCKET_PATH);
@@ -235,7 +238,7 @@ rcd_unix_server_run_async(RCDUnixServerCallback callback)
     if (bind (sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0) {
         rc_debug (RC_DEBUG_LEVEL_WARNING,
                   "Unable to bind to domain socket");
-        return;
+        return -1;
     }
 
     chmod(SOCKET_PATH, 0777);
@@ -243,7 +246,7 @@ rcd_unix_server_run_async(RCDUnixServerCallback callback)
     if (listen (sockfd, 10) < 0) {
         rc_debug (RC_DEBUG_LEVEL_WARNING,
                   "Unable to listen to domain socket");
-        return;
+        return -1;
     }
 
     rcd_shutdown_add_handler (shutdown_server_cb, GINT_TO_POINTER (sockfd));
@@ -251,4 +254,6 @@ rcd_unix_server_run_async(RCDUnixServerCallback callback)
     iochannel = g_io_channel_unix_new(sockfd);
     g_io_add_watch(iochannel, G_IO_IN, conn_accept, callback);
     g_io_channel_unref(iochannel);
+
+    return 0;
 } /* rcd_unix_server_run_async */

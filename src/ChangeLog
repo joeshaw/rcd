@@ -1,3 +1,18 @@
+2002-07-10  Joe Shaw  <joe@ximian.com>
+
+	* rcd-prefs.c (rcd_prefs_get_host): Get the hostname from the
+	DefaultFreeURL override before looking in the actual
+	configuration.
+
+	* rcd-rpc-packsys.c (packsys_dump): Compress the packaging data
+	and send it down as binary data.
+
+	* rcd-rpc.c (run_server_thread): Check the return code from
+	rcd_unix_server_run_async() and error out if it doesn't work.
+
+	* rcd-unix-server.c (rcd_unix_server_run_async): Now returns an
+	integer; 0 on success.
+
 2002-07-10  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-rpc-packsys.c (build_updates_list): Filter out updates to
