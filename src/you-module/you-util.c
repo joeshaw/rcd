@@ -339,8 +339,9 @@ write_directory_files (RCYouPatchSList *patches, GError **error)
             return;
         }
 
-        buf = patch->file->filename;
+        buf = g_strdup_printf ("%s\n", patch->file->filename);
         success = rc_write (fd, (void *) buf, strlen (buf));
+        g_free (buf);
         rc_close (fd);
 
         if (!success) {

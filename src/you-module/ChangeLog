@@ -1,3 +1,7 @@
+2004-11-01  Tambet Ingo  <tambet@ximian.com>
+
+	* you-util.c (write_directory_files): Add newlines.
+
 2004-09-11  Peter Teichman  <peter@ximian.com>
 
 	* rc-you-transaction.c (get_files_to_download): download .patch.rpm
