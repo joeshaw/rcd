@@ -156,8 +156,6 @@ rcd_fetch_channel_list_local (void)
 
     rc_world_add_channels_from_xml (rc_get_world (), root->xmlChildrenNode);
 
-    xmlDocDump (stdout, doc);
-
     success = TRUE;
 
  cleanup:
