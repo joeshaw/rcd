@@ -1,10 +1,5 @@
 (Maybe further down the road...) Allow modules to register prefs
 
-We need to add code to XMLify the entire RCWorld, including all of the
-channel package data and the subscriptions (this is really a
-libredcarpet TODO, of course).  Then we need to add some XML-RPC glue
-to pass that chunk of XML to the client for our 'debug' command.
-
 There should be a get_update_count (or whatever) method that returns
 only the number of pending updates, possibly broken out by importance.
 This way we can make a soothingly-throbbing update-alert panel applet
