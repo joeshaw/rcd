@@ -1,0 +1,43 @@
+The Red Carpet Daemon (rcd) is a package management daemon for RPM and
+dpkg based systems.
+
+ABOUT THE RED CARPET DAEMON
+---------------------------
+The Red Carpet Daemon provides interfaces to applications that want to
+access and manipulate packages on a system.  rcd is also a development
+framework through which a number of system services can be built,
+completely unrelated to package management.
+
+rcd runs unobtrusively on the system, not locking the package database
+except when necessary, so other packaging tools, like rpm, apt-get,
+Red Carpet, gnorpm, etc., continue to work.
+
+rcd can be launched interactively or from init.  It exposes an XML-RPC
+interface over unix domain sockets and over TCP via secure HTTP.  This
+allows systems to be managed remotely.
+
+Security is built into rcd; methods register required privileges, and
+only users who have those privileges may execute commands.  Credentials
+are verified by the kernel in the case of a connection over unix domain
+sockets, and using a password in a root-owned, read-only file over
+HTTPS.
+
+DOCUMENTATION
+-------------
+A man page is included with the package.  At some point, developer
+documentation will be added.  (Yeah, yeah...)  In the meantime, the
+header files should hopefully suffice.
+
+BUILDING AND DEVELOPING
+-----------------------
+Building rcd is hard(TM).  Please see the HACKING file for build
+instructions.
+
+We welcome contributors both on the core of rcd and on add-on
+modules.  Please see the HACKING file for more info on contributing.
+
+RCD CLIENTS
+-----------
+Once you have rcd up and running, you'll need a client to access it.
+Check out the "rc" module from GNOME CVS or wherever you got rcd, which
+contains a powerful little command-line client.
