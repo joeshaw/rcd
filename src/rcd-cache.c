@@ -404,7 +404,7 @@ rcd_cache_get_local_filename (RCDCache *cache,
 static RCDCacheEntry *
 rcd_cache_lookup_entry (RCDCache      *cache,
                         RCDCacheEntry *base_entry,
-                        gboolean       add_base_on_cache_miss)
+                        gboolean       return_base_on_cache_miss)
 {
     RCDCacheEntry *entry;
 
@@ -420,18 +420,14 @@ rcd_cache_lookup_entry (RCDCache      *cache,
             rcd_cache_entry_invalidate (entry);
         }
     } else {
-        /* If the file isn't in the cache and add_base_on_cache_miss
+        /* If the file isn't in the cache and return_base_on_cache_miss
            is not set, just return NULL. */
         if (! rcd_cache_entry_is_valid (base_entry)
-            && ! add_base_on_cache_miss) {
+            && ! return_base_on_cache_miss) {
             rcd_cache_entry_free (base_entry);
             return NULL;
         }
     }
-
-    g_hash_table_insert (cache->entries,
-                         base_entry->local_file,
-                         base_entry);
 
     return base_entry;
 }

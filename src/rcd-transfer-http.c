@@ -226,7 +226,7 @@ http_done (SoupMessage *message, gpointer user_data)
             char *local_url;
             
             cache_filename =
-                rcd_cache_entry_get_local_filename (protocol->entry);
+                rcd_cache_entry_get_local_filename (t->cache_entry);
             local_url = g_strconcat ("file://", cache_filename, NULL);
             g_free (cache_filename);
             
@@ -251,12 +251,12 @@ http_done (SoupMessage *message, gpointer user_data)
             return;
         }
 
-        if (protocol->entry && rcd_cache_entry_is_open (protocol->entry))
-            rcd_cache_entry_close (protocol->entry);
+        if (t->cache_entry && rcd_cache_entry_is_open (t->cache_entry))
+            rcd_cache_entry_close (t->cache_entry);
     }
     else {
-        if (protocol->entry)
-            rcd_cache_entry_cancel (protocol->entry);
+        if (t->cache_entry)
+            rcd_cache_entry_cancel (t->cache_entry);
     }
 
     rcd_transfer_emit_done (t);
@@ -320,12 +320,10 @@ http_info (SoupMessage *message,
            gpointer     user_data)
 {
     RCDTransfer *t = user_data;
-    RCDTransferProtocolHTTP *protocol =
-        (RCDTransferProtocolHTTP *) t->protocol;
     const char *auth_header;
 
-    if (HTTP_RESPONSE_SUCCESSFUL (message->errorcode) && protocol->entry)
-        rcd_cache_entry_open (protocol->entry);
+    if (HTTP_RESPONSE_SUCCESSFUL (message->errorcode) && t->cache_entry)
+        rcd_cache_entry_open (t->cache_entry);
 
     auth_header = soup_message_get_header (
         message->response_headers, "X-RC-Auth");
@@ -354,14 +352,12 @@ http_read_data (SoupMessage *message,
                 gpointer     user_data)
 {
     RCDTransfer *t = user_data;
-    RCDTransferProtocolHTTP *protocol =
-        (RCDTransferProtocolHTTP *) t->protocol;
 
     if (HTTP_RESPONSE_SUCCESSFUL (message->errorcode) &&
-        protocol->entry && rcd_cache_entry_is_open (protocol->entry))
+        t->cache_entry && rcd_cache_entry_is_open (t->cache_entry))
     {
         rcd_cache_entry_append (
-            protocol->entry, message->response.body, message->response.length);
+            t->cache_entry, message->response.body, message->response.length);
     }
 
     rcd_transfer_emit_data (
@@ -485,44 +481,40 @@ http_open (RCDTransfer *t)
     if (t->cache_entry && (t->flags & RCD_TRANSFER_FLAGS_FORCE_CACHE ||
         (rcd_prefs_get_cache_enabled () &&
          !(t->flags & RCD_TRANSFER_FLAGS_DONT_CACHE)))) {
-        protocol->entry = t->cache_entry;
+        const char *modtime;
+        const char *entity_tag;
 
-        if (protocol->entry) {
-            const char *modtime;
-            const char *entity_tag;
+        modtime = rcd_cache_entry_get_modification_time (t->cache_entry);
+        entity_tag = rcd_cache_entry_get_entity_tag (t->cache_entry);
 
-            modtime = rcd_cache_entry_get_modification_time (protocol->entry);
-            entity_tag = rcd_cache_entry_get_entity_tag (protocol->entry);
+        if (modtime || entity_tag) {
+            /* Handler for 304 Not Modified messages */
+            soup_message_add_error_code_handler (
+                message, 304, SOUP_HANDLER_PRE_BODY,
+                http_response_not_modified, t);
+        }
+        
+        if (modtime) {
+            /* We want to get a 304 if we already have the file */
+            soup_message_add_header (
+                protocol->message->request_headers,
+                "If-Modified-Since", modtime);
+        }
 
-            if (modtime || entity_tag) {
-                /* Handler for 304 Not Modified messages */
-                soup_message_add_error_code_handler (
-                    message, 304, SOUP_HANDLER_PRE_BODY,
-                    http_response_not_modified, t);
-            }
-
-            if (modtime) {
-                /* We want to get a 304 if we already have the file */
-                soup_message_add_header (
-                    protocol->message->request_headers,
-                    "If-Modified-Since", modtime);
-            }
-
-            if (entity_tag) {
-                /* We want to get a 304 if we already have the file */
-                soup_message_add_header (
-                    protocol->message->request_headers,
-                    "If-None-Match", entity_tag);
-            }
+        if (entity_tag) {
+            /* We want to get a 304 if we already have the file */
+            soup_message_add_header (
+                protocol->message->request_headers,
+                "If-None-Match", entity_tag);
         }
 
         soup_message_add_header_handler (
             message, "ETag", SOUP_HANDLER_PRE_BODY,
-            http_etag, protocol->entry);
+            http_etag, t->cache_entry);
 
         soup_message_add_header_handler (
             message, "Last-Modified", SOUP_HANDLER_PRE_BODY,
-            http_last_modified, protocol->entry);
+            http_last_modified, t->cache_entry);
     }
 
 #if 0
@@ -586,11 +578,8 @@ http_open (RCDTransfer *t)
 static char *
 http_get_local_filename (RCDTransfer *t)
 {
-    RCDTransferProtocolHTTP *protocol =
-        (RCDTransferProtocolHTTP *) t->protocol;
-
-    if (protocol->entry)
-        return rcd_cache_entry_get_local_filename (protocol->entry);
+    if (t->cache_entry)
+        return rcd_cache_entry_get_local_filename (t->cache_entry);
     else
         return NULL;
 } /* http_get_filename */

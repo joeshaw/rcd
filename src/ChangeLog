@@ -1,3 +1,14 @@
+2003-10-20  Joe Shaw  <joe@ximian.com>
+
+	* rcd-cache.c (rcd_cache_lookup_entry): Change the
+	add_base_on_cache_miss argument to return_base_on_cache_miss.
+	Don't insert the base entry into the hash_table, since that's done
+	when the transfer is successfully completed.
+
+	* rcd-transfer-http.c: Remove the RCDCacheEntry field from the
+	RCDTransferPotocolHTTP struct and just use the cache_entry field
+	on the RCDTransfer object throughout instead.  Whee, 4 byte savings.
+
 2003-10-16  Joe Shaw  <joe@ximian.com>
 
 	* rcd-prefs.c: Make rcd_prefs_error_quark() and RCD_PREFS_ERROR

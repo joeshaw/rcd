@@ -33,7 +33,6 @@ typedef struct _RCDTransferProtocolHTTP RCDTransferProtocolHTTP;
 struct _RCDTransferProtocolHTTP {
     RCDTransferProtocol parent;
 
-    RCDCacheEntry *entry;
     SoupMessage *message;
 
     gboolean cache_hit;
