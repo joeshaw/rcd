@@ -405,12 +405,14 @@ rcd_world_remote_parse_channel_data (RCDWorldRemote *remote,
         break;
 
     default:
-        g_print ("Unknown channel type!");
+        rc_debug (RC_DEBUG_LEVEL_WARNING, "Unknown channel type for '%s'!",
+                  rc_channel_get_id (channel));
         count = 0;
         break;
     }
 
-    g_print ("Loaded %d packages\n\n", count);
+    rc_debug (RC_DEBUG_LEVEL_DEBUG, "Loaded %d packages in '%s'",
+              count, rc_channel_get_id (channel));
 
     if (decompressed_data)
         g_byte_array_free (decompressed_data, TRUE);
@@ -646,7 +648,7 @@ rcd_world_remote_parse_channels_xml (RCDWorldRemote *remote,
     N = rc_extract_channels_from_helix_buffer (buffer, buffer_len,
                                                rcd_world_remote_per_channel_cb,
                                                &channel_data);
-    g_print ("Got %d channels files\n", N);
+    rc_debug (RC_DEBUG_LEVEL_DEBUG ("Got %d channels files", N);
 
     if (channel_data.pool != NULL) {
         rcd_transfer_pool_begin (channel_data.pool);
