@@ -1,5 +1,19 @@
 2002-08-08  Jon Trowbridge  <trow@ximian.com>
 
+	* rcd-rpc-packsys.c (resolve_deps): Added an argument for passing
+	out an xmlrpc array containing the xmlrpcified RCResolverInfo
+	items generated during this resolution.  It is taken from the best
+	context if our resolution succeeded, and from the first failed
+	queue otherwise.
+	(packsys_verify_dependencies): Get the resolution info from the
+	call to resolve_deps, then pass it back as the third element of
+	our returned tuple.
+	(packsys_resolve_dependencies): Ditto.
+
+	* rcd-rpc-util.c (rcd_rc_resolver_info_to_xmlrpc): Actually store
+	the contents of the RCResolverInfo message in the "message" field
+	of the xmlrpc struct.
+
 	* rcd-rpc-packsys.c (append_dep_info): Call
 	rc_resolver_info_type_to_string instead of _to_str.
 	(dep_get_package_info_cb): Call

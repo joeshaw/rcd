@@ -637,7 +637,7 @@ rcd_rc_resolver_info_to_xmlrpc (RCResolverInfo *info,
     xmlrpc_DECREF (pkg_list);
 
     if (info->msg) {
-        RCD_XMLRPC_STRUCT_SET_STRING (env, value, "message", info->action);
+        RCD_XMLRPC_STRUCT_SET_STRING (env, value, "message", info->msg);
     }
 
 

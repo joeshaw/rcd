@@ -1673,6 +1673,7 @@ static void
 resolve_deps (xmlrpc_env         *env,
               xmlrpc_value      **packages_to_install,
               xmlrpc_value      **packages_to_remove,
+              xmlrpc_value      **resolution_info,
               RCPackageDepSList  *extra_dep_list,
               gboolean            verification,
               RCWorld            *world)
@@ -1725,6 +1726,23 @@ resolve_deps (xmlrpc_env         *env,
         rc_resolver_verify_system (resolver);
     else
         rc_resolver_resolve_dependencies (resolver);
+
+    if (resolution_info) {
+        RCResolverContext *info_context = NULL;
+
+        if (resolver->best_context)
+            info_context = resolver->best_context;
+        else {
+            RCResolverQueue *queue = resolver->invalid_queues->data;
+            info_context = queue->context;
+        }
+
+        if (info_context) {
+            *resolution_info = rcd_rc_resolver_context_info_to_xmlrpc_array (info_context,
+                                                                             NULL, -1,
+                                                                             env);
+        }
+    }
 
     if (!resolver->best_context) {
         char *dep_failure_info;
@@ -1798,6 +1816,7 @@ packsys_resolve_dependencies(xmlrpc_env   *env,
     xmlrpc_value *xmlrpc_install_packages;
     xmlrpc_value *xmlrpc_remove_packages;
     xmlrpc_value *xmlrpc_extra_deps;
+    xmlrpc_value *xmlrpc_resolution_info;
     RCPackageDepSList *extra_dep_list;
     xmlrpc_value *value = NULL;
 
@@ -1812,12 +1831,14 @@ packsys_resolve_dependencies(xmlrpc_env   *env,
     XMLRPC_FAIL_IF_FAULT (env);
 
     resolve_deps (env, &xmlrpc_install_packages, &xmlrpc_remove_packages,
+                  &xmlrpc_resolution_info,
                   extra_dep_list, FALSE, world);
     rc_package_dep_slist_free (extra_dep_list);
     XMLRPC_FAIL_IF_FAULT (env);
 
     value = xmlrpc_build_value(
-        env, "(VV)", xmlrpc_install_packages, xmlrpc_remove_packages);
+        env, "(VVV)",
+        xmlrpc_install_packages, xmlrpc_remove_packages, xmlrpc_resolution_info);
     XMLRPC_FAIL_IF_FAULT(env);
 
     xmlrpc_DECREF(xmlrpc_install_packages);
@@ -1835,14 +1856,16 @@ packsys_verify_dependencies(xmlrpc_env   *env,
     RCWorld *world = (RCWorld *) user_data;
     xmlrpc_value *xmlrpc_install_packages = NULL;
     xmlrpc_value *xmlrpc_remove_packages = NULL;
+    xmlrpc_value *xmlrpc_resolution_info;
     xmlrpc_value *value = NULL;
 
     resolve_deps (env, &xmlrpc_install_packages, &xmlrpc_remove_packages,
+                  &xmlrpc_resolution_info,
                   NULL, TRUE, world);
     XMLRPC_FAIL_IF_FAULT (env);
 
     value = xmlrpc_build_value(
-        env, "(VV)", xmlrpc_install_packages, xmlrpc_remove_packages);
+        env, "(VVV)", xmlrpc_install_packages, xmlrpc_remove_packages, xmlrpc_resolution_info);
     XMLRPC_FAIL_IF_FAULT(env);
 
     xmlrpc_DECREF(xmlrpc_install_packages);
