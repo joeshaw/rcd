@@ -1660,6 +1660,7 @@ packsys_rollback_dependencies(xmlrpc_env   *env,
                               void         *user_data)
 {
     RCWorld *world = (RCWorld *) user_data;
+    RCPackman *packman = rc_world_get_packman (world);
     int channel_priority;
     RCChannel *rollback_channel = NULL;
     int size, i;
@@ -1671,6 +1672,13 @@ packsys_rollback_dependencies(xmlrpc_env   *env,
     xmlrpc_value *xmlrpc_extra_deps = NULL;
     xmlrpc_value *tmp;
     xmlrpc_value *result = NULL;
+
+    if (!(rc_packman_get_capabilities (packman) & RC_PACKMAN_CAP_REPACKAGING))
+    {
+        xmlrpc_env_set_fault(env, RCD_RPC_FAULT_NOT_SUPPORTED,
+                             "Rollback is not supported by this system");
+        return NULL;
+    }
 
     xmlrpc_parse_value (env, param_array, "(A)", &xmlrpc_package_names);
     XMLRPC_FAIL_IF_FAULT (env);
@@ -1794,7 +1802,16 @@ packsys_get_rollback_packages (xmlrpc_env   *env,
                                xmlrpc_value *param_array,
                                void         *user_data)
 {
+    RCWorld *world = (RCWorld *) user_data;
+    RCPackman *packman = rc_world_get_packman (world);
     xmlrpc_value *result;
+
+    if (!(rc_packman_get_capabilities (packman) & RC_PACKMAN_CAP_REPACKAGING))
+    {
+        xmlrpc_env_set_fault(env, RCD_RPC_FAULT_NOT_SUPPORTED,
+                             "Rollback is not supported by this system");
+        return NULL;
+    }
 
     result = rcd_rc_package_slist_to_xmlrpc_array (
         rcd_rollback_get_packages (), env);

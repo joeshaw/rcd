@@ -59,6 +59,7 @@ rcd_rc_package_spec_to_xmlrpc(RCPackageSpec *spec,
         spec->release);
 
 cleanup:
+    ;
 } /* rcd_rc_package_spec_to_xmlrpc */
 
 void
@@ -73,6 +74,7 @@ rcd_rc_package_dep_to_xmlrpc (RCPackageDep *dep,
         rc_package_relation_to_string (rc_package_dep_get_relation (dep), 0));
     
  cleanup:
+    ;
 }
 
 xmlrpc_value *
@@ -1007,6 +1009,7 @@ copy_array (xmlrpc_env *env, xmlrpc_value **out_array, xmlrpc_value *in_array)
     }
 
 cleanup:
+    ;
 } /* copy_array */
 
 xmlrpc_value *

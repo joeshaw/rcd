@@ -1,5 +1,14 @@
 2003-03-13  Joe Shaw  <joe@ximian.com>
 
+	* rcd-rpc-util.h: Add RCD_RPC_FAULT_NOT_SUPPORTED
+
+	* rcd-rpc-packsys.c (packsys_rollback_dependencies,
+	packsys_get_rollback_packages): Throw the not supported fault if
+	our packman doesn't support it.  (Fixes #39015)
+
+	* rcd-rpc-util.c: Add lone semicolons after labels with no
+	statements to shut newer gccs up.
+
 	* rcd-transaction.c (transact_progess_cb): RPM sends a total size
 	of 0 for some packages -- I'm not sure why -- but in those cases
 	don't try to update the pending.  This fixes the many glib
