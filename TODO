@@ -7,7 +7,9 @@ channel package data and the subscriptions (this is really a
 libredcarpet TODO, of course).  Then we need to add some XML-RPC glue
 to pass that chunk of XML to the client for our 'debug' command.
 
-There should be a XML-RPC method that does a graceful shutdown.  It should
-probably only be allowed if it comes from root on the local machine.
+There should be a get_update_count (or whatever) method that returns
+only the number of pending updates, possibly broken out by importance.
+This way we can make a soothingly-throbbing update-alert panel applet
+and not need to pass big chunks of data between it and the daemon.
 
 Need docs and a man page.
