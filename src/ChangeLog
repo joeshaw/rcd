@@ -1,5 +1,12 @@
 2003-02-11  Joe Shaw  <joe@ximian.com>
 
+	* rcd-query-packages.c (summary_match, description_match,
+	text_match): Guard against the possibility of NULL summaries and
+	descriptions.  I actually have a package installed without a
+	description tag which was causing rcd to crash.
+
+2003-02-11  Joe Shaw  <joe@ximian.com>
+
 	* rcd-transfer-http.c (map_soup_error_to_rcd_transfer_error): Fix
 	a buglet where if a transfer failed it would print the proxy URL
 	(or "(null)") instead of the real URL.

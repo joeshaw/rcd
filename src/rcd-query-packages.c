@@ -42,6 +42,10 @@ summary_match (RCDQueryPart *part,
             gpointer      data)
 {
     RCPackage *pkg = data;
+
+    if (!pkg->summary)
+        return FALSE;
+
     return rcd_query_match_string_ci (part, pkg->summary);
 }
 
@@ -50,6 +54,10 @@ description_match (RCDQueryPart *part,
                    gpointer      data)
 {
     RCPackage *pkg = data;
+
+    if (!pkg->description)
+        return FALSE;
+
     return rcd_query_match_string_ci (part, pkg->description);
 }
 
@@ -61,8 +69,9 @@ text_match (RCDQueryPart *part,
 
     return rcd_query_match_string_ci (
         part, g_quark_to_string (pkg->spec.nameq))
-        || rcd_query_match_string_ci (part, pkg->summary)
-        || rcd_query_match_string_ci (part, pkg->description);
+        || (pkg->summary && rcd_query_match_string_ci (part, pkg->summary))
+        || (pkg->description && rcd_query_match_string_ci (part,
+                                                           pkg->description));
 }
 
 #define SYSTEM_HACK (guint)(~0)
