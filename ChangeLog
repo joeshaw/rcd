@@ -1,3 +1,11 @@
+2002-11-16  Frank Belew  <frb@ximian.com>
+
+	* configure.in: added third argument to all the AC_DEFINE* to set
+	description, this makes autoconf 2.53 happy, and 2.53 is required
+	for libsoup
+
+	* acconfig.h: removed in favor of third argument to AC_DEFINE
+	
 2002-11-13  Joe Shaw  <joe@ximian.com>
 
 	* configure.in: Require libsoup (soup-2.0.pc) instead of a
