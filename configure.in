@@ -180,12 +180,12 @@ DDIR=`echo $datadir | sed -e "s,"'${prefix}'",$prefix,"`
 AC_SUBST(DDIR)
 
 AC_ARG_WITH(init-script-type,
-  [  --with-init-script-type=TYPE (redhat, suse, debian, solaris)],
+  [  --with-init-script-type=TYPE (redhat, lsb, debian, solaris, suse (use lsb))],
   with_init_script_type="$withval",
   with_init_script_type="redhat")
 
 AM_CONDITIONAL(INIT_REDHAT, false)
-AM_CONDITIONAL(INIT_SUSE, false)
+AM_CONDITIONAL(INIT_LSB, false)
 AM_CONDITIONAL(INIT_DEBIAN, false)
 AM_CONDITIONAL(INIT_SOLARIS, false)
 
@@ -193,8 +193,11 @@ if test "x$with_init_script_type" = "xredhat"; then
   INIT_SCRIPT=rcd.init.redhat
   AM_CONDITIONAL(INIT_REDHAT, true)
 elif test "x$with_init_script_type" = "xsuse"; then
-  INIT_SCRIPT=rcd.init.suse
-  AM_CONDITIONAL(INIT_SUSE, true)
+  INIT_SCRIPT=rcd.init.lsb
+  AM_CONDITIONAL(INIT_LSB, true)
+elif test "x$with_init_script_type" = "xlsb"; then
+  INIT_SCRIPT=rcd.init.lsb
+  AM_CONDITIONAL(INIT_LSB, true)
 elif test "x$with_init_script_type" = "xdebian"; then
   INIT_SCRIPT=rcd.init.debian
   AM_CONDITIONAL(INIT_DEBIAN, true)
@@ -212,7 +215,7 @@ Makefile
 src/Makefile
 src/rcd-buddy
 rcd.init.redhat
-rcd.init.suse
+rcd.init.lsb
 rcd.init.debian
 rcd.init.solaris
 rcd.pc

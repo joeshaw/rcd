@@ -14,7 +14,7 @@ pkgconfig_DATA = rcd.pc
 
 man_MANS = rcd.8 rcd.conf.5
 
-EXTRA_DIST = rcd.init.redhat.in rcd.init.suse.in rcd.init.debian.in \
+EXTRA_DIST = rcd.init.redhat.in rcd.init.lsb.in rcd.init.debian.in \
 	     rcd.init.solaris.in rcd.pc.in rcd.passwd rcd.logrotate \
 	     $(cert_DATA) $(gpg_DATA) $(man_MANS)
 
@@ -23,8 +23,8 @@ init_file = rcd.init.redhat
 initdir = $(sysconfdir)/rc.d/init.d
 endif
 
-if INIT_SUSE
-init_file = rcd.init.suse
+if INIT_LSB
+init_file = rcd.init.lsb
 initdir = $(sysconfdir)/rc.d/init.d
 endif
 

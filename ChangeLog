@@ -1,3 +1,14 @@
+2004-03-16  Frank Belew  <fbelew@novell.com>
+
+	* configure.in: add support for LSB init script
+	  alias suse to be lsb
+
+	* Makefile.am: change suse init clause to lsb
+
+	* rcd.init.lsb.in(new): suse init script with more lsb compliance
+
+	* rcd.init.suse.in(removed): replaced by rcd.init.lsb.in
+
 2004-02-11  Joe Shaw  <joe@ximian.com>
                                                                                 
         * configure.in: 2.0.2
