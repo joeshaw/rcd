@@ -15,6 +15,9 @@
 # install: ability to install new packages on the system
 # upgrade: ability to upgrade existing packages on the system
 # remove: ability to remove existing packages from the system
+# trusted: ability to install packages which have no signatures or
+#          cannot be verified.
+# lock: ability to lock down when packages can be installed, removed, etc.
 # superuser: ability to do everything
 #
 # Note: root always has superuser privileges when accessing locally, so

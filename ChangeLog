@@ -1,3 +1,7 @@
+2003-01-29  Joe Shaw  <joe@ximian.com>
+
+	* rcd.passwd: Added docs for the trusted and lock privs.
+
 2003-01-27  Aaron Weber <aaron@ximian.com>
 
 	* rcd.conf.8: Fix proxy-user entry (from proxy-username) as per bug 36821
