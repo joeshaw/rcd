@@ -2,8 +2,8 @@
 #
 # Startup script for the Ximian Red Carpet Daemon
 #
-# description: RCD is a daemon through which users can manage software \
-#              their systems.
+# description: RCD, the Red Carpet Daemon, allows users to manage software \
+#              on their systems. Visit http://ximian.com for more information.
 #
 # chkconfig: 2345 97 03
 #

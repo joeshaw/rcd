@@ -1,3 +1,8 @@
+2003-07-01  Aaron Weber  <aaron@ximian.com>
+
+	* rcd.init.redhat.in (ARGS): update the description in RH and SuSE versions of this file. Not changing others.
+	* rcd.init.suse.in: see above.
+
 2003-06-23  Aaron Weber <aaron@ximian.com>
 
 	* rcd.8: add note about the -o option.

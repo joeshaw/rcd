@@ -1,7 +1,8 @@
 #! /bin/sh
 # Default-Start:  3 4 5
 # Default-Stop:   0 1 2 6
-# Description:    Start Red Carpet Daemon
+# Description: RCD, the Red Carpet Daemon, allows users to manage software \
+#              on their systems. Visit http://ximian.com for more information.
 ### END INIT INFO
 
 # $Id$
