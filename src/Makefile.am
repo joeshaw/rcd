@@ -114,6 +114,7 @@ librcd_autopull_la_SOURCES =	\
 	rcd-autopull.c
 
 librcd_sample_la_LDFLAGS = -module -avoid-version
+librcd_autopull_la_LDFLAGS = -module -avoid-version
 
 install-exec-hook:
 	chmod 0755 $(DESTDIR)$(rcd_buddydir)/$(rcd_buddy_DATA)
