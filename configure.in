@@ -196,14 +196,15 @@ fi
 
 ### build makefiles
 
-AC_OUTPUT(
+AC_OUTPUT([
 Makefile
 src/Makefile
 src/rcd-buddy
 rcd.init.redhat
 rcd.init.suse
 rcd.init.debian
-)
+rcd.pc
+])
 
 echo "
 

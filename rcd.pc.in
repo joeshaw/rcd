@@ -1,0 +1,10 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: rcd
+Description: RCD - The Red Carpet Daemon
+Version: @VERSION@
+Libs:
+Cflags: -I${includedir}/rcd

@@ -13,10 +13,14 @@ ca_DATA = rcd-ca-bundle.pem
 gpgdir = $(datadir)/rcd
 gpg_DATA = rcd.gpg
 
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = rcd.pc
+
 man_MANS = rcd.8 rcd.conf.5
 
-EXTRA_DIST = rcd.passwd rcd.init.redhat rcd.init.suse rcd.init.debian \
-             rcd.logrotate $(cert_DATA) $(ca_DATA) $(gpg_DATA) $(man_MANS)
+EXTRA_DIST = rcd.passwd rcd.init.redhat rcd.init.suse rcd.init.debian    \
+             rcd.logrotate rcd.pc.in $(cert_DATA) $(ca_DATA) $(gpg_DATA) \
+             $(man_MANS)
 
 if INIT_REDHAT
 init_file = rcd.init.redhat
