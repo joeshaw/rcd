@@ -1464,19 +1464,19 @@ dep_get_package_info_cb (RCResolverInfo *info, gpointer user_data)
 
     switch (info->type) {
     case RC_RESOLVER_INFO_TYPE_NEEDED_BY:
-        pkgs = rc_resolver_info_packages_to_str (info, TRUE);
+        pkgs = rc_resolver_info_packages_to_str (info, FALSE);
         info_str = g_strconcat ("needed by: ", pkgs, NULL);
         g_free (pkgs);
         break;
 
     case RC_RESOLVER_INFO_TYPE_CONFLICTS_WITH:
-        pkgs = rc_resolver_info_packages_to_str (info, TRUE);
+        pkgs = rc_resolver_info_packages_to_str (info, FALSE);
         info_str = g_strconcat ("conflicts with: ", pkgs, NULL);
         g_free (pkgs);
         break;
 
     case RC_RESOLVER_INFO_TYPE_DEPENDS_ON:
-        pkgs = rc_resolver_info_packages_to_str (info, TRUE);
+        pkgs = rc_resolver_info_packages_to_str (info, FALSE);
         info_str = g_strconcat ("depends on: ", pkgs, NULL);
         g_free (pkgs);
         break;

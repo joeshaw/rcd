@@ -1,3 +1,8 @@
+2002-07-23  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-packsys.c (dep_get_package_info_cb): Get the version
+	numbers from the RCResolverInfo structs.
+
 2002-07-23  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-rpc-util.c (rcd_rc_channel_to_xmlrpc): Put the alias in
