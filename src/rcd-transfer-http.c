@@ -53,7 +53,7 @@
    msg->errorclass != SOUP_ERROR_CLASS_INFORMATIONAL && \
    msg->errorclass != SOUP_ERROR_CLASS_REDIRECT
 
-static char *rc_auth_header = NULL;
+static GHashTable *rc_auth_header_table = NULL;
 
 static void
 print_header (gpointer name, gpointer value, gpointer user_data)
@@ -331,8 +331,19 @@ http_info (SoupMessage *message,
         message->response_headers, "X-RC-Auth");
 
     if (auth_header) {
-        g_free (rc_auth_header);
-        rc_auth_header = g_strdup (auth_header);
+        const SoupUri *uri;
+
+        if (rc_auth_header_table == NULL) {
+            rc_auth_header_table = g_hash_table_new_full (g_str_hash,
+                                                          g_str_equal,
+                                                          g_free, g_free);
+        }
+
+        uri = soup_context_get_uri (message->context);
+        
+        g_hash_table_replace (rc_auth_header_table,
+                              g_strdup (uri->host),
+                              g_strdup (auth_header));
     }
 
     rc_debug (RC_DEBUG_LEVEL_DEBUG, "[%p]: http_info called", message);
@@ -542,9 +553,18 @@ http_open (RCDTransfer *t)
     soup_message_add_header (
         message->request_headers, "User-Agent", "Red Carpet Daemon/"VERSION);
 
-    if (rc_auth_header) {
-        soup_message_add_header (
-            message->request_headers, "X-RC-Auth", rc_auth_header);
+    if (rc_auth_header_table) {
+        const SoupUri *uri;
+        const char *auth_header;
+
+        uri = soup_context_get_uri (context);
+        
+        auth_header = g_hash_table_lookup (rc_auth_header_table, uri->host);
+
+        if (auth_header) {
+            soup_message_add_header (message->request_headers,
+                                     "X-RC-Auth", auth_header);
+        }
     }
 
     if (protocol->request_headers) {

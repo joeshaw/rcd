@@ -1,3 +1,9 @@
+2003-09-10  Joe Shaw  <joe@ximian.com>
+
+	* rcd-transfer-http.c: Replace rc_auth_header with a hash table
+	rc_auth_header_table which caches X-RC-Auth per-host instead of
+	globally.
+
 2003-09-09  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-packsys.c (packsys_mount_directory): Throw a fault with
