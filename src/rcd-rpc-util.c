@@ -223,8 +223,8 @@ rcd_rc_package_to_xmlrpc (RCPackage *package, xmlrpc_env *env)
 {
     xmlrpc_value *value = NULL;
     RCPackageUpdate *update;
-    const char *name;
-    gboolean installed, name_installed;
+    gboolean installed;
+    gint name_installed;
 
     value = xmlrpc_struct_new(env);
     XMLRPC_FAIL_IF_FAULT(env);
@@ -284,6 +284,8 @@ rcd_rc_package_to_xmlrpc (RCPackage *package, xmlrpc_env *env)
             RCD_XMLRPC_STRUCT_SET_INT(env, value, "channel_guess",
                                       rc_channel_get_id (guess));
 
+        name_installed = 1;
+
     } else {
 
         RCPackage *sys_pkg;
@@ -296,14 +298,17 @@ rcd_rc_package_to_xmlrpc (RCPackage *package, xmlrpc_env *env)
         installed = (sys_pkg != NULL
                      && rc_package_spec_equal (RC_PACKAGE_SPEC(package),
                                                RC_PACKAGE_SPEC(sys_pkg)));
+
+        if (sys_pkg) {
+            RCPackman *packman = rc_world_get_packman (rc_get_world ());
+            name_installed = rc_packman_version_compare (packman,
+                                                         RC_PACKAGE_SPEC (package),
+                                                         RC_PACKAGE_SPEC (sys_pkg));
+        } else {
+            name_installed = 0;
+        }
     }
     RCD_XMLRPC_STRUCT_SET_INT(env, value, "installed", installed);
-
-    name = g_quark_to_string (RC_PACKAGE_SPEC (package)->nameq);
-    name_installed = rc_world_get_package (rc_get_world (),
-                                           RC_WORLD_SYSTEM_PACKAGES,
-                                           name) != NULL;
-
     RCD_XMLRPC_STRUCT_SET_INT(env, value, "name_installed", name_installed);
         
 cleanup:
