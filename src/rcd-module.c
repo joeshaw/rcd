@@ -113,6 +113,8 @@ rcd_module_init(void)
 
         }
     }
+
+    g_dir_close (dir);
 } /* rcd_module_init */
     
 gboolean

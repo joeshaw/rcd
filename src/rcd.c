@@ -442,7 +442,7 @@ main (int argc, const char **argv)
     initialize_rc_world ();
     initialize_rpc ();
     initialize_data ();
-
+    
     /* We can't daemonize any later than this, so hopefully module initialization
        won't be slow. */
     if (late_background) {

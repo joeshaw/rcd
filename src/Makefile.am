@@ -95,7 +95,9 @@ rcd$(EXEEXT): $(rcd_OBJECTS) $(rcd_DEPENDENCIES)
 
 
 rcd_moduledir = $(libdir)/rcd/modules
-rcd_module_LTLIBRARIES = librcd-sample.la
+rcd_module_LTLIBRARIES = 	\
+	librcd-sample.la	\
+	librcd-autopull.la
 
 EXTRA_DIST =			\
 	rcd-marshal.list
@@ -103,6 +105,9 @@ EXTRA_DIST =			\
 librcd_sample_la_SOURCES =	\
 	rcd-rpc-sample.c	\
 	rcd-rpc-sample.h
+
+librcd_autopull_la_SOURCES =	\
+	rcd-autopull.c
 
 librcd_sample_la_LDFLAGS = -module -avoid-version
 

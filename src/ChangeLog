@@ -1,5 +1,10 @@
 2002-08-04  Jon Trowbridge  <trow@ximian.com>
 
+	* rcd-autopull.c: Added.  The beginnings of some code for an
+	autopull module.  Still incomplete.
+
+	* rcd-module.c (rcd_module_init): Please don't leak the GDir.
+
 	* rcd-identity.c (create_password_file): Added.  Breaks out our
 	fopen/chmod on PASSWORD_FILE.
 	(identity_update_cb): Changed to use create_password_file.
