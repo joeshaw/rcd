@@ -160,13 +160,22 @@ rcd_prefs_set_http10_enabled (gboolean enabled)
 guint32
 rcd_prefs_get_heartbeat_interval (void)
 {
+    /* 21600 seconds == 6 hours */
     return (guint32) gnome_config_get_int (
-        CONFIG_PATH "/System/heartbeat=3000");
+        CONFIG_PATH "/System/heartbeat=21600");
 } /* rcd_prefs_get_heartbeat_interval */
 
+#define HEARTBEAT_MINIMUM 1800
 void
 rcd_prefs_set_heartbeat_interval (guint32 interval)
 {
+    if (interval < HEARTBEAT_MINIMUM) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Heartbeat frequencies less than %d are not allowed.",
+                  HEARTBEAT_MINIMUM);
+        return;
+    }
+
     gnome_config_set_int (CONFIG_PATH "/System/heartbeat", (int) interval);
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "heartbeat: %u", interval);
 

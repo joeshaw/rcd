@@ -1,3 +1,10 @@
+2002-07-23  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-prefs.c (rcd_prefs_get_heartbeat_interval): Set the default
+	heartbeat interval to 21600 (6 hours).
+	(rcd_prefs_set_heartbeat_interval): Reject any attempt to set
+	the heartbeat interval below 1800 (30 minutes).
+
 2002-07-22  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-identity.c (rcd_identity_remove_from_password_file): Chmod
