@@ -1,7 +1,7 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
 /*
- * rcd-heartbeat.c
+ * rcd-heartbeatrtbeat.c
  *
  * Copyright (C) 2002 Ximian, Inc.
  *
@@ -32,6 +32,7 @@
 #include <rc-debug.h>
 
 #include "rcd-prefs.h"
+#include "rcd-recurring.h"
 
 typedef struct {
     RCDHeartbeatFunc func;
@@ -40,24 +41,13 @@ typedef struct {
 
 /* List of RCDHearbeatFuncInfos */
 static GSList *registered_heartbeat_funcs = NULL;
-static guint32 heartbeat_interval = 0;
-static int heartbeat_id = 0;
-static gboolean heartbeat_running = FALSE;
+static RCDRecurring recurring_heartbeat;
 
-static gboolean
-run_heartbeat (gpointer user_data)
+static void
+heartbeat_execute (RCDRecurring *recurring)
 {
-    time_t t;
     GSList *iter;
-    guint32 interval;
-
-    if (heartbeat_running == TRUE) {
-        rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Heartbeat is already running; "
-                  "Suggest lowering heartbeat interval");
-        return TRUE;
-    }
-
-    heartbeat_running = TRUE;
+    time_t t;
 
     t = time (NULL);
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Running heartbeat at %s",
@@ -68,45 +58,41 @@ run_heartbeat (gpointer user_data)
 
         (*func_info->func) (func_info->user_data);
     }
+}
 
-    interval = rcd_prefs_get_heartbeat_interval ();
-    if (interval != heartbeat_interval) {
-        heartbeat_interval = interval;
-        heartbeat_id = g_timeout_add (heartbeat_interval * 1000,
-                                      run_heartbeat, NULL);
+static time_t
+heartbeat_first (RCDRecurring *recurring,
+                 time_t        now)
+{
+    return now + rcd_prefs_get_heartbeat_interval ();
+}
 
-        heartbeat_running = FALSE;
-
-        return FALSE;
-    }
-    else {
-        heartbeat_running = FALSE;
-
-        return TRUE;
-    }
-} /* run_heartbeat */
+static time_t
+heartbeat_next (RCDRecurring *recurring,
+                time_t        previous)
+{
+    return previous + rcd_prefs_get_heartbeat_interval ();
+}
 
 void
 rcd_heartbeat_start (void)
 {
-    g_return_if_fail (heartbeat_id == 0);
-
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Starting heartbeat");
 
-    heartbeat_interval = rcd_prefs_get_heartbeat_interval();
+    recurring_heartbeat.tag     = g_quark_from_static_string ("heartbeat");
+    recurring_heartbeat.execute = heartbeat_execute;
+    recurring_heartbeat.first   = heartbeat_first;
+    recurring_heartbeat.next    = heartbeat_next;
 
-    heartbeat_id = g_timeout_add (heartbeat_interval * 1000,
-                                  run_heartbeat, NULL);
+    rcd_recurring_add (&recurring_heartbeat);
 } /* rcd_heartbeat_start */
 
 void
 rcd_heartbeat_stop (void)
 {
-    g_return_if_fail (heartbeat_id != 0);
-
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Stopping heartbeat");
 
-    g_source_remove (heartbeat_id);
+    rcd_recurring_remove (&recurring_heartbeat);
 } /* rcd_heartbeat_stop */
 
 void

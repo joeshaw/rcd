@@ -49,6 +49,8 @@ rcd_SOURCES = 			\
 	rcd-query.h		\
 	rcd-query-packages.c	\
 	rcd-query-packages.h	\
+	rcd-recurring.c		\
+	rcd-recurring.h		\
 	rcd-rpc.c		\
 	rcd-rpc.h		\
 	rcd-rpc-log.c		\

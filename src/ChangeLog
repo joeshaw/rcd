@@ -1,3 +1,11 @@
+2002-07-28  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-recurring.c: Added.  This is a slightly over-engineered
+	framework for handling recurring events.
+
+	* rcd-heartbeat.c: Modified to use the new framework for recurring
+	events in rcd-recurring.c.
+
 2002-07-26  Joe Shaw  <joe@ximian.com>
 
 	* Makefile.am: Change the moduledir to be $(libdir)/rcd/modules so
