@@ -465,15 +465,12 @@ typedef struct {
     xmlrpc_value *result;
 } ServiceInfo;
 
-static void
-add_service_cb (RCWorldService *service, gpointer user_data)
+static gboolean
+add_service_cb (RCWorld *subworld, gpointer user_data)
 {
+    RCWorldService *service = RC_WORLD_SERVICE (subworld);
     ServiceInfo *info = user_data;
     xmlrpc_value *xmlrpc_service;
-
-    /* Fault occurred somewhere during the foreach */
-    if (info->env->fault_occurred)
-        return;
 
     xmlrpc_service = xmlrpc_struct_new (info->env);
     XMLRPC_FAIL_IF_FAULT (info->env);
@@ -506,7 +503,10 @@ add_service_cb (RCWorldService *service, gpointer user_data)
     xmlrpc_DECREF (xmlrpc_service);
 
 cleanup:
-    return;
+    if (info->env->fault_occurred)
+        return FALSE;
+
+    return TRUE;
 }
 
 static xmlrpc_value *
@@ -521,7 +521,10 @@ system_list_services (xmlrpc_env   *env,
 
     info.env = env;
 
-    rc_world_service_foreach_mount (add_service_cb, &info);
+    rc_world_multi_foreach_subworld_by_type (RC_WORLD_MULTI (rc_get_world ()),
+                                             RC_TYPE_WORLD_SERVICE,
+                                             add_service_cb,
+                                             &info);
     XMLRPC_FAIL_IF_FAULT (env);
 
 cleanup:
@@ -538,24 +541,17 @@ system_add_service (xmlrpc_env   *env,
                     void         *user_data)
 {
     char *service_url;
-    RCWorld *world;
 
     xmlrpc_parse_value (env, param_array, "(s)", &service_url);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    world = rc_world_service_mount (service_url);
-
-    if (!world) {
+    if (!rc_world_multi_mount_service (RC_WORLD_MULTI (rc_get_world ()),
+                                       service_url)) {
         xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_INVALID_SERVICE,
                                         "Unable to mount service for '%s'",
                                         service_url);
-        goto cleanup;
-    }
-
-    rc_world_multi_add_subworld (RC_WORLD_MULTI (rc_get_world ()), world);
-    g_object_unref (world);
-
-    rcd_services_save ();
+    } else
+        rcd_services_save ();
 
 cleanup:
     if (env->fault_occurred)
@@ -570,22 +566,23 @@ system_remove_service (xmlrpc_env   *env,
                        void         *user_data)
 {
     char *service_url;
-    RCWorld *world;
+    RCWorldService *service;
 
     xmlrpc_parse_value (env, param_array, "(s)", &service_url);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    world = rc_world_service_lookup_mount (service_url);
+    service = rc_world_multi_lookup_service (RC_WORLD_MULTI (rc_get_world ()),
+                                             service_url);
 
-    if (!world) {
+    if (!service) {
         xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_INVALID_SERVICE,
                                         "Unable to unmount service for '%s'",
                                         service_url);
         goto cleanup;
     }
 
-    rc_world_multi_remove_subworld (RC_WORLD_MULTI (rc_get_world ()), world);
-    rc_world_service_unmount (RC_WORLD_SERVICE (world));
+    rc_world_multi_remove_subworld (RC_WORLD_MULTI (rc_get_world ()),
+                                    RC_WORLD (service));
 
     rcd_services_save ();
 

@@ -103,23 +103,32 @@ rcd_services_load (RCWorldMulti *multi)
         }
 
         world = rc_world_service_mount (url);
-        rc_world_multi_add_subworld (multi, world);
-        g_object_unref (world);
+
+        if (!world) {
+            rc_debug (RC_DEBUG_LEVEL_WARNING, "Unable to load service '%s'",
+                      url);
+        } else {
+            rc_world_multi_add_subworld (multi, world);
+            g_object_unref (world);
+        }
     }
 }
 
-static void
-save_mount_cb (RCWorldService *service, gpointer user_data)
+static gboolean
+save_mount_cb (RCWorld *world, gpointer user_data)
 {
+    RCWorldService *service = RC_WORLD_SERVICE (world);
     xmlNode *root = user_data;
     xmlNode *node;
     xmlNode *sub_node;
 
     if (service->is_unsaved)
-        return;
+        return TRUE;
 
     node = xmlNewChild (root, NULL, "service", NULL);
     sub_node = xmlNewChild (node, NULL, "url", service->url);
+
+    return TRUE;
 }
 
 void
@@ -142,7 +151,9 @@ rcd_services_save (void)
     doc = xmlNewDoc ("1.0");
     xmlDocSetRootElement (doc, root);
 
-    rc_world_service_foreach_mount (save_mount_cb, root);
+    rc_world_multi_foreach_subworld_by_type (RC_WORLD_MULTI (rc_get_world ()),
+                                             RC_TYPE_WORLD_SERVICE,
+                                             save_mount_cb, root);
 
     if (!xmlSaveFile (SERVICES_FILE, doc)) {
         rc_debug (RC_DEBUG_LEVEL_ERROR, "Unable to save services data to "

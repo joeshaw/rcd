@@ -113,10 +113,6 @@ foreach_subworld_cb (RCWorld *world, gpointer user_data)
 {
     struct GetAllInfo *info = user_data;
 
-    /* News is only on RCDWorldRemote objects */
-    if (!g_type_is_a (G_TYPE_FROM_INSTANCE (world), RCD_TYPE_WORLD_REMOTE))
-        return TRUE;
-
     info->remote = RCD_WORLD_REMOTE (world);
 
     rcd_world_remote_foreach_news (info->remote, add_news_cb, info);
@@ -135,8 +131,9 @@ news_get_all (xmlrpc_env   *env,
     info.array  = xmlrpc_build_value (env, "()");
     info.failed = FALSE;
 
-    rc_world_multi_foreach_subworld (RC_WORLD_MULTI (rc_get_world ()),
-                                     foreach_subworld_cb, &info);
+    rc_world_multi_foreach_subworld_by_type (RC_WORLD_MULTI (rc_get_world ()),
+                                             RCD_TYPE_WORLD_REMOTE,
+                                             foreach_subworld_cb, &info);
 
     if (info.failed || env->fault_occurred)
         return NULL;

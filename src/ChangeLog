@@ -1,3 +1,24 @@
+2003-08-18  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-news.c (foreach_subworld_cb): Use the new
+	rc_world_multi_foreach_subworld_by_type() function for iterating
+	across remote worlds to get news.
+
+	* rcd-rpc-packsys.c: Update for new APIs
+
+	* rcd-rpc-system.c: Ditto.
+
+	* rcd-services.c: Ditto.
+
+	* rcd-transfer-http.c: Get rid of the response_body stuff, it
+	wasn't being used.
+
+	* rcd-world-remote.c (rcd_world_remote_dup): Kill this, the
+	RCWorldService's dup function is better.
+
+	* rcd.c (initialize_rc_world): Unref the world after calling
+	rc_set_world().
+
 2003-08-16  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-util.c (rcd_rc_channel_to_xmlrpc): Serialize the hidden

@@ -2202,9 +2202,10 @@ packsys_remove_lock (xmlrpc_env   *env,
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
-static void
-foreach_service_cb (RCWorldService *service, gpointer user_data)
+static gboolean
+foreach_service_cb (RCWorld *world, gpointer user_data)
 {
+    RCWorldService *service = RC_WORLD_SERVICE (world);
     xmlNode *services_node = user_data;
     xmlNode *service_node;
 
@@ -2233,11 +2234,12 @@ foreach_service_cb (RCWorldService *service, gpointer user_data)
         xmlNewTextChild (distro_node, NULL, "target",
                          rc_distro_get_target (remote->distro));
     }
-    
+
+    return TRUE;
 }
 
 static xmlNode *
-extra_dump_info (void)
+extra_dump_info (RCWorld *world)
 {
     xmlNode *info;
     time_t now;
@@ -2270,7 +2272,10 @@ extra_dump_info (void)
     services_node = xmlNewNode (NULL, "services");
     xmlAddChild (info, services_node);
 
-    rc_world_service_foreach_mount (foreach_service_cb, services_node);
+    rc_world_multi_foreach_subworld_by_type (RC_WORLD_MULTI (world),
+                                             RC_TYPE_WORLD_SERVICE,
+                                             foreach_service_cb,
+                                             services_node);
 
     xmlNewTextChild (info, NULL, "proxy", rcd_prefs_get_proxy_url ());
     xmlNewTextChild (info, NULL, "proxy_has_user",
@@ -2292,7 +2297,7 @@ packsys_dump(xmlrpc_env   *env,
     GByteArray *ba;
     xmlrpc_value *value = NULL;
 
-    xml = rc_world_dump (world, extra_dump_info ());
+    xml = rc_world_dump (world, extra_dump_info (world));
     rc_gzip_memory (xml, strlen (xml), &ba);
     g_free (xml);
 
@@ -2308,9 +2313,10 @@ packsys_mount_directory(xmlrpc_env   *env,
                         void         *user_data)
 {
     RCWorld *world = (RCWorld *) user_data;
-    RCWorld *mounted_world;
     char *path, *name, *alias;
     char *url;
+    RCWorld *mounted_world;
+    RCChannel *channel;
     xmlrpc_value *retval;
 
     xmlrpc_parse_value (env, param_array, "(sss)",
@@ -2321,21 +2327,26 @@ packsys_mount_directory(xmlrpc_env   *env,
     else
         url = g_strdup (path);
 
-
     mounted_world = rc_world_service_mount (url);
+
+    g_free (url);
+
+    if (!mounted_world)
+        return xmlrpc_build_value (env, "s", "");
+
+    rc_world_local_dir_set_name (RC_WORLD_LOCAL_DIR (mounted_world), name);
+    rc_world_local_dir_set_alias (RC_WORLD_LOCAL_DIR (mounted_world), alias);
+
     rc_world_multi_add_subworld (RC_WORLD_MULTI (world), mounted_world);
     g_object_unref (mounted_world);
 
     rcd_services_save ();
 
-#if 0
-    retval = xmlrpc_build_value (env, "s", 
-                                 channel ? rc_channel_get_id (channel) : "");
-#endif
+    channel = rc_world_get_channel_by_name (mounted_world, name);
 
-    retval = xmlrpc_build_value (env, "s", url);
+    g_assert (channel != NULL);
 
-    g_free (url);
+    retval = xmlrpc_build_value (env, "s", rc_channel_get_id (channel));
 
     return retval;
 }
@@ -2346,37 +2357,28 @@ packsys_unmount_directory(xmlrpc_env   *env,
                           void         *user_data)
 {
     RCWorld *world = user_data;
-    RCWorld *mount_world;
+    RCWorld *mounted_world;
     RCChannel *channel = NULL;
     char *cid;
-    xmlrpc_value *retval;
-
-    retval = xmlrpc_build_value (env, "i", 0);
-    XMLRPC_FAIL_IF_FAULT (env);
 
     xmlrpc_parse_value (env, param_array, "(s)", &cid);
     XMLRPC_FAIL_IF_FAULT (env);
 
     channel = rc_world_get_channel_by_id (world, cid);
     if (channel == NULL)
-        goto cleanup;
+        return xmlrpc_build_value (env, "i", 0);
 
-#if 0
-    mount_world = rc_world_multi_get_subworld_by_type (RC_WORLD_MULTI (world),
-                                                       RC_TYPE_WORLD_MOUNT);
-    g_assert (mount_world != NULL);
+    mounted_world = rc_channel_get_world (channel);
 
-    if (! rc_world_contains_channel (mount_world, channel))
-        goto cleanup;
+    g_assert (mounted_world != NULL);
 
-    if (rc_world_mount_remove_dir (RC_WORLD_MOUNT (mount_world), channel)) {
-        xmlrpc_DECREF (retval);
-        retval = xmlrpc_build_value (env, "i", 1);
-    }
-#endif
-    
- cleanup:
-    return retval;
+    rc_world_multi_remove_subworld (RC_WORLD_MULTI (world), mounted_world);
+
+cleanup:
+    if (env->fault_occurred)
+        return NULL;
+
+    return xmlrpc_build_value (env, "i", 1);
 }
 
 static xmlrpc_value *

@@ -310,6 +310,7 @@ initialize_rc_world (void)
 
     rcd_shutdown_add_handler (shutdown_world, world);
     rc_set_world (world);
+    g_object_unref (world);
 
 } /* initialize_rc_world */
 

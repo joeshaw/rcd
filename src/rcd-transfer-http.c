@@ -216,9 +216,6 @@ http_done (SoupMessage *message, gpointer user_data)
     soup_message_foreach_header (
         message->response_headers, copy_header_cb, protocol);
 
-    protocol->response_body = g_strndup (message->response.body,
-                                         message->response.length);
-
     if (RCD_SOUP_MESSAGE_IS_ERROR (message) &&
         !message->errorcode != SOUP_ERROR_NOT_MODIFIED)
         map_soup_error_to_rcd_transfer_error (message, t);
@@ -584,8 +581,6 @@ http_free (RCDTransferProtocol *protocol)
 
     if (http_protocol->response_headers)
         g_hash_table_destroy (http_protocol->response_headers);
-
-    g_free (http_protocol->response_body);
 
     g_free (protocol);
 } /* http_free */

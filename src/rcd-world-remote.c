@@ -76,16 +76,6 @@ rcd_world_remote_refresh (RCWorld *world)
     return pending;
 }
 
-static RCWorld *
-rcd_world_remote_dup (RCWorld *old_world)
-{
-    RCWorld *new_world;
-
-    new_world = rcd_world_remote_new (RC_WORLD_SERVICE (old_world)->url);
-
-    return new_world;
-}
-
 static gboolean
 rcd_world_remote_assemble (RCWorldService *service)
 {
@@ -111,7 +101,6 @@ rcd_world_remote_class_init (RCDWorldRemoteClass *klass)
     object_class->finalize = rcd_world_remote_finalize;
 
     world_class->refresh_fn    = rcd_world_remote_refresh;
-    world_class->dup_fn        = rcd_world_remote_dup;
 
     service_class->assemble_fn = rcd_world_remote_assemble;
 }
