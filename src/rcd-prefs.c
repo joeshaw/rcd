@@ -37,6 +37,18 @@
 #define CONFIG_PATH "=" SYSCONFDIR "/rcd.config="
 #define SYNC_CONFIG (gnome_config_sync_file (CONFIG_PATH))
 
+gboolean
+rcd_prefs_get_remote_server_enabled (void)
+{
+    return gnome_config_get_bool (CONFIG_PATH "/Server/enabled=TRUE");
+} /* rcd_prefs_get_remote_server_enabled */
+
+int
+rcd_prefs_get_remote_server_port (void)
+{
+    return gnome_config_get_int (CONFIG_PATH "/Server/port=505");
+} /* rcd_prefs_get_remote_server_port */
+
 const char *
 rcd_prefs_get_cache_dir (void)
 {

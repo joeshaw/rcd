@@ -67,12 +67,15 @@ gboolean rcd_fetch_news_local (void);
  * Download a list of packages and call the specified callback when they
  * all finish.
  */
-typedef void (*RCDFetchProgressFunc) (gsize size, gpointer user_data);
+typedef void (*RCDFetchProgressFunc)  (gsize size, gpointer user_data);
+typedef void (*RCDFetchCompletedFunc) (gboolean    successful,
+                                       const char *error_string,
+                                       gpointer    user_data);
 
-int rcd_fetch_packages (RCPackageSList *packages,
-                        RCDFetchProgressFunc progress_callback,
-                        GSourceFunc     completed_callback,
-                        gpointer        user_data);
+int rcd_fetch_packages (RCPackageSList        *packages,
+                        RCDFetchProgressFunc   progress_callback,
+                        RCDFetchCompletedFunc  completed_callback,
+                        gpointer               user_data);
 
 void rcd_fetch_packages_abort (int transaction_id);
 

@@ -605,9 +605,12 @@ typedef struct {
 
     GSList *running_transfers;
 
-    RCDFetchProgressFunc progress_callback;
-    GSourceFunc completed_callback;
+    RCDFetchProgressFunc  progress_callback;
+    RCDFetchCompletedFunc completed_callback;
     gpointer user_data;
+
+    gboolean successful;
+    char *error_message;
 } PackageFetchClosure;
 
 static void
@@ -632,6 +635,29 @@ package_completed_cb (RCDTransfer *t, gpointer user_data)
 
     if (rcd_transfer_get_error (t) == RCD_TRANSFER_ERROR_CANCELLED) {
         rc_debug (RC_DEBUG_LEVEL_INFO, "Download of %s cancelled", t->url);
+
+        if (!closure->running_transfers && !closure->successful) {
+            closure->completed_callback (
+                FALSE, closure->error_message, closure->user_data);
+            g_free (closure->error_message);
+        }
+    }
+    else if (rcd_transfer_get_error (t)) {
+        rc_debug (RC_DEBUG_LEVEL_INFO, "Download of %s failed", t->url);
+
+        if (closure->running_transfers) {
+            closure->successful = FALSE;
+            closure->error_message = g_strdup (
+                rcd_transfer_get_error_string (t));
+#if 0
+            /* FIXME: The soup cancel crasher forces this to be commented out for now */
+            rcd_fetch_packages_abort (closure->transfer_id);
+#endif
+        }
+        else {
+            closure->completed_callback (
+                FALSE, rcd_transfer_get_error_string (t), closure->user_data);
+        }
     }
     else {
         rc_debug (RC_DEBUG_LEVEL_INFO, "Download of %s complete", t->url);
@@ -642,8 +668,14 @@ package_completed_cb (RCDTransfer *t, gpointer user_data)
         if (!closure->running_transfers) {
             rc_debug (RC_DEBUG_LEVEL_INFO,
                       "No more pending transfers, calling callback");
-            closure->completed_callback (closure->user_data);
-            /* g_idle_add (closure->callback, closure->user_data); */
+
+            if (closure->successful)
+                closure->completed_callback (TRUE, NULL, closure->user_data);
+            else {
+                closure->completed_callback (
+                    FALSE, closure->error_message, closure->user_data);
+                g_free (closure->error_message);
+            }
         }
     }
 
@@ -701,10 +733,10 @@ download_package_file (RCPackage           *package,
 } /* download_package_file */
 
 int
-rcd_fetch_packages (RCPackageSList       *packages,
-                    RCDFetchProgressFunc  progress_callback,
-                    GSourceFunc           completed_callback,
-                    gpointer              user_data)
+rcd_fetch_packages (RCPackageSList        *packages,
+                    RCDFetchProgressFunc   progress_callback,
+                    RCDFetchCompletedFunc  completed_callback,
+                    gpointer               user_data)
 {
     PackageFetchClosure *closure;
     RCPackageSList *iter;

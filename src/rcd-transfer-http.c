@@ -57,6 +57,9 @@ map_soup_error_to_rcd_transfer_error (SoupMessage *message, RCDTransfer *t)
     soup_err = soup_error_get_phrase (message->errorcode);
 
     switch (message->errorcode) {
+    case SOUP_ERROR_CANCELLED:
+        rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_CANCELLED, NULL);
+        break;
     case SOUP_ERROR_CANT_CONNECT:
         url = t->url;
     case SOUP_ERROR_CANT_CONNECT_PROXY:

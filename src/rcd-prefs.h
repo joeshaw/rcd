@@ -28,6 +28,10 @@
 
 #include <glib.h>
 
+gboolean     rcd_prefs_get_remote_server_enabled (void);
+
+int          rcd_prefs_get_remote_server_port (void);
+
 const gchar *rcd_prefs_get_cache_dir          (void);
 void         rcd_prefs_set_cache_dir          (const char *);
 

@@ -38,6 +38,7 @@
 #include <libredcarpet.h>
 
 #include "rcd-identity.h"
+#include "rcd-prefs.h"
 #include "rcd-privileges.h"
 #include "rcd-rpc-system.h"
 #include "rcd-rpc-util.h"
@@ -303,46 +304,6 @@ soup_shutdown_cb (gpointer user_data)
     soup_server_unref (server);
 } /* soup_shutdown_cb */
 
-static gboolean
-run_server_thread(gpointer user_data)
-{
-    SoupServer *server;
-    SoupServerAuthContext auth_ctx = { 0 };
-
-    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Starting server");
-
-    soup_set_ssl_cert_files(SHAREDIR "/rcd.pem",
-                            SHAREDIR "/rcd.pem");
-
-    server = soup_server_new(SOUP_PROTOCOL_HTTPS, 5505);
-
-    if (!server) {
-        rc_debug (RC_DEBUG_LEVEL_ERROR, "Could not start RPC server");
-        rc_debug (RC_DEBUG_LEVEL_ERROR, "(This probably means that another rcd process is already running.)");
-        exit (-1);
-    }
-
-    auth_ctx.types = SOUP_AUTH_TYPE_BASIC;
-    auth_ctx.callback = soup_auth_callback;
-    auth_ctx.basic_info.realm = "RCD";
-
-    soup_server_register(
-        server, "/RPC2", &auth_ctx, soup_rpc_callback, NULL, NULL);
-    soup_server_register(
-        server, NULL, NULL, soup_default_callback, NULL, NULL);
-
-    rcd_shutdown_add_handler (soup_shutdown_cb, server);
-
-    soup_server_run_async(server);
-
-    if (rcd_unix_server_run_async(unix_rpc_callback)) {
-        rc_debug (RC_DEBUG_LEVEL_ERROR, "Unable to listen for local connections.");
-        exit (-1);
-    }
-
-    return FALSE;
-} /* run_server_thread */
-
 RCDRPCMethodData *
 rcd_rpc_get_method_data (void)
 {
@@ -394,9 +355,52 @@ rcd_rpc_register_method(const char   *method_name,
 } /* rcd_rpc_register_method */
 
 void
-rcd_rpc_server_start (void)
+rcd_rpc_server_start (int port)
 {
-    run_server_thread (NULL);
+    SoupServer *server;
+    SoupServerAuthContext auth_ctx = { 0 };
+
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Starting server");
+
+    /* 
+     * port of -1 means disable the remote server
+     * port of 0 means use the default port from the config
+     */
+
+    if (port != -1 && rcd_prefs_get_remote_server_enabled ()) {
+        if (!port)
+            port = rcd_prefs_get_remote_server_port ();
+
+        soup_set_ssl_cert_files(SHAREDIR "/rcd.pem",
+                                SHAREDIR "/rcd.pem");
+
+        server = soup_server_new(SOUP_PROTOCOL_HTTPS, port);
+
+        if (!server) {
+            rc_debug (RC_DEBUG_LEVEL_ERROR, "Could not start RPC server on port %d", port);
+            rc_debug (RC_DEBUG_LEVEL_ERROR, "(This probably means that you're running not as root and not using");
+            rc_debug (RC_DEBUG_LEVEL_ERROR, "a non-privileged port, or another rcd process is already running.)");
+            exit (-1);
+        }
+
+        auth_ctx.types = SOUP_AUTH_TYPE_BASIC;
+        auth_ctx.callback = soup_auth_callback;
+        auth_ctx.basic_info.realm = "RCD";
+        
+        soup_server_register(
+            server, "/RPC2", &auth_ctx, soup_rpc_callback, NULL, NULL);
+        soup_server_register(
+            server, NULL, NULL, soup_default_callback, NULL, NULL);
+        
+        rcd_shutdown_add_handler (soup_shutdown_cb, server);
+        
+        soup_server_run_async(server);
+    }
+
+    if (rcd_unix_server_run_async(unix_rpc_callback)) {
+        rc_debug (RC_DEBUG_LEVEL_ERROR, "Unable to listen for local connections.");
+        exit (-1);
+    }
 } /* rcd_rpc_server_start */
 
 void

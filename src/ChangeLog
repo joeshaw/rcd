@@ -1,3 +1,43 @@
+2002-07-30  Joe Shaw  <joe@ximian.com>
+
+	* Makefile.am: Add rcd-transact-log.[ch]
+
+	* rcd-fetch.c (package_completed_cb): Check to see if the transfer
+	failed and send some useful failure info along if so.  Comment out
+	cancelling of the other downloads when one of ours fails because
+	of the Soup crash.
+
+	* rcd-prefs.c (rcd_prefs_get_remote_server_enabled): Added.
+	Checks the configuation file to see if we should run an HTTPS
+	server.
+	(rcd_prefs_get_remote_server_port): Get the port to run on from
+	the config file.
+
+	* rcd-rpc-packsys.c (verify_packages): If verification fails,
+	allow shutdown again.
+	(download_completed): Added, but incomplete.  If the download
+	failed, send it down to the client and allow shutdowns again.  If
+	it succeeds, call verify_packages().
+	(download_packages): Set download_completed() to be the download
+	completion callback instead of verify_packages().
+	(packsys_transact): If we're in premium mode, send a transaction
+	manifest to the server for logging.
+
+	* rcd-rpc.c (run_server_thread): Removed; moved all of this into
+	rcd_rpc_server_start().
+	(rcd_rpc_server_start): Take a port parameter.  Start the HTTPS
+	server if it's enabled.
+
+	* rcd-transfer-http.c (map_soup_error_to_rcd_transfer_error): Make
+	SOUP_ERROR_CANCELLED to RCD_TRANSFER_ERROR_CANCELLED.
+
+	* rcd.c (option_parsing): Added -p options for setting the remote
+	server port, and -r for disabling the remote server.
+	(signal_handler): Handle SIGINT (ie, ^C in the controlling
+	terminal).
+	(main): Call rcd_rpc_server_start() with the port specified in -p
+	and -r.
+
 2002-07-29  Joe Shaw  <joe@ximian.com>
 
 	* Makefile.am: Install the daemon into $prefix/sbin, like a good

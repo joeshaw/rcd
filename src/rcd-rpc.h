@@ -44,7 +44,7 @@ int rcd_rpc_register_method (const char        *method_name,
                              const char        *privilege_string,
                              gpointer           user_data);
 
-void rcd_rpc_server_start (void);
+void rcd_rpc_server_start (int remote_port);
 void rcd_rpc_init (void);
 
 #endif /* __RCD_RPC_H__ */

@@ -60,7 +60,8 @@
 static gboolean non_daemon_flag = FALSE;
 static gboolean non_root_flag = FALSE;
 static int debug_level = RC_DEBUG_LEVEL_INFO;
-
+static int remote_port = 0;
+static gboolean remote_disable = FALSE;
 static char *dump_file = NULL;
 
 static void
@@ -72,6 +73,10 @@ option_parsing (int argc, const char **argv)
           "Don't run the daemon in the background.", NULL },
         { "allow-non-root", '\0', POPT_ARG_NONE, &non_root_flag, 0,
           "Allow the daemon to be run as a user other than root.", NULL },
+        { "port", 'p', POPT_ARG_INT, &remote_port, 0,
+          "Listen for remote connections on a different port", NULL },
+        { "no-remote", 'r', POPT_ARG_NONE, &remote_disable, 0,
+          "Don't listen for remote connections", NULL },
         { "debug", 'd', POPT_ARG_INT, &debug_level, 0,
           "Set the verbosity of debugging output.", NULL },
         { "undump", '\0', POPT_ARG_STRING, &dump_file, 0,
@@ -292,6 +297,8 @@ signal_handler (int sig_num)
         sig_name = "SIGQUIT";
     else if (sig_num == SIGTERM)
         sig_name = "SIGTERM";
+    else if (sig_num == SIGINT)
+        sig_name = "SIGINT";
     else
         g_assert_not_reached ();
 
@@ -320,6 +327,7 @@ main (int argc, const char **argv)
     sig_action.sa_handler = signal_handler;
     sigemptyset (&sig_action.sa_mask);
     sig_action.sa_flags = 0;
+    sigaction (SIGINT,  &sig_action, NULL);
     sigaction (SIGTERM, &sig_action, NULL);
     sigaction (SIGQUIT, &sig_action, NULL);
 
@@ -337,7 +345,10 @@ main (int argc, const char **argv)
 
     rcd_module_init ();
 
-    rcd_rpc_server_start ();
+    if (remote_disable)
+        remote_port = -1;
+
+    rcd_rpc_server_start (remote_port);
 
     /* No heartbeat if we have initialized from a dump file. */
     if (dump_file == NULL)

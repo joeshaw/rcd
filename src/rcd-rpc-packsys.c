@@ -42,6 +42,7 @@
 #include "rcd-rpc-util.h"
 #include "rcd-shutdown.h"
 #include "rcd-subscriptions.h"
+#include "rcd-transact-log.h"
 
 static gboolean packsys_lock = FALSE;
 
@@ -66,6 +67,8 @@ typedef struct {
 
     char *client_host;
     char *client_user;
+
+    char *log_tid;
 } RCDTransactionStatus;
 
 static void
@@ -1057,6 +1060,9 @@ verify_packages (gpointer user_data)
             rcd_pending_fail (status->pending, -1, msg);
             g_free (msg);
 
+            /* Allow shutdowns again. */
+            rcd_shutdown_allow ();
+
             return FALSE;
         }
         else if (worst_status == RC_VERIFICATION_STATUS_UNDEF) {
@@ -1072,6 +1078,9 @@ verify_packages (gpointer user_data)
                 rcd_pending_fail (status->pending, -1, msg);
                 g_free (msg);
 
+                /* Allow shutdowns again. */
+                rcd_shutdown_allow ();
+
                 return FALSE;
             }
         }
@@ -1083,6 +1092,28 @@ verify_packages (gpointer user_data)
 } /* verify_packages */
 
 static void
+download_completed (gboolean    successful,
+                    const char *error_message,
+                    gpointer    user_data)
+{
+    RCDTransactionStatus *status = user_data;
+    char *msg;
+
+    if (successful) {
+        verify_packages (user_data);
+        return;
+    }
+
+    msg = g_strdup_printf ("failed:Download failed - %s", error_message);
+    rcd_pending_add_message (status->pending, msg);
+    rcd_pending_fail (status->pending, -1, msg);
+    g_free (msg);
+
+    /* Allow shutdowns again. */
+    rcd_shutdown_allow ();
+} /* download_completed */
+
+static void
 update_download_progress (gsize size, gpointer user_data)
 {
     RCDTransactionStatus *status = user_data;
@@ -1091,7 +1122,7 @@ update_download_progress (gsize size, gpointer user_data)
 
     rcd_pending_update_by_size (status->pending,
                                 status->current_download_size,
-                                status->total_download_size);
+                                status->total_download_size);    
 } /* update_download_progress */
 
 static gboolean
@@ -1130,7 +1161,7 @@ download_packages (RCPackageSList *packages, RCDTransactionStatus *status)
     status->package_download_id = rcd_fetch_packages (
         status->packages_to_download, 
         update_download_progress,
-        verify_packages,
+        download_completed,
         status);
 
     return TRUE;
@@ -1270,6 +1301,13 @@ packsys_transact(xmlrpc_env   *env,
      * in the middle of a transaction.
      */
     rcd_shutdown_block ();
+
+    /* If we're in premium mode, send a log of the transaction to the server */
+    if (rcd_prefs_get_premium ()) {
+        rcd_transact_log_send_transaction (status->install_packages,
+                                           status->remove_packages,
+                                           &status->log_tid);
+    }
 
     /*
      * If we have to download files, start the download.  Otherwise,
