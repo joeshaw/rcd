@@ -371,6 +371,11 @@ rcd_rpc_prefs_register_methods (void)
         (RCDPrefSetFunc) rcd_prefs_set_proxy_password, "superuser");
 
     rcd_rpc_prefs_register_pref (
+        "http-1.0", RCD_PREF_BOOLEAN,
+        (RCDPrefGetFunc) rcd_prefs_get_http10_enabled, "view",
+        (RCDPrefSetFunc) rcd_prefs_set_http10_enabled, "superuser");
+
+    rcd_rpc_prefs_register_pref (
         "cache-directory", RCD_PREF_STRING,
         (RCDPrefGetFunc) rcd_prefs_get_cache_dir, "view",
         (RCDPrefSetFunc) rcd_prefs_set_cache_dir, "superuser");
@@ -396,9 +401,9 @@ rcd_rpc_prefs_register_methods (void)
         (RCDPrefSetFunc) rcd_prefs_set_cache_max_size_in_mb, "superuser");
 
     rcd_rpc_prefs_register_pref (
-        "http-1.0", RCD_PREF_BOOLEAN,
-        (RCDPrefGetFunc) rcd_prefs_get_http10_enabled, "view",
-        (RCDPrefSetFunc) rcd_prefs_set_http10_enabled, "superuser");
+        "require-signatures", RCD_PREF_BOOLEAN,
+        (RCDPrefGetFunc) rcd_prefs_get_require_signed_packages, "view",
+        (RCDPrefSetFunc) rcd_prefs_set_require_signed_packages, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "heartbeat-interval", RCD_PREF_INT,

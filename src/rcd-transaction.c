@@ -605,7 +605,12 @@ verify_packages (RCDTransactionStatus *status)
         char *msg;
         RCVerificationSList *vers;
         RCVerificationStatus worst_status = RC_VERIFICATION_STATUS_PASS;
+        gboolean gpg_attempted = FALSE;
         GSList *v;
+
+        /* Flush the glib main loop queue */
+        while (g_main_pending ())
+            g_main_iteration (TRUE);
 
         msg = g_strconcat ("verify:",
                            g_quark_to_string (package->spec.nameq), NULL);
@@ -619,6 +624,9 @@ verify_packages (RCDTransactionStatus *status)
 
             if (worst_status > ver->status)
                 worst_status = ver->status;
+
+            if (ver->type == RC_VERIFICATION_TYPE_GPG)
+                gpg_attempted = TRUE;
         }
 
         rc_verification_slist_free (vers);
@@ -645,35 +653,44 @@ verify_packages (RCDTransactionStatus *status)
             cleanup_after_transaction (status);
             return;
         }
-        else if (worst_status == RC_VERIFICATION_STATUS_UNDEF) {
-            rc_debug (RC_DEBUG_LEVEL_MESSAGE,
-                      "Verification of '%s' was inconclusive",
-                      g_quark_to_string (package->spec.nameq));
+        else if (worst_status == RC_VERIFICATION_STATUS_UNDEF ||
+                 !gpg_attempted)
+        {
+            char *status_msg;
 
-            if (rcd_prefs_get_require_verified_packages () ||
-                !rcd_identity_approve_action (
+            msg = g_strdup_printf (
+                "Unable to verify package signature for '%s'",
+                g_quark_to_string (package->spec.nameq));
+
+            rc_debug (RC_DEBUG_LEVEL_MESSAGE, msg);
+
+            status_msg = g_strconcat ("verify-nosig:",
+                                      g_quark_to_string (package->spec.nameq),
+                                      NULL);
+            rcd_pending_add_message (status->transaction_pending, status_msg);
+            g_free (status_msg);
+
+            if (!rcd_identity_approve_action (
                     status->identity,
-                    rcd_privileges_from_string ("trusted")))
+                    rcd_privileges_from_string ("trusted")) &&
+                rcd_prefs_get_require_signed_packages ())
             {
-                msg = g_strdup_printf (
-                    "Verification of '%s' was inconclusive",
-                    g_quark_to_string (package->spec.nameq));
-                rcd_pending_fail (status->transaction_pending, -1, msg);
-                g_free (msg);
+                status_msg = g_strdup_printf (
+                    "Package signatures are required for installation");
+                rcd_pending_fail (status->transaction_pending, -1, status_msg);
+                g_free (status_msg);
 
                 if (status->flags != RCD_TRANSACTION_FLAGS_DRY_RUN &&
                     rcd_prefs_get_premium ())
-                {
-                    msg = g_strdup_printf (
-                        "Verification of '%s' failed",
-                        g_quark_to_string (package->spec.nameq));
                     rcd_transaction_send_log (status, FALSE, msg);
-                    g_free (msg);
-                }
+
+                g_free (msg);
 
                 cleanup_after_transaction (status);
                 return;
             }
+
+            g_free (msg);
         }
     }
 

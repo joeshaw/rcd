@@ -66,7 +66,8 @@ void         rcd_prefs_set_heartbeat_interval (guint32);
 int          rcd_prefs_get_max_downloads (void);
 void         rcd_prefs_set_max_downloads (int);
 
-gboolean     rcd_prefs_get_require_verified_packages (void);
+gboolean     rcd_prefs_get_require_signed_packages (void);
+void         rcd_prefs_set_require_signed_packages (gboolean);
 
 gint         rcd_prefs_get_debug_level        (void);
 void         rcd_prefs_set_debug_level        (gint);

@@ -1,5 +1,25 @@
 2002-09-13  Joe Shaw  <joe@ximian.com>
 
+	* rcd-autopull.c (rcd_autopull_resolve_and_transact): Don't set
+	the "trusted" privilege for autopull transactions.
+
+	* rcd-prefs.c (rcd_prefs_get_require_signed_packages): Renamed
+	from _verified_packages.  Now defaults to TRUE.
+	(rcd_prefs_set_require_signed_packages): Added.
+
+	* rcd-rpc-prefs.c (rcd_rpc_prefs_register_methods): Added
+	require-signatures.
+
+	* rcd-transaction.c (verify_packages): Flush the main loop before
+	each iteration.  Mark whether we have tried to verify a
+	signature.  If checking the signature was indeterministic or
+	wasn't there at all, flag a warning and send it to the client.  If
+	we require signed packages and the user doesn't have the "trusted"
+	privilege, abort.  (Previously, if you required signed packages,
+	even trusted users couldn't install unsigned packages)
+
+2002-09-13  Joe Shaw  <joe@ximian.com>
+
 	* rcd.c (option_parsing): Add an -f option, which specifies the
 	config file to use.
 	(main): Check to make sure the config file passed in is valid.

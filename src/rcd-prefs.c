@@ -375,11 +375,22 @@ rcd_prefs_set_max_downloads (int max_downloads)
 } /* rcd_prefs_set_max_downloads */
 
 gboolean
-rcd_prefs_get_require_verified_packages (void)
+rcd_prefs_get_require_signed_packages (void)
 {
     return gnome_config_get_bool (
-        get_config_path ("/System/require-verified=FALSE"));
-} /* rcd_prefs_get_require_verified_packages */
+        get_config_path ("/System/require-signatures=TRUE"));
+} /* rcd_prefs_get_require_signed_packages */
+
+void
+rcd_prefs_set_require_signed_packages (gboolean enabled)
+{
+    gnome_config_set_bool (
+        get_config_path ("/System/require-signatures"), enabled);
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Signatures required for install: %s",
+              enabled ? "TRUE" : "FALSE");
+
+    SYNC_CONFIG;
+} /* rcd_prefs_set_require_signed_packages */
 
 gint
 rcd_prefs_get_debug_level (void)

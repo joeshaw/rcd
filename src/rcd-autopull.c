@@ -278,7 +278,7 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
         dummy_identity = rcd_identity_new ();
         dummy_identity->username = g_strdup ("autopull " VERSION);
         dummy_identity->privileges = rcd_privileges_from_string (
-            "install, remove, upgrade, trusted");
+            "install, remove, upgrade");
 
         rcd_transaction_begin (rc_get_world (),
                                to_install,
