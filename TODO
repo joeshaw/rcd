@@ -4,3 +4,6 @@ Need to be able to add users, remove users, set passwords, etc. via
 the daemon.
 
 Need docs and a man page.
+
+Need to check through all the source files and check to make sure
+the license is GPL v2 only.  (not "at your option, any later version")
