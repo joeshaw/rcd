@@ -1,3 +1,14 @@
+2005-01-13  Tambet Ingo  <tambet@ximian.com>
+
+	* rcd-world-remote.c (rcd_extract_packages_from_yum_buffer): Don't
+	leak RCDTransfers.
+	(rcd_world_remote_fetch): Don't leak RCDTransfer, some minor cleanup.
+
+2005-01-03  Tambet Ingo  <tambet@ximian.com>
+
+	* rcd.c (main): Catch SIGABRT signal so we can print stack trace on
+	assert() and abort().
+
 2004-09-02  Tambet Ingo  <tambet@ximian.com>
 
 	* rcd-rpc-util.c (rcd_xmlrpc_package_file_list): Free PackageFileSList

@@ -465,6 +465,7 @@ crash_handler (int sig_num)
     sigaction (SIGSEGV, &sig_action, NULL);
     sigaction (SIGFPE, &sig_action, NULL);
     sigaction (SIGBUS, &sig_action, NULL);
+    sigaction (SIGABRT, &sig_action, NULL);
 
     write (2, "Crash!\n", 7);
     
@@ -533,6 +534,7 @@ main (int argc, const char **argv)
         sigaction (SIGSEGV, &sig_action, NULL);
         sigaction (SIGFPE,  &sig_action, NULL);
         sigaction (SIGBUS,  &sig_action, NULL);
+        sigaction (SIGABRT, &sig_action, NULL);
     }
     g_free (python_path);
 

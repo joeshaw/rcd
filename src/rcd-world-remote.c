@@ -798,7 +798,7 @@ rcd_extract_packages_from_yum_buffer (RCDWorldRemote *world,
         char *name, *version, *release, *arch;
         char *rpm_url, *header_url;
         RCDCacheEntry *entry;
-        RCDTransfer *transfer;
+        RCDTransfer *transfer = NULL;
         const GByteArray *header_data;
         RCPackage *p;
         GByteArray *decompressed_data = NULL;
@@ -870,6 +870,9 @@ rcd_extract_packages_from_yum_buffer (RCDWorldRemote *world,
 
         if (decompressed_data)
             g_byte_array_free (decompressed_data, TRUE);
+
+        if (transfer)
+            g_object_unref (transfer);
         
         count++;
     }
@@ -1615,9 +1618,9 @@ rcd_world_remote_fetch (RCDWorldRemote *remote, gboolean local, GError **error)
     char *url;
     char *cache_entry_str = NULL;
     RCDCacheEntry *entry;
-    RCDTransfer *t;
+    RCDTransfer *t = NULL;
     const GByteArray *data;
-    RCPending *pending;
+    RCPending *pending = NULL;
     GError *tmp_error = NULL;
 
     if (!strncmp (RC_WORLD_SERVICE (remote)->url, "http://", 7))
@@ -1637,8 +1640,6 @@ rcd_world_remote_fetch (RCDWorldRemote *remote, gboolean local, GError **error)
         buf = rcd_cache_entry_map_file (entry);
 
         if (buf) {
-            RCPending *pending;
-
             pending = rcd_world_remote_parse_serviceinfo (remote, TRUE,
                                                           buf->data,
                                                           buf->size,
@@ -1646,11 +1647,9 @@ rcd_world_remote_fetch (RCDWorldRemote *remote, gboolean local, GError **error)
 
             rc_buffer_unmap_file (buf);
 
-            if (tmp_error == NULL) {
-                g_free (cache_entry_str);
-
-                return pending;
-            } else {
+            if (tmp_error == NULL)
+                goto cleanup;
+            else {
                 g_error_free (tmp_error);
                 tmp_error = NULL;
 
@@ -1667,8 +1666,6 @@ rcd_world_remote_fetch (RCDWorldRemote *remote, gboolean local, GError **error)
         }
     }
 
-    g_free (cache_entry_str);
-
     url = g_strconcat (RC_WORLD_SERVICE (remote)->url,
                        "/serviceinfo.xml", NULL);
     t = rcd_transfer_new (url, RCD_TRANSFER_FLAGS_NONE, entry);
@@ -1683,19 +1680,25 @@ rcd_world_remote_fetch (RCDWorldRemote *remote, gboolean local, GError **error)
         rc_debug (RC_DEBUG_LEVEL_CRITICAL,
                   "Unable to download service info: %s",
                   rcd_transfer_get_error_string (t));
-        return NULL;
+        goto cleanup;
     }
 
     pending = rcd_world_remote_parse_serviceinfo (remote, FALSE,
                                                   data->data, data->len,
                                                   &tmp_error);
-        
+
     if (tmp_error != NULL) {
         /* We don't want to cache bad data */
         rcd_cache_entry_invalidate (entry);
 
         g_propagate_error (error, tmp_error);
     }
+
+ cleanup:
+    g_free (cache_entry_str);
+
+    if (t)
+        g_object_unref (t);
 
     return pending;
 }
