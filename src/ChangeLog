@@ -1,3 +1,21 @@
+2003-09-29  Joe Shaw  <joe@ximian.com>
+
+	* rcd-world-remote.c: Since the move to channel base IDs, it's
+	possible to get old cached data even if the target changes.  This
+	commit fixes that by saving the old target to disk and when
+	refreshing checking to see if the detected target is different
+	from the one on disk.  This is all Jose's fault.
+	(rcd_world_remote_fetch_channels): Add a huge comment describing
+	the problem and call some helper functions to see if the target is
+	different and to save it if it is.
+	(saved_target_differs, save_target): Added.  Uses the rcd-cache
+	methods to check and save this data.
+	(rcd_world_remote_per_channel_cb): If the "flush" flag was set
+	(because the target changed), invalidate channel data and icon
+	cache entries so we ensure that we download them.
+	(build_register_params): Fix a cut-and-paste error... the server
+	port should be sent as an int, not a string.
+
 2003-09-29  Tambet Ingo  <tambet@ximian.com>
 
 	* rcd-world-remote.c (build_register_params): Send port number

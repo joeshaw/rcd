@@ -555,8 +555,8 @@ build_register_params (xmlrpc_env *env,
     RCD_XMLRPC_STRUCT_SET_STRING (env, value, "hostname", hostname);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    RCD_XMLRPC_STRUCT_SET_STRING (env, value, "port",
-                                  rcd_prefs_get_remote_server_port ());
+    RCD_XMLRPC_STRUCT_SET_INT (env, value, "port",
+                               rcd_prefs_get_remote_server_port ());
 
 cleanup:
     if (env->fault_occurred) {
@@ -716,6 +716,7 @@ channel_data_file_done_cb (RCDTransfer *t, gpointer user_data)
 typedef struct {
     RCDWorldRemote *remote;
     gboolean local;
+    gboolean flush;
     RCDTransferPool *pool;
 } ChannelData;
 
@@ -745,6 +746,15 @@ rcd_world_remote_per_channel_cb (RCChannel *channel,
                                 channel);
 
     /* Channel data */
+    if (channel_data->flush) {
+        entry  = rcd_cache_lookup (rcd_cache_get_normal_cache (),
+                                   "channel_data", rc_channel_get_id (channel),
+                                   FALSE);
+
+        if (entry)
+            rcd_cache_entry_invalidate (entry);
+    }
+
     entry = rcd_cache_lookup (rcd_cache_get_normal_cache (),
                               "channel_data", rc_channel_get_id (channel),
                               TRUE);
@@ -793,6 +803,15 @@ rcd_world_remote_per_channel_cb (RCChannel *channel,
     }
     
     /* Channel icon */
+    if (channel_data->flush) {
+        entry  = rcd_cache_lookup (rcd_cache_get_normal_cache (),
+                                   "icon", rc_channel_get_id (channel),
+                                   FALSE);
+
+        if (entry)
+            rcd_cache_entry_invalidate (entry);
+    }
+
     entry = rcd_cache_lookup (rcd_cache_get_normal_cache (),
                               "icon", rc_channel_get_id (channel),
                               TRUE);
@@ -843,6 +862,53 @@ remove_channel_cb (RCChannel *channel, gpointer user_data)
     rc_world_store_remove_channel (store, channel);
 
     return TRUE;
+}
+
+static gboolean
+saved_target_differs (RCDWorldRemote *remote)
+{
+    RCDCacheEntry *entry;
+    RCBuffer *buf;
+    const char *target;
+
+    entry = rcd_cache_lookup (rcd_cache_get_normal_cache (),
+                              "distro_target",
+                              RC_WORLD_SERVICE (remote)->unique_id,
+                              FALSE);
+
+    /* It hasn't been saved to disk yet.  Better safe than sorry */
+    if (!entry)
+        return TRUE;
+
+    buf = rcd_cache_entry_map_file (entry);
+
+    if (!buf)
+        return TRUE;
+
+    target = rc_distro_get_target (remote->distro);
+
+    if (strlen (target) != buf->size)
+        return TRUE;
+
+    return strncmp (target, buf->data, buf->size);
+}
+
+static void
+save_target (RCDWorldRemote *remote)
+{
+    RCDCacheEntry *entry;
+    const char *target;
+
+    target = rc_distro_get_target (remote->distro);
+
+    entry = rcd_cache_lookup (rcd_cache_get_normal_cache (),
+                              "distro_target",
+                              RC_WORLD_SERVICE (remote)->unique_id,
+                              TRUE);
+
+    rcd_cache_entry_open (entry);
+    rcd_cache_entry_append (entry, target, strlen (target));
+    rcd_cache_entry_close (entry);
 }
 
 static RCPending *
@@ -899,7 +965,31 @@ rcd_world_remote_fetch_channels (RCDWorldRemote *remote, gboolean local,
 
     channel_data.remote = remote;
     channel_data.local = local;
+    channel_data.flush = FALSE;
     channel_data.pool = NULL; /* May be set in _per_channel_cb() */
+
+    /*
+     * Channel data is cached by service id + channel bid.  Channel bids
+     * are the same across distros, so it's possible that your target can
+     * change underneat you (like if you upgrade your distro), but you can
+     * still get old channel data for your old target because it's not
+     * newer than the last refresh you did on the old target.  This checks
+     * to see if the previously saved target is different than our current
+     * target and instructs rcd_world_remote_per_channel_cb() to flush the
+     * old cached entries.
+     */
+    if (saved_target_differs (remote)) {
+        rc_debug (RC_DEBUG_LEVEL_MESSAGE,
+                  "Distro target differs from last run on service '%s' [%s].  "
+                  "Flushing channel data cache",
+                  RC_WORLD_SERVICE (remote)->name,
+                  RC_WORLD_SERVICE (remote)->unique_id);
+        
+        channel_data.local = FALSE;
+        channel_data.flush = TRUE;
+
+        save_target (remote);
+    }
 
     N = rc_extract_channels_from_helix_buffer (buffer, buffer_len,
                                                rcd_world_remote_per_channel_cb,
