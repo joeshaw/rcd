@@ -56,7 +56,7 @@ install-data-hook:
 		chmod 0755 $(DESTDIR)$(initdir); \
 	fi
 
-	$(INSTALL_DATA) -m 0755 $(srcdir)/$(init_file) $(DESTDIR)$(initdir)/rcd;
+	$(INSTALL_DATA) -m 0755 $(top_builddir)/$(init_file) $(DESTDIR)$(initdir)/rcd;
 
 	if test '!' -d $(DESTDIR)$(logrotatedir); then \
 		$(mkinstalldirs) $(DESTDIR)$(logrotatedir); \

@@ -9,8 +9,8 @@ dnl AM_INIT_AUTOMAKE(AC_PACKAGE_NAME, AC_PACKAGE_VERSION)
 AC_INIT(src/rcd.c)
 
 MAJOR_VERSION=1
-MINOR_VERSION=3
-MICRO_VERSION=2
+MINOR_VERSION=4
+MICRO_VERSION=0
 VERSION=$MAJOR_VERSION.$MINOR_VERSION.$MICRO_VERSION
 
 AM_INIT_AUTOMAKE(rcd, $VERSION)
@@ -51,7 +51,7 @@ AM_PROG_LIBTOOL
 
 ### get cflags and libs
 
-PKG_CHECK_MODULES(RCD, glib-2.0 gmodule-2.0 gobject-2.0 libxml-2.0 libredcarpet)
+PKG_CHECK_MODULES(RCD, glib-2.0 gmodule-2.0 gobject-2.0 libxml-2.0 libredcarpet >= 1.4)
 
 ###
 ### libsoup magic
