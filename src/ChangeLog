@@ -1,3 +1,14 @@
+2003-05-12  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-fetch.c (rcd_fetch_channel_list): Replace a call to
+	rc_uncompress_xml with rc_parse_xml_from_buffer.
+	(rcd_fetch_channel_list_local): Replace a bunch of fumbling around
+	with a call to rc_parse_xml_from_file.  Transparent uncompression
+	makes life easier.
+
+	* rcd-autopull.c (rcd_autopull_download_xml): Replace a call to
+	rc_uncompress_xml with rc_parse_xml_from_buffer.
+
 2003-05-09  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-rpc-packsys.c (dep_get_package_info_cb): Stringify info

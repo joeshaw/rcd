@@ -1122,7 +1122,7 @@ rcd_autopull_download_xml (void)
         goto cleanup;
     }
 
-    doc = rc_uncompress_xml (data->data, data->len);
+    doc = rc_parse_xml_from_buffer (data->data, data->len);
     if (doc == NULL) {
         rc_debug (RC_DEBUG_LEVEL_ERROR,
                   "Unable to uncompress or parse autopull data.");

@@ -385,7 +385,7 @@ rcd_fetch_channel_list (RCWorld *world, char **err_msg)
         goto cleanup;
     }
 
-    doc = rc_uncompress_xml (data->data, data->len);
+    doc = rc_parse_xml_from_buffer (data->data, data->len);
     if (doc == NULL) {
         err = g_strdup ("Unable to uncompress or parse channel list.");
         rc_debug (RC_DEBUG_LEVEL_CRITICAL, err);
@@ -434,7 +434,6 @@ rcd_fetch_channel_list_local (RCWorld *world)
 {
     gchar *url = NULL;
     gchar *local_file = NULL;
-    RCBuffer *buf = NULL;
     xmlDoc *doc = NULL;
     xmlNode *root;
     gboolean success = FALSE;
@@ -444,15 +443,7 @@ rcd_fetch_channel_list_local (RCWorld *world)
 
     local_file = "/var/lib/rcd/channels.xml.gz";
 
-    if (!g_file_test (local_file, G_FILE_TEST_EXISTS))
-        goto cleanup;
-        
-    buf = rc_buffer_map_file (local_file);
-
-    if (!buf)
-        goto cleanup;
-
-    doc = rc_uncompress_xml (buf->data, buf->size);
+    doc = rc_parse_xml_from_file (local_file);
 
     if (!doc)
         goto cleanup;
@@ -471,9 +462,6 @@ rcd_fetch_channel_list_local (RCWorld *world)
     if (url)
         g_free (url);
 
-    if (buf)
-        rc_buffer_unmap_file (buf);
-    
     if (doc)
         xmlFreeDoc (doc);
 

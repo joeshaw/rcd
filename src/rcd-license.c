@@ -42,7 +42,7 @@ rcd_license_parse (const char *data, gsize size)
 
     g_return_val_if_fail (data != NULL, FALSE);
 
-    doc = rc_uncompress_xml (data, size);
+    doc = rc_parse_xml_from_buffer (data, size);
     if (doc == NULL) {
         rc_debug (RC_DEBUG_LEVEL_CRITICAL,
                   "Couldn't parse license XML file");
