@@ -19,7 +19,7 @@ if [ -f /etc/sysconfig/rcd ] ; then
 	. /etc/sysconfig/rcd
 fi
 
-$rcd=@prefix@/bin/rcd
+rcd=@prefix@/bin/rcd
 prog=rcd
 RETVAL=0
 
