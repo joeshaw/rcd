@@ -1,5 +1,12 @@
 2002-08-27  Joe Shaw  <joe@ximian.com>
 
+	* rcd-transfer-http.c
+	(rcd_transfer_protocol_http_get_response_body): Removed.  It's not
+	used anywhere anymore, and since we overwrite chunks, it'll never
+	work the way we want it to.
+
+2002-08-27  Joe Shaw  <joe@ximian.com>
+
 	* rcd-autopull.c (rcd_autopull_resolve_and_transact): If we had
 	failed deps, stringify the failure and send it as the reason
 	instead of a generic "resolution failed" message.

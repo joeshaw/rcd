@@ -613,20 +613,6 @@ rcd_transfer_protocol_http_get_response_header (RCDTransferProtocolHTTP *protoco
     return g_hash_table_lookup (protocol->response_headers, header);
 } /* rcd_transfer_protocol_http_get_response_header */
 
-const char *
-rcd_transfer_protocol_http_get_response_body (RCDTransferProtocolHTTP *protocol)
-{
-    g_return_val_if_fail (protocol, NULL);
-
-    if (!protocol->response_body) {
-        rc_debug (RC_DEBUG_LEVEL_WARNING,
-                  "Trying to get a response body before transfer");
-        return NULL;
-    }
-
-    return protocol->response_body;
-} /* rcd_transfer_protocol_http_get_response_body */
-
 RCDTransferProtocol *
 rcd_transfer_protocol_http_new (void)
 {

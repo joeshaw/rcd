@@ -878,7 +878,6 @@ rcd_transaction_get_install_packages (int transaction_id)
 
     g_return_val_if_fail (status, NULL);
 
-    /* FIXME: Should we ref here? */
     return status->install_packages;
 } /* rcd_transaction_get_install_packages */
 

@@ -69,8 +69,5 @@ const char *rcd_transfer_protocol_http_get_response_header (
     RCDTransferProtocolHTTP *protocol,
     const char              *header);
 
-const char *rcd_transfer_protocol_http_get_response_body (
-    RCDTransferProtocolHTTP *protocol);
-
 #endif /* __RCD_TRANSFER_HTTP_H__ */
 
