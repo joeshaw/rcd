@@ -1,5 +1,12 @@
 2002-08-06  Joe Shaw  <joe@ximian.com>
 
+	* rcd-fetch.c: Split out a bunch of the transfer queuing and
+	beginning to smaller functions.
+	(package_completed_cb): Unref the transfer afterward.
+	(rcd_fetch_packages_abort): Unref all of the queued transfers.
+
+2002-08-06  Joe Shaw  <joe@ximian.com>
+
 	* rcd-fetch.c (download_package_file): If we want to download more
 	packages than we allow concurrently, queue the additional ones up.
 	(package_completed_cb): If we have any queued up
