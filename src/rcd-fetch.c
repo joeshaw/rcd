@@ -1215,7 +1215,7 @@ rcd_fetch_refresh (char **err_msg)
 
     info->id_list = g_slist_copy (id_list);
 
-    g_idle_add (check_pending_status_cb, info);
+    g_timeout_add (250, check_pending_status_cb, info);
 
     return id_list;
 }    

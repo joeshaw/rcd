@@ -1,3 +1,8 @@
+2003-06-26  Joe Shaw  <joe@ximian.com>
+
+	* rcd-fetch.c (rcd_fetch_refresh): Change the idle to a timeout so
+	we're not slamming the main loop unnecessarily.  Fixes #42081.
+
 2003-06-23  Joe Shaw  <joe@ximian.com>
 
 	* rcd-options.c: -d was already taken by --debug, so use -o for
