@@ -38,7 +38,7 @@ struct _RCDTransferPool {
 
     gboolean abort_if_any;
     GSList *transfers;
-    RCDPending *pending;
+    RCPending *pending;
     gsize expected_size;
 
     /* Running state */
@@ -52,7 +52,7 @@ struct _RCDTransferPool {
 struct _RCDTransferPoolClass {
     GObjectClass parent_class;
     
-    void (*transfer_done) (RCDTransfer *, RCDTransferError error);
+    void (*transfer_done) (RCDTransferPool *, RCDTransferError error);
 };
 
 #define RCD_TYPE_TRANSFER_POOL            (rcd_transfer_pool_get_type ())
@@ -69,17 +69,18 @@ struct _RCDTransferPoolClass {
 
 GType             rcd_transfer_pool_get_type      (void);
 
-RCDTransferPool  *rcd_transfer_pool_new           (gboolean abort_if_any);
+RCDTransferPool  *rcd_transfer_pool_new           (gboolean abort_if_any,
+                                                   const char *description);
 
 void              rcd_transfer_pool_add_transfer  (RCDTransferPool *pool,
                                                    RCDTransfer     *transfer);
 
-/* Returns RCDPending ID */
+/* Returns RCPending ID */
 int               rcd_transfer_pool_begin         (RCDTransferPool *pool);
 
 void              rcd_transfer_pool_abort         (RCDTransferPool *pool);
 
-RCDPending       *rcd_transfer_pool_get_pending   (RCDTransferPool *pool);
+RCPending        *rcd_transfer_pool_get_pending   (RCDTransferPool *pool);
 
 void              rcd_transfer_pool_set_expected_size (RCDTransferPool *pool,
                                                        gsize size);

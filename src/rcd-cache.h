@@ -26,12 +26,13 @@
 #define __RCD_CACHE_H__
 
 #include <glib.h>
+#include <libredcarpet.h>
 
 typedef struct _RCDCache      RCDCache;
 typedef struct _RCDCacheEntry RCDCacheEntry;
 
-RCDCacheEntry *rcd_cache_entry_new (RCDCache *cache, const char *url);
-RCDCacheEntry *rcd_cache_lookup    (RCDCache *cache, const char *url);
+
+/* RCDCacheEntry functions */
 
 void rcd_cache_entry_open       (RCDCacheEntry *entry);
 void rcd_cache_entry_append     (RCDCacheEntry *entry,
@@ -40,7 +41,6 @@ void rcd_cache_entry_append     (RCDCacheEntry *entry,
 void rcd_cache_entry_close      (RCDCacheEntry *entry);
 void rcd_cache_entry_cancel     (RCDCacheEntry *entry);
 void rcd_cache_entry_invalidate (RCDCacheEntry *entry);
-
 const char *rcd_cache_entry_get_modification_time (RCDCacheEntry *entry);
 const char *rcd_cache_entry_get_entity_tag        (RCDCacheEntry *entry);
 void        rcd_cache_entry_set_modification_time (RCDCacheEntry *entry,
@@ -49,22 +49,40 @@ void        rcd_cache_entry_set_entity_tag        (RCDCacheEntry *entry,
                                                    const char    *etag);
 
 char *rcd_cache_entry_get_local_filename (RCDCacheEntry *entry);
-char *rcd_cache_get_local_filename       (RCDCache *cache, const char *url);
+
+RCBuffer *rcd_cache_entry_map_file (RCDCacheEntry *entry);
+
+
+/* RCDCache functions */
+
+RCDCacheEntry *rcd_cache_lookup (RCDCache   *cache,
+                                 const char *source_id,
+                                 const char *file_tag,
+                                 gboolean    create_new_if_nonexistent);
+
+RCDCacheEntry *rcd_cache_lookup_by_url (RCDCache   *cache,
+                                        const char *url,
+                                        gboolean    create_new);
 
 void rcd_cache_expire (RCDCache *cache,
                        double    max_age_in_days,
                        double    max_size_in_mb);
-void rcd_cache_expire_now (RCDCache *cache);
 
-/*
-  A convenience function that (possibly) calls rcd_cache_expire on the
-  package cache using parameters pulled in from rcd-prefs */
-void rcd_cache_expire_package_cache (void);
+void rcd_cache_expire_now (RCDCache *cache);
 
 gsize rcd_cache_size (RCDCache *cache);
 
+
 RCDCache *rcd_cache_get_normal_cache  (void);
-RCDCache *rcd_cache_get_package_cache (void);
-RCDCache *rcd_cache_get_icon_cache    (const char *channel_id);
+
+RCDCache *rcd_cache_get_package_cache    (void);
+
+/*
+  A convenience function that (possibly) calls rcd_cache_expire on the
+  package cache using parameters pulled in from rcd-prefs.
+*/
+
+void      rcd_cache_expire_package_cache (void);
+
 
 #endif /* __RCD_CACHE_H__ */

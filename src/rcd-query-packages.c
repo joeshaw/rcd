@@ -88,7 +88,7 @@ installed_match (RCDQueryPart *part,
                  gpointer      data)
 {
     RCPackage *pkg = data;
-    return rcd_query_match_bool (part, pkg->channel == NULL);
+    return rcd_query_match_bool (part, rc_package_is_installed (pkg));
 }
 
 static gboolean
@@ -111,18 +111,20 @@ struct InstalledCheck {
     gboolean installed;
 };
 
-static void
+static gboolean
 installed_check_cb (RCPackage *sys_pkg,
                     gpointer user_data)
 {
     struct InstalledCheck *check = user_data;
    
     if (check->installed)
-        return;
+        return FALSE;
 
     if (rc_package_spec_equal (RC_PACKAGE_SPEC (sys_pkg),
                                RC_PACKAGE_SPEC (check->pkg)))
         check->installed = TRUE;
+
+    return TRUE;
 }
 
 static gboolean
@@ -165,8 +167,8 @@ needs_upgrade_match (RCDQueryPart *part,
 {
     RCPackage *pkg = data;
     return rcd_query_match_bool (part,
-                          pkg->channel == NULL /* must be installed */
-                          && rc_world_get_best_upgrade (rc_get_world (), pkg, TRUE) != NULL);
+                                 rc_package_is_installed (pkg) /* must be installed */
+                                 && rc_world_get_best_upgrade (rc_get_world (), pkg, TRUE) != NULL);
 }
 
 static gboolean
@@ -189,9 +191,7 @@ importance_match (RCDQueryPart *part,
     RCPackageImportance imp;
 
     /* Installed packages automatically fail. */
-    if (pkg->channel == NULL
-        || pkg->history == NULL
-        || pkg->history->data == NULL)
+    if (rc_package_is_installed (pkg))
         return FALSE;
 
     imp = ((RCPackageUpdate *) pkg->history->data)->importance;
@@ -256,7 +256,7 @@ struct QueryInfo {
     gint          count;
 };
 
-void
+static gboolean
 match_package_fn (RCPackage *pkg, gpointer user_data)
 {
     struct QueryInfo *info = user_data;
@@ -270,6 +270,8 @@ match_package_fn (RCPackage *pkg, gpointer user_data)
 
         ++info->count;
     }
+
+    return TRUE;
 }
       
 gint

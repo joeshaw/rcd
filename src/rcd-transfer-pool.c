@@ -59,6 +59,14 @@ rcd_transfer_pool_finalize (GObject *obj)
 }
 
 static void
+rcd_transfer_pool_transfer_done (RCDTransferPool *pool,
+                                 RCDTransferError failing_err)
+{
+    /* Removes the ref added in rcd_transfer_pool_begin() */
+    g_object_unref (pool);
+}
+
+static void
 rcd_transfer_pool_class_init (RCDTransferPoolClass *klass)
 {
     GObjectClass *obj_class = (GObjectClass *) klass;
@@ -66,6 +74,8 @@ rcd_transfer_pool_class_init (RCDTransferPoolClass *klass)
     parent_class = g_type_class_peek_parent (klass);
 
     obj_class->finalize = rcd_transfer_pool_finalize;
+
+    klass->transfer_done = rcd_transfer_pool_transfer_done;
 
     signals[TRANSFER_DONE] =
         g_signal_new ("transfer_done",
@@ -80,8 +90,8 @@ rcd_transfer_pool_class_init (RCDTransferPoolClass *klass)
 static void
 rcd_transfer_pool_init (RCDTransferPool *pool)
 {
-    /* Create associated RCDPending object */
-    pool->pending = rcd_pending_new (NULL);
+    /* Create associated RCPending object */
+    pool->pending = rc_pending_new (NULL);
 }
 
 GType
@@ -155,9 +165,33 @@ transfer_file_data_cb (RCDTransfer *transfer,
     pool->current_size += size;
 
     if (pool->expected_size) {
-        rcd_pending_update_by_size (pool->pending,
-                                    pool->current_size,
-                                    pool->expected_size);
+        rc_pending_update_by_size (pool->pending,
+                                   pool->current_size,
+                                   pool->expected_size);
+    } else {
+        int num_transfers;
+        double percent_complete = 0.0;
+        GSList *iter;
+
+        num_transfers = g_slist_length (pool->transfers);
+
+        for (iter = pool->transfers; iter; iter = iter->next) {
+            RCDTransfer *transfer = RCD_TRANSFER (iter->data);
+            RCPending *pending;
+
+            pending = rcd_transfer_get_pending (transfer);
+
+            if (pending) {
+                percent_complete += (1.0 / num_transfers) *
+                    rc_pending_get_percent_complete (pending);
+            }
+        }
+
+        /* Lame rounding fun */
+        if (percent_complete > 100.0)
+            percent_complete = 100.0;
+
+        rc_pending_update (pool->pending, percent_complete);
     }
 }
 
@@ -170,6 +204,28 @@ abort_transfers (gpointer user_data)
 
     return FALSE;
 }
+
+static void
+emit_transfer_done (RCDTransferPool *pool)
+{
+    if (!pool->failing_error) {
+        rc_pending_finished (pool->pending, 0);
+    }
+    else if (pool->failing_error == RCD_TRANSFER_ERROR_CANCELLED)
+        rc_pending_abort (pool->pending, -1);
+    else {
+        char *msg;
+
+        msg = g_strdup_printf ("%s (%s)",
+                               rcd_transfer_error_to_string (pool->failing_error),
+                               pool->failing_transfer->url);
+
+        rc_pending_fail (pool->pending, -1, msg);
+        g_free (msg);
+    }
+
+    g_signal_emit (pool, signals[TRANSFER_DONE], 0, pool->failing_error);
+}    
 
 static void
 transfer_file_done_cb (RCDTransfer *transfer, gpointer user_data)
@@ -203,22 +259,7 @@ transfer_file_done_cb (RCDTransfer *transfer, gpointer user_data)
         (pool->failing_error || !pool->queued_transfers)) {
         /* We're done! */
 
-        if (!pool->failing_error)
-            rcd_pending_finished (pool->pending, 0);
-        else if (pool->failing_error == RCD_TRANSFER_ERROR_CANCELLED)
-            rcd_pending_abort (pool->pending, -1);
-        else {
-            char *msg;
-
-            msg = g_strdup_printf ("%s (%s)",
-                                   rcd_transfer_error_to_string (pool->failing_error),
-                                   pool->failing_transfer->url);
-
-            rcd_pending_fail (pool->pending, -1, msg);
-            g_free (msg);
-        }
-
-        g_signal_emit (pool, signals[TRANSFER_DONE], 0, pool->failing_error);
+        emit_transfer_done (pool);
     }
 
     if (pool->queued_transfers && !pool->failing_error) {
@@ -229,18 +270,23 @@ transfer_file_done_cb (RCDTransfer *transfer, gpointer user_data)
             rcd_transfer_pool_begin_transfer (pool, new_transfer);
         }
     }
+
+    g_object_unref (pool);
 }
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 RCDTransferPool *
-rcd_transfer_pool_new (gboolean abort_if_any)
+rcd_transfer_pool_new (gboolean abort_if_any, const char *description)
 {
     RCDTransferPool *pool;
 
     pool = g_object_new (RCD_TYPE_TRANSFER_POOL, NULL);
 
     pool->abort_if_any = abort_if_any;
+
+    rc_pending_set_description (pool->pending,
+                                 description ? description : "Transfer pool");
 
     return pool;
 }
@@ -259,6 +305,12 @@ rcd_transfer_pool_add_transfer (RCDTransferPool *pool,
 
     pool->transfers = g_slist_append (pool->transfers,
                                       g_object_ref (transfer));
+
+    /*
+     * Because the pool could finish (and be finalized) before a transfer
+     * is done, grab a ref and release it in transfer_file_done_cb()
+     */
+    g_object_ref (pool);
 
     g_signal_connect (transfer,
                       "file_data",
@@ -282,22 +334,32 @@ rcd_transfer_pool_begin (RCDTransferPool *pool)
 
     max_downloads = rcd_prefs_get_max_downloads ();
 
-    rcd_pending_begin (pool->pending);
+    rc_pending_begin (pool->pending);
 
     /*
-     * Iterate over the list of transfers and kick them off up to
-     * max_downloads, queuing the rest of later
+     * Add a ref so that people can safely unref it after beginning if
+     * they don't care about it afterward.
      */
-    for (iter = pool->transfers, i = 0; iter; iter = iter->next, i++) {
-        RCDTransfer *t = RCD_TRANSFER (iter->data);
+    g_object_ref (pool);
 
-        if (i < max_downloads)
-            rcd_transfer_pool_begin_transfer (pool, t);
-        else
-            rcd_transfer_pool_queue_push_transfer (pool, t);
+    if (pool->transfers != NULL) {
+        /*
+         * Iterate over the list of transfers and kick them off up to
+         * max_downloads, queuing the rest of later
+         */
+        for (iter = pool->transfers, i = 0; iter; iter = iter->next, i++) {
+            RCDTransfer *t = RCD_TRANSFER (iter->data);
+
+            if (i < max_downloads)
+                rcd_transfer_pool_begin_transfer (pool, t);
+            else
+                rcd_transfer_pool_queue_push_transfer (pool, t);
+        }
+    } else {
+        emit_transfer_done (pool);
     }
 
-    return rcd_pending_get_id (pool->pending);
+    return rc_pending_get_id (pool->pending);
 }
 
 void
@@ -319,7 +381,7 @@ rcd_transfer_pool_abort (RCDTransferPool *pool)
     }
 }
 
-RCDPending *
+RCPending *
 rcd_transfer_pool_get_pending (RCDTransferPool *pool)
 {
     g_return_val_if_fail (RCD_IS_TRANSFER_POOL (pool), NULL);

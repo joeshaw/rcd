@@ -1,9 +1,9 @@
-/* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+/* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 
 /*
- * rcd-subscriptions.h: Code for managing subscriptions
+ * rcd-services.h
  *
- * Copyright (c) 2000-2002 Ximian, Inc.
+ * Copyright (C) 2003 Ximian, Inc.
  *
  */
 
@@ -11,26 +11,25 @@
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License,
  * version 2, as published by the Free Software Foundation.
- *
+ * 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
+ * USA.
  */
 
-#ifndef __RCD_SUBSCRIPTIONS_H
-#define __RCD_SUBSCRIPTIONS_H
+#ifndef __RCD_SERVICES_H__
+#define __RCD_SERVICES_H__
 
 #include <libredcarpet.h>
 
-/* These return TRUE if the operation succeeded. */
+void rcd_services_load (RCWorldMulti *multi);
+void rcd_services_save (void);
 
-gboolean rcd_subscriptions_load (void);
+#endif /* __RCD_SERVICES_H__ */
 
-gboolean rcd_subscriptions_save (void);
-
-#endif /* __RCD_SUBSCRIPTIONS_H */

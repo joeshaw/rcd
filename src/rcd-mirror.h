@@ -45,11 +45,5 @@ struct _RCDMirror {
 RCDMirror *rcd_mirror_parse   (xmlNode *item_node);
 void       rcd_mirror_free    (RCDMirror *);
 
-void       rcd_mirror_add     (RCDMirror *);
-void       rcd_mirror_clear   (void);
-
-void       rcd_mirror_foreach (RCDMirrorFn fn, gpointer user_data);
-
-
 #endif /* __RCD_MIRRORS_H__ */
 

@@ -26,13 +26,15 @@
 #ifndef __RCD_LICENSE_H__
 #define __RCD_LICENSE_H__
 
-#include <glib.h>
+#include <libredcarpet.h>
+
+#include "rcd-world-remote.h"
 
 /* This takes compressed XML data */
-gboolean    rcd_license_parse                     (const char     *data,
+gboolean    rcd_license_parse                     (RCDWorldRemote *remote,
+                                                   const char     *data,
                                                    gsize           size);
 
-const char *rcd_license_lookup                    (const char     *name);
 GSList     *rcd_license_lookup_from_package_slist (RCPackageSList *packages);
 
 #endif /* __RCD_LICENSE_H__ */

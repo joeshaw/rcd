@@ -64,74 +64,8 @@ gboolean rcd_fetch_register (const char  *activation_code,
  * This -must- be done before the RCWorld is initialized.  Returns TRUE on
  * success.
  */
-gboolean rcd_fetch_distro (void);
-
-/*
- * Download the list of licenses that we know about
- */
-
-gboolean rcd_fetch_licenses       (void);
-gboolean rcd_fetch_licenses_local (void);
-
-/* 
-   Download the channel list from the server, then
-   add the channels corresponding to our disto to the global
-   RCWorld.  Returns TRUE if successful.
-*/
-gboolean rcd_fetch_channel_list       (RCWorld *world, char **err_msg);
-gboolean rcd_fetch_channel_list_local (RCWorld *world);
-
-/* 
-   Download a channel's package data from the server,
-   storing the packages in our RCWorld.  Returns the id
-   of the RCDPending.
-*/
-gint     rcd_fetch_channel       (RCChannel *channel, RCWorld *world);
-gboolean rcd_fetch_channel_local (RCChannel *channel, RCWorld *world);
-
-/*
-  Download channel package data for all channels.
-  Returns a list of the ids of the RCPendings; the caller
-  is responsible for freeing the list.
-*/
-
-typedef enum {
-    RCD_FETCH_LOCAL      = 1<<0,
-    RCD_FETCH_TRANSIENT  = 1<<1,
-    RCD_FETCH_PERSISTENT = 1<<2,
-} RCDFetchChannelFlags;
-
-GSList *rcd_fetch_all_channels       (RCWorld *world);
-void    rcd_fetch_all_channels_local (RCWorld *world);
-GSList *rcd_fetch_some_channels      (RCDFetchChannelFlags flags,
-                                      RCWorld *world);
-
-/*
- * Download channel icons.  If they're already on the system, they won't
- * be downloaded again unless the refetch argument is set
- */
-
-int  rcd_fetch_channel_icon      (RCChannel *channel);
-void rcd_fetch_all_channel_icons (gboolean refretch);
-
-/*
-  Download news
-*/
-void     rcd_fetch_news       (void);
-gboolean rcd_fetch_news_local (void);
-
-/*
-  Download mirrors
-*/
-void     rcd_fetch_mirrors       (void);
-gboolean rcd_fetch_mirrors_local (void);
-
-/*
- * Refresh channel data, news and mirrors.  Returns a list of pending
- * IDs for the channel data.  The optional out parameter is an error
- * message in case it fails.
- */
-GSList *rcd_fetch_refresh (char **err_msg);
+gboolean rcd_fetch_distro       (void);
+gboolean rcd_fetch_distro_local (void);
 
 /*
  * Set up an RCDTransferPool to download all of the packages specified.

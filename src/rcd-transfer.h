@@ -28,9 +28,9 @@
 
 #include <glib-object.h>
 #include <libsoup/soup.h>
+#include <libredcarpet.h>
 
 #include "rcd-cache.h"
-#include "rcd-pending.h"
 
 typedef   enum _RCDTransferFlags RCDTransferFlags;
 typedef   enum _RCDTransferError RCDTransferError;
@@ -42,7 +42,8 @@ enum _RCDTransferFlags {
     RCD_TRANSFER_FLAGS_DONT_CACHE     = 1 << 1,
     RCD_TRANSFER_FLAGS_FORCE_CACHE    = 1 << 2,
     RCD_TRANSFER_FLAGS_RESUME_PARTIAL = 1 << 3,
-    RCD_TRANSFER_FLAGS_NO_PENDING     = 1 << 4
+    RCD_TRANSFER_FLAGS_NO_PENDING     = 1 << 4,
+    RCD_TRANSFER_FLAGS_BUFFER_DATA    = 1 << 5
 };
 
 enum _RCDTransferError {
@@ -79,20 +80,22 @@ struct _RCDTransfer {
     char *url;
     char *filename;
 
-    RCDCache *cache;
+    RCDCacheEntry *cache_entry;
 
-    RCDPending *pending;
+    RCPending *pending;
 
     RCDTransferProtocol *protocol;
 
     gsize file_size;
     gsize bytes_transferred;
+
+    GByteArray *data; /* If a blocking transfer or data is bufferred */
 };
 
 struct _RCDTransferClass {
     GObjectClass parent_class;
     
-    void (*file_data) (RCDTransfer *, char *buffer, gsize size);
+    void (*file_data) (RCDTransfer *, const char *buffer, gsize size);
     void (*file_done) (RCDTransfer *);
 };
 
@@ -110,13 +113,13 @@ GType             rcd_transfer_get_type           (void);
 
 RCDTransfer      *rcd_transfer_new                (const char       *url,
                                                    RCDTransferFlags  flags,
-                                                   RCDCache         *cache);
+                                                   RCDCacheEntry    *entry);
 
 void              rcd_transfer_set_flags          (RCDTransfer *t,
                                                    RCDTransferFlags flags);
 
 int               rcd_transfer_begin              (RCDTransfer *t);
-GByteArray       *rcd_transfer_begin_blocking     (RCDTransfer *t);
+const GByteArray *rcd_transfer_begin_blocking     (RCDTransfer *t);
 void              rcd_transfer_abort              (RCDTransfer *t);
 
 void              rcd_transfer_emit_data          (RCDTransfer *t,
@@ -124,7 +127,7 @@ void              rcd_transfer_emit_data          (RCDTransfer *t,
                                                    gsize       size);
 void              rcd_transfer_emit_done          (RCDTransfer *t);
 
-RCDPending       *rcd_transfer_get_pending        (RCDTransfer *t);
+RCPending        *rcd_transfer_get_pending        (RCDTransfer *t);
 char             *rcd_transfer_get_local_filename (RCDTransfer *t);
 
 RCDTransferError  rcd_transfer_get_error          (RCDTransfer *t);

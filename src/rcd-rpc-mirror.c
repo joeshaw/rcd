@@ -108,7 +108,10 @@ mirror_get_all (xmlrpc_env   *env,
     info.array = xmlrpc_build_value (env, "()");
     info.failed = FALSE;
 
+#if 0
+    /* FIXME */
     rcd_mirror_foreach (add_mirror_cb, &info);
+#endif
 
     if (info.failed || env->fault_occurred)
         return NULL;

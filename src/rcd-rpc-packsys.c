@@ -34,21 +34,22 @@
 #include "rcd-fetch.h"
 #include "rcd-heartbeat.h"
 #include "rcd-package-locks.h"
-#include "rcd-pending.h"
 #include "rcd-prefs.h"
 #include "rcd-query-packages.h"
 #include "rcd-rpc.h"
 #include "rcd-rpc-util.h"
-#include "rcd-subscriptions.h"
+#include "rcd-services.h"
 #include "rcd-transaction.h"
+#include "rcd-world-remote.h"
 
 #define RCD_REFRESH_INVALID ((gpointer) 0xdeadbeef)
 
-static void
+static gboolean
 add_channel_cb (RCChannel *channel, gpointer user_data)
 {
     GSList **slist = user_data;
     *slist = g_slist_prepend (*slist, channel);
+    return TRUE;
 }
 
 static xmlrpc_value *
@@ -92,35 +93,6 @@ packsys_get_channels (xmlrpc_env   *env,
     return channel_array;
 }
 
-static xmlrpc_value *
-packsys_refresh_channel (xmlrpc_env   *env,
-                         xmlrpc_value *param_array,
-                         void         *user_data)
-{
-    RCWorld *world = user_data;
-    xmlrpc_value *value = NULL;
-    RCChannel *channel;
-    char *channel_id;
-    gint pending_id = -1;
-
-    xmlrpc_parse_value (env, param_array, "(s)", &channel_id);
-    XMLRPC_FAIL_IF_FAULT (env);
-
-    channel = rc_world_get_channel_by_id (world, channel_id);
-    if (channel) {
-        pending_id = rcd_fetch_channel (channel, NULL);
-        rcd_fetch_channel_icon (channel);
-    }
-
-    value = xmlrpc_build_value (env, "i", pending_id);
-
- cleanup:
-    if (env->fault_occurred)
-        return NULL;
-
-    return value;
-}
-
 typedef struct {
     GSList *pending_id_list;
     gboolean fail_if_any;
@@ -137,17 +109,17 @@ wait_for_pending_cb (gpointer user_data)
 
     for (iter = info->pending_id_list; iter; iter = next) {
         int pending_id = GPOINTER_TO_INT (iter->data);
-        RCDPending *pending = rcd_pending_lookup_by_id (pending_id);
+        RCPending *pending = rc_pending_lookup_by_id (pending_id);
 
         next = iter->next;
 
-        if (!rcd_pending_is_active (pending)) {
+        if (!rc_pending_is_active (pending)) {
             info->pending_id_list = g_slist_delete_link (info->pending_id_list,
                                                          iter);
         }
 
         if (info->fail_if_any) {
-            const char *err_msg = rcd_pending_get_error_msg (pending);
+            const char *err_msg = rc_pending_get_error_msg (pending);
 
             if (err_msg) {
                 xmlrpc_env_set_fault (info->env, RCD_RPC_FAULT_CANT_REFRESH,
@@ -167,53 +139,12 @@ wait_for_pending_cb (gpointer user_data)
 }
 
 static xmlrpc_value *
-packsys_refresh_channel_blocking (xmlrpc_env   *env,
-                                  xmlrpc_value *param_array,
-                                  void         *user_data)
-{
-    RCWorld *world = user_data;
-    char *channel_id;
-    RCChannel *channel;
-    int pending_id;
-    BlockingInfo info;
-
-    xmlrpc_parse_value (env, param_array, "(s)", &channel_id);
-    XMLRPC_FAIL_IF_FAULT (env);
-
-    channel = rc_world_get_channel_by_id (world, channel_id);
-    if (!channel) {
-        xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_INVALID_CHANNEL,
-                                        "Unknown channel '%s'", channel_id);
-        return NULL;
-    }
-
-    pending_id = rcd_fetch_channel (channel, NULL);
-    rcd_fetch_channel_icon (channel);
-
-    info.pending_id_list = g_slist_prepend (NULL,
-                                            GINT_TO_POINTER (pending_id));
-    info.fail_if_any = TRUE;
-    info.env = env;
-    info.inferior_loop = g_main_loop_new (NULL, FALSE);
-
-    g_idle_add (wait_for_pending_cb, &info);
-    g_main_loop_run (info.inferior_loop);
-    g_main_loop_unref (info.inferior_loop);
-    g_slist_free (info.pending_id_list);
-
-cleanup:
-    if (env->fault_occurred)
-        return NULL;
-
-    return xmlrpc_build_value (env, "i", 0);
-}
-
-static xmlrpc_value *
 packsys_refresh_all_channels_blocking (xmlrpc_env   *env,
                                        xmlrpc_value *param_array,
                                        void         *user_data)
 {
-    GSList *ret_list;
+    RCWorld *world = user_data;
+    RCPending *pending;
     char *err_msg = NULL;
     BlockingInfo info;
 
@@ -223,7 +154,8 @@ packsys_refresh_all_channels_blocking (xmlrpc_env   *env,
         return NULL;
     }
 
-    ret_list = rcd_fetch_refresh (&err_msg);
+    /* FIXME: err_msg ? */
+    pending = rc_world_refresh (world);
 
     if (err_msg) {
         xmlrpc_env_set_fault_formatted (
@@ -232,7 +164,8 @@ packsys_refresh_all_channels_blocking (xmlrpc_env   *env,
         goto cleanup;
     }
     
-    info.pending_id_list = ret_list;
+    info.pending_id_list =
+        g_slist_prepend (NULL, GINT_TO_POINTER (rc_pending_get_id (pending)));
     info.fail_if_any = FALSE;
     info.env = env;
     info.inferior_loop = g_main_loop_new (NULL, FALSE);
@@ -241,10 +174,9 @@ packsys_refresh_all_channels_blocking (xmlrpc_env   *env,
     g_main_loop_run (info.inferior_loop);
     g_main_loop_unref (info.inferior_loop);
 
-cleanup:
-    if (ret_list)
-        g_slist_free (ret_list);
+    g_slist_free (info.pending_id_list);
 
+cleanup:
     if (err_msg)
         g_free (err_msg);
 
@@ -259,8 +191,9 @@ packsys_refresh_all_channels (xmlrpc_env   *env,
                               xmlrpc_value *param_array,
                               void         *user_data)
 {
+    RCWorld *world = user_data;
     xmlrpc_value *value = NULL;
-    GSList *ret_list = NULL, *iter;
+    RCPending *pending;
     char *err_msg = NULL;
 
     if (rcd_transaction_is_locked ()) {
@@ -269,7 +202,8 @@ packsys_refresh_all_channels (xmlrpc_env   *env,
         return NULL;
     }
 
-    ret_list = rcd_fetch_refresh (&err_msg);
+    /* FIXME: err_msg ? */
+    pending = rc_world_refresh (world);
 
     if (err_msg) {
         xmlrpc_env_set_fault_formatted (
@@ -278,26 +212,10 @@ packsys_refresh_all_channels (xmlrpc_env   *env,
         goto cleanup;
     }
 
-    value = xmlrpc_build_value (env, "()");
+    value = xmlrpc_build_value (env, "(i)", rc_pending_get_id (pending));
     XMLRPC_FAIL_IF_FAULT (env);
-
-    for (iter = ret_list; iter != NULL; iter = iter->next) {
-        int id = GPOINTER_TO_INT (iter->data);
-        xmlrpc_value *idval;
-
-        idval = xmlrpc_build_value (env, "i", id);
-        XMLRPC_FAIL_IF_FAULT (env);
-
-        xmlrpc_array_append_item (env, value, idval);
-        XMLRPC_FAIL_IF_FAULT (env);
-
-        xmlrpc_DECREF (idval);
-    }
     
  cleanup:
-    if (ret_list)
-        g_slist_free (ret_list);
-
     if (err_msg)
         g_free (err_msg);
 
@@ -313,6 +231,7 @@ packsys_get_channel_icon (xmlrpc_env   *env,
                           void         *user_data)
 {
     RCWorld *world = user_data;
+    RCDCacheEntry *entry;
     char *channel_id;
     RCChannel *channel;
     char *local_file = NULL;
@@ -339,10 +258,11 @@ packsys_get_channel_icon (xmlrpc_env   *env,
         goto cleanup;
     }
 
-    local_file = rcd_cache_get_local_filename (
-        rcd_cache_get_icon_cache (channel_id),
-        rc_channel_get_icon_file (channel));
+    entry = rcd_cache_lookup (rcd_cache_get_normal_cache (),
+                              "icon", channel_id, FALSE);
 
+    if (entry)
+        local_file = rcd_cache_entry_get_local_filename (entry);
     if (!local_file) {
         xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_NO_ICON,
                                         "Can't get icon for channel '%s' (%d)",
@@ -392,21 +312,9 @@ packsys_subscribe (xmlrpc_env   *env,
 
     channel = rc_world_get_channel_by_id (world, channel_id);
     if (channel != NULL) {
-
-        if (! rc_channel_subscribed (channel)) {
-            rc_channel_set_subscription (channel, TRUE);
-            success = rcd_subscriptions_save ();
-
-            /* If we couldn't save our subscription file, undo the change.
-               This keeps us in sync with the xml file on disk, and it
-               keeps us from showing the channel as being subed even
-               though we (hopefully!) reported an error to the user. */
-            if (! success)
-                rc_channel_set_subscription (channel, FALSE);
-        } else {
-            /* channel is already subscribed */
-            success = TRUE;
-        }
+        if (! rc_channel_is_subscribed (channel))
+            rc_world_set_subscription (world, channel, TRUE);
+        success = TRUE;
     }
 
     value = xmlrpc_build_value (env, "i", success ? 1 : 0);
@@ -434,21 +342,9 @@ packsys_unsubscribe (xmlrpc_env   *env,
 
     channel = rc_world_get_channel_by_id (world, channel_id);
     if (channel != NULL) {
-
-        if (rc_channel_subscribed (channel)) {
-            rc_channel_set_subscription (channel, FALSE);
-            success = rcd_subscriptions_save ();
-
-            /* If we couldn't save our subscription file, undo the change.
-               This keeps us in sync with the xml file on disk, and it
-               keeps us from showing the channel as being unsubed even
-               though we (hopefully!) reported an error to the user. */
-            if (! success)
-                rc_channel_set_subscription (channel, TRUE);
-        } else {
-            /* channel is already unsubscribed */
-            success = TRUE;
-        }
+        if (rc_channel_is_subscribed (channel))
+            rc_world_set_subscription (world, channel, FALSE);
+        success = TRUE;
     }
 
     value = xmlrpc_build_value (env, "i", success ? 1 : 0);
@@ -493,7 +389,7 @@ build_updates_list (RCPackage *old,
         RCPackageUpdate *update = iter->data;
 
         if (rc_packman_version_compare (
-                rc_world_get_packman (rc_get_world ()),
+                rc_packman_get_global (),
                 RC_PACKAGE_SPEC (old),
                 RC_PACKAGE_SPEC (update)) < 0)
         {
@@ -577,7 +473,7 @@ count_updates (RCPackage *old,
 
     /* Filter out updates in unsubscribed channels. */
     if (nuevo->channel
-        && ! rc_channel_subscribed (nuevo->channel))
+        && ! rc_channel_is_subscribed (nuevo->channel))
         return;
 
     update = rc_package_get_latest_update (nuevo);
@@ -628,12 +524,13 @@ packsys_update_summary (xmlrpc_env   *env,
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
-static void
+static gboolean
 add_package_cb (RCPackage *package, gpointer user_data)
 {
     RCPackageSList **packages = (RCPackageSList **) user_data;
 
     *packages = g_slist_prepend(*packages, rc_package_ref (package));
+    return TRUE;
 } /* add_package_cb */
 
 static xmlrpc_value *
@@ -741,7 +638,6 @@ packsys_find_package_for_file (xmlrpc_env   *env,
                                xmlrpc_value *param_array,
                                void         *user_data)
 {
-    RCWorld *world = user_data;
     char *filename;
     RCPackage *rc_package;
     xmlrpc_value *xmlrpc_package = NULL;
@@ -749,7 +645,7 @@ packsys_find_package_for_file (xmlrpc_env   *env,
     xmlrpc_parse_value (env, param_array, "(s)", &filename);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    rc_package = rc_packman_find_file (rc_world_get_packman (world),
+    rc_package = rc_packman_find_file (rc_packman_get_global (),
                                        filename);
 
     if (!rc_package) {
@@ -815,14 +711,15 @@ typedef struct {
     gboolean subscribed_only;
 } LatestVersionClosure;
 
-static void
+static gboolean
 find_latest_version (RCPackage *package, gpointer user_data)
 {
     LatestVersionClosure *closure = user_data;
-    RCPackman *packman = rc_world_get_packman (closure->world);
+    RCPackman *packman = rc_packman_get_global ();
 
-    if (closure->subscribed_only && !rc_channel_subscribed (package->channel))
-        return;
+    if (closure->subscribed_only
+        && !rc_channel_is_subscribed (package->channel))
+        return TRUE;
 
     /*
      * First check to see if we're newer than the version already installed
@@ -834,7 +731,7 @@ find_latest_version (RCPackage *package, gpointer user_data)
                 packman,
                 RC_PACKAGE_SPEC (package),
                 RC_PACKAGE_SPEC (closure->installed_package)) <= 0)
-            return;
+            return TRUE;
     }
         
     if (!closure->package)
@@ -846,13 +743,15 @@ find_latest_version (RCPackage *package, gpointer user_data)
                 RC_PACKAGE_SPEC (closure->package)) > 0)
             closure->package = package;
     }
+
+    return TRUE;
 } /* find_latest_version */
 
-static void
+static gboolean
 find_latest_installed_version (RCPackage *package, gpointer user_data)
 {
     LatestVersionClosure *closure = user_data;
-    RCPackman *packman = rc_world_get_packman (closure->world);
+    RCPackman *packman = rc_packman_get_global ();
 
     if (!closure->installed_package)
         closure->installed_package = package;
@@ -863,6 +762,7 @@ find_latest_installed_version (RCPackage *package, gpointer user_data)
                 RC_PACKAGE_SPEC (closure->installed_package)) > 0)
             closure->installed_package = package;
     }
+    return TRUE;
 } /* find_latest_installed_version */
 
 static xmlrpc_value *
@@ -1995,7 +1895,7 @@ struct WhatProvidesInfo {
     xmlrpc_value *array;
 };
 
-static void
+static gboolean
 what_provides_cb (RCPackage *pkg,
                   RCPackageSpec *spec,
                   gpointer user_data)
@@ -2006,7 +1906,7 @@ what_provides_cb (RCPackage *pkg,
     xmlrpc_value *pkg_spec_pair;
 
     if (info->env->fault_occurred)
-        return;
+        return FALSE;
 
     pkg_value = rcd_rc_package_to_xmlrpc (pkg, info->env);
 
@@ -2023,6 +1923,7 @@ what_provides_cb (RCPackage *pkg,
     xmlrpc_DECREF (pkg_value);
     xmlrpc_DECREF (spec_value);
     xmlrpc_DECREF (pkg_spec_pair);
+    return TRUE;
 }
 
 static xmlrpc_value *
@@ -2069,7 +1970,7 @@ struct WhatRequiresOrConflictsInfo {
     xmlrpc_value *array;
 };
 
-static void
+static gboolean
 what_requires_or_conflicts_cb (RCPackage    *pkg,
                                RCPackageDep *dep,
                                gpointer      user_data)
@@ -2080,7 +1981,7 @@ what_requires_or_conflicts_cb (RCPackage    *pkg,
     xmlrpc_value *pkg_dep_pair;
 
     if (info->env->fault_occurred)
-        return;
+        return FALSE;
 
     pkg_value = rcd_rc_package_to_xmlrpc (pkg, info->env);
 
@@ -2097,6 +1998,7 @@ what_requires_or_conflicts_cb (RCPackage    *pkg,
     xmlrpc_DECREF (pkg_value);
     xmlrpc_DECREF (dep_value);
     xmlrpc_DECREF (pkg_dep_pair);
+    return TRUE;
 }
 
 static xmlrpc_value *
@@ -2178,7 +2080,7 @@ struct GetLocksInfo {
     xmlrpc_value *array;
 };
 
-static void
+static gboolean
 get_lock_cb (RCPackageMatch *match,
              gpointer        user_data)
 {
@@ -2189,6 +2091,7 @@ get_lock_cb (RCPackageMatch *match,
                                                   info->env);
     
     xmlrpc_array_append_item (info->env, info->array, match_value);
+    return TRUE;
 }
 
 static xmlrpc_value *
@@ -2225,6 +2128,7 @@ packsys_add_lock (xmlrpc_env   *env,
     XMLRPC_FAIL_IF_FAULT (env);
 
     match = rcd_xmlrpc_to_rc_package_match (match_value, env);
+
     if (match) {
         rc_world_add_lock (world, match);
         rcd_package_locks_save (world);
@@ -2240,7 +2144,7 @@ struct RemoveLockInfo {
     RCPackageMatch *matching_lock;
 };
 
-static void
+static gboolean
 remove_lock_cb (RCPackageMatch *match,
                 gpointer        user_data)
 {
@@ -2250,6 +2154,8 @@ remove_lock_cb (RCPackageMatch *match,
         && rc_package_match_equal (match, info->target_lock)) {
         info->matching_lock = match;
     }
+
+    return TRUE;
 }
 
 static xmlrpc_value *
@@ -2279,6 +2185,9 @@ packsys_remove_lock (xmlrpc_env   *env,
         info.matching_lock = NULL;
         rc_world_foreach_lock (world, remove_lock_cb, &info);
 
+        g_warning ("Can't remove locks yet!");
+        g_assert_not_reached (); /* FIXME! */
+
         if (info.matching_lock) {
             rc_world_remove_lock (world, info.matching_lock);
             rcd_package_locks_save (world);
@@ -2294,16 +2203,41 @@ packsys_remove_lock (xmlrpc_env   *env,
     return retval;
 }
 
-static xmlrpc_value *
-packsys_lock_sequence_number (xmlrpc_env   *env,
-                              xmlrpc_value *param_array,
-                              void         *user_data)
-{
-    return xmlrpc_build_value (env, "i",
-                               rcd_package_locks_get_sequence_number ());
-}
-
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+static void
+foreach_service_cb (RCWorldService *service, gpointer user_data)
+{
+    xmlNode *services_node = user_data;
+    xmlNode *service_node;
+
+    service_node = xmlNewNode (NULL, "service");
+    xmlAddChild (services_node, service_node);
+
+    if (service->name)
+        xmlNewTextChild (service_node, NULL, "name", service->name);
+
+    if (service->unique_id)
+        xmlNewTextChild (service_node, NULL, "unique_id", service->unique_id);
+
+    xmlNewTextChild (service_node, NULL, "url", service->url);
+
+    /* Distro info is only on RCDWorldRemote objects */
+    if (g_type_is_a (G_TYPE_FROM_INSTANCE (service), RCD_TYPE_WORLD_REMOTE)) {
+        RCDWorldRemote *remote = RCD_WORLD_REMOTE (service);
+        xmlNode *distro_node;
+
+        distro_node = xmlNewNode (NULL, "distro");
+        xmlAddChild (service_node, distro_node);
+        xmlNewTextChild (distro_node, NULL, "name",
+                         rc_distro_get_name (remote->distro));
+        xmlNewTextChild (distro_node, NULL, "version",
+                         rc_distro_get_version (remote->distro));
+        xmlNewTextChild (distro_node, NULL, "target",
+                         rc_distro_get_target (remote->distro));
+    }
+    
+}
 
 static xmlNode *
 extra_dump_info (void)
@@ -2312,20 +2246,11 @@ extra_dump_info (void)
     time_t now;
     char *tmp_str;
     struct utsname uname_buf;
-    xmlNode *distro_node;
+    xmlNode *services_node;
 
     info = xmlNewNode (NULL, "general_information");
 
     xmlNewTextChild (info, NULL, "rcd_version", VERSION);
-
-    distro_node = xmlNewNode (NULL, "distro");
-    xmlAddChild (info, distro_node);
-    xmlNewTextChild (distro_node, NULL, "name",
-                     rc_distro_get_name ());
-    xmlNewTextChild (distro_node, NULL, "version",
-                     rc_distro_get_version ());
-    xmlNewTextChild (distro_node, NULL, "target",
-                     rc_distro_get_target ());
 
     time (&now);
     xmlNewTextChild (info, NULL, "time", ctime (&now));
@@ -2345,9 +2270,11 @@ extra_dump_info (void)
 #endif
     }
 
-    xmlNewTextChild (info, NULL, "host", rcd_prefs_get_host ());
-    xmlNewTextChild (info, NULL, "premium",
-                     rcd_prefs_get_premium () ? "1" : "0");
+    services_node = xmlNewNode (NULL, "services");
+    xmlAddChild (info, services_node);
+
+    rc_world_service_foreach_mount (foreach_service_cb, services_node);
+
     xmlNewTextChild (info, NULL, "proxy", rcd_prefs_get_proxy_url ());
     xmlNewTextChild (info, NULL, "proxy_has_user",
                      (rcd_prefs_get_proxy_username () != NULL) ? "1" : "0");
@@ -2369,7 +2296,7 @@ packsys_dump(xmlrpc_env   *env,
     xmlrpc_value *value = NULL;
 
     xml = rc_world_dump (world, extra_dump_info ());
-    rc_compress_memory (xml, strlen (xml), &ba);
+    rc_gzip_memory (xml, strlen (xml), &ba);
     g_free (xml);
 
     value = xmlrpc_build_value (env, "6", ba->data, ba->len);
@@ -2384,21 +2311,35 @@ packsys_mount_directory(xmlrpc_env   *env,
                         void         *user_data)
 {
     RCWorld *world = (RCWorld *) user_data;
-    RCChannel *channel = NULL;
+    RCWorld *mounted_world;
     char *path, *name, *alias;
+    char *url;
     xmlrpc_value *retval;
 
     xmlrpc_parse_value (env, param_array, "(sss)",
                         &path, &name, &alias);
 
-    if (g_file_test (path, G_FILE_TEST_IS_DIR)) {
-        channel = rc_world_add_channel_from_directory (world,
-                                                       name, alias,
-                                                       path);
-    }
+    if (path[0] == '/') 
+        url = g_strconcat ("file://", path, NULL);
+    else
+        url = g_strdup (path);
 
-    retval = xmlrpc_build_value (env, "i", 
-                                 channel ? rc_channel_get_id (channel) : 0);
+
+    mounted_world = rc_world_service_mount (url);
+    rc_world_multi_add_subworld (RC_WORLD_MULTI (world), mounted_world);
+    g_object_unref (mounted_world);
+
+    rcd_services_save ();
+
+#if 0
+    retval = xmlrpc_build_value (env, "s", 
+                                 channel ? rc_channel_get_id (channel) : "");
+#endif
+
+    retval = xmlrpc_build_value (env, "s", url);
+
+    g_free (url);
+
     return retval;
 }
 
@@ -2408,6 +2349,7 @@ packsys_unmount_directory(xmlrpc_env   *env,
                           void         *user_data)
 {
     RCWorld *world = user_data;
+    RCWorld *mount_world;
     RCChannel *channel = NULL;
     char *cid;
     xmlrpc_value *retval;
@@ -2422,26 +2364,19 @@ packsys_unmount_directory(xmlrpc_env   *env,
     if (channel == NULL)
         goto cleanup;
 
-    /* OK, this is sort of a hack.  We only want to allow the user to
-       remove directory-mounted channels, so we only allow the unmount
-       to succeed if the selected channel:
-       (0) actually exists (duh)
-       (1) is transient
-       (2) has refresh magic
-       (3) has a description where the first character is '/'.
-       This is sort of a hack, but should be good enough for 99.9% of
-       all real-life cases. */
+#if 0
+    mount_world = rc_world_multi_get_subworld_by_type (RC_WORLD_MULTI (world),
+                                                       RC_TYPE_WORLD_MOUNT);
+    g_assert (mount_world != NULL);
 
-    if (channel
-        && rc_channel_get_transient (channel)
-        && rc_channel_has_refresh_magic (channel)) {
-        const char *desc = rc_channel_get_description (channel);
-        if (desc && *desc == '/') {
-            rc_world_remove_channel (world, channel);
-            xmlrpc_DECREF (retval);
-            retval = xmlrpc_build_value (env, "i", 1);
-        }
+    if (! rc_world_contains_channel (mount_world, channel))
+        goto cleanup;
+
+    if (rc_world_mount_remove_dir (RC_WORLD_MOUNT (mount_world), channel)) {
+        xmlrpc_DECREF (retval);
+        retval = xmlrpc_build_value (env, "i", 1);
     }
+#endif
     
  cleanup:
     return retval;
@@ -2455,10 +2390,11 @@ packsys_world_sequence_numbers (xmlrpc_env   *env,
     RCWorld *world = user_data;
     xmlrpc_value *value;
 
-    value = xmlrpc_build_value (env, "(iii)",
+    value = xmlrpc_build_value (env, "(iiii)",
                                 rc_world_get_package_sequence_number (world),
                                 rc_world_get_channel_sequence_number (world),
-                                rc_world_get_subscription_sequence_number (world));
+                                rc_world_get_subscription_sequence_number (world),
+                                rc_world_get_lock_sequence_number (world));
 
     return value;
 }
@@ -2471,7 +2407,7 @@ struct DanglingReqInfo {
     xmlrpc_env   *env;
 };
 
-static void
+static gboolean
 dangling_req_cb (RCPackage *package,
                  gpointer   user_data)
 {
@@ -2515,6 +2451,8 @@ dangling_req_cb (RCPackage *package,
             xmlrpc_DECREF (dangling_req_list);
         }
     }
+
+    return TRUE;
 }
 
 static xmlrpc_value *
@@ -2537,6 +2475,12 @@ packsys_find_dangling_requires (xmlrpc_env   *env,
 }
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+static void
+heartbeat_refresh_world_cb (gpointer user_data)
+{
+    rc_world_refresh (rc_get_world ());
+}
 
 void
 rcd_rpc_packsys_register_methods(RCWorld *world)
@@ -2656,11 +2600,6 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
                             "lock",
                             world);
 
-    rcd_rpc_register_method("rcd.packsys.lock_sequence_number",
-                            packsys_lock_sequence_number,
-                            NULL,
-                            NULL);
-
     rcd_rpc_register_method("rcd.packsys.dump",
                             packsys_dump,
                             "view",
@@ -2668,16 +2607,6 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
 
     rcd_rpc_register_method("rcd.packsys.get_channels",
                             packsys_get_channels,
-                            "view",
-                            world);
-
-    rcd_rpc_register_method("rcd.packsys.refresh_channel",
-                            packsys_refresh_channel,
-                            "view",
-                            world);
-
-    rcd_rpc_register_method("rcd.packsys.refresh_channel_blocking",
-                            packsys_refresh_channel_blocking,
                             "view",
                             world);
 
@@ -2726,7 +2655,6 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
                             "superuser",
                             world);
 
-    rcd_heartbeat_register_func ((RCDHeartbeatFunc) rcd_fetch_refresh,
-                                 NULL);
+    rcd_heartbeat_register_func (heartbeat_refresh_world_cb, NULL);
 } /* rcd_rpc_packsys_register_methods */
 

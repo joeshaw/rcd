@@ -34,61 +34,6 @@
 #include "rcd-rpc-util.h"
 
 static xmlrpc_value *
-license_lookup (xmlrpc_env   *env,
-                xmlrpc_value *param_array,
-                void         *user_data)
-{
-    xmlrpc_value *license_names;
-    xmlrpc_value *license_texts = NULL;
-    int size;
-    int i;
-
-    xmlrpc_parse_value (env, param_array, "(A)", &license_names);
-    XMLRPC_FAIL_IF_FAULT (env);
-
-    size = xmlrpc_array_size (env, license_names);
-    XMLRPC_FAIL_IF_FAULT (env);
-
-    license_texts = xmlrpc_build_value (env, "()");
-    XMLRPC_FAIL_IF_FAULT (env);
-
-    for (i = 0; i < size; i++) {
-        xmlrpc_value *xmlrpc_name;
-        xmlrpc_value *xmlrpc_text;
-        const char *name;
-        const char *text;
-
-        xmlrpc_name = xmlrpc_array_get_item (env, license_names, i);
-        XMLRPC_FAIL_IF_FAULT (env);
-
-        xmlrpc_parse_value (env, xmlrpc_name, "s", &name);
-        XMLRPC_FAIL_IF_FAULT (env);
-
-        text = rcd_license_lookup (name);
-
-        if (!text) {
-            xmlrpc_env_set_fault_formatted (env,
-                                            RCD_RPC_FAULT_LICENSE_NOT_FOUND,
-                                            "License '%s' not found", name);
-            goto cleanup;
-        }
-
-        xmlrpc_text = xmlrpc_build_value (env, "s", text);
-        XMLRPC_FAIL_IF_FAULT (env);
-
-        xmlrpc_array_append_item (env, license_texts, xmlrpc_text);
-        XMLRPC_FAIL_IF_FAULT (env);
-        xmlrpc_DECREF (xmlrpc_text);
-    }
-
-cleanup:
-    if (env->fault_occurred)
-        return NULL;
-
-    return license_texts;
-}
-
-static xmlrpc_value *
 license_lookup_from_packages (xmlrpc_env   *env,
                               xmlrpc_value *param_array,
                               void         *user_data)
@@ -140,9 +85,6 @@ cleanup:
 void
 rcd_rpc_license_register_methods(void)
 {
-    rcd_rpc_register_method ("rcd.license.lookup",
-                             license_lookup,
-                             NULL, NULL);
     rcd_rpc_register_method ("rcd.license.lookup_from_packages",
                              license_lookup_from_packages,
                              NULL, NULL);

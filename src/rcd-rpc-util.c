@@ -86,7 +86,7 @@ rcd_rc_package_dep_array_to_xmlrpc (RCPackageDepArray *rc_deps,
 
     dep_array = xmlrpc_build_value (env, "()");
     
-    for (i = 0; i < rc_deps->len; i++) {
+    for (i = 0; rc_deps != NULL && i < rc_deps->len; i++) {
         xmlrpc_value *dep_value;
 
         dep_value = xmlrpc_struct_new (env);
@@ -115,8 +115,7 @@ assemble_spec (xmlrpc_value  *value,
 
     if (xmlrpc_struct_has_key (env, value, "version_str")) {
 
-        RCWorld *world = rc_get_world ();
-        RCPackman *packman = rc_world_get_packman (world);
+        RCPackman *packman = rc_packman_get_global ();
 
         RCD_XMLRPC_STRUCT_GET_STRING (env, value, "version_str", version_str);
 
@@ -280,10 +279,9 @@ rcd_rc_package_match_to_xmlrpc (RCPackageMatch *match,
                                       rc_package_match_get_glob (match));
     }
 
-    if (rc_package_match_get_channel (match) != NULL) {
-        const char *cid = \
-            rc_channel_get_id (rc_package_match_get_channel (match));
-        RCD_XMLRPC_STRUCT_SET_STRING (env, value, "channel", cid);
+    if (rc_package_match_get_channel_id (match) != NULL) {
+        RCD_XMLRPC_STRUCT_SET_STRING (env, value, "channel",
+                                      rc_package_match_get_channel_id (match));
     }
 
     if (rc_package_match_get_importance (match, NULL) != RC_IMPORTANCE_INVALID) {
@@ -402,14 +400,14 @@ struct InstalledFlags {
     int name_installed;
 };
 
-static void
+static gboolean
 installed_check_cb (RCPackage *sys_pkg,
                     gpointer user_data)
 {
     struct InstalledFlags *flags = user_data;
     int cmp;
     
-    cmp = rc_packman_version_compare (rc_world_get_packman (rc_get_world ()),
+    cmp = rc_packman_version_compare (rc_packman_get_global (),
                                       RC_PACKAGE_SPEC (flags->pkg),
                                       RC_PACKAGE_SPEC (sys_pkg));
 
@@ -424,6 +422,8 @@ installed_check_cb (RCPackage *sys_pkg,
         else
             flags->name_installed = MAX (flags->name_installed, cmp);
     }
+
+    return TRUE;
 }
 
 xmlrpc_value *
@@ -516,7 +516,7 @@ rcd_rc_package_to_xmlrpc (RCPackage *package, xmlrpc_env *env)
                                           RC_CHANNEL_SYSTEM,
                                           installed_check_cb,
                                           &flags);
-
+        
         installed = flags.installed;
         name_installed = flags.name_installed;
     }
@@ -598,8 +598,7 @@ rcd_rc_package_from_file (xmlrpc_value *value,
                           xmlrpc_env   *env)
 {
     char *file_name;
-    RCWorld *world = rc_get_world ();
-    RCPackman *packman = rc_world_get_packman (world);
+    RCPackman *packman = rc_packman_get_global ();
     RCPackage *package = NULL;
 
     xmlrpc_parse_value (env, value, "s", &file_name);
@@ -625,8 +624,7 @@ rcd_rc_package_from_streamed_package (xmlrpc_value *value,
     char *package_file;
     size_t package_size;
     int fd;
-    RCWorld *world = rc_get_world ();
-    RCPackman *packman = rc_world_get_packman (world);
+    RCPackman *packman = rc_packman_get_global ();
     RCPackage *package = NULL;
 
     xmlrpc_parse_value (env, value, "6", &package_file, &package_size);
@@ -658,7 +656,7 @@ rcd_rc_package_from_xmlrpc_package (xmlrpc_value *value,
     int has_key;
     char *channel_id;
     RCWorld *world = rc_get_world ();
-    RCPackman *packman = rc_world_get_packman (world);
+    RCPackman *packman = rc_packman_get_global ();
     RCPackage *package = NULL;
 
     has_key = xmlrpc_struct_has_key (env, value, "package_data");
@@ -826,10 +824,7 @@ rcd_rc_channel_to_xmlrpc (RCChannel  *channel,
     RCD_XMLRPC_STRUCT_SET_STRING (env, value, "alias", alias ? alias : "");
 
     RCD_XMLRPC_STRUCT_SET_INT (env, value, "subscribed",
-                               rc_channel_subscribed (channel) ? 1 : 0);
-
-    RCD_XMLRPC_STRUCT_SET_INT (env, value, "transient",
-                               rc_channel_get_transient (channel) ? 1 : 0);
+                               rc_channel_is_subscribed (channel) ? 1 : 0);
 
     RCD_XMLRPC_STRUCT_SET_STRING (env, value, "description",
                                   rc_channel_get_description (channel));
@@ -1011,7 +1006,7 @@ rcd_xmlrpc_package_file_list (RCPackage *package, xmlrpc_env *env)
     xmlrpc_value *file_array;
 
     world = rc_get_world ();
-    packman = rc_world_get_packman (world);
+    packman = rc_packman_get_global ();
 
     files = rc_packman_file_list (packman, package);
     

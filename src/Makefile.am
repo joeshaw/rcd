@@ -48,8 +48,6 @@ rcd_SOURCES = 			\
 	rcd-options.h		\
 	rcd-package-locks.c	\
 	rcd-package-locks.h	\
-	rcd-pending.c		\
-	rcd-pending.h		\
 	rcd-prefs.c		\
 	rcd-prefs.h		\
 	rcd-privileges.c	\
@@ -80,10 +78,10 @@ rcd_SOURCES = 			\
 	rcd-rpc-users.h		\
 	rcd-rpc-util.c		\
 	rcd-rpc-util.h		\
+	rcd-services.c		\
+	rcd-services.h		\
 	rcd-shutdown.c		\
 	rcd-shutdown.h		\
-	rcd-subscriptions.c	\
-	rcd-subscriptions.h	\
 	rcd-transaction.c	\
 	rcd-transaction.h	\
 	rcd-transfer.c		\
@@ -96,6 +94,8 @@ rcd_SOURCES = 			\
 	rcd-transfer-pool.h	\
 	rcd-unix-server.c	\
 	rcd-unix-server.h	\
+	rcd-world-remote.c	\
+	rcd-world-remote.h	\
 	rcd-xmlrpc.c		\
 	rcd-xmlrpc.h		\
 	rcd.c
@@ -114,7 +114,6 @@ rcdinclude_HEADERS = 		\
 	rcd-heartbeat.h		\
 	rcd-identity.h		\
 	rcd-module.h 		\
-	rcd-pending.h		\
 	rcd-prefs.h		\
 	rcd-privileges.h	\
 	rcd-query.h		\
@@ -125,13 +124,12 @@ rcdinclude_HEADERS = 		\
 	rcd-shutdown.h		\
 	rcd-transfer.h		\
 	rcd-transfer-file.h	\
-	rcd-transfer-http.h \
+	rcd-transfer-http.h	\
 	rcd-xmlrpc.h
 
 rcd_moduledir = $(libdir)/rcd/modules
 rcd_module_LTLIBRARIES = 	\
-	librcd-sample.la	\
-	librcd-autopull.la
+	librcd-sample.la
 
 rcd_buddydir = $(datadir)/rcd
 rcd_buddy_DATA = 		\
@@ -147,11 +145,7 @@ librcd_sample_la_SOURCES =	\
 	rcd-rpc-sample.c	\
 	rcd-rpc-sample.h
 
-librcd_autopull_la_SOURCES =	\
-	rcd-autopull.c
-
 librcd_sample_la_LDFLAGS = -module -avoid-version
-librcd_autopull_la_LDFLAGS = -module -avoid-version
 
 ###
 ### Deal with auto-generating the signal marshallers

@@ -24,21 +24,17 @@
  */
 
 #include <config.h>
-#include "rcd-news.h"
+#include "rcd-license.h"
 
 #include <stdlib.h>
 
-#include <libredcarpet.h>
 #include <xml-util.h>
 
-static GHashTable *rcd_licenses = NULL;
-
 gboolean
-rcd_license_parse (const char *data, gsize size)
+rcd_license_parse (RCDWorldRemote *remote, const char *data, gsize size)
 {
     xmlDoc *doc;
     xmlNode *node;
-    GHashTable *licenses;
 
     g_return_val_if_fail (data != NULL, FALSE);
 
@@ -56,8 +52,7 @@ rcd_license_parse (const char *data, gsize size)
         return FALSE;
     }
 
-    licenses = g_hash_table_new_full (rc_str_case_hash, rc_str_case_equal,
-                                      g_free, g_free);
+    rcd_world_remote_clear_licenses (remote);
 
     /* Descend to the actual licenses */
     for (node = node->xmlChildrenNode; node; node = node->next) {
@@ -98,32 +93,18 @@ rcd_license_parse (const char *data, gsize size)
         }
         else if (!text && !name) {
             rc_debug (RC_DEBUG_LEVEL_WARNING,
-                      "Ignoring license with not name or text");
+                      "Ignoring license with ot name or text");
         }
         else {
-            g_hash_table_replace (licenses, name, text);
+            rcd_world_remote_add_license (remote, name, text);
             rc_debug (RC_DEBUG_LEVEL_INFO, "Added license '%s'", name);
+            g_free (name);
         }
     }
 
     xmlFreeDoc (doc);
 
-    if (rcd_licenses)
-        g_hash_table_destroy (rcd_licenses);
-    rcd_licenses = licenses;
-
     return TRUE;
-}
-
-const char *
-rcd_license_lookup (const char *name)
-{
-    g_return_val_if_fail (name != NULL, NULL);
-
-    if (!rcd_licenses)
-        return NULL;
-
-    return g_hash_table_lookup (rcd_licenses, name);
 }
 
 static void
@@ -149,15 +130,21 @@ rcd_license_lookup_from_package_slist (RCPackageSList *packages)
     for (iter = packages; iter; iter = iter->next) {
         RCPackage *package = iter->data;
         RCPackageUpdate *update = rc_package_get_latest_update (package);
+        RCWorld *world = NULL;
         const char *license_text;
 
-        if (!update || !update->license)
+        if (package->channel)
+            world = rc_channel_get_world (package->channel);
+
+        if (!update || !update->license || !world)
             continue;
 
         if (g_hash_table_lookup (licenses, update->license))
             continue;
 
-        license_text = rcd_license_lookup (update->license);
+        license_text =
+            rcd_world_remote_lookup_license (RCD_WORLD_REMOTE (world),
+                                             update->license);
 
         if (license_text)
             g_hash_table_insert (licenses, update->license,

@@ -37,7 +37,6 @@
 
 #include "rcd-cache.h"
 #include "rcd-marshal.h"
-#include "rcd-pending.h"
 #include "rcd-prefs.h"
 #include "rcd-transfer-file.h"
 #include "rcd-transfer-http.h"
@@ -71,8 +70,45 @@ rcd_transfer_finalize (GObject *obj)
     if (t->pending)
         g_object_unref (t->pending);
 
+    if (t->data)
+        g_byte_array_free (t->data, TRUE);
+
     if (parent_class->finalize)
         parent_class->finalize (obj);
+}
+
+static void
+rcd_transfer_file_data (RCDTransfer *t,
+                        const char  *buf,
+                        gsize        size)
+{
+    if (t->pending && t->file_size) {
+        rc_pending_update_by_size (t->pending,
+                                   t->bytes_transferred,
+                                   t->file_size);
+    }
+
+    if (t->flags & RCD_TRANSFER_FLAGS_BUFFER_DATA) {
+        g_assert (t->data);
+
+        t->data = g_byte_array_append (t->data, buf, size);
+    }
+}
+
+static void
+rcd_transfer_file_done (RCDTransfer *t)
+{
+    if (t->pending) {
+        if (rcd_transfer_get_error (t) == RCD_TRANSFER_ERROR_CANCELLED)
+            rc_pending_abort (t->pending, 0);
+        else if (rcd_transfer_get_error (t))
+            rc_pending_fail (t->pending, 0, rcd_transfer_get_error_string (t));
+        else
+            rc_pending_finished (t->pending, 0);
+    }        
+
+    /* Removes the ref added in rcd_transfer_begin() */
+    g_object_unref (t);
 }
 
 static void
@@ -83,6 +119,9 @@ rcd_transfer_class_init (RCDTransferClass *klass)
     parent_class = g_type_class_peek_parent (klass);
 
     obj_class->finalize = rcd_transfer_finalize;
+
+    klass->file_data = rcd_transfer_file_data;
+    klass->file_done = rcd_transfer_file_done;
 
     signals[FILE_DATA] =
         g_signal_new ("file_data",
@@ -140,7 +179,7 @@ rcd_transfer_get_type (void)
 RCDTransfer *
 rcd_transfer_new (const char       *url,
                   RCDTransferFlags  flags,
-                  RCDCache         *cache)
+                  RCDCacheEntry    *cache_entry)
 {
     RCDTransfer *t;
 
@@ -149,7 +188,7 @@ rcd_transfer_new (const char       *url,
     t = g_object_new (RCD_TYPE_TRANSFER, NULL);
 
     t->flags = flags;
-    t->cache = cache;
+    t->cache_entry = cache_entry;
 
     t->protocol = rcd_transfer_get_protocol_from_url (url);
 
@@ -170,7 +209,7 @@ rcd_transfer_set_flags(RCDTransfer *t, RCDTransferFlags flags)
     t->flags = flags;
 } /* rcd_transfer_set_flags */
 
-RCDPending *
+RCPending *
 rcd_transfer_get_pending (RCDTransfer *t)
 {
     g_return_val_if_fail (RCD_IS_TRANSFER (t), NULL);
@@ -308,33 +347,6 @@ rcd_transfer_get_protocol_from_url (const char *url)
     return protocol;
 } /* rcd_transfer_get_protocol_from_url */
 
-static void
-pending_file_data_cb (RCDTransfer *t,
-                      char        *buf,
-                      gsize        size,
-                      gpointer     user_data)
-{
-    RCDPending *pending = user_data;
-
-    if (t->file_size) {
-        rcd_pending_update_by_size (pending, t->bytes_transferred,
-                                    t->file_size);
-    }
-} /* pending_file_data_cb */
-
-static void
-pending_file_done_cb (RCDTransfer *t, gpointer user_data)
-{
-    RCDPending *pending = user_data;
-
-    if (rcd_transfer_get_error (t) == RCD_TRANSFER_ERROR_CANCELLED)
-        rcd_pending_abort (pending, 0);
-    else if (rcd_transfer_get_error (t))
-        rcd_pending_fail (pending, 0, rcd_transfer_get_error_string (t));
-    else
-        rcd_pending_finished (pending, 0);
-} /* pending_file_done_cb */
-
 int
 rcd_transfer_begin (RCDTransfer *t)
 {
@@ -361,79 +373,70 @@ rcd_transfer_begin (RCDTransfer *t)
         char *desc;
 
         desc = g_strdup_printf ("Downloading %s", t->url);
-        t->pending = rcd_pending_new (desc);
+        t->pending = rc_pending_new (desc);
         g_free (desc);
 
-        g_signal_connect (t,
-                          "file_data",
-                          (GCallback) pending_file_data_cb,
-                          t->pending);
-
-        g_signal_connect (t,
-                          "file_done",
-                          (GCallback) pending_file_done_cb,
-                          t->pending);
-
-        rcd_pending_begin (t->pending);
+        rc_pending_begin (t->pending);
     }
 
-    return t->pending ? rcd_pending_get_id (t->pending) : 0;
+    /* Buffer our data (if the flag is set) */
+    if (t->data) {
+        g_byte_array_free (t->data, TRUE);
+        t->data = NULL;
+    }
+
+    if (t->flags & RCD_TRANSFER_FLAGS_BUFFER_DATA) {
+        t->data = g_byte_array_new ();
+    }
+
+    /*
+     * Add a ref so that people can safely unref it after beginning if
+     * they don't care about it afterward.
+     */
+    g_object_ref (t);
+
+    return t->pending ? rc_pending_get_id (t->pending) : 0;
 } /* rcd_transfer_begin */
-
-typedef struct {
-    GMainLoop  *main_loop;
-    GByteArray *data;
-} BlockingTransferClosure;
-
-static void
-blocking_file_data_cb (RCDTransfer *t,
-                       const char  *buf,
-                       gsize        size,
-                       gpointer     user_data)
-{
-    BlockingTransferClosure *closure = user_data;
-
-    closure->data = g_byte_array_append (closure->data, buf, size);
-} /* blocking_file_data_cb */
 
 static void
 blocking_file_done_cb (RCDTransfer *t, gpointer user_data)
 {
-    BlockingTransferClosure *closure = user_data;
+    GMainLoop *main_loop = user_data;
 
-    g_main_loop_quit (closure->main_loop);
+    g_main_loop_quit (main_loop);
 }
 
-GByteArray *
+const GByteArray *
 rcd_transfer_begin_blocking (RCDTransfer *t)
 {
-    BlockingTransferClosure closure;
+    GMainLoop *main_loop;
+    RCDTransferFlags old_flags;
     gint id;
 
     g_return_val_if_fail (RCD_IS_TRANSFER (t), NULL);
 
-    closure.data = g_byte_array_new ();
-    closure.main_loop = g_main_loop_new (NULL, TRUE);
+    old_flags = t->flags;
+    t->flags |= RCD_TRANSFER_FLAGS_BUFFER_DATA;
 
-    g_signal_connect (t, "file_data",
-                      G_CALLBACK (blocking_file_data_cb), &closure);
+    main_loop = g_main_loop_new (NULL, TRUE);
+
     g_signal_connect (t, "file_done",
-                      G_CALLBACK (blocking_file_done_cb), &closure);
+                      G_CALLBACK (blocking_file_done_cb), main_loop);
 
     id = rcd_transfer_begin (t);
 
     if (id != -1) {
         /* Wait until the transfer has finished */
-        g_main_loop_run (closure.main_loop);
+        g_main_loop_run (main_loop);
     }
 
-    g_main_loop_unref (closure.main_loop);
-
     g_signal_handlers_disconnect_by_func (
-        t, G_CALLBACK (blocking_file_data_cb), &closure);
-    g_signal_handlers_disconnect_by_func (
-        t, G_CALLBACK (blocking_file_done_cb), &closure);
+        t, G_CALLBACK (blocking_file_done_cb), main_loop);
 
-    return closure.data;
+    g_main_loop_unref (main_loop);
+
+    t->flags = old_flags;
+
+    return t->data;
 }
 

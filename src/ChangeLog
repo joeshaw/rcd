@@ -1,3 +1,10 @@
+2003-08-16  Joe Shaw  <joe@ximian.com>
+
+	* Merge the rcd-multiserver-branch into the trunk.  Changes
+	include support for multiple servers, better caching, a ton of
+	fixes to the transfer classes, especially transfer pooling, which
+	didn't work properly before.
+
 2003-08-06  Tambet Ingo  <tambet@ximian.com>
 
 	* rcd-rpc.c (rcd_rpc_get_xmlrpc_registry): Add.

@@ -364,7 +364,7 @@ http_abort (RCDTransfer *t)
 } /* http_abort */
 
 static SoupUri *
-get_premium_uri (const char *url)
+get_uri_with_auth_info (const char *url)
 {
     SoupUri *uri;
 
@@ -374,11 +374,12 @@ get_premium_uri (const char *url)
     if (!uri)
         return NULL;
 
+    uri->authmech = g_strdup ("Digest");
     uri->user = g_strdup (rcd_prefs_get_mid ());
     uri->passwd = g_strdup (rcd_prefs_get_secret ());
 
     return uri;
-} /* get_premium_uri */
+}
 
 static void
 add_header_cb (gpointer key, gpointer value, gpointer user_data)
@@ -409,17 +410,15 @@ http_open (RCDTransfer *t)
 
     protocol = (RCDTransferProtocolHTTP *) t->protocol;
 
-    if (rcd_prefs_get_premium ())
-        uri = get_premium_uri (t->url);
-    else
-        uri = soup_uri_new (t->url);
+    uri = get_uri_with_auth_info (t->url);
 
     context = soup_context_from_uri (uri);
+
+    soup_uri_free (uri);
 
     /* No context?  Probably a bad URL. */
     if (!context) {
         rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_INVALID_URI, t->url);
-        soup_uri_free (uri);
         return -1;
     }
     
@@ -466,10 +465,10 @@ http_open (RCDTransfer *t)
     /* We want to get the chunks out seperately */
     soup_message_set_flags (message, SOUP_MESSAGE_OVERWRITE_CHUNKS);
 
-    if (t->cache && (t->flags & RCD_TRANSFER_FLAGS_FORCE_CACHE ||
+    if (t->cache_entry && (t->flags & RCD_TRANSFER_FLAGS_FORCE_CACHE ||
         (rcd_prefs_get_cache_enabled () &&
          !(t->flags & RCD_TRANSFER_FLAGS_DONT_CACHE)))) {
-        protocol->entry = rcd_cache_lookup (t->cache, t->url);
+        protocol->entry = t->cache_entry;
 
         if (protocol->entry) {
             const char *modtime;
@@ -499,8 +498,10 @@ http_open (RCDTransfer *t)
                     "If-None-Match", entity_tag);
             }
         }
+#if 0
         else
             protocol->entry = rcd_cache_entry_new (t->cache, t->url);
+#endif
 
         soup_message_add_header_handler (
             message, "ETag", SOUP_HANDLER_PRE_BODY,
@@ -556,8 +557,6 @@ http_open (RCDTransfer *t)
     http_debug (message);
 
     soup_message_queue (message, http_done, t);
-
-    soup_uri_free (uri);
 
     return 0;
 } /* http_open */

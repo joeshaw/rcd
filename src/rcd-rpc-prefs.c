@@ -372,22 +372,7 @@ rcd_rpc_prefs_register_pref (const char     *pref_name,
 void
 rcd_rpc_prefs_register_methods (void)
 {
-    RCWorld *world;
     RCPackman *packman;
-
-    rcd_rpc_prefs_register_pref (
-        "host", RCD_PREF_STRING,
-        "Server URL",
-        "Server",
-        (RCDPrefGetFunc) rcd_prefs_get_host, "view",
-        (RCDPrefSetFunc) rcd_prefs_set_host, "superuser");
-
-    rcd_rpc_prefs_register_pref (
-        "enable-premium", RCD_PREF_BOOLEAN,
-        "Enable Premium Services (Red Carpet Express, CorporateConnect, or Enterprise)",
-        "Server",
-        (RCDPrefGetFunc) rcd_prefs_get_premium, "view",
-        (RCDPrefSetFunc) rcd_prefs_set_premium, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "proxy-url", RCD_PREF_STRING,
@@ -515,8 +500,7 @@ rcd_rpc_prefs_register_methods (void)
         (RCDPrefGetFunc) rcd_prefs_get_bind_ipaddress, "view",
         (RCDPrefSetFunc) rcd_prefs_set_bind_ipaddress, "superuser");
 
-    world = rc_get_world ();
-    packman = rc_world_get_packman (world);
+    packman = rc_packman_get_global ();
     if (rc_packman_get_capabilities (packman) & RC_PACKMAN_CAP_ROLLBACK) {
         rcd_rpc_prefs_register_pref (
             "rollback", RCD_PREF_BOOLEAN,

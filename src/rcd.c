@@ -3,7 +3,7 @@
 /*
  * rcd.c
  *
- * Copyright (C) 2002 Ximian, Inc.
+ * Copyright (C) 2002-2003 Ximian, Inc.
  *
  */
 
@@ -55,10 +55,11 @@
 #include "rcd-rpc-news.h"
 #include "rcd-rpc-prefs.h"
 #include "rcd-rpc-users.h"
+#include "rcd-services.h"
 #include "rcd-shutdown.h"
-#include "rcd-subscriptions.h"
 #include "rcd-transaction.h"
 #include "rcd-transfer.h"
+#include "rcd-world-remote.h"
 
 #define SYNTHETIC_PACKAGE_DB_PATH "/var/lib/rcd/synthetic-packages.xml"
 
@@ -242,17 +243,14 @@ shutdown_world (gpointer user_data)
 {
     RCWorld *world = user_data;
     
-    rc_world_free (world);
+    g_object_unref (world);
 }
 
 static void
-initialize_rc_world (void)
+initialize_rc_packman (void)
 {
     RCPackman *packman;
-    RCWorld *world;
-    const char *dump_file;
 
-    /* Create a packman, hand it off to the world */
     packman = rc_distman_new ();
     if (! packman) {
         rc_debug (RC_DEBUG_LEVEL_ERROR, "Couldn't get a packman");
@@ -266,45 +264,53 @@ initialize_rc_world (void)
         exit (-1);
     }
 
-    world = rc_world_new (packman);
+    rc_packman_set_global (packman);
     g_object_unref (packman);
-    rc_set_world (world);
+}
 
-    rc_world_set_synthetic_package_db (world, SYNTHETIC_PACKAGE_DB_PATH);
-    
-    rcd_shutdown_add_handler (shutdown_world, world);
+static void
+initialize_rc_services (void)
+{
+    rc_world_system_register_service ();
+    rc_world_synthetic_register_service ();
+    rc_world_local_dir_register_service ();
+    rcd_world_remote_register_service ();
+}
 
+static void
+initialize_rc_world (void)
+{
+
+    RCWorld *world;
+    const char *dump_file;
+
+    /* If we are undumping, create and register an undump world. */
     dump_file = rcd_options_get_dump_file ();
     if (dump_file != NULL) {
-        char *dump_file_contents;
-
         rc_debug (RC_DEBUG_LEVEL_MESSAGE,
                   "Loading dump file '%s'",
                   dump_file);
+
+        world = rc_world_undump_new (dump_file);
         
-        if (! g_file_get_contents (dump_file,
-                                   &dump_file_contents,
-                                   NULL, NULL)) {
+        /* FIXME: terminate w/ an error if we can't load dump_file */
+        if (world == NULL) {
             rc_debug (RC_DEBUG_LEVEL_ERROR,
                       "Unable to load dump file '%s'",
                       dump_file);
-
             exit (-1);
         }
 
-        rc_world_undump (world, dump_file_contents);
-
-        g_free (dump_file_contents);
-
-
     } else {
+        /* Construct a multi-world */
+        world = rc_world_multi_new ();
 
-        rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Loading system packages");
-        rc_world_get_system_packages (world);
-        rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Done loading system packages");
-        
-    }
-  
+        rcd_services_load (RC_WORLD_MULTI (world));
+    } 
+
+    rcd_shutdown_add_handler (shutdown_world, world);
+    rc_set_world (world);
+
 } /* initialize_rc_world */
 
 static void
@@ -349,6 +355,7 @@ rcd_create_uuid (const char *file)
     chmod (file, 0600);
 } /* rcd_create_uuid */
 
+#if 0
 static gboolean
 is_supported_distro (void)
 {
@@ -431,16 +438,18 @@ is_supported_distro (void)
 
     return supported;
 } /* is_supported_distro */
+#endif
 
 static void
 initialize_data (void)
 {
-    gboolean supported_distro = FALSE;
-
     /* If we have loaded a dump file, we don't want to initialize
        any of this stuff. */
     if (rcd_options_get_dump_file () != NULL)
         return;
+
+    /* This forces the subscriptions to be loaded from disk. */
+    rc_subscription_get_status (NULL);
 
     if (!g_file_test (SYSCONFDIR "/mcookie", G_FILE_TEST_EXISTS))
         rcd_create_uuid (SYSCONFDIR "/mcookie");
@@ -458,39 +467,9 @@ initialize_data (void)
         rcd_prefs_get_org_id ())
         rcd_fetch_register (NULL, NULL, NULL, NULL);
 
-    supported_distro = is_supported_distro ();
-
-    if (!rcd_options_get_no_network_flag () && supported_distro) {
-        if (!rcd_fetch_channel_list_local (NULL))
-            rcd_fetch_channel_list (NULL, NULL);
-    }
-    
-    rcd_subscriptions_load ();
-    
-    if (!rcd_options_get_no_network_flag () && supported_distro) {
-        /* This will fall back and download from the net if necessary */
-        rcd_fetch_all_channels_local (NULL);
-
-        rcd_fetch_all_channel_icons (FALSE);
-    }
-
     /* We don't want to read in the locks until after we have fetched the
        list of channels. */
     rcd_package_locks_load (rc_get_world ());
-
-    /* Always try to download the licenses; it will fall back on
-       rcd_fetch_licenses_local() if it fails. */
-    if (!rcd_options_get_no_network_flag ())
-        rcd_fetch_licenses ();
-    else
-        rcd_fetch_licenses_local ();
-
-    if (!rcd_options_get_no_network_flag () && !rcd_fetch_news_local ())
-        rcd_fetch_news ();
-
-    if (!rcd_options_get_no_network_flag () && !rcd_fetch_mirrors_local ())
-        rcd_fetch_mirrors ();
-
 } /* initialize_data */
 
 static void
@@ -528,7 +507,7 @@ rehash_data (gpointer data)
 
     if (!rcd_transaction_is_locked ()) {
         timeout_id = -1;
-        rcd_fetch_refresh (NULL);
+        rc_world_refresh (rc_get_world ());
     }
     else {
         if (timeout_id == -1)
@@ -588,15 +567,6 @@ crash_handler (int sig_num)
     system (cmd);
     
     exit (1);
-}
-
-static gboolean
-load_distro_info (void)
-{
-    if (rcd_options_get_download_distro_flag ())
-        return rcd_fetch_distro ();
-    else
-        return rc_distro_parse_xml (NULL, 0);
 }
 
 int
@@ -676,13 +646,8 @@ main (int argc, const char **argv)
     if (rcd_prefs_get_require_verified_certificates ())
         soup_set_ssl_ca_file (SHAREDIR "/rcd-ca-bundle.pem");
 
-    /* Load the distribution info */
-    if (!load_distro_info ()) {
-        rc_debug (RC_DEBUG_LEVEL_CRITICAL,
-                  "Unable to determine system or distribution type.");
-        exit (-1);
-    }
-
+    initialize_rc_packman ();
+    initialize_rc_services ();
     initialize_rc_world ();
     initialize_rpc ();
 

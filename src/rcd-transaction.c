@@ -33,7 +33,6 @@
 #include "rcd-fetch.h"
 #include "rcd-log.h"
 #include "rcd-marshal.h"
-#include "rcd-pending.h"
 #include "rcd-prefs.h"
 #include "rcd-shutdown.h"
 #include "rcd-transfer.h"
@@ -122,8 +121,8 @@ rcd_transaction_started_handler (RCDTransaction *transaction)
 static void
 rcd_transaction_finished_handler (RCDTransaction *transaction)
 {
-    /* Reload the system packages */
-    rc_world_get_system_packages (transaction->world);
+    /* Sync the world.  This will reload the system packages */
+    rc_world_sync (transaction->world);
 
     /*
      * If caching is turned off, we don't want to keep around the package
@@ -194,18 +193,16 @@ rcd_transaction_init (RCDTransaction *transaction)
 {
     transaction->world = rc_get_world ();
 
-    transaction->pool = rcd_transfer_pool_new (TRUE);
+    transaction->pool = rcd_transfer_pool_new (TRUE, "Package download");
 
     transaction->download_pending =
         g_object_ref (rcd_transfer_pool_get_pending (transaction->pool));
-    rcd_pending_set_description (transaction->download_pending,
-                                 "Package download");
 
     transaction->transaction_pending =
-        rcd_pending_new ("Package transaction");
+        rc_pending_new ("Package transaction");
 
     transaction->transaction_step_pending =
-        rcd_pending_new ("Package transaction step");
+        rc_pending_new ("Package transaction step");
 }
 
 GType
@@ -323,7 +320,7 @@ rcd_transaction_get_download_pending_id (RCDTransaction *transaction)
     if (transaction->packages_to_download == NULL)
         return -1;
 
-    return rcd_pending_get_id (transaction->download_pending);
+    return rc_pending_get_id (transaction->download_pending);
 }
 
 int
@@ -335,7 +332,7 @@ rcd_transaction_get_transaction_pending_id (RCDTransaction *transaction)
     if (transaction->flags & RCD_TRANSACTION_FLAGS_DOWNLOAD_ONLY)
         return -1;
 
-    return rcd_pending_get_id (transaction->transaction_pending);
+    return rc_pending_get_id (transaction->transaction_pending);
 }
 
 int
@@ -347,7 +344,7 @@ rcd_transaction_get_step_pending_id (RCDTransaction *transaction)
     if (transaction->flags & RCD_TRANSACTION_FLAGS_DOWNLOAD_ONLY)
         return -1;
 
-    return rcd_pending_get_id (transaction->transaction_step_pending);
+    return rc_pending_get_id (transaction->transaction_step_pending);
 }
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
@@ -404,19 +401,19 @@ rcd_transaction_finished (RCDTransaction *transaction, const char *msg)
 
 static void
 rcd_transaction_failed (RCDTransaction *transaction,
-                        RCDPending     *pending_to_fail,
+                        RCPending     *pending_to_fail,
                         const char     *msg)
 {
-    RCDPendingStatus status = rcd_pending_get_status (pending_to_fail);
+    RCPendingStatus status = rc_pending_get_status (pending_to_fail);
 
-    if (status == RCD_PENDING_STATUS_PRE_BEGIN ||
-        rcd_pending_is_active (pending_to_fail))
+    if (status == RC_PENDING_STATUS_PRE_BEGIN ||
+        rc_pending_is_active (pending_to_fail))
     {
         /* We need to be running the pending to fail it */
-        if (status == RCD_PENDING_STATUS_PRE_BEGIN)
-            rcd_pending_begin (pending_to_fail);
+        if (status == RC_PENDING_STATUS_PRE_BEGIN)
+            rc_pending_begin (pending_to_fail);
 
-        rcd_pending_fail (pending_to_fail, 0, msg);
+        rc_pending_fail (pending_to_fail, 0, msg);
     }
 
     if (rcd_prefs_get_premium ())
@@ -433,8 +430,8 @@ transact_start_cb(RCPackman *packman,
     rc_debug (RC_DEBUG_LEVEL_MESSAGE,
               "Transaction starting.  %d steps", total_steps);
 
-    rcd_pending_begin (transaction->transaction_pending);
-    rcd_pending_begin (transaction->transaction_step_pending);
+    rc_pending_begin (transaction->transaction_pending);
+    rc_pending_begin (transaction->transaction_step_pending);
 
     transaction->total_transaction_steps = total_steps;
 } /* transact_start_cb */
@@ -479,13 +476,13 @@ transact_step_cb(RCPackman *packman,
         msg = g_strdup (action);
 
     /* We don't want to push the same message multiple times */
-    last = rcd_pending_get_latest_message (transaction->transaction_pending);
+    last = rc_pending_get_latest_message (transaction->transaction_pending);
     if (!last || strcmp (msg, last) != 0)
-        rcd_pending_add_message (transaction->transaction_pending, msg);
+        rc_pending_add_message (transaction->transaction_pending, msg);
 
     g_free (msg);
 
-    rcd_pending_update_by_size (transaction->transaction_pending, seqno - 1,
+    rc_pending_update_by_size (transaction->transaction_pending, seqno - 1,
                                 transaction->total_transaction_steps);
 } /* transact_step_cb */
 
@@ -499,15 +496,15 @@ transact_progress_cb(RCPackman *packman,
               "Transaction progress.  %d of %d", amount, total);
 
     if (transaction->transaction_size == 0) {
-        if (rcd_pending_get_status (transaction->transaction_step_pending) ==
-            RCD_PENDING_STATUS_PRE_BEGIN)
-            rcd_pending_begin (transaction->transaction_step_pending);
+        if (rc_pending_get_status (transaction->transaction_step_pending) ==
+            RC_PENDING_STATUS_PRE_BEGIN)
+            rc_pending_begin (transaction->transaction_step_pending);
         else
-            rcd_pending_update (transaction->transaction_step_pending, 0);
+            rc_pending_update (transaction->transaction_step_pending, 0);
     }
 
     if (total && amount > transaction->transaction_size) {
-        rcd_pending_update_by_size (transaction->transaction_step_pending,
+        rc_pending_update_by_size (transaction->transaction_step_pending,
                                     amount, total);
     }
 } /* transact_progress_cb */
@@ -518,17 +515,17 @@ transact_done_cb(RCPackman *packman,
 {
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Transaction done");
 
-    rcd_pending_finished (transaction->transaction_pending, 0);
-    if (rcd_pending_get_status (transaction->transaction_step_pending) !=
-        RCD_PENDING_STATUS_PRE_BEGIN)
-        rcd_pending_finished (transaction->transaction_step_pending, 0);
+    rc_pending_finished (transaction->transaction_pending, 0);
+    if (rc_pending_get_status (transaction->transaction_step_pending) !=
+        RC_PENDING_STATUS_PRE_BEGIN)
+        rc_pending_finished (transaction->transaction_step_pending, 0);
 } /* transact_done_cb */
 
 /* Ahem */
 static void
 rcd_transaction_transaction (RCDTransaction *transaction)
 {
-    RCPackman *packman = rc_world_get_packman (transaction->world);
+    RCPackman *packman = rc_packman_get_global ();
     int flags = 0;
 
     g_signal_connect (packman, "transact_start",
@@ -575,7 +572,7 @@ rcd_transaction_transaction (RCDTransaction *transaction)
 static void
 rcd_transaction_verification (RCDTransaction *transaction)
 {
-    RCPackman *packman = rc_world_get_packman (transaction->world);
+    RCPackman *packman = rc_packman_get_global ();
     GError *err = NULL;
     RCPackageSList *iter;
 
@@ -607,7 +604,7 @@ rcd_transaction_verification (RCDTransaction *transaction)
 
         msg = g_strconcat ("verify:", g_quark_to_string (package->spec.nameq),
                            NULL);
-        rcd_pending_add_message (transaction->transaction_pending, msg);
+        rc_pending_add_message (transaction->transaction_pending, msg);
         g_free (msg);
 
         vers = rc_packman_verify (packman, package,
@@ -683,7 +680,7 @@ rcd_transaction_verification (RCDTransaction *transaction)
                     NULL);
             }
 
-            rcd_pending_add_message (transaction->transaction_pending,
+            rc_pending_add_message (transaction->transaction_pending,
                                      status_msg);
             g_free (status_msg);
 
@@ -740,7 +737,9 @@ get_packages_to_download (RCDTransaction *transaction, GError **err)
                     RCDCacheEntry *entry;
 
                     entry = rcd_cache_lookup (rcd_cache_get_package_cache (),
-                                              package->package_filename);
+                                              "packages",
+                                              package->package_filename,
+                                              FALSE);
 
                     if (entry)
                         rcd_cache_entry_invalidate (entry);
@@ -918,8 +917,8 @@ rcd_transaction_download (RCDTransaction *transaction)
         rcd_transfer_pool_begin (transaction->pool);
     }
     else {
-        rcd_pending_begin (transaction->download_pending);
-        rcd_pending_finished (transaction->download_pending, 0);
+        rc_pending_begin (transaction->download_pending);
+        rc_pending_finished (transaction->download_pending, 0);
 
         if (transaction->flags == RCD_TRANSACTION_FLAGS_DOWNLOAD_ONLY)
             rcd_transaction_finished (transaction, NULL);
@@ -966,7 +965,7 @@ rcd_transaction_check_package_integrity (const char *filename)
     gboolean ret = FALSE;
 
     world = rc_get_world ();
-    packman = rc_world_get_packman (world);
+    packman = rc_packman_get_global ();
 
     file_package = rc_packman_query_file (packman, filename);
 
@@ -1017,12 +1016,12 @@ out:
 static RCDTransaction *
 get_transaction_from_id (int download_id)
 {
-    RCDPending *pending;
+    RCPending *pending;
 
     if (!abortable_transactions)
         return NULL;
 
-    pending = rcd_pending_lookup_by_id (download_id);
+    pending = rc_pending_lookup_by_id (download_id);
 
     if (!pending)
         return NULL;
@@ -1246,10 +1245,12 @@ transaction_xml (xmlrpc_env     *env,
             rcd_prefs_get_mid());
     XMLRPC_FAIL_IF_FAULT (env);
 
+#if 0
     RCD_XMLRPC_STRUCT_SET_STRING(
             env, xtrans, "distro",
             rc_distro_get_target());
     XMLRPC_FAIL_IF_FAULT (env);
+#endif
 
     RCD_XMLRPC_STRUCT_SET_INT(
             env, xtrans, "dry_run",
@@ -1364,46 +1365,6 @@ rcd_transaction_send_log (RCDTransaction *transaction,
 cleanup:
     xmlrpc_env_clean (&env);
 } /* rcd_transaction_send_log */
-
-#if 0
-/*
- * This function is rather evil, but we need it to fake an
- * RCDTransactionStatus for things like dependency failures in autopull,
- * where we don't have one of these structures.
- */
-void
-rcd_transaction_log_to_server (const char         *name,
-                               RCPackageSList     *install_packages,
-                               RCPackageSList     *remove_packages,
-                               RCDTransactionFlags flags,
-                               const char         *client_id,
-                               const char         *client_version,
-                               gboolean            successful,
-                               const char         *message)
-{
-    /* FIXME: This function will go with autopull module, right? */
-    RCDTransactionStatus *status;
-
-    if (!rcd_prefs_get_premium ())
-        return;
-
-    status = g_new0 (RCDTransactionStatus, 1);
-    status->refs = 1;
-    status->name = g_strdup (name);
-    status->install_packages =
-        g_slist_copy (rc_package_slist_ref (install_packages));
-    status->remove_packages =
-        g_slist_copy (rc_package_slist_ref (remove_packages));
-    status->flags = flags;
-    status->client_id = g_strdup (client_id);
-    status->client_version = g_strdup (client_version);
-    status->start_time = time (NULL);
-
-    rcd_transaction_send_log (status, successful, message);
-
-    rcd_transaction_status_unref (status);
-} /* rcd_transaction_log_to_server */
-#endif
 
 void
 rcd_transaction_lock (void)
