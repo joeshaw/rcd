@@ -1,5 +1,7 @@
 .deps
 .libs
+*.la
+*.lo
 Makefile.in
 Makefile
 rcd
