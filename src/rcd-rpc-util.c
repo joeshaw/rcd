@@ -218,6 +218,36 @@ cleanup:
     return dep_list;
 } /* rcd_xmlrpc_array_to_rc_package_dep_slist */
 
+struct InstalledFlags {
+    RCPackage *pkg;
+    int installed;
+    int name_installed;
+};
+
+static void
+installed_check_cb (RCPackage *sys_pkg,
+                    gpointer user_data)
+{
+    struct InstalledFlags *flags = user_data;
+    int cmp;
+    
+    cmp = rc_packman_version_compare (rc_world_get_packman (rc_get_world ()),
+                                      RC_PACKAGE_SPEC (flags->pkg),
+                                      RC_PACKAGE_SPEC (sys_pkg));
+
+    if (cmp == 0) {
+
+        flags->installed = 1;
+
+    } else {
+
+        if (! flags->name_installed)
+            flags->name_installed = cmp;
+        else
+            flags->name_installed = MAX (flags->name_installed, cmp);
+    }
+}
+
 xmlrpc_value *
 rcd_rc_package_to_xmlrpc (RCPackage *package, xmlrpc_env *env)
 {
@@ -287,26 +317,21 @@ rcd_rc_package_to_xmlrpc (RCPackage *package, xmlrpc_env *env)
         name_installed = 1;
 
     } else {
+        const char *name;
+        struct InstalledFlags flags;
+        flags.pkg = package;
+        flags.installed = 0;
+        flags.name_installed = 0;
 
-        RCPackage *sys_pkg;
+        name = g_quark_to_string (RC_PACKAGE_SPEC (package)->nameq);
+        rc_world_foreach_package_by_name (rc_get_world (),
+                                          name,
+                                          RC_WORLD_SYSTEM_PACKAGES,
+                                          installed_check_cb,
+                                          &flags);
 
-        sys_pkg = rc_world_get_package (
-            rc_get_world(),
-            RC_WORLD_SYSTEM_PACKAGES,
-            g_quark_to_string (RC_PACKAGE_SPEC(package)->nameq));
-
-        installed = (sys_pkg != NULL
-                     && rc_package_spec_equal (RC_PACKAGE_SPEC(package),
-                                               RC_PACKAGE_SPEC(sys_pkg)));
-
-        if (sys_pkg) {
-            RCPackman *packman = rc_world_get_packman (rc_get_world ());
-            name_installed = rc_packman_version_compare (packman,
-                                                         RC_PACKAGE_SPEC (package),
-                                                         RC_PACKAGE_SPEC (sys_pkg));
-        } else {
-            name_installed = 0;
-        }
+        installed = flags.installed;
+        name_installed = flags.name_installed;
     }
     RCD_XMLRPC_STRUCT_SET_INT(env, value, "installed", installed);
     RCD_XMLRPC_STRUCT_SET_INT(env, value, "name_installed", name_installed);

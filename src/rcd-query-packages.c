@@ -130,13 +130,32 @@ name_installed_match (RCDQueryPart *part,
     return rcd_query_match_bool (part, sys_pkg != NULL);
 } /* name_installed_match */
 
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+struct InstalledCheck {
+    RCPackage *pkg;
+    gboolean installed;
+};
+
+static void
+installed_check_cb (RCPackage *sys_pkg,
+                    gpointer user_data)
+{
+    struct InstalledCheck *check = user_data;
+   
+    if (check->installed)
+        return;
+
+    if (rc_package_spec_equal (RC_PACKAGE_SPEC (sys_pkg),
+                               RC_PACKAGE_SPEC (check->pkg)))
+        check->installed = TRUE;
+}
+
 static gboolean
 package_installed_match (RCDQueryPart *part,
                          gpointer      data)
 {
     RCPackage *pkg = data;
-    RCPackage *sys_pkg;
-    const char *name;
     gboolean installed;
 
 
@@ -145,18 +164,26 @@ package_installed_match (RCDQueryPart *part,
         installed = TRUE;
 
     } else {
+        struct InstalledCheck check;
+        const char *name;
+
+        check.pkg = pkg;
+        check.installed = FALSE;
 
         name = g_quark_to_string (RC_PACKAGE_SPEC (pkg)->nameq);
-        sys_pkg = rc_world_get_package (rc_get_world (),
-                                        RC_WORLD_SYSTEM_PACKAGES,
-                                        name);
-        installed = (sys_pkg != NULL
-                     && rc_package_spec_equal (RC_PACKAGE_SPEC (pkg),
-                                               RC_PACKAGE_SPEC (sys_pkg)));
+        rc_world_foreach_package_by_name (rc_get_world (),
+                                          name,
+                                          RC_WORLD_SYSTEM_PACKAGES,
+                                          installed_check_cb,
+                                          &check);
+
+        installed = check.installed;
     }
 
     return rcd_query_match_bool (part, installed);
 }
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 static gboolean
 needs_upgrade_match (RCDQueryPart *part,
