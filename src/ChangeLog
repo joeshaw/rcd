@@ -1,5 +1,12 @@
 2003-09-26  Joe Shaw  <joe@ximian.com>
 
+	* rcd-world-remote.c (rcd_world_remote_activate): Get a string as
+	the return value from rcserver.activate(), which if not empty
+	indicates our new server URL.  If provided, set our service URL to
+	that and refresh.
+
+2003-09-26  Joe Shaw  <joe@ximian.com>
+
 	* rcd-world-remote.c: Add an "activated" signal for when the
 	RCDWorldRemote successfully activates against an RCE server.
 

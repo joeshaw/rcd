@@ -575,6 +575,7 @@ rcd_world_remote_activate (RCDWorldRemote  *remote,
     xmlrpc_server_info *server;
     xmlrpc_value *params, *value;
     gboolean success = TRUE;
+    char *new_url;
 
     if (err_msg)
         *err_msg = NULL;
@@ -592,6 +593,9 @@ rcd_world_remote_activate (RCDWorldRemote  *remote,
     value = xmlrpc_client_call_server (&env, server,
                                        "rcserver.activate",
                                        "(V)", params);
+    XMLRPC_FAIL_IF_FAULT (&env);
+
+    xmlrpc_parse_value (&env, value, "s", &new_url);
 
 cleanup:
     if (env.fault_occurred) {
@@ -603,6 +607,15 @@ cleanup:
 
         success = FALSE;
     } else {
+        if (XMLRPC_STRING_TO_RC (new_url) != NULL) {
+            RCWorldService *service = RC_WORLD_SERVICE (remote);
+
+            g_free (service->url);
+            service->url = g_strdup (new_url);
+
+            rc_world_refresh (RC_WORLD (remote));
+        }
+
         g_signal_emit (remote, signals[ACTIVATED], 0);
 
         xmlrpc_DECREF (value);
