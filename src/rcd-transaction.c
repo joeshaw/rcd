@@ -1191,7 +1191,9 @@ manifest_xml_node(xmlrpc_env *env,
 {
     xmlrpc_value *xmanifest;
     xmlrpc_value *xpkg;
+#if 0
     RCPackageUpdate *update;
+#endif
 
     xmanifest = xmlrpc_struct_new (env);
     XMLRPC_FAIL_IF_FAULT (env);

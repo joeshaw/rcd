@@ -1,3 +1,15 @@
+2003-09-18  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-util.c (rcd_rc_channel_to_xmlrpc): Include the service
+	id in the channel structure if there is one.
+
+	* rcd-rpc.c (soup_rpc_callback, soup_default_callback,
+	soup_auth_callback): Set the Server header to
+	"Red Carpet Daemon/VERSION"
+
+	* rcd-transaction.c (manifest_xml_node): #if 0 out an unused
+	variable so we compile -Werror.
+
 2003-09-17  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-packsys.c (packsys_find_package_for_file): Update to

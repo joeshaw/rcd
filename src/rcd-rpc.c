@@ -257,6 +257,9 @@ soup_rpc_callback (SoupServerContext *context, SoupMessage *msg, gpointer data)
     g_free (method_data->host);
     g_free (method_data);
 
+    soup_message_add_header (msg->response_headers,
+                             "Server", "Red Carpet Daemon/"VERSION);
+
     if (env.fault_occurred) {
         soup_message_set_error(msg, SOUP_ERROR_BAD_REQUEST);
         return;
@@ -276,6 +279,8 @@ soup_rpc_callback (SoupServerContext *context, SoupMessage *msg, gpointer data)
 static void
 soup_default_callback(SoupServerContext *context, SoupMessage *msg, gpointer data)
 {
+    soup_message_add_header (msg->response_headers,
+                             "Server", "Red Carpet Daemon/"VERSION);
     soup_message_set_error(msg, SOUP_ERROR_NOT_FOUND);
 } /* default_callback */
 
@@ -287,6 +292,9 @@ soup_auth_callback (SoupServerAuthContext *auth_ctx,
 {
     const char *username;
     RCDIdentity *identity;
+
+    soup_message_add_header (msg->response_headers,
+                             "Server", "Red Carpet Daemon/"VERSION);
 
     /* 
      * If there wasn't any authentication data passed back, we have to fail

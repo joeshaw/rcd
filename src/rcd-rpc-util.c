@@ -811,6 +811,7 @@ rcd_rc_channel_to_xmlrpc (RCChannel  *channel,
 {
     xmlrpc_value *value;
     const char *alias;
+    RCWorld *world;
     
     g_return_val_if_fail (channel != NULL, NULL);
 
@@ -832,6 +833,13 @@ rcd_rc_channel_to_xmlrpc (RCChannel  *channel,
 
     RCD_XMLRPC_STRUCT_SET_INT (env, value, "hidden",
                                rc_channel_is_hidden (channel) ? 1 : 0);
+
+    world = rc_channel_get_world (channel);
+    if (world && g_type_is_a (G_TYPE_FROM_INSTANCE (world),
+                              RC_TYPE_WORLD_SERVICE)) {
+        RCD_XMLRPC_STRUCT_SET_STRING (env, value, "service",
+                                      RC_WORLD_SERVICE (world)->unique_id);
+    }
 
     if (env->fault_occurred) {
         if (value)
