@@ -6,6 +6,9 @@
 	the XML.
 	(xml_fetch_next): Use the check-in interval.
 	(rcd_autopull_download_xml): Actually download the autopull XML.
+	(xml_fetch_execute): Disable the file override.
+	(rcd_autopull_resolve_and_transact): Be a bit more verbose in our
+	logging.
 
 2002-08-21  Joe Shaw  <joe@ximian.com>
 

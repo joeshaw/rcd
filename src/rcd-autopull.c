@@ -203,12 +203,31 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
                                          pkg_upgrade,
                                          &to_install);
 
-    tid = rcd_transaction_begin (rc_get_world (),
-                                 to_install,
-                                 to_remove,
-                                 FALSE,
-                                 "localhost",
-                                 "autopull " VERSION);
+    if (to_install != NULL || to_remove != NULL) {
+        GSList *iter;
+        rc_debug (RC_DEBUG_LEVEL_INFO,
+                  "Beginning Autopull");
+        for (iter = to_install; iter != NULL; iter = iter->next) {
+            rc_debug (RC_DEBUG_LEVEL_INFO,
+                      "  Install: %s",
+                      rc_package_to_str_static (iter->data));
+        }
+        for (iter = to_remove; iter != NULL; iter = iter->next) {
+            rc_debug (RC_DEBUG_LEVEL_INFO,
+                      "   Remove: %s",
+                      rc_package_to_str_static (iter->data));
+        }
+        
+        tid = rcd_transaction_begin (rc_get_world (),
+                                     to_install,
+                                     to_remove,
+                                     FALSE,
+                                     "localhost",
+                                     "autopull " VERSION);
+    } else {
+        rc_debug (RC_DEBUG_LEVEL_INFO,
+                  "Autopull: no action necessary.");
+    }
 
     /* FIXME: Do we want to use the transaction ID for anything? */
 
@@ -680,8 +699,7 @@ xml_fetch_execute (RCDRecurring *recur)
 {
     const char *file_override;
 
-    /* file_override = getenv ("RCD_AUTOPULL_XML_FROM_FILE"); */
-    file_override = "test-autopull.xml"; /* FIXME */
+    file_override = getenv ("RCD_AUTOPULL_XML_FROM_FILE");
 
     if (file_override) {
 
