@@ -1,5 +1,12 @@
 2003-08-26  Joe Shaw  <joe@ximian.com>
 
+	* rcd-world-remote.c: Invalidate cache entries if various metadata
+	files don't parse.
+	(rcd_world_remote_fetch_news): Get rid of the age old hack to get
+	around old non-UTF-8 news files.
+
+2003-08-26  Joe Shaw  <joe@ximian.com>
+
 	* rcd-world-remote.c (rcd_world_remote_refresh): If the pending is
 	RCD_WORLD_REMOTE_FETCH_FAILED, return NULL.
 	(rcd_world_remote_fetch): Download serviceinfo.xml.gz instead of

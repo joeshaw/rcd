@@ -192,6 +192,7 @@ rcd_world_remote_fetch_distributions (RCDWorldRemote *remote)
     if (!remote->distro) {
         rc_debug (RC_DEBUG_LEVEL_CRITICAL,
                   "Unable to parse distribution info");
+        rcd_cache_entry_invalidate (entry);
     }
 
 cleanup:
@@ -219,8 +220,10 @@ rcd_world_remote_fetch_licenses (RCDWorldRemote *remote)
         goto cleanup;
     }
 
-    if (!rcd_license_parse (remote, data->data, data->len))
+    if (!rcd_license_parse (remote, data->data, data->len)) {
         rc_debug (RC_DEBUG_LEVEL_CRITICAL, "Unable to parse licenses info");
+        rcd_cache_entry_invalidate (entry);
+    }        
 
 cleanup:
     g_object_unref (t);
@@ -249,22 +252,10 @@ rcd_world_remote_fetch_news (RCDWorldRemote *remote)
         goto cleanup;
     }
 
-#if 0
-    {
-        /* FIXME!  A silly hack to get around the fact that the
-           current RDF file isn't valid utf-8 */
-
-        int i;
-        for (i = 0; i < data->len; ++i) {
-            if (data->data[i] >= 0x80)
-                data->data[i] = '_';
-        }
-    }
-#endif
-
     doc = rc_parse_xml_from_buffer (data->data, data->len);
     if (doc == NULL) {
         rc_debug (RC_DEBUG_LEVEL_CRITICAL, "Couldn't parse news XML file");
+        rcd_cache_entry_invalidate (entry);
         goto cleanup;
     }
 
@@ -316,6 +307,7 @@ rcd_world_remote_fetch_mirrors (RCDWorldRemote *remote)
     doc = rc_parse_xml_from_buffer (data->data, data->len);
     if (doc == NULL) {
         rc_debug (RC_DEBUG_LEVEL_CRITICAL, "Couldn't parse mirrors XML file.");
+        rcd_cache_entry_invalidate (entry);
         goto cleanup;
     }
 
