@@ -309,7 +309,10 @@ run_server_thread(gpointer user_data)
 
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Starting server");
 
-    server = soup_server_new(SOUP_PROTOCOL_HTTP, 5505);
+    soup_set_ssl_cert_files(SHAREDIR "/rcd.pem",
+                            SHAREDIR "/rcd.pem");
+
+    server = soup_server_new(SOUP_PROTOCOL_HTTPS, 5505);
 
     if (!server) {
         rc_debug (RC_DEBUG_LEVEL_ERROR, "Could not start RPC server");

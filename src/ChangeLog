@@ -1,3 +1,8 @@
+2002-07-24  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc.c (run_server_thread): Set the Soup SSL certificate and
+	start the server as an HTTPS server.
+
 2002-07-23  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd.c (root_check): Removed a FIXME that didn't really need
