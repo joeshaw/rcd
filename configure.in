@@ -2,17 +2,20 @@ dnl -*- tab-width: 2; indent-tabs-mode: nil -*-
 
 ### init & version stuff
 
-MAJOR_VERSION=0
-MINOR_VERSION=0
-MICRO_VERSION=1
-$VERSION=$MAJOR_VERSION.$MINOR_VERSION.$MICRO_VERSION
+
 
 dnl AC_INIT(rcd, $VERSION, http://bugzilla.ximian.com/enter_bug.gci?product=rcd)
 dnl AC_CONFIG_SRCDIR(src/rcd.c)
 dnl AM_INIT_AUTOMAKE(AC_PACKAGE_NAME, AC_PACKAGE_VERSION)
 
 AC_INIT(src/rcd.c)
-AM_INIT_AUTOMAKE(rcd, VERSION)
+
+VERSION=0.0.1
+MAJOR_VERSION=0
+MINOR_VERSION=0
+MICRO_VERSION=1
+
+AM_INIT_AUTOMAKE(rcd, $VERSION)
 
 AC_SUBST(MAJOR_VERSION)
 AC_SUBST(MINOR_VERSION)
