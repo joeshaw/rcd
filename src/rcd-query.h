@@ -39,6 +39,8 @@ typedef enum {
     RCD_QUERY_LT,
     RCD_QUERY_GT_EQ,
     RCD_QUERY_LT_EQ,
+    RCD_QUERY_BEGIN_OR,
+    RCD_QUERY_END_OR,
     RCD_QUERY_LAST,
     RCD_QUERY_INVALID
 } RCDQueryType;

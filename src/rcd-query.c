@@ -63,7 +63,10 @@ static struct QueryTypeStrings {
     { RCD_QUERY_LT_EQ, "<="},
     { RCD_QUERY_LT_EQ, "lteq"},
 
-    { RCD_QUERY_LAST,   NULL }
+    { RCD_QUERY_BEGIN_OR, "begin-or" },
+    { RCD_QUERY_END_OR,   "end-or" },
+
+    { RCD_QUERY_INVALID,   NULL }
 };
         
 
@@ -72,7 +75,7 @@ rcd_query_type_from_string (const char *str)
 {
     int i;
     g_return_val_if_fail (str && *str, RCD_QUERY_INVALID);
-    for (i = 0; query2str[i].type != RCD_QUERY_LAST; ++i) {
+    for (i = 0; query2str[i].type != RCD_QUERY_INVALID; ++i) {
         if (! g_strcasecmp (str, query2str[i].str))
             return query2str[i].type;
     }
@@ -201,7 +204,7 @@ gboolean
 rcd_query_begin (RCDQueryPart *query_parts,
                  RCDQueryEngine *query_engine)
 {
-    int i;
+    int i, or_depth = 0;
 
     g_return_val_if_fail (query_engine != NULL, FALSE);
 
@@ -210,31 +213,60 @@ rcd_query_begin (RCDQueryPart *query_parts,
 
     /* Sweep through and validate the parts. */
     for (i = 0; query_parts[i].type != RCD_QUERY_LAST; ++i) {
-        RCDQueryEngine *eng = lookup_engine (query_parts[i].key, query_engine);
 
-        if (eng) {
+        RCDQueryEngine *eng = NULL;
 
-            if (eng->validate && ! eng->validate (&query_parts[i]))
+        if (query_parts[i].type == RCD_QUERY_BEGIN_OR) {
+
+            if (or_depth > 0) {
+                g_warning ("Nested 'or' not allowed.");
                 return FALSE;
+            }
 
-            if (eng->match == NULL) {
-                g_warning ("Key \"%s\" lacks a match function.", query_parts[i].key);
+            ++or_depth;
+
+        } else if (query_parts[i].type == RCD_QUERY_END_OR) {
+
+            --or_depth;
+
+            if (or_depth < 0) {
+                g_warning ("Extra 'or' terminator found.");
                 return FALSE;
             }
 
         } else {
-            g_warning ("Unknown part \"%s\"", query_parts[i].key);
-            return FALSE;
+
+            eng = lookup_engine (query_parts[i].key, query_engine);
+
+            if (eng) {
+                
+                if (eng->validate && ! eng->validate (&query_parts[i]))
+                    return FALSE;
+
+                if (eng->match == NULL) {
+                    g_warning ("Key \"%s\" lacks a match function.", query_parts[i].key);
+                    return FALSE;
+                }
+
+           } else {
+               g_warning ("Unknown part \"%s\"", query_parts[i].key);
+                return FALSE;
+            }
         }
 
         query_parts[i].engine = eng;
         query_parts[i].processed = FALSE;
     }
 
+    if (or_depth > 0) {
+        g_warning ("Unterminated 'or' in expression.");
+        return FALSE;
+    }
+
     /* If we made it this far, our query must be OK.  Call each part initializer. */
     for (i = 0; query_parts[i].type != RCD_QUERY_LAST; ++i) {
         
-        if (query_parts[i].engine->initialize)
+        if (query_parts[i].engine && query_parts[i].engine->initialize)
             query_parts[i].engine->initialize (&query_parts[i]);
         
     }
@@ -248,6 +280,8 @@ rcd_query_match (RCDQueryPart   *query_parts,
                  gpointer        data)
 {
     int i;
+    int or_depth = 0, or_expr_count = 0;
+    gboolean or_val = FALSE;
 
     g_return_val_if_fail (query_engine != NULL, FALSE);
 
@@ -257,13 +291,38 @@ rcd_query_match (RCDQueryPart   *query_parts,
     for (i = 0; query_parts[i].type != RCD_QUERY_LAST; ++i) {
 
         if (! query_parts[i].processed) {
-            RCDQueryEngine *engine = query_parts[i].engine;
+
+            if (query_parts[i].type == RCD_QUERY_BEGIN_OR) {
+
+                ++or_depth;
+                or_expr_count = 0;
+                or_val = FALSE;
+
+            } else if (query_parts[i].type == RCD_QUERY_END_OR) {
+
+                --or_depth;
+                if (or_expr_count > 0 && ! or_val)
+                    return FALSE;
+
+            } else {
+
+                RCDQueryEngine *engine = query_parts[i].engine;
+                gboolean matched;
             
-            g_assert (engine != NULL);
-            g_assert (engine->match != NULL);
-        
-            if (! engine->match (&query_parts[i], data))
-                return FALSE;
+                g_assert (engine != NULL);
+                g_assert (engine->match != NULL);
+
+                matched = engine->match (&query_parts[i], data);
+
+                if (or_depth > 0) {
+                    ++or_expr_count;
+                    if (matched)
+                        or_val = TRUE;
+                } else {
+                    if (! matched)
+                        return FALSE;
+                }
+            }
         }
     }
 
@@ -283,7 +342,7 @@ rcd_query_end (RCDQueryPart *query_parts,
 
     for (i = 0; query_parts[i].key != NULL; ++i) {
 
-        if (query_parts[i].engine->finalize)
+        if (query_parts[i].engine && query_parts[i].engine->finalize)
             query_parts[i].engine->finalize (&query_parts[i]);
 
         query_parts[i].engine = NULL;

@@ -1,3 +1,17 @@
+2002-06-25  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-query.c (query2str): Added 'begin-or' and 'end-or' string
+	representations of RCD_QUERY_BEGIN_OR and RCD_QUERY_END_OR.
+	Terminate the array with RCD_QUERY_INVALID, not RCD_QUERY_LAST.
+	(rcd_query_type_from_string): Check for end of array by looking
+	for RCD_QUERY_INVALID.
+	(rcd_query_begin): Check that our begin-ors and end-ors balance
+	properly.  When calling a part's ->initialize method, make
+	sure the engine is non-NULL.
+	(rcd_query_match): Handle ors.
+	(rcd_query_end): When calling a part's ->finalize method,
+	make sure the engine is non-NULL.
+
 2002-06-24  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-module.c (rcd_module_init): If the module dir doesn't
