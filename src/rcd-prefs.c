@@ -374,7 +374,7 @@ rcd_prefs_set_require_verified_certificates (gboolean enabled)
 {
     gnome_config_set_bool (get_config_path ("/Network/require-verified-certificates"), enabled);
 
-    soup_set_ssl_ca_dir (enabled ? SHAREDIR "/ca" : NULL);
+    soup_set_ssl_ca_file (enabled ? SHAREDIR "/rcd-ca-bundle.pem" : NULL);
 
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "SSL Certificate verification %s",
               enabled ? "enabled" : "disabled");

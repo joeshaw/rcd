@@ -726,7 +726,7 @@ main (int argc, const char **argv)
 
     /* Set up the CA verification dir if we're requiring it */
     if (rcd_prefs_get_require_verified_certificates ())
-        soup_set_ssl_ca_dir (SHAREDIR "/ca");
+        soup_set_ssl_ca_file (SHAREDIR "/rcd-ca-bundle.pem");
 
     /* We have to fetch this before the RCWorld gets initialized. */
     if (!rcd_fetch_distro ()) {
