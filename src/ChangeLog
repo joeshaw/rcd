@@ -1,3 +1,9 @@
+2003-01-15  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-util.c (rcd_rc_channel_to_xmlrpc): Export the
+	"transient" flag so it's easier for clients to determine what
+	channels can be unmounted.
+
 2003-01-14  Joe Shaw  <joe@ximian.com>
 
 	* rcd-module.c (load_module): Add module versioning.  Read the

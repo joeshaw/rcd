@@ -814,6 +814,9 @@ rcd_rc_channel_to_xmlrpc (RCChannel  *channel,
     RCD_XMLRPC_STRUCT_SET_INT (env, value, "subscribed",
                                rc_channel_subscribed (channel) ? 1 : 0);
 
+    RCD_XMLRPC_STRUCT_SET_INT (env, value, "transient",
+                               rc_channel_get_transient (channel) ? 1 : 0);
+
     RCD_XMLRPC_STRUCT_SET_STRING (env, value, "description",
                                   rc_channel_get_description (channel));
 
