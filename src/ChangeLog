@@ -1,3 +1,16 @@
+2002-07-07  Joe Shaw  <joe@ximian.com>
+
+	* Makefile.am: Define SYSCONFDIR, install the rcd binary.
+
+	* rcd-auth.c, rcd-rpc-packsys.c, rcd-rpc.c: Eliminate the
+	RCD_ENFORCE_AUTH env check and always require authorization.
+
+	* rcd-identity.c (rcd_identity_from_password_file): Read the
+	rc-passwd file from SYSCONFDIR.  Skip over lines which begin with
+	a # as comments.
+
+	* rcd-rpc.c (unix_rpc_callback): Fix an errant assert.
+
 2002-07-06  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd.c (daemonize): Open our rcd-messages file here, and redirect

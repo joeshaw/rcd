@@ -1028,16 +1028,14 @@ packsys_transact(xmlrpc_env   *env,
 
     method_data = rcd_rpc_get_method_data ();
 
-    if (getenv ("RCD_ENFORCE_AUTH")) {
-        /* Check our permissions to install/upgrade/remove */
-        check_install_package_auth (
-            env, world, install_packages, method_data->identity);
-        XMLRPC_FAIL_IF_FAULT (env);
-        
-        check_remove_package_auth (
-            env, remove_packages, method_data->identity);
-        XMLRPC_FAIL_IF_FAULT (env);
-    }
+    /* Check our permissions to install/upgrade/remove */
+    check_install_package_auth (
+        env, world, install_packages, method_data->identity);
+    XMLRPC_FAIL_IF_FAULT (env);
+    
+    check_remove_package_auth (
+        env, remove_packages, method_data->identity);
+    XMLRPC_FAIL_IF_FAULT (env);
 
     /* Track our transaction */
     status = g_new0(RCDTransactionStatus, 1);
@@ -1046,10 +1044,7 @@ packsys_transact(xmlrpc_env   *env,
     status->remove_packages = remove_packages;
     status->pending = rcd_pending_new ("Beginning transaction");
     status->client_host = g_strdup (method_data->host);
-    if (getenv ("RCD_ENFORCE_AUTH"))
-        status->client_user = g_strdup (method_data->identity->username);
-    else
-        status->client_user = g_strdup ("(none)");
+    status->client_user = g_strdup (method_data->identity->username);
 
     g_object_set_data (G_OBJECT (status->pending), "status", status);
     rcd_pending_begin (status->pending);
@@ -1093,6 +1088,7 @@ packsys_abort_download(xmlrpc_env   *env,
     RCDPending *pending;
     RCDTransactionStatus *status;
     xmlrpc_value *result = NULL;
+    RCDRPCMethodData *method_data;
 
     xmlrpc_parse_value (env, param_array, "(i)", &transaction_id);
     pending = rcd_pending_lookup_by_id (transaction_id);
@@ -1117,14 +1113,11 @@ packsys_abort_download(xmlrpc_env   *env,
         return result;
     }
 
-    if (getenv ("RCD_ENFORCE_AUTH")) {
-        RCDRPCMethodData *method_data = rcd_rpc_get_method_data ();
-
-        /* Check our permissions to abort this download */
-        check_install_package_auth (
-            env, world, status->install_packages, method_data->identity);
-        XMLRPC_FAIL_IF_FAULT (env);
-    }
+    /* Check our permissions to abort this download */
+    method_data = rcd_rpc_get_method_data ();
+    check_install_package_auth (
+        env, world, status->install_packages, method_data->identity);
+    XMLRPC_FAIL_IF_FAULT (env);
 
     rcd_fetch_packages_abort (status->package_download_id);
 

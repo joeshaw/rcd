@@ -59,7 +59,7 @@ rcd_identity_from_password_file (const char *username)
 
     g_return_val_if_fail (username, NULL);
 
-    buffer = rc_buffer_map_file ("rc-passwd");
+    buffer = rc_buffer_map_file (SYSCONFDIR "/rc-passwd");
 
     if (!buffer)
         return NULL;
@@ -67,6 +67,10 @@ rcd_identity_from_password_file (const char *username)
     lines = g_strsplit (buffer->data, "\n", 0);
     for (l = lines; *l; l++) {
         char **user_info;
+
+        /* The line begins with a #, so it's a comment */
+        if (**l == '#')
+            continue;
 
         user_info = g_strsplit (*l, ":", 0);
         if (!user_info[0] || !user_info[1] || !user_info[2] ||

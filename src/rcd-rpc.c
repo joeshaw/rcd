@@ -87,19 +87,17 @@ access_control_check (xmlrpc_env   *env,
 
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Method being called: %s", method_name);
 
-    if (getenv ("RCD_ENFORCE_AUTH")) {
-        g_assert (identity != NULL);
+    g_assert (identity != NULL);
 
-        method_info = g_hash_table_lookup (method_info_hash, method_name);
+    method_info = g_hash_table_lookup (method_info_hash, method_name);
 
-        if (method_info &&
-            !rcd_auth_approve_action (identity,
-                                      method_info->req_privs,
-                                      NULL)) {
-            xmlrpc_env_set_fault (env, -610, "Permission denied");
+    if (method_info &&
+        !rcd_auth_approve_action (identity,
+                                  method_info->req_privs,
+                                  NULL)) {
+        xmlrpc_env_set_fault (env, -610, "Permission denied");
             
-            rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Unable to approve action");
-        }
+        rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Unable to approve action");
     }
 } /* access_control_check */
 
@@ -143,35 +141,29 @@ unix_rpc_callback (RCDUnixServerHandle *handle)
 
     xmlrpc_env_init(&env);
 
-    if (getenv ("RCD_ENFORCE_AUTH")) {
-        if (handle->uid != 0) {
-            struct passwd *pw;
-            
-            pw = getpwuid (handle->uid);
-            if (!pw) {
-                rc_debug (RC_DEBUG_LEVEL_WARNING,
-                          "Couldn't get info for UID %d\n", handle->uid);
-                identity = NULL;
-            }
-            else {
-                identity = rcd_identity_from_password_file (pw->pw_name);
-                g_assert (identity);
-            }
+    if (handle->uid != 0) {
+        struct passwd *pw;
+        
+        pw = getpwuid (handle->uid);
+        if (!pw) {
+            rc_debug (RC_DEBUG_LEVEL_WARNING,
+                      "Couldn't get info for UID %d\n", handle->uid);
+            identity = NULL;
         }
-        else {
-            identity = rcd_identity_new ();
-            identity->username = g_strdup ("root");
-            identity->privileges = rcd_auth_action_list_from_1 (
-                RCD_AUTH_SUPERUSER);
-        }
-
-        if (!identity) {
-            output = serialize_permission_fault ();
-            goto finish_request;
-        }
+        else
+            identity = rcd_identity_from_password_file (pw->pw_name);
     }
-    else
-        identity = NULL;
+    else {
+        identity = rcd_identity_new ();
+        identity->username = g_strdup ("root");
+        identity->privileges = rcd_auth_action_list_from_1 (
+            RCD_AUTH_SUPERUSER);
+    }
+    
+    if (!identity) {
+        output = serialize_permission_fault ();
+        goto finish_request;
+    }
 
     method_data = g_new0 (RCDRPCMethodData, 1);
     method_data->host = "local";
@@ -214,23 +206,19 @@ soup_rpc_callback (SoupServerContext *context, SoupMessage *msg, gpointer data)
     method_data = g_new0 (RCDRPCMethodData, 1);
 
     /* Authenticate the user's password */
-    if (getenv ("RCD_ENFORCE_AUTH")) {
-        username = soup_server_auth_get_user (context->auth);
-        identity = rcd_identity_from_password_file (username);
+    username = soup_server_auth_get_user (context->auth);
+    identity = rcd_identity_from_password_file (username);
 
-        if (!identity || !soup_server_auth_check_passwd (context->auth,
-                                                         identity->password)) {
-            rc_debug (RC_DEBUG_LEVEL_MESSAGE,
-                      "Couldn't authenticate %s", username);
-            
-            rcd_identity_free (identity);
-            output = serialize_permission_fault ();
-
-            goto finish_request;
-        }
+    if (!identity || !soup_server_auth_check_passwd (context->auth,
+                                                     identity->password)) {
+        rc_debug (RC_DEBUG_LEVEL_MESSAGE,
+                  "Couldn't authenticate %s", username);
+        
+        rcd_identity_free (identity);
+        output = serialize_permission_fault ();
+        
+        goto finish_request;
     }
-    else
-        identity = NULL;
 
     method_data->host = soup_server_context_get_client_host (context);
     method_data->identity = identity;
@@ -271,14 +259,14 @@ soup_auth_callback (SoupServerAuthContext *auth_ctx,
                     SoupMessage           *msg,
                     gpointer               user_data)
 {
-    if (!auth) {
-        if (getenv("RCD_ENFORCE_AUTH"))
-            return FALSE;
-        else
-            return TRUE;
-    }
-
-    return TRUE;
+    /* 
+     * If there wasn't any authentication data passed back, we have to fail
+     * the call.
+     */
+    if (!auth)
+        return FALSE;
+    else
+        return TRUE;
 } /* auth_callback */
 
 static gboolean

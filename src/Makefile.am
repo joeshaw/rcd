@@ -4,10 +4,11 @@ INCLUDES =						\
 	-DGNOMELOCALEDIR=\""$(datadir)/locale"\"	\
 	-DMODULEDIR=\""$(rcd_moduledir)"\"		\
 	-DSHAREDIR=\""$(datadir)/rcd"\"			\
+	-DSYSCONFDIR=\""$(sysconfdir)/ximian"\"		\
 	-DG_LOG_DOMAIN=\"rcd\"				\
 	-Wall
 
-noinst_PROGRAMS = rcd
+bin_PROGRAMS = rcd
 
 BUILT_SOURCES =			\
 	rcd-marshal.h		\
