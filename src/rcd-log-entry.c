@@ -128,7 +128,7 @@ spec_to_str (RCPackageSpec *spec)
 {
     char epoch_str[32] = "_";
 
-    if (spec->name == NULL) {
+    if (spec->nameq == 0) {
         return g_strdup ("_|_|_|_");
     } 
         
@@ -137,7 +137,7 @@ spec_to_str (RCPackageSpec *spec)
     }
 
     return g_strdup_printf ("%s|%s|%s|%s",
-                            spec->name,
+                            g_quark_to_string (spec->nameq),
                             epoch_str,
                             spec->version ? spec->version : "_",
                             spec->release ? spec->release : "_");
@@ -237,7 +237,7 @@ spec_from_str (RCPackageSpec *spec,
         return;
     }
 
-    spec->name = (char *) name_str;
+    spec->nameq = g_quark_from_string (name_str);
 
     if (IS_VBAR (epoch_str)) {
         spec->has_epoch = FALSE;
@@ -282,9 +282,11 @@ rcd_log_entry_parse (char         *buffer,
 
     spec_from_str (&entry.pkg_initial,
                    bufv[5], bufv[6], bufv[7], bufv[8]);
+    g_free (bufv[5]);
 
     spec_from_str (&entry.pkg_final,
                    bufv[9], bufv[10], bufv[11], bufv[12]);
+    g_free (bufv[9]);
 
     fn (&entry, user_data);
 }

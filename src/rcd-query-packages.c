@@ -33,7 +33,8 @@ name_match (RCDQueryPart *part,
             gpointer      data)
 {
     RCPackage *pkg = data;
-    return rcd_query_match_string_ci (part, pkg->spec.name);
+    return rcd_query_match_string_ci (
+        part, g_quark_to_string (pkg->spec.nameq));
 }
 
 static gboolean
@@ -58,7 +59,8 @@ text_match (RCDQueryPart *part,
 {
     RCPackage *pkg = data;
 
-    return rcd_query_match_string_ci (part, pkg->spec.name)
+    return rcd_query_match_string_ci (
+        part, g_quark_to_string (pkg->spec.nameq))
         || rcd_query_match_string_ci (part, pkg->summary)
         || rcd_query_match_string_ci (part, pkg->description);
 }

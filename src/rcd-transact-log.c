@@ -74,7 +74,8 @@ manifest_xml_node(int             cid,
 
     /* write info on the new package */
     pkgnode = xmlNewChild (node, NULL, "package", NULL);
-    xmlNewTextChild(pkgnode, NULL, "name", new_pkg->spec.name);
+    xmlNewTextChild(pkgnode, NULL, "name",
+                    g_quark_to_string (new_pkg->spec.nameq));
     tmp = g_strdup_printf("%d", new_pkg->spec.epoch);
     xmlNewTextChild(pkgnode, NULL, "epoch", tmp);
     g_free(tmp);

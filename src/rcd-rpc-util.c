@@ -36,7 +36,7 @@ rcd_rc_package_spec_to_xmlrpc(RCPackageSpec *spec,
     /* RCPackageSpec members */
     RCD_XMLRPC_STRUCT_SET_STRING(
         env, value, "name",
-        spec->name);
+        g_quark_to_string (spec->nameq));
     XMLRPC_FAIL_IF_FAULT (env);
 
     RCD_XMLRPC_STRUCT_SET_INT(
@@ -269,7 +269,7 @@ rcd_rc_package_to_xmlrpc (RCPackage *package, xmlrpc_env *env)
         sys_pkg = rc_world_get_package (
             rc_get_world(),
             RC_WORLD_SYSTEM_PACKAGES,
-            RC_PACKAGE_SPEC(package)->name);
+            g_quark_to_string (RC_PACKAGE_SPEC(package)->nameq));
 
         installed = (sys_pkg != NULL
                      && rc_package_spec_equal (RC_PACKAGE_SPEC(package),

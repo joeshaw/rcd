@@ -62,7 +62,7 @@ rcd_log_entry_to_xmlrpc (RCDLogEntry *entry,
     RCD_XMLRPC_STRUCT_SET_INT (env, value,
                                "timestamp", entry->timestamp);
 
-    if (entry->pkg_initial.name) {
+    if (entry->pkg_initial.nameq) {
         spec = xmlrpc_struct_new (env);
         XMLRPC_FAIL_IF_FAULT (env);
 
@@ -74,7 +74,7 @@ rcd_log_entry_to_xmlrpc (RCDLogEntry *entry,
         xmlrpc_DECREF (spec);
     }
 
-    if (entry->pkg_final.name) {
+    if (entry->pkg_final.nameq) {
         spec = xmlrpc_struct_new (env);
         XMLRPC_FAIL_IF_FAULT (env);
 

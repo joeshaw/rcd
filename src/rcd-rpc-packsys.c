@@ -942,7 +942,7 @@ update_log (RCDTransactionStatus *status)
 
         old_p = rc_world_get_package (rc_get_world (),
                                       RC_WORLD_SYSTEM_PACKAGES,
-                                      new_p->spec.name);
+                                      g_quark_to_string (new_p->spec.nameq));
 
         if (old_p)
             rcd_log_entry_set_upgrade (log_entry, old_p, new_p);
@@ -1066,7 +1066,8 @@ verify_packages (RCDTransactionStatus *status)
         RCVerificationStatus worst_status = RC_VERIFICATION_STATUS_PASS;
         GSList *v;
 
-        msg = g_strconcat ("verify:", package->spec.name, NULL);
+        msg = g_strconcat ("verify:",
+                           g_quark_to_string (package->spec.nameq), NULL);
         rcd_pending_add_message (status->pending, msg);
         g_free (msg);
 
@@ -1084,16 +1085,17 @@ verify_packages (RCDTransactionStatus *status)
         if (worst_status == RC_VERIFICATION_STATUS_FAIL) {
             rc_debug (RC_DEBUG_LEVEL_MESSAGE,
                       "Verification of '%s' failed",
-                      package->spec.name);
+                      g_quark_to_string (package->spec.nameq));
             msg = g_strdup_printf ("failed:Verification of '%s' failed",
-                                   package->spec.name);
+                                   g_quark_to_string (package->spec.nameq));
             rcd_pending_add_message (status->pending, msg);
             rcd_pending_fail (status->pending, -1, msg);
             g_free (msg);
 
             if (!status->dry_run && status->log_tid) {
-                msg = g_strdup_printf ("Verification of '%s' failed",
-                                       package->spec.name);
+                msg = g_strdup_printf (
+                    "Verification of '%s' failed",
+                    g_quark_to_string (package->spec.nameq));
                 rcd_transact_log_send_success (status->log_tid, FALSE, msg);
                 g_free (msg);
             }
@@ -1104,19 +1106,20 @@ verify_packages (RCDTransactionStatus *status)
         else if (worst_status == RC_VERIFICATION_STATUS_UNDEF) {
             rc_debug (RC_DEBUG_LEVEL_MESSAGE,
                       "Verification of '%s' was inconclusive",
-                      package->spec.name);
+                      g_quark_to_string (package->spec.nameq));
 
             if (rcd_prefs_get_require_verified_packages ()) {
                 msg = g_strdup_printf (
                     "failed:Verification of '%s' was inconclusive",
-                    package->spec.name);
+                    g_quark_to_string (package->spec.nameq));
                 rcd_pending_add_message (status->pending, msg);
                 rcd_pending_fail (status->pending, -1, msg);
                 g_free (msg);
 
                 if (!status->dry_run && status->log_tid) {
-                    msg = g_strdup_printf ("Verification of '%s' failed",
-                                           package->spec.name);
+                    msg = g_strdup_printf (
+                        "Verification of '%s' failed",
+                        g_quark_to_string (package->spec.nameq));
                     rcd_transact_log_send_success (
                         status->log_tid, FALSE, msg);
                     g_free (msg);
@@ -1491,7 +1494,7 @@ prepend_pkg (RCPackage *pkg, RCPackageStatus status, gpointer user_data)
 
     if (status == RC_PACKAGE_STATUS_TO_BE_INSTALLED ||
         (status == RC_PACKAGE_STATUS_TO_BE_UNINSTALLED && pkg->installed)) {
-        g_hash_table_insert (*hash, pkg->spec.name, pkg);
+        g_hash_table_insert (*hash, GINT_TO_POINTER (pkg->spec.nameq), pkg);
         rc_package_ref (pkg);
     }
 } /* prepend_pkg */
@@ -1505,7 +1508,8 @@ prepend_pkg_pair (RCPackage *pkg_to_add,
 {
     GHashTable **hash = user_data;
 
-    g_hash_table_insert (*hash, pkg_to_add->spec.name, pkg_to_add);
+    g_hash_table_insert (*hash, GINT_TO_POINTER (pkg_to_add->spec.nameq),
+                         pkg_to_add);
     rc_package_ref (pkg_to_add);
 
     /* We don't need to do the removal part of the upgrade */
@@ -1763,8 +1767,8 @@ resolve_deps (xmlrpc_env         *env,
         goto cleanup;
     }
 
-    install_hash = g_hash_table_new (g_str_hash, g_str_equal);
-    remove_hash = g_hash_table_new (g_str_hash, g_str_equal);
+    install_hash = g_hash_table_new (NULL, NULL);
+    remove_hash = g_hash_table_new (NULL, NULL);
 
     rc_resolver_context_foreach_install(
         resolver->best_context, prepend_pkg, &install_hash);
@@ -1776,8 +1780,10 @@ resolve_deps (xmlrpc_env         *env,
     for (iter = install_packages; iter; iter = iter->next) {
         RCPackage *p = iter->data;
 
-        if (g_hash_table_lookup (install_hash, p->spec.name)) {
-            g_hash_table_remove (install_hash, p->spec.name);
+        if (g_hash_table_lookup (install_hash,
+                                 GINT_TO_POINTER (p->spec.nameq))) {
+            g_hash_table_remove (install_hash,
+                                 GINT_TO_POINTER (p->spec.nameq));
             rc_package_unref (p);
         }
     }
@@ -1785,8 +1791,10 @@ resolve_deps (xmlrpc_env         *env,
     for (iter = remove_packages; iter; iter = iter->next) {
         RCPackage *p = iter->data;
 
-        if (g_hash_table_lookup (remove_hash, p->spec.name)) {
-            g_hash_table_remove (remove_hash, p->spec.name);
+        if (g_hash_table_lookup (remove_hash,
+                                 GINT_TO_POINTER (p->spec.nameq))) {
+            g_hash_table_remove (remove_hash,
+                                 GINT_TO_POINTER (p->spec.nameq));
             rc_package_unref (p);
         }
     }

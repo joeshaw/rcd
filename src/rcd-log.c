@@ -171,11 +171,13 @@ package_name_match (RCDQueryPart *part,
 
     RCDLogEntry *entry = data;
 
-    if (entry->pkg_initial.name)
-        x1 = rcd_query_match_string_ci (part, entry->pkg_initial.name);
+    if (entry->pkg_initial.nameq)
+        x1 = rcd_query_match_string_ci (
+            part, g_quark_to_string (entry->pkg_initial.nameq));
 
-    if (!x1 && entry->pkg_final.name)
-        x2 = rcd_query_match_string_ci (part, entry->pkg_final.name);
+    if (!x1 && entry->pkg_final.nameq)
+        x2 = rcd_query_match_string_ci (
+            part, g_quark_to_string (entry->pkg_final.nameq));
 
     return x1 || x2;
 }
