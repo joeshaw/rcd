@@ -182,7 +182,15 @@ rcd_query_match_string (RCDQueryPart *part,
         return strstr_word (str, part->query_str) == NULL;
     }
     
-    return rcd_query_type_int_compare (part->type, strcmp (part->query_str, str), 0);
+    if (rcd_query_type_int_compare (part->type,
+                                    strcmp (part->query_str, str),
+                                    0))
+        return TRUE;
+    else
+        return rcd_query_type_int_compare (part->type,
+                                           g_pattern_match_simple (
+                                               part->query_str, str),
+                                           TRUE);
 }
 
 gboolean
@@ -210,6 +218,14 @@ rcd_query_match_string_ci (RCDQueryPart *part,
         rv = rcd_query_type_int_compare (part->type,
                                          strcmp (part->query_str_folded, str_folded),
                                          0);
+
+        if (!rv) {
+            rv = rcd_query_type_int_compare (part->type,
+                                             g_pattern_match_simple (
+                                                 part->query_str_folded,
+                                                 str_folded),
+                                             TRUE);
+        }
     }
 
     g_free (str_folded);

@@ -1,3 +1,8 @@
+2002-11-05  Joe Shaw  <joe@ximian.com>
+
+	* rcd-query.c (rcd_query_match_string, rcd_query_match_string_ci):
+	Allow globbing in string equality searches.
+
 2002-11-01  Jon Trowbridge  <trow@ximian.com>
  
  	* rcd-rpc-system.c (system_get_recurring): Added.  An xml-rpc

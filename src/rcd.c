@@ -110,7 +110,9 @@ option_parsing (int argc, const char **argv)
     while ( (rv = poptGetNextOpt (popt_context)) > 0);
 
     if (rv < -1) {
-        g_printerr ("%s: %s\n", poptBadOption(popt_context, 0), poptStrerror (rv));
+        g_printerr ("%s: %s\n",
+                    poptBadOption(popt_context, 0), 
+                    poptStrerror (rv));
         g_printerr ("rcd aborting\n");
         exit (-1);
     }
@@ -135,14 +137,18 @@ root_check (void)
         return;
 
     g_printerr ("*** WARNING ***\n\n");
-    g_printerr ("You have attempted to run rcd as a user other than 'root'.\n");
-    g_printerr ("In general, this will not work -- rcd will be unable to modify\n");
+    g_printerr ("You have attempted to run rcd as a user other than "
+                "'root'.\n");
+    g_printerr ("In general, this will not work -- rcd will be unable to "
+                "modify\n");
     g_printerr ("the system to install, upgrade or remove packages.\n");
     g_printerr ("\n");
 
     if (! non_root_flag) {
-        g_printerr ("If you really want to do this, re-run rcd with the --allow-non-root\n");
-        g_printerr ("option to suppress this warning message.  However, don't be surprised\n");
+        g_printerr ("If you really want to do this, re-run rcd with the "
+                    "--allow-non-root\n");
+        g_printerr ("option to suppress this warning message.  However, "
+                    "don't be surprised\n");
         g_printerr ("when rcd fails to work properly.\n");
         exit (-1);
     }
@@ -395,28 +401,48 @@ is_supported_distro (void)
 
     switch (status) {
     case RC_DISTRO_STATUS_UNSUPPORTED:
-        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "The distribution you are running (%s) is not", distro_name);
-        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "supported.  Channel data will not be downloaded.");
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
+                  "The distribution you are running (%s) is not",
+                  distro_name);
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
+                  "supported.  Channel data will not be downloaded.");
         break;
     case RC_DISTRO_STATUS_PRESUPPORTED:
-        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "The distribution you are running (%s) is not", distro_name);
-        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "yet supported.  Channel data will not be downloaded.");
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
+                  "The distribution you are running (%s) is not",
+                  distro_name);
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
+                  "yet supported.  Channel data will not be downloaded.");
         break;
     case RC_DISTRO_STATUS_SUPPORTED:
         supported = TRUE;
         break;
     case RC_DISTRO_STATUS_DEPRECATED:
-        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "Support for the distribution you are running (%s) has ", distro_name);
-        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "been deprecated and will be discontinued on %s.", death_str);
-        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "After that date you will need to upgrade your distribution to continue");
-        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "using channels for package installations and upgrades.");
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
+                  "Support for the distribution you are running (%s) has ",
+                  distro_name);
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
+                  "been deprecated and will be discontinued on %s.",
+                  death_str);
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
+                  "After that date you will need to upgrade your "
+                  "distribution to continue");
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
+                  "using channels for package installations and upgrades.");
         supported = TRUE;
         break;
     case RC_DISTRO_STATUS_RETIRED:
-        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "As of %s, support for the distribution you are", death_str);
-        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "running (%s) has been discontinued.  You must upgrade", distro_name);
-        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "your distribution to use channels for package installations and");
-        rc_debug (RC_DEBUG_LEVEL_ALWAYS, "upgrades.  Channel data will not be downloaded.");
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
+                  "As of %s, support for the distribution you are",
+                  death_str);
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
+                  "running (%s) has been discontinued.  You must upgrade",
+                  distro_name);
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
+                  "your distribution to use channels for package "
+                  "installations and");
+        rc_debug (RC_DEBUG_LEVEL_ALWAYS,
+                  "upgrades.  Channel data will not be downloaded.");
         break;
     }
 
@@ -493,7 +519,8 @@ signal_handler (int sig_num)
     else
         g_assert_not_reached ();
 
-    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Received %s... Shutting down.", sig_name);
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE,
+              "Received %s... Shutting down.", sig_name);
     rcd_shutdown ();
 } /* signal_handler */
 
