@@ -1,5 +1,7 @@
 dnl -*- tab-width: 2; indent-tabs-mode: nil -*-
 
+### init & version stuff
+
 MAJOR_VERSION=0
 MINOR_VERSION=0
 MICRO_VERSION=1
@@ -23,6 +25,14 @@ AC_DEFINE_UNQUOTED(MICRO_VERSION, $MICRO_VERSION)
 AM_CONFIG_HEADER(config.h)
 AM_MAINTAINER_MODE
 
+### args
+
+AC_ARG_WITH(xmlrpc-prefix,
+  [--with-xmlrpc-prefix=PREFIX],
+  with_xmlrpc_prefix="$withval")
+
+### basic checks
+
 AC_PROG_CC
 AC_ISC_POSIX
 AC_STDC_HEADERS
@@ -36,13 +46,22 @@ AC_PROG_INTLTOOL
 
 PKG_CHECK_MODULES(RCD, glib-2.0 gthread-2.0 gmodule-2.0 libredcarpet-2.0 soup)
 
-AC_PATH_PROG(XMLRPC_CONFIG, xmlrpc-c-config, no)
+# I'm sue there is a cleaner way to do this
+if test -z "$with_xmlrpc_prefix"; then
+  xmlrpc_config="xmlrpc-c-config"
+  AC_PATH_PROG(XMLRPC_CONFIG, xmlrpc-c-config, no)
+else
+  xmlrpc_config="env PATH=$with_xmlrpc_prefix/bin xmlrpc-c-config"
+  AC_PATH_PROG(XMLRPC_CONFIG, xmlrpc-c-config, no, $with_xmlrpc_prefix/bin)
+fi
+
 if test x$XMLRPC_CONFIG = xno; then
   AC_MSG_ERROR(Couldn't find xmlrpc-c-config -- please install the xmlrpc-c library)
 fi
 
-XMLRPC_CFLAGS=`xmlrpc-c-config --cflags`
-XMLRPC_LIBS=`xmlrpc-c-config --libs`
+
+XMLRPC_CFLAGS=`$xmlrpc_config --cflags`
+XMLRPC_LIBS=`$xmlrpc_config --libs`
 
 RCD_CFLAGS="$RCD_CFLAGS $XMLRPC_CFLAGS"
 RCD_LIBS="$RCD_LIBS $XMLRPC_LIBS"
