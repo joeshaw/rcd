@@ -32,15 +32,84 @@
 /*****************************************************************************/
 /* XML-RPC helpers */
 
+struct InstalledFlags {
+    RCYouPatch *patch;
+    int installed;
+    int name_installed;
+};
+
+static gboolean
+installed_check_cb (RCYouPatch *sys_patch,
+                    gpointer user_data)
+{
+    struct InstalledFlags *flags = user_data;
+    int cmp;
+    
+    cmp = rc_packman_version_compare (rc_packman_get_global (),
+                                      RC_PACKAGE_SPEC (flags->patch),
+                                      RC_PACKAGE_SPEC (sys_patch));
+
+    if (cmp == 0) {
+
+        flags->installed = 1;
+
+    } else {
+
+        if (! flags->name_installed)
+            flags->name_installed = cmp;
+        else
+            flags->name_installed = MAX (flags->name_installed, cmp);
+    }
+
+    return TRUE;
+}
+
 xmlrpc_value *
 rc_you_patch_to_xmlrpc (RCYouPatch *patch, xmlrpc_env *env)
 {
     xmlrpc_value *value = NULL;
+    gboolean installed;
+    gint name_installed;
 
     value = xmlrpc_struct_new (env);
     XMLRPC_FAIL_IF_FAULT (env);
 
     rcd_rc_package_spec_to_xmlrpc (RC_PACKAGE_SPEC (patch), value, env);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    if (patch->installed) {
+        RCChannel *guess;
+
+        installed = TRUE;
+        name_installed = 1;
+
+        guess = rc_world_multi_guess_patch_channel
+            (RC_WORLD_MULTI (rc_get_world ()), patch);
+
+        if (guess != NULL)
+            RCD_XMLRPC_STRUCT_SET_STRING(env, value, "channel_guess",
+                                         rc_channel_get_id (guess));
+    } else {
+        const char *name;
+        struct InstalledFlags flags;
+        flags.patch = patch;
+        flags.installed = 0;
+        flags.name_installed = 0;
+
+        name = g_quark_to_string (RC_PACKAGE_SPEC (patch)->nameq);
+        rc_world_multi_foreach_patch_by_name
+            (RC_WORLD_MULTI (rc_get_world ()),
+             name,
+             RC_CHANNEL_SYSTEM,
+             installed_check_cb,
+             &flags);
+        
+        installed = flags.installed;
+        name_installed = flags.name_installed;
+    }
+    RCD_XMLRPC_STRUCT_SET_INT(env, value, "installed", installed);
+    XMLRPC_FAIL_IF_FAULT (env);
+    RCD_XMLRPC_STRUCT_SET_INT(env, value, "name_installed", name_installed);
     XMLRPC_FAIL_IF_FAULT (env);
 
     RCD_XMLRPC_STRUCT_SET_STRING
@@ -54,9 +123,6 @@ rc_you_patch_to_xmlrpc (RCYouPatch *patch, xmlrpc_env *env)
         RCD_XMLRPC_STRUCT_SET_STRING (env, value, "importance_str",
                                       rc_package_importance_to_string (patch->importance));
     }
-
-    RCD_XMLRPC_STRUCT_SET_INT (env, value, "installed", patch->installed);
-    XMLRPC_FAIL_IF_FAULT (env);
 
     RCD_XMLRPC_STRUCT_SET_INT (env, value, "install_only", patch->install_only);
 

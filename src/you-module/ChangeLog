@@ -1,3 +1,26 @@
+2004-06-14  Tambet Ingo  <tambet@ximian.com>
+
+	* you.c (you_ping): Delete. (Hey Joe!).
+	(find_latest_version): Implement.
+	(find_latest_installed_version): Implement.
+	(you_find_latest_version): Implement.
+	(rcd_module_load): Don't export "rcd.you.ping" RPC call. Register
+	"rcd.you.find_latest_version".
+
+	* you-util.c (installed_check_cb): Implement.
+	(rc_you_patch_to_xmlrpc): Guess patch channel for installed patches.
+	Set "name_installed" for patches from channels.
+
+	* rc-world-you.c (rc_world_multi_get_patch): Use foreach_by_name
+	so the callback function doesn't have to check name and channel.
+	(foreach_patch_by_name_cb): Implement.
+	(rc_world_multi_foreach_patch_by_name): Implement.
+	(guess_cb): Implement.
+	(rc_world_multi_guess_patch_channel): Implement.
+	(fetch_patches_cb): Don't filter anything here.
+	(rc_world_add_patches): Touch package sequence number to make sure
+	client will pick up updated patch list.
+
 2004-06-11  Tambet Ingo  <tambet@ximian.com>
 
 	* rc-you-query.[ch]: New files. Implement patch querying,

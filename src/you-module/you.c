@@ -73,14 +73,6 @@ subworld_added_cb (RCWorldMulti *multi,
 
 /*****************************************************************************/
 
-static xmlrpc_value *
-you_ping (xmlrpc_env   *env,
-          xmlrpc_value *param_array,
-          void         *user_data)
-{
-    return xmlrpc_build_value (env, "i", 1);
-}
-
 static gboolean
 add_patch_cb (RCYouPatch *patch, gpointer user_data)
 {
@@ -151,6 +143,118 @@ cleanup:
 
     return xmlrpc_patches;
 } /* you_search */
+
+typedef struct {
+    RCWorld *world;
+    RCYouPatch *patch;
+    RCYouPatch *installed_patch;
+
+    gboolean subscribed_only;
+} LatestVersionInfo;
+
+static gboolean
+find_latest_version (RCYouPatch *patch, gpointer user_data)
+{
+    LatestVersionInfo *info = user_data;
+    RCPackman *packman = rc_packman_get_global ();
+
+    if (info->subscribed_only
+        && !rc_channel_is_subscribed (patch->channel))
+        return TRUE;
+
+    /*
+     * First check to see if we're newer than the version already installed
+     * on the system, if there is one.  That's filled out below, in
+     * find_latest_installed_version().
+     */
+    if (info->installed_patch) {
+        if (rc_packman_version_compare
+            (packman,
+             RC_PACKAGE_SPEC (patch),
+             RC_PACKAGE_SPEC (info->installed_patch)) <= 0)
+            return TRUE;
+    }
+
+    if (!info->patch)
+        info->patch = patch;
+    else {
+        if (rc_packman_version_compare
+            (packman, 
+             RC_PACKAGE_SPEC (patch),
+             RC_PACKAGE_SPEC (info->patch)) > 0)
+            info->patch = patch;
+    }
+
+    return TRUE;
+} /* find_latest_version */
+
+static gboolean
+find_latest_installed_version (RCYouPatch *patch, gpointer user_data)
+{
+    LatestVersionInfo *info = user_data;
+    RCPackman *packman = rc_packman_get_global ();
+
+    if (!info->installed_patch)
+        info->installed_patch = patch;
+    else {
+        if (rc_packman_version_compare
+            (packman, 
+             RC_PACKAGE_SPEC (patch),
+             RC_PACKAGE_SPEC (info->installed_patch)) > 0)
+            info->installed_patch = patch;
+    }
+    return TRUE;
+} /* find_latest_installed_version */
+
+static xmlrpc_value *
+you_find_latest_version (xmlrpc_env   *env,
+                         xmlrpc_value *param_array,
+                         void         *user_data)
+{
+    RCWorld *world = (RCWorld *) user_data;
+    char *name = NULL;
+    gboolean subscribed_only;
+    LatestVersionInfo info;
+    xmlrpc_value *result = NULL;
+
+    xmlrpc_parse_value (env, param_array, "(sb)", &name, &subscribed_only);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    info.world = world;
+    info.patch = NULL;
+    info.installed_patch = NULL;
+    info.subscribed_only = subscribed_only;
+
+    rc_world_multi_foreach_patch_by_name
+        (RC_WORLD_MULTI (world), name, RC_CHANNEL_SYSTEM,
+         find_latest_installed_version, &info);
+    rc_world_multi_foreach_patch_by_name
+        (RC_WORLD_MULTI (world), name, RC_CHANNEL_NON_SYSTEM,
+         find_latest_version, &info);
+
+    if (!info.patch) {
+        if (info.installed_patch) {
+            /* No version in a channel newer than what is on the system. */
+            xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PACKAGE_IS_NEWEST,
+                                  "Installed version is newer than the "
+                                  "newest available version");
+        } else {
+            /* Can't find a patch by that name at all. */
+            xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PACKAGE_NOT_FOUND,
+                                  "Couldn't find patch");
+        }
+
+        return NULL;
+    }
+
+    result = rc_you_patch_to_xmlrpc (info.patch, env);
+
+ cleanup:
+    if (env->fault_occurred)
+        return NULL;
+
+    return result;
+}
 
 static xmlrpc_value *
 you_transaction (xmlrpc_env   *env,
@@ -331,9 +435,10 @@ rcd_module_load (RCDModule *module)
                       G_CALLBACK (subworld_added_cb),
                       NULL);
 
-    rcd_rpc_register_method ("rcd.you.ping", you_ping,
-                             "view", NULL);
     rcd_rpc_register_method ("rcd.you.search", you_search,
+                             "view", world);
+    rcd_rpc_register_method ("rcd.you.find_latest_version",
+                             you_find_latest_version,
                              "view", world);
     rcd_rpc_register_method ("rcd.you.transact", you_transaction,
                              "superuser", NULL);

@@ -47,9 +47,11 @@ rc_you_patches_quark (void)
 
 typedef struct _PatchInfo PatchInfo;
 struct _PatchInfo {
-    RCPatchFn callback;
-    int       count;
-    gpointer  user_data;
+    int          count;
+    GQuark       nameq;
+    RCChannel   *channel;
+    RCPatchFn    callback;
+    gpointer     user_data;
 };
 
 static gboolean
@@ -101,15 +103,11 @@ typedef struct {
 static gboolean
 multi_get_patch_cb (RCYouPatch *patch, gpointer user_data)
 {
-    GetPatchInfo *info = (GetPatchInfo *) user_data;
+    RCYouPatch **ret = user_data;
 
-    if ((info->nameq == patch->spec.nameq) &&
-        (info->channel == RC_CHANNEL_ANY || info->channel == patch->channel)) {
-        info->patch = patch;
-        return FALSE;
-    }
+    *ret = patch;
 
-    return TRUE;
+    return FALSE;
 }
 
 RCYouPatch *
@@ -117,14 +115,100 @@ rc_world_multi_get_patch (RCWorldMulti *world,
                           RCChannel    *channel,
                           const char   *name)
 {
-    GetPatchInfo info;
+    RCYouPatch *patch = NULL;
 
-    info.patch = NULL;
-    info.channel = channel;
+    g_return_val_if_fail (world != NULL, NULL);
+    g_return_val_if_fail (channel != RC_CHANNEL_ANY
+                          && channel != RC_CHANNEL_NON_SYSTEM, NULL);
+    g_return_val_if_fail (name && *name, NULL);
+
+    rc_world_multi_foreach_patch_by_name (world, name, channel,
+                                          multi_get_patch_cb, &patch);
+    return patch;
+}
+
+static gboolean
+foreach_patch_by_name_cb (RCYouPatch *patch, gpointer user_data)
+{
+    PatchInfo *info = user_data;
+
+    /* If channel matches and nameq is either not set or matches */
+    if ((rc_channel_equal (info->channel, patch->channel)) &&
+        (info->nameq == 0 || info->nameq == patch->spec.nameq)) {
+        if (!info->callback (patch, info->user_data)) {
+            info->count = -1;
+            return FALSE;
+        }
+        info->count++;
+    }
+
+    return TRUE;
+}
+
+gint
+rc_world_multi_foreach_patch_by_name (RCWorldMulti *world,
+                                      const char   *name,
+                                      RCChannel    *channel,
+                                      RCPatchFn     callback,
+                                      gpointer      user_data)
+
+{
+    PatchInfo info;
+
+    info.count = 0;
     info.nameq = g_quark_from_string (name);
+    info.channel = channel;
+    info.callback = callback;
+    info.user_data = user_data;
 
-    rc_world_multi_foreach_patch (world, multi_get_patch_cb, &info);
-    return info.patch;
+    rc_world_multi_foreach_patch (world, foreach_patch_by_name_cb, &info);
+
+    return info.count;
+}
+
+typedef struct {
+    RCYouPatch *patch;
+    RCChannel *guess;
+} GuessInfo;
+
+static gboolean
+guess_cb (RCYouPatch *patch, gpointer user_data)
+{
+    GuessInfo *info = user_data;
+
+    if (!patch->channel)
+        return TRUE;
+
+    if (rc_package_spec_equal (RC_PACKAGE_SPEC (patch),
+                               RC_PACKAGE_SPEC (info->patch))) {
+        info->guess = patch->channel;
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+RCChannel *
+rc_world_multi_guess_patch_channel (RCWorldMulti *world, RCYouPatch *patch)
+{
+    GuessInfo info;
+
+    g_return_val_if_fail (world != NULL, NULL);
+    g_return_val_if_fail (patch != NULL, NULL);
+
+    if (patch->channel != NULL &&
+        !rc_channel_is_system (patch->channel) &&
+        !rc_channel_is_hidden (patch->channel))
+        return patch->channel;
+    
+    info.patch = patch;
+    info.guess = NULL;
+
+    rc_world_multi_foreach_patch_by_name
+        (world, g_quark_to_string (patch->spec.nameq),
+         RC_CHANNEL_NON_SYSTEM, guess_cb, &info);
+
+    return info.guess;
 }
 
 static const char *
@@ -153,17 +237,8 @@ static gboolean
 fetch_patches_cb (RCYouPatch *patch, gpointer user_data)
 {
     RCYouPatchSList **list = user_data;
-    RCYouPatch *existing_patch;
-
-    /* Avoid duplicates */
-    existing_patch = rc_world_multi_get_patch (RC_WORLD_MULTI (rc_get_world ()),
-                                               RC_CHANNEL_ANY,
-                                               g_quark_to_string (patch->spec.nameq));
-
-    if (!existing_patch || rc_package_spec_not_equal ((gconstpointer) existing_patch,
-                                                      (gconstpointer) patch))
-        *list = g_slist_prepend (*list, rc_you_patch_ref (patch));
-
+    *list = g_slist_prepend (*list, rc_you_patch_ref (patch));
+    
     return TRUE;
 }
 
@@ -249,9 +324,11 @@ rc_world_add_patches (RCWorld *world, gpointer user_data)
         patches = info.patches;
     }
 
-    if (patches)
+    if (patches) {
         g_object_set_qdata_full (G_OBJECT (world),
                                  RC_YOU_PATCHES,
                                  patches,
                                  free_patches);
+        rc_world_touch_package_sequence_number (world);
+    }
 }

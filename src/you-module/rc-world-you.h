@@ -40,6 +40,14 @@ typedef gboolean (*RCPatchFn) (RCYouPatch *patch, gpointer user_data);
 gint rc_world_multi_foreach_patch (RCWorldMulti *world,
                                    RCPatchFn     callback,
                                    gpointer      user_data);
+gint rc_world_multi_foreach_patch_by_name (RCWorldMulti *world,
+                                           const char   *name,
+                                           RCChannel    *channel,
+                                           RCPatchFn     callback,
+                                           gpointer      user_data);
+
+RCChannel *rc_world_multi_guess_patch_channel (RCWorldMulti *world,
+                                               RCYouPatch *patch);
 
 RCYouPatch *rc_world_multi_get_patch (RCWorldMulti *world,
                                       RCChannel    *channel,
