@@ -170,6 +170,12 @@ rcd_prefs_get_proxy (void)
         CONFIG_PATH "/Network/proxy-password");
 
     proxy_uri = soup_uri_new (proxy);
+
+    if (!proxy_uri) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING, "Invalid proxy URL: %s", proxy);
+        return NULL;
+    }
+
     proxy_uri->user = proxy_user;
     proxy_uri->passwd = proxy_passwd;
     g_free (proxy);
