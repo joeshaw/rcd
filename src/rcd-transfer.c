@@ -35,11 +35,11 @@
 #include <fcntl.h>
 
 #include <libsoup/soup.h>
+#include <libredcarpet.h>
 #include "rcd-prefs.h"
 #include "rcd-cache.h"
 #include "rcd-marshal.h"
 
-#define rc_debug(x,...) 
 #define _(x) x
 
 static GObjectClass *parent_class;
@@ -276,7 +276,8 @@ rcd_transfer_emit_done(RCDTransfer *t)
     current_transfers = g_slist_remove(current_transfers, t);
 
     if (!rcd_transfer_get_error(t)) {
-        g_timer_stop(t->timer);
+        if (t->timer)
+            g_timer_stop(t->timer);
     }
     g_signal_emit(t, signals[FILE_DONE], 0);
 
@@ -486,7 +487,10 @@ file_pause(RCDTransfer *t)
 {
     int watch = GPOINTER_TO_INT(t->proto_data);
 
-    rc_debug(RC_DEBUG_LEVEL_INFO, "PAUSE! Trans size: %d\n", t->trans_size);
+#if 0
+    /* FIXME */
+    rc_debug(RC_DEBUG_LEVEL_DEBUG, "PAUSE! Trans size: %d\n", t->trans_size);
+#endif
 
     g_source_remove(watch);
 
@@ -559,9 +563,12 @@ http_done(SoupMessage *message, gpointer user_data)
     RCDTransferError gte;
     char *gte_msg = NULL;
 
-    rc_debug(RC_DEBUG_LEVEL_INFO, "[%p]: http_done called\n", message);
-    rc_debug(RC_DEBUG_LEVEL_INFO,
+#if 0
+    /* FIXME */
+    rc_debug(RC_DEBUG_LEVEL_DEBUG, "[%p]: http_done called\n", message);
+    rc_debug(RC_DEBUG_LEVEL_DEBUG,
              "[%p]: Soup Error code: %d\n", message, err);
+#endif
 
     /* The transfer was paused... */
     if (transfer->paused)
@@ -577,13 +584,11 @@ http_done(SoupMessage *message, gpointer user_data)
         transfer->url = g_strdup_printf("file://%s", filename);
         g_free(filename);
         
-        rc_debug(
-            RC_DEBUG_LEVEL_INFO, "[%p]: Reading from the cache: %s\n",
-            message, transfer->url);
+        rc_debug(RC_DEBUG_LEVEL_DEBUG, 
+                 "[%p]: Reading from the cache: %s",
+                 message, transfer->url);
         
         file_open(transfer, 0);
-
-        rc_debug(RC_DEBUG_LEVEL_INFO, "\n");
 
         return;
     }
@@ -609,7 +614,7 @@ http_done(SoupMessage *message, gpointer user_data)
              HTTP_RESPONSE_AUTH_FAILURE(message->response_code))
         gte = RCD_TRANSFER_ERROR_CANT_AUTHENTICATE;
     else if (err == SOUP_ERROR_CANT_CONNECT) {
-        rc_debug(RC_DEBUG_LEVEL_INFO,
+        rc_debug(RC_DEBUG_LEVEL_DEBUG,
                  "[%p]: SOUP_ERROR_CANT_CONNECT\n", message);
         gte = RCD_TRANSFER_ERROR_CANT_CONNECT;
         /* CANT_CONNECT && !gte_msg signify a DNS failure or a refused conn */
@@ -617,7 +622,7 @@ http_done(SoupMessage *message, gpointer user_data)
             gte_msg = g_strdup("DNS failure or connection refused");
     }
     else if (err == SOUP_ERROR_HANDLER) {
-        rc_debug(RC_DEBUG_LEVEL_INFO,
+        rc_debug(RC_DEBUG_LEVEL_DEBUG,
                  "[%p]: SOUP_ERROR_HANDLER\n", message);
         gte = RCD_TRANSFER_ERROR_CANT_CONNECT;
     }
@@ -640,7 +645,7 @@ http_done(SoupMessage *message, gpointer user_data)
 
     if (err == SOUP_ERROR_NONE && !transfer->data &&
         !(transfer->flags & RCD_TRANSFER_FLAGS_FLUSH_MEMORY)) {
-        rc_debug(RC_DEBUG_LEVEL_INFO,
+        rc_debug(RC_DEBUG_LEVEL_DEBUG,
                  "[%p]: SOUP_ERROR_NONE, !transfer->data, !FLUSH_MEM\n",
                  message);
         gte = RCD_TRANSFER_ERROR_CANT_CONNECT;
@@ -653,7 +658,7 @@ http_done(SoupMessage *message, gpointer user_data)
     }
 #endif
 
-    rc_debug(RC_DEBUG_LEVEL_INFO, "\n\n");
+    rc_debug(RC_DEBUG_LEVEL_DEBUG, "\n\n");
 
     rcd_transfer_set_error(transfer, gte, gte_msg);
     rcd_transfer_emit_done(transfer);
@@ -673,11 +678,11 @@ http_content_length(SoupMessage *message, gpointer data)
         return SOUP_ERROR_NONE;
 #endif
 
-    cl = soup_message_get_response_header(message, "Content-Length");
+    cl = soup_message_get_header(message->response_headers, "Content-Length");
     t->file_size = atoi(cl);
 
     rc_debug(
-        RC_DEBUG_LEVEL_INFO, "[%p]: Got Content-Length: %s\n",
+        RC_DEBUG_LEVEL_DEBUG, "[%p]: Got Content-Length: %s\n",
         message, cl);
 } /* http_content_length */
 
@@ -688,13 +693,13 @@ http_content_range(SoupMessage *message, gpointer data)
     const char *cr;
     int total;
 
-    cr = soup_message_get_response_header(message, "Content-Range");
+    cr = soup_message_get_header(message->response_headers, "Content-Range");
     sscanf(cr, "bytes %*d-%*d/%d", &total);
     t->file_size = total;
     t->content_range_set = TRUE;
 
     rc_debug(
-        RC_DEBUG_LEVEL_INFO, "[%p]: Got Content-Range: %s\n",
+        RC_DEBUG_LEVEL_DEBUG, "[%p]: Got Content-Range: %s\n",
         message, cr);
 } /* http_content_range */
 
@@ -704,7 +709,7 @@ http_response_not_modified(SoupMessage *message, gpointer data)
     RCDTransfer *t = data;
 
     rc_debug(
-        RC_DEBUG_LEVEL_INFO, "[%p]: http_response_not_modified called\n",
+        RC_DEBUG_LEVEL_DEBUG, "[%p]: http_response_not_modified called\n",
         message);
 
     t->cached = TRUE;
@@ -716,7 +721,7 @@ http_response_ok(SoupMessage *message, gpointer data)
     RCDTransfer *t = data;
 
     rc_debug(
-        RC_DEBUG_LEVEL_INFO, "[%p]: http_response_ok called\n",
+        RC_DEBUG_LEVEL_DEBUG, "[%p]: http_response_ok called\n",
         message);
 
     /* If we asked for a range of bytes and didn't get it... */
@@ -729,7 +734,7 @@ http_response_partial_content(SoupMessage *message, gpointer data)
     RCDTransfer *t = data;
 
     rc_debug(
-        RC_DEBUG_LEVEL_INFO, "[%p]: http_partial_content called\n",
+        RC_DEBUG_LEVEL_DEBUG, "[%p]: http_partial_content called\n",
         message);
 
     /* We're getting a partial content body */
@@ -748,7 +753,7 @@ http_info(SoupMessage *message, gpointer data)
         return;
 #endif
 
-    rc_debug(RC_DEBUG_LEVEL_INFO, "[%p]: http_info called\n", message);
+    rc_debug(RC_DEBUG_LEVEL_DEBUG, "[%p]: http_info called\n", message);
     rc_dump_transfer_info(message);
 
 #ifdef FIXME_PLEASE
@@ -760,7 +765,7 @@ http_info(SoupMessage *message, gpointer data)
 
     /* We only want to do this on success... */
     if (!HTTP_RESPONSE_SUCCESSFUL(message->response_code)) {
-        rc_debug(RC_DEBUG_LEVEL_INFO,
+        rc_debug(RC_DEBUG_LEVEL_DEBUG,
                  "[%p]: http_info - unsuccessful response code: "
                  "%d, setting HANDLER\n", message, message->response_code);
         return;
@@ -785,7 +790,7 @@ http_read_data(SoupMessage *message, gpointer data)
         return;
 
     if (!HTTP_RESPONSE_SUCCESSFUL(message->response_code)) {
-        rc_debug(RC_DEBUG_LEVEL_INFO, 
+        rc_debug(RC_DEBUG_LEVEL_DEBUG, 
                  "[%p]: http_read_data - unsuccessful response code: "
                  "%d, setting HANDLER\n", message, message->response_code);
         return;
@@ -807,7 +812,7 @@ http_pause(RCDTransfer *t)
 {
     SoupMessage *message = t->proto_data;
 
-    rc_debug(RC_DEBUG_LEVEL_INFO, "PAUSE! Trans size: %d\n", t->trans_size);
+    rc_debug(RC_DEBUG_LEVEL_DEBUG, "PAUSE! Trans size: %d\n", t->trans_size);
 
     soup_message_cancel(message);
 
@@ -877,7 +882,7 @@ http_open(RCDTransfer *t, int offset)
         cache_tmp = g_strdup_printf("%s.tmp", cache_fn);
 
         rc_debug(
-            RC_DEBUG_LEVEL_INFO,
+            RC_DEBUG_LEVEL_DEBUG,
             "[%p]: Trying to find a file to resume... ",
             message);
 
@@ -889,11 +894,11 @@ http_open(RCDTransfer *t, int offset)
             t->offset = offset = s.st_size;
 
             rc_debug(
-                RC_DEBUG_LEVEL_INFO, "Found it! File %s, size %d\n",
+                RC_DEBUG_LEVEL_DEBUG, "Found it! File %s, size %d\n",
                 cache_tmp, offset);
         }
         else {
-            rc_debug(RC_DEBUG_LEVEL_INFO, "Not found\n");
+            rc_debug(RC_DEBUG_LEVEL_DEBUG, "Not found\n");
         }
 
         g_free(cache_fn);
@@ -913,8 +918,8 @@ http_open(RCDTransfer *t, int offset)
         modtime = rcd_cache_get_modification_time(t->cache, t->filename);
         if (modtime) {
             /* We want to get a 304 if we already have the file */
-            soup_message_set_request_header(
-                message, "If-Modified-Since", modtime);
+            soup_message_add_header(
+                message->request_headers, "If-Modified-Since", modtime);
 
             /* Handler for 304 Not Modified messages */
             soup_message_add_error_code_handler(
@@ -949,11 +954,11 @@ http_open(RCDTransfer *t, int offset)
         message, SOUP_HANDLER_BODY_CHUNK,
         http_read_data, t);
 
-    soup_message_set_request_header(
-        message, "User-Agent", "Red Carpet/"VERSION);
+    soup_message_add_header(
+        message->request_headers, "User-Agent", "Red Carpet/"VERSION);
 
     rc_debug(
-        RC_DEBUG_LEVEL_INFO, "[%p]: Queuing up new transfer\n",
+        RC_DEBUG_LEVEL_DEBUG, "[%p]: Queuing up new transfer\n",
         message);
 
     soup_context_unref(context);
@@ -1039,7 +1044,7 @@ rcd_transfer_begin(RCDTransfer *t, const char *url)
 
     t->cacheable = vtable->cacheable;
 
-    rc_debug(RC_DEBUG_LEVEL_INFO, "Transfer URL: %s\n", t->url);
+    rc_debug(RC_DEBUG_LEVEL_DEBUG, "Transfer URL: %s\n", t->url);
 
     rc = (vtable->open_func)(t, 0);
     if (rc) {
@@ -1126,7 +1131,7 @@ rcd_transfer_resume(RCDTransfer *t)
 static void
 print_headers(gpointer key, gpointer value, gpointer data)
 {
-    rc_debug(RC_DEBUG_LEVEL_INFO, "   %s: %s\n", (char *) key, (char *) value);
+    rc_debug(RC_DEBUG_LEVEL_DEBUG, "   %s: %s\n", (char *) key, (char *) value);
 } /* print_headers */
 
 void
@@ -1136,38 +1141,41 @@ rc_dump_transfer_info(SoupMessage *message)
 
     url = soup_uri_to_string(soup_context_get_uri(message->context), FALSE);
 
-    rc_debug(RC_DEBUG_LEVEL_INFO,
+    rc_debug(RC_DEBUG_LEVEL_DEBUG,
              "[%p]: Soup URL %s\n", message, url);
-    rc_debug(RC_DEBUG_LEVEL_INFO,
+    rc_debug(RC_DEBUG_LEVEL_DEBUG,
              "[%p]: Method: %s\n", message, message->method);
-    rc_debug(RC_DEBUG_LEVEL_INFO,
+    rc_debug(RC_DEBUG_LEVEL_DEBUG,
              "[%p]: HTTP Version: %s\n", message,
              soup_message_get_http_version(message) == SOUP_HTTP_1_0 ? 
              "1.0" : "1.1");
-    rc_debug(RC_DEBUG_LEVEL_INFO,
+#if 0
+    /* FIXME */
+    rc_debug(RC_DEBUG_LEVEL_DEBUG,
              "[%p]: HTTP Response code: %d\n", 
              message, message->response_code);
-    rc_debug(RC_DEBUG_LEVEL_INFO,
+    rc_debug(RC_DEBUG_LEVEL_DEBUG,
              "[%p]: HTTP Response phrase: %s\n",
              message, message->response_phrase ? message->response_phrase :
              "(null)");
+#endif
     if (message->request_headers) {
-        rc_debug(RC_DEBUG_LEVEL_INFO,
+        rc_debug(RC_DEBUG_LEVEL_DEBUG,
                  "[%p]: Request headers:\n", message);
         g_hash_table_foreach(message->request_headers, print_headers, NULL);
     }
     else {
-        rc_debug(RC_DEBUG_LEVEL_INFO,
+        rc_debug(RC_DEBUG_LEVEL_DEBUG,
                  "[%p]: No request headers\n", message);
     }
 
     if (message->response_headers) {
-        rc_debug(RC_DEBUG_LEVEL_INFO,
+        rc_debug(RC_DEBUG_LEVEL_DEBUG,
                  "[%p]: Response headers:\n", message);
         g_hash_table_foreach(message->response_headers, print_headers, NULL);
     }
     else {
-        rc_debug(RC_DEBUG_LEVEL_INFO,
+        rc_debug(RC_DEBUG_LEVEL_DEBUG,
                  "[%p]: No response headers\n", message);
     }
 

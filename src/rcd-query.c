@@ -60,7 +60,13 @@ struct QueryTypeStrings {
 
 struct QueryTypeStrings query2str[] = {
     { RCD_QUERY_IS,     "is" },
+    { RCD_QUERY_IS,     "==" },
+    { RCD_QUERY_IS,     "=" },
     { RCD_QUERY_SUBSTR, "substr" },
+    { RCD_QUERY_GT,     ">" },
+    { RCD_QUERY_LT,     "<" },
+    { RCD_QUERY_LT_EQ,  ">="},
+    { RCD_QUERY_GT_EQ,  "<="},
     { RCD_QUERY_LAST,   NULL }
 };
         
@@ -236,26 +242,33 @@ channel_match (RCPackage *package,
                RCDQueryPart *part)
 {
     RCChannel *channel = package->channel;
+    const char *name;
+    gchar *endptr;
+    guint32 id;
     
     /* $ is a magic character for system packages.  This is very lame. */
     if (part->query_str[0] == '$' && part->query_str[1] == '\0') {
         return channel == NULL; 
     }
+
+    /* System packages match only against the magic character */
+    if (channel == NULL)
+        return FALSE;
     
-    if (channel) {
-        gchar *endptr;
-        guint32 id = strtoul (part->query_str, &endptr, 10);
-        if (endptr == NULL) { /* yes, query_str was a uint */
-            return rc_channel_get_id (channel) == id;
-        }
+    id = strtoul (part->query_str, &endptr, 10);
+    if (endptr == NULL) { /* yes, query_str was a uint */
+        return rc_channel_get_id (channel) == id;
     }
 
+    name = rc_channel_get_name (channel);
+    g_assert (name != NULL);
+
     if (part->type == RCD_QUERY_IS) {
-        return ! strcmp (part->query_str, rc_channel_get_name (channel));
+        return ! strcmp (part->query_str, name);
     }
 
     if (part->type == RCD_QUERY_SUBSTR) {
-        return strstr (part->query_str, rc_channel_get_name (channel)) != NULL;
+        return strstr (name, part->query_str) != NULL;
     }
 
     g_assert_not_reached ();
@@ -317,6 +330,10 @@ urgency_match (RCPackage *package,
     RCPackageUpdate *update;
     RCPackageImportance this_importance;
     int imp_num, this_imp_num;
+
+    /* Skip system packages */
+    if (package->channel == NULL)
+        return FALSE;
 
     update = rc_package_get_latest_update (package);
     if (update == NULL)

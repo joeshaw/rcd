@@ -1,7 +1,7 @@
 /* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 
 /*
- * rcd-prefs.c
+ * rcd-fetch.h
  *
  * Copyright (C) 2002 Ximian, Inc.
  *
@@ -25,36 +25,28 @@
  * USA.
  */
 
-#include <config.h>
-#include "rcd-prefs.h"
+#ifndef __RCD_FETCH_H__
+#define __RCD_FETCH_H__
 
-const char *
-rcd_prefs_get_cache_dir (void)
-{
-    /* return "/var/cache/redcarpet"; */ /* FIXME */
-    return "/tmp/rcd-cache";
-}
+#include <libredcarpet.h>
 
-gboolean
-rcd_prefs_get_cache_enabled (void)
-{
-    return TRUE;
-}
+/* 
+   Download the channel list from the server, then
+   add the channels corresponding to our disto to the global
+   RCWorld. 
+*/
+void rcd_fetch_channel_list (void);
 
-const char *
-rcd_prefs_get_host (void)
-{
-    return "http://red-carpet.ximian.com";
-}
+/* 
+   Download a channel's package data from the server,
+   storing the packages in our RCWorld.
+*/
+void rcd_fetch_channel (RCChannel *channel);
 
-gboolean
-rcd_prefs_get_http10_enabled (void)
-{
-    return FALSE;
-}
+/*
+  Download channel package data for all channels.
+*/
+void rcd_fetch_all_channels (void);
 
-gboolean
-rcd_prefs_get_priority (void)
-{
-    return FALSE;
-}
+#endif /* __RCD_FETCH_H__ */
+

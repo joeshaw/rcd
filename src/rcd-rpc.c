@@ -31,6 +31,7 @@
 #include <libsoup/soup-server.h>
 #include <libsoup/soup-socket.h>
 
+#include <libredcarpet.h>
 #include "rcd-rpc.h"
 #include "rcd-rpc-system.h"
 #include "rcd-unix-server.h"
@@ -44,14 +45,14 @@ unix_rpc_callback (GByteArray *in_data)
     xmlrpc_mem_block *output;
     GByteArray *out_data;
 
-    g_print ("[%d]: Handling RPC connection\n", getpid());
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Handling RPC connection");
 
     xmlrpc_env_init(&env);
 
     output = xmlrpc_registry_process_call(
         &env, registry, NULL, in_data->data, in_data->len);
 
-    g_print ("[%d]: Call processed\n", getpid());
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Call processed");
 
     if (env.fault_occurred) {
         g_warning ("Some weird fault during registry processing");
@@ -74,14 +75,14 @@ soup_rpc_callback (SoupServerContext *context, SoupMessage *msg, gpointer data)
     xmlrpc_env env;
     xmlrpc_mem_block *output;
 
-    g_print ("[%d]: Handling RPC connection\n", getpid());
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Handling RPC connection");
 
     xmlrpc_env_init(&env);
 
     output = xmlrpc_registry_process_call(
         &env, registry, NULL, msg->request.body, msg->request.length);
 
-    g_print ("[%d]: Call processed\n", getpid());
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Call processed");
 
     if (env.fault_occurred) {
         soup_message_set_error(msg, SOUP_ERROR_BAD_REQUEST);
@@ -127,7 +128,7 @@ run_server_thread(gpointer user_data)
     SoupServer *server;
     SoupServerAuthContext auth_ctx = { 0 };
 
-    g_print ("[%d]: Starting server\n", getpid());
+    rc_debug (RC_DEBUG_LEVEL_ALWAYS, "Starting server");
 
     server = soup_server_new(SOUP_PROTOCOL_HTTP, 5505);
 
@@ -159,7 +160,8 @@ rcd_rpc_register_method(const char *method_name, xmlrpc_method method,
 	if (!registry)
 		rcd_rpc_init ();
 
-    g_print ("[%d]: Registering method %s\n", getpid(), method_name);
+    rc_debug (RC_DEBUG_LEVEL_INFO,
+              "Registering method %s", method_name);
 
 	xmlrpc_env_init(&env);
     xmlrpc_registry_add_method(
@@ -182,7 +184,7 @@ rcd_rpc_init(void)
 	xmlrpc_env env;
     GThread *thread;
 
-    g_print ("[%d]: Initializing RPC system\n", getpid());
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Initializing RPC system");
 
     if (!g_thread_supported())
         g_thread_init(NULL);

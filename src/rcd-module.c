@@ -7,6 +7,7 @@
 
 #include <glib.h>
 
+#include <libredcarpet.h>
 #include "rcd-module.h"
 
 /* List of RCDModules */
@@ -34,7 +35,8 @@ load_module(const char *file_name)
         return NULL;
     }
 
-    printf("[%d]: Loaded module %s\n", getpid(), file_name);
+    rc_debug (RC_DEBUG_LEVEL_INFO,
+              "Loaded module %s", file_name);
 
     rcd_module = g_new0(RCDModule, 1);
     rcd_module->g_module = module;

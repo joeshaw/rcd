@@ -169,7 +169,6 @@ rcd_cache_open(RCDCache *cache, const char *filename, gboolean append)
 
     cache_fn = rcd_cache_get_cache_filename(cache, filename);
     tmp_fn = g_strdup_printf("%s.tmp", cache_fn);
-    g_free(cache_fn);
     
     flags = O_WRONLY | O_CREAT;
     if (append)
@@ -178,15 +177,19 @@ rcd_cache_open(RCDCache *cache, const char *filename, gboolean append)
         flags |= O_TRUNC;
 
     fd = open(tmp_fn, flags, 0644);
-    g_free(tmp_fn);
 
     if (fd < 0) {
         g_warning("Couldn't open %s (%s) for writing", cache_fn, filename);
-        return;
+        goto finished;
     }
 
     g_hash_table_insert(
         cache->handles, g_strdup(filename), GINT_TO_POINTER(fd));
+
+ finished:
+    g_free(cache_fn);
+    g_free(tmp_fn);
+
 } /* rcd_cache_open */
 
 void

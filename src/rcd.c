@@ -36,37 +36,26 @@
 #include "rcd-rpc.h"
 #include "rcd-rpc-packsys.h"
 #include "rcd-transfer.h"
+#include "rcd-fetch.h"
 
 static void
-rcd_query_fn (RCPackage *package, gpointer user_data)
+debug_message_handler (const char *str, gpointer user_data)
 {
-    g_print ("%s\n", rc_package_to_str_static (package));
+    static int pid = 0;
+    if (pid == 0)
+        pid = getpid ();
+
+    fprintf (stderr, "[%d] %s\n", pid, str);
 }
 
 static void
-rcd_query_test (void)
+initialize_logging (void)
 {
-    RCDQueryPart parts[3];
+    rc_debug_set_display_handler (debug_message_handler, NULL);
+    rc_debug_set_display_level (RC_DEBUG_LEVEL_INFO);
 
-    /* Query for all packages that mention 'GNOME' in the summary but
-       don't have 'gnome' in the package name. */
-
-    parts[0].key = "summary";
-    parts[0].type = RCD_QUERY_SUBSTR;
-    parts[0].query_str = "GNOME";
-    parts[0].negate = FALSE;
-
-    parts[1].key = "channel";
-    parts[1].type = RCD_QUERY_IS;
-    parts[1].query_str = "$";
-    parts[1].negate = FALSE;
-
-    parts[2].type = RCD_QUERY_LAST;
-
-    rcd_query (rc_get_world (),
-               parts,
-               rcd_query_fn,
-               NULL);
+    rc_debug (RC_DEBUG_LEVEL_ALWAYS, "Starting Red Carpet Daemon " VERSION);
+    rc_debug (RC_DEBUG_LEVEL_ALWAYS, "Copyright (C) 2000-2002 Ximian Inc.  All rights reserved.");
 }
 
 static void
@@ -96,15 +85,17 @@ main (int argc, char *argv[])
 {
     GMainLoop *main_loop;
 
-    g_print ("[%d]: Starting rcd\n", getpid());
-
     g_type_init ();
 
-    main_loop = g_main_loop_new (NULL, TRUE);
+    initialize_logging ();
+
+    rcd_fetch_channel_list ();
+    rcd_fetch_all_channels ();
 
     rcd_module_init ();
     initialize_rc_world ();
 
+    main_loop = g_main_loop_new (NULL, TRUE);
     g_main_run (main_loop);
 
     return 0;

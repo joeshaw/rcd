@@ -20,6 +20,8 @@ rcd_SOURCES = 			\
 	rcd-auth.c		\
 	rcd-cache.h		\
 	rcd-cache.c		\
+	rcd-fetch.h		\
+	rcd-fetch.c		\
 	rcd-identity.h		\
 	rcd-identity.c		\
 	rcd-module.c		\

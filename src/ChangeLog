@@ -1,3 +1,22 @@
+2002-05-28  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd.c: Added stuff to download channel and package info and to
+	use a debug display handler.  Removed some old testing code.
+
+	* rcd-transfer.c: Poked at the various bits of rc_debug-ism.
+
+	* rcd-fetch.c: Added.  Some code for downloading channel and
+	package information and storing it in the RCWorld.
+
+	* rcd-cache.c (rcd_cache_open): Don't free cache_fn and tmp_fn
+	until we've finished using them.
+
+	* rcd-module.c: Changed to use rc_debug for spew.
+
+	* rcd-prefs.c (rcd_prefs_get_cache_dir): Use a cache file under
+	/tmp for now, so there is less warning spew when not running as
+	root.
+
 2002-05-24  Joe Shaw  <joe@ximian.com>
 
 	* Makefile.am: Add in rcd-rpc-packsys.[ch], rcd-rpc-util.[ch],
