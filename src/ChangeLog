@@ -1,3 +1,8 @@
+2002-08-14  Ian Peters  <itp@ximian.com>
+
+	* rcd-rpc-packsys.c (resolve_packages): get rid of all of the
+	virtual conflicts stuff
+
 2002-08-14  Jon Trowbridge  <trow@ximian.com>
 
 	* Makefile.am: Don't make rcd-buddy executable in the

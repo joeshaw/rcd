@@ -1216,7 +1216,6 @@ resolve_deps (xmlrpc_env         *env,
               gboolean            verification,
               RCWorld            *world)
 {
-    RCPackman *packman;
     RCPackageSList *install_packages = NULL;
     RCPackageSList *remove_packages = NULL;
     RCResolver *resolver = NULL;
@@ -1254,11 +1253,6 @@ resolve_deps (xmlrpc_env         *env,
 
         rc_resolver_add_extra_dependency (resolver, dep);
     }
-
-    packman = rc_world_get_packman (world);
-    if (rc_packman_get_capabilities (packman) & 
-        RC_PACKMAN_CAP_VIRTUAL_CONFLICTS)
-        rc_resolver_allow_virtual_conflicts (resolver, TRUE);
 
     if (verification)
         rc_resolver_verify_system (resolver);
