@@ -69,7 +69,7 @@ load_module(const char *file_name)
         rc_debug (RC_DEBUG_LEVEL_WARNING,
                   "Can't load module %s: Module major version %d, %d is "
                   "required",
-                  file_name, major_module_version, RCD_MODULE_MAJOR_VERSION);
+                  file_name, *major_module_version, RCD_MODULE_MAJOR_VERSION);
         g_module_close (module);
         return NULL;
     }
@@ -82,7 +82,7 @@ load_module(const char *file_name)
         rc_debug (RC_DEBUG_LEVEL_WARNING,
                   "Can't load module %s: Module minor version %d, %d or "
                   "lower is required",
-                  file_name, minor_module_version, RCD_MODULE_MINOR_VERSION);
+                  file_name, *minor_module_version, RCD_MODULE_MINOR_VERSION);
         g_module_close (module);
         return NULL;
     }

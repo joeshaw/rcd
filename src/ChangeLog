@@ -1,3 +1,99 @@
+2003-04-08  Joe Shaw  <joe@ximian.com>
+
+	* Makefile.am: Add rcd-license.[ch], rcd-options.[ch],
+	rcd-rpc-license.[ch].
+
+	* rcd-autopull.c (rcd_autopull_fetch_all_channels): Update for
+	change to rcd_fetch_all_channels() parameters.
+	(rcd_autopull_fetch_channel_list): Update for change to
+	rcd_fetch_channel_list() parameters.
+
+	* rcd-fetch.c (rcd_fetch_licenses, rcd_fetch_licenses_local):
+	Added.  Fetches a list of licenses from the server (or off of
+	disk) and parses them.
+	(rcd_fetch_channel_list, rcd_fetch_channel_list_local,
+	rcd_fetch_channel, rcd_fetch_channel_local,
+	rcd_fetch_all_channels, rcd_fetch_all_channels_local,
+	rcd_fetch_some_channels): Take an optional RCWorld argument, pass
+	it around, to various rc_world functions, etc.
+
+	* rcd-license.c: New file, deals with package licenses.
+
+	* rcd-module.c (load_module): Fix a buglet where we were printing
+	out the addresses of the module version numbers instead of the
+	numbers themselves.
+
+	* rcd-module.h: Bump up the RCD_MODULE_MAJOR_VERSION to 2 because
+	of API changes in rcd-fetch.h.
+
+	* rcd-options.c: New file, deals with command-line options.
+	Really cleans up a lot of extern mess around the place.
+
+	* rcd-prefs.c (get_config_path): Use accessor functions in
+	rcd-options to get the config file to use.
+	(rcd_prefs_get_remove_server_enabled): First check the
+	command-line option before checking the config file.
+	(rcd_prefs_get_remote_server_port): Ditto.
+	(rcd_prefs_get_bind_ipaddress): Added.
+	(rcd_prefs_get_debug_level): Use rcd-options accessor functions.
+	(rcd_prefs_set_debug_level): Ditto.
+	(rcd_prefs_get_syslog_level): Ditto.
+	(rcd_prefs_set_syslog_level): Ditto.
+
+	* rcd-query.c (rcd_query_type_int_compare): Move a
+	g_assert_not_reached() and a return into the switch statement to
+	shut up gcc.
+
+	* rcd-rpc-license.c: New file, adds RPC methods for dealing with
+	package licnenses.
+
+	* rcd-rpc-packsys.c ((refresh_channels_cb): Create a temporary
+	world for our refresh so we can migrate all of the new channel
+	data at once to fix odd races with rc and flicker with
+	red-carpet.  Also refresh licenses, move loading of subscriptions
+	out of here.  Also always pass in the list of pending ids to
+	check_pending_status_cb() even if we aren't polling on them; fixes
+	an unlikely race with possible duplicate packages.
+	(check_pending_status_cb): Once we're done with the refresh,
+	migrate the data from the temporary world over to the real world.
+	(migrate_world_data): New function, cleans out old world data,
+	migrates temporary world data over, and loads subscriptions.
+	(packsys_refresh_channel): Update for rcd_fetch_channel() API
+	change.
+
+	* rcd-rpc-system.c (system_restart): RPC method to have the daemon
+	restart itself.
+
+	* rcd-rpc-util.c (rcd_rc_package_to_xmlrpc): Add the "license"
+	field to the XML-RPC representation of a package.
+
+	* rcd-rpc-util.h: Add RCD_RPC_FAULT_LICENSE_NOT_FOUND.
+
+	* rcd-rpc.c (rcd_rpc_server_start): Don't take a port number
+	anymore.  Use the accessor functions in rcd-options to figure out
+	the right IP address to bind to an the port number.  Also unref
+	the SoupServer so it gets shutdown when the daemon is shutdown or
+	restarted and so the port doesn't stay open.
+	(rcd_rpc_init): Remove some #if 0 code.
+
+	* rcd-shutdown.c (shutdown_idle_cb): Take a flag whether to
+	restart as the user_data to this function.  If we're being
+	restarted, exec ourselves.
+	(rcd_shutdown): Make this just a wrapper around do_shutdown()
+	(rcd_restart): Added.
+
+	* rcd-transfer-http.c (http_open): Get the no network flag from an
+	rcd-options accessor function.
+
+	* rcd.c: Remove all the command-line option parsing from this
+	file.  Any time we need that info, call an rcd-options accessor
+	function.
+	(initialize_rpc): Register our license rpc functions.
+	(initialize_data): Update fetch functions for new API.  Always try
+	downloading license info.
+	(main): Call rcd_options_parse() to parse options, don't do stupid
+	things with passing the port to rcd_rpc_server_start().
+
 2003-04-03  Ian Peters  <itp@ximian.com>
 
 	* rcd-transaction.c (check_download_space): make sure the cache

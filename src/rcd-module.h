@@ -37,7 +37,7 @@
  * "rcd_module_minor_version" symbol which must be less than or equal to
  * the minor version.
  */
-#define RCD_MODULE_MAJOR_VERSION 1
+#define RCD_MODULE_MAJOR_VERSION 2
 #define RCD_MODULE_MINOR_VERSION 0
 
 typedef struct _RCDModule RCDModule;

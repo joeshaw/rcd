@@ -32,6 +32,7 @@
 
 #include <libredcarpet.h>
 
+#include "rcd-options.h"
 #include "rcd-prefs.h"
 
 /* 
@@ -392,7 +393,7 @@ add_header_cb (gpointer key, gpointer value, gpointer user_data)
 static int
 http_open (RCDTransfer *t)
 {
-    extern gboolean no_network;
+    gboolean no_network = rcd_options_get_no_network_flag ();
     RCDTransferProtocolHTTP *protocol;
     SoupUri *uri;
     SoupContext *context;

@@ -32,6 +32,8 @@ rcd_SOURCES = 			\
 	rcd-heartbeat.h		\
 	rcd-identity.c		\
 	rcd-identity.h		\
+	rcd-license.c		\
+	rcd-license.h		\
 	rcd-log.c		\
 	rcd-log.h		\
 	rcd-log-entry.c		\
@@ -42,6 +44,8 @@ rcd_SOURCES = 			\
 	rcd-module.h		\
 	rcd-news.c		\
 	rcd-news.h		\
+	rcd-options.c		\
+	rcd-options.h		\
 	rcd-package-locks.c	\
 	rcd-package-locks.h	\
 	rcd-pending.c		\
@@ -60,6 +64,8 @@ rcd_SOURCES = 			\
 	rcd-rollback.h		\
 	rcd-rpc.c		\
 	rcd-rpc.h		\
+	rcd-rpc-license.c	\
+	rcd-rpc-license.h	\
 	rcd-rpc-log.c		\
 	rcd-rpc-log.h		\
 	rcd-rpc-mirror.c	\

@@ -109,7 +109,7 @@ packsys_refresh_channel (xmlrpc_env   *env,
 
     channel = rc_world_get_channel_by_id (world, channel_id);
     if (channel) {
-        pending_id = rcd_fetch_channel (channel);
+        pending_id = rcd_fetch_channel (channel, NULL);
         rcd_fetch_channel_icon (channel);
     }
 
@@ -122,13 +122,46 @@ packsys_refresh_channel (xmlrpc_env   *env,
     return value;
 }
 
+typedef struct {
+    RCWorld *temp_world;
+    GSList *id_list;
+} ChannelRefreshInfo;
+
+static void
+remove_channel_cb (RCChannel *channel, gpointer user_data)
+{
+    RCWorld *world = user_data;
+
+    if (!rc_channel_has_refresh_magic (channel))
+        rc_world_remove_channel (world, channel);
+}
+
+static void
+migrate_channel_cb (RCChannel *channel, gpointer user_data)
+{
+    RCWorld *world = user_data;
+
+    rc_world_migrate_channel (world, channel);
+}
+
+static void
+migrate_world_data (RCWorld *from_world, RCWorld *to_world)
+{
+    rc_world_foreach_channel (to_world, remove_channel_cb, to_world);
+    rc_world_foreach_channel (from_world, migrate_channel_cb, to_world);
+
+    rcd_subscriptions_load ();
+
+    rc_world_free (from_world);
+}
+
 static gboolean
 check_pending_status_cb (gpointer user_data)
 {
-    GSList *id_list = user_data;
+    ChannelRefreshInfo *info = user_data;
     GSList *iter;
 
-    for (iter = id_list; iter; iter = iter->next) {
+    for (iter = info->id_list; iter; iter = iter->next) {
         int id = GPOINTER_TO_INT (iter->data);
         RCDPending *pending = rcd_pending_lookup_by_id (id);
         RCDPendingStatus status = rcd_pending_get_status (pending);
@@ -139,7 +172,9 @@ check_pending_status_cb (gpointer user_data)
             return TRUE;
     }
 
-    g_slist_free (id_list);
+    g_slist_free (info->id_list);
+    migrate_world_data (info->temp_world, rc_get_world ());
+    g_free (info);
 
     rcd_transaction_unlock ();
 
@@ -149,6 +184,7 @@ check_pending_status_cb (gpointer user_data)
 static void
 refresh_channels_cb (gpointer user_data)
 {
+    ChannelRefreshInfo *info;
     RCDistroStatus status;
     GSList *id_list;
     GSList **ret_list = user_data;
@@ -173,39 +209,47 @@ refresh_channels_cb (gpointer user_data)
 
     rcd_transaction_lock ();
 
+    info = g_new0 (ChannelRefreshInfo, 1);
+
+    /*
+     * Create a temporary world so we can make all these changes to
+     * the real world once and avoid flicker and incomplete data.
+     */
+    info->temp_world = rc_world_new (rc_world_get_packman (rc_get_world ()));
+
     /* First we fetch the transient channels -- which practically 
        means refreshing the mounted channels only.  Otherwise it is
        not possible to refresh mounted channels if the network is
        unavailable. */
-    id_list = rcd_fetch_some_channels (RCD_FETCH_TRANSIENT);
+    id_list = rcd_fetch_some_channels (RCD_FETCH_TRANSIENT, info->temp_world);
     /* id_list should just be NULL, but we free it just in case */
     g_slist_free (id_list);
 
-    if (!rcd_fetch_channel_list ()) {
+    if (!rcd_fetch_channel_list (info->temp_world)) {
         if (ret_list)
             *ret_list = RCD_REFRESH_INVALID;
+        migrate_world_data (info->temp_world, rc_get_world ());
+        g_free (info);
         rcd_transaction_unlock ();
         return;
     }
 
+    rcd_fetch_licenses ();
     rcd_fetch_news ();
     rcd_fetch_mirrors ();
-
-    rcd_subscriptions_load ();
 
     rcd_fetch_all_channel_icons (TRUE);
 
     /* Now we refresh just the persistent channels (i.e. the
        non-mounted ones). */
-    id_list = rcd_fetch_some_channels (RCD_FETCH_PERSISTENT);
+    id_list = rcd_fetch_some_channels (RCD_FETCH_PERSISTENT, info->temp_world);
 
-    if (ret_list == NULL) {
-        g_slist_free (id_list);
-        id_list = NULL;
-    } else
+    if (ret_list)
         *ret_list = id_list;
 
-    g_idle_add (check_pending_status_cb, id_list);
+    info->id_list = id_list;
+
+    g_idle_add (check_pending_status_cb, info);
 } /* refresh_channels_cb */
 
 static xmlrpc_value *

@@ -64,21 +64,28 @@ gboolean rcd_fetch_register (const char  *activation_code,
  */
 gboolean rcd_fetch_distro (void);
 
+/*
+ * Download the list of licenses that we know about
+ */
+
+gboolean rcd_fetch_licenses       (void);
+gboolean rcd_fetch_licenses_local (void);
+
 /* 
    Download the channel list from the server, then
    add the channels corresponding to our disto to the global
    RCWorld.  Returns TRUE if successful.
 */
-gboolean rcd_fetch_channel_list       (void);
-gboolean rcd_fetch_channel_list_local (void);
+gboolean rcd_fetch_channel_list       (RCWorld *world);
+gboolean rcd_fetch_channel_list_local (RCWorld *world);
 
 /* 
    Download a channel's package data from the server,
    storing the packages in our RCWorld.  Returns the id
    of the RCDPending.
 */
-gint     rcd_fetch_channel       (RCChannel *channel);
-gboolean rcd_fetch_channel_local (RCChannel *channel);
+gint     rcd_fetch_channel       (RCChannel *channel, RCWorld *world);
+gboolean rcd_fetch_channel_local (RCChannel *channel, RCWorld *world);
 
 /*
   Download channel package data for all channels.
@@ -92,9 +99,10 @@ typedef enum {
     RCD_FETCH_PERSISTENT = 1<<2,
 } RCDFetchChannelFlags;
 
-GSList *rcd_fetch_all_channels       (void);
-void    rcd_fetch_all_channels_local (void);
-GSList *rcd_fetch_some_channels      (RCDFetchChannelFlags flags);
+GSList *rcd_fetch_all_channels       (RCWorld *world);
+void    rcd_fetch_all_channels_local (RCWorld *world);
+GSList *rcd_fetch_some_channels      (RCDFetchChannelFlags flags,
+                                      RCWorld *world);
 
 /*
  * Download channel icons.  If they're already on the system, they won't

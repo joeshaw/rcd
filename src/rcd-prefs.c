@@ -34,6 +34,7 @@
 
 #include "gnome-config.h"
 #include "rcd-heartbeat.h"
+#include "rcd-options.h"
 
 #define DEFAULT_CONFIG_FILE SYSCONFDIR "/rcd.conf"
 #define SYNC_CONFIG if (prefs_auto_save) gnome_config_sync_file ((char *) get_config_path (NULL))
@@ -43,11 +44,7 @@ static gboolean prefs_auto_save = TRUE;
 static const char *
 get_config_path (const char *path)
 {
-    /*
-     * Ugh.  I dislike externing this.  It's one of the options in
-     * rcd.c.
-     */
-    extern char *config_file;
+    const char *config_file = rcd_options_get_config_file ();
     static char *config_path = NULL;
 
     g_free (config_path);
@@ -126,6 +123,11 @@ rcd_prefs_set_boolean (const char *path, gboolean val)
 gboolean
 rcd_prefs_get_remote_server_enabled (void)
 {
+    gboolean no_remote_option = rcd_options_get_remote_disable_flag ();
+
+    if (no_remote_option)
+        return FALSE;
+
     return gnome_config_get_bool (
         get_config_path ("/Server/remote-enabled=TRUE"));
 } /* rcd_prefs_get_remote_server_enabled */
@@ -133,8 +135,29 @@ rcd_prefs_get_remote_server_enabled (void)
 int
 rcd_prefs_get_remote_server_port (void)
 {
+    int remote_port_option = rcd_options_get_server_port ();
+
+    if (remote_port_option)
+        return remote_port_option;
+
     return gnome_config_get_int (get_config_path ("/Server/port=505"));
 } /* rcd_prefs_get_remote_server_port */
+
+const char *
+rcd_prefs_get_bind_ipaddress (void)
+{
+    const char *bind_option = rcd_options_get_bind_ipaddress ();
+    static char *ip = NULL;
+
+    if (bind_option)
+        return bind_option;
+
+    g_free (ip);
+
+    ip = gnome_config_get_string (get_config_path ("/Server/bind-ip"));
+
+    return ip;
+} /* rcd_prefs_get_bind_ipaddress */
 
 const char *
 rcd_prefs_get_cache_dir (void)
@@ -480,7 +503,7 @@ gint
 rcd_prefs_get_debug_level (void)
 {
     /* Command-line debug level option */
-    extern int debug_level;
+    int debug_level = rcd_options_get_debug_level ();
 
     if (debug_level > -1)
         return debug_level;
@@ -493,7 +516,7 @@ void
 rcd_prefs_set_debug_level (gint level)
 {
     /* Command-line debug level option */
-    extern int debug_level;
+    int debug_level = rcd_options_get_debug_level ();
 
     /* Don't obey the command-line option anymore */
     debug_level = -1;
@@ -507,7 +530,7 @@ gint
 rcd_prefs_get_syslog_level (void)
 {
     /* Command-line debug level option */
-    extern int syslog_level;
+    int syslog_level = rcd_options_get_syslog_level ();
 
     if (syslog_level > -1)
         return syslog_level;
@@ -520,7 +543,7 @@ void
 rcd_prefs_set_syslog_level (gint level)
 {
     /* Command-line debug level option */
-    extern int syslog_level;
+    int syslog_level = rcd_options_get_syslog_level ();
 
     /* Don't obey the command-line option anymore */
     syslog_level = -1;

@@ -480,7 +480,7 @@ rcd_autopull_fetch_all_channels (void (*finished_cb) (gpointer),
     frc->user_data   = user_data;
 
     /* Start the package info downloads */
-    frc->ids         = rcd_fetch_all_channels ();
+    frc->ids         = rcd_fetch_all_channels (NULL);
 
     /* Launch our timeout that waits for the download to finish
        before proceeding. */
@@ -492,7 +492,7 @@ static gboolean
 rcd_autopull_fetch_channel_list (void (*finished_cb) (gpointer),
                                  gpointer user_data)
 {
-    if (! rcd_fetch_channel_list ()) 
+    if (! rcd_fetch_channel_list (NULL)) 
         return FALSE;
 
     /* Calling rcd_fetch_channel_list blows away our subscriptions,

@@ -1,9 +1,9 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
 /*
- * rcd-rpc.h
+ * rcd-rpc-license.h
  *
- * Copyright (C) 2002 Ximian, Inc.
+ * Copyright (C) 2003 Ximian, Inc.
  *
  */
 
@@ -23,28 +23,9 @@
  * USA.
  */
 
-#ifndef __RCD_RPC_H__
-#define __RCD_RPC_H__
+#ifndef __RCD_RPC_LICENSE_H__
+#define __RCD_RPC_LICENSE_H__
 
-#include <glib.h>
-#include <xmlrpc.h>
+void rcd_rpc_license_register_methods(void);
 
-#include "rcd-identity.h"
-
-typedef struct {
-    char *host;
-
-    RCDIdentity *identity;
-} RCDRPCMethodData;
-
-RCDRPCMethodData *rcd_rpc_get_method_data (void);
-
-int rcd_rpc_register_method (const char        *method_name,
-                             xmlrpc_method      method,
-                             const char        *privilege_string,
-                             gpointer           user_data);
-
-void rcd_rpc_server_start (void);
-void rcd_rpc_init (void);
-
-#endif /* __RCD_RPC_H__ */
+#endif /* __RCD_RPC_LICENSE_H__ */

@@ -453,6 +453,11 @@ rcd_rc_package_to_xmlrpc (RCPackage *package, xmlrpc_env *env)
             env, value,
             "importance_str",
             rc_package_importance_to_string (update->importance));
+
+        if (update->license) {
+            RCD_XMLRPC_STRUCT_SET_STRING (env, value,
+                                          "license", update->license);
+        }
     }
 
     /* Extra data useful to a client */

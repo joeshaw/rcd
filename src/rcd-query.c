@@ -126,10 +126,9 @@ rcd_query_type_int_compare (RCDQueryType type,
         return x <= y;
 
     default:
+        g_assert_not_reached ();
+        return FALSE;
     }
-
-    g_assert_not_reached ();
-    return FALSE;
 }
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */

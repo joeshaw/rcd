@@ -38,6 +38,7 @@
 #include <libredcarpet.h>
 
 #include "rcd-identity.h"
+#include "rcd-options.h"
 #include "rcd-prefs.h"
 #include "rcd-privileges.h"
 #include "rcd-rpc-system.h"
@@ -400,33 +401,21 @@ rcd_rpc_register_method(const char   *method_name,
 } /* rcd_rpc_register_method */
 
 void
-rcd_rpc_server_start (int port)
+rcd_rpc_server_start (void)
 {
     SoupServer *server;
     SoupServerAuthContext auth_ctx = { 0 };
 
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Starting server");
 
-    /* 
-     * port of -1 means disable the remote server
-     * port of 0 means use the default port from the config
-     */
-
-    if (port != -1 && rcd_prefs_get_remote_server_enabled ()) {
-        /* Command-line argument, externed.  Ew. */
-        extern char *bind_ipaddress;
+    if (rcd_prefs_get_remote_server_enabled ()) {
+        int port = rcd_prefs_get_remote_server_port ();
         const char *bind_ip;
-
-        if (!port)
-            port = rcd_prefs_get_remote_server_port ();
 
         soup_set_ssl_cert_files(SHAREDIR "/rcd.pem",
                                 SHAREDIR "/rcd.pem");
 
-        if (bind_ipaddress)
-            bind_ip = bind_ipaddress;
-        else
-            bind_ip = rcd_prefs_get_string ("/Server/bind-ip");
+        bind_ip = rcd_prefs_get_bind_ipaddress ();
 
         if (bind_ip) {
             server = soup_server_new_with_host (bind_ip,
@@ -457,6 +446,7 @@ rcd_rpc_server_start (int port)
         rcd_shutdown_add_handler (soup_shutdown_cb, server);
         
         soup_server_run_async(server);
+        soup_server_unref (server);
     }
 
     if (rcd_unix_server_run_async(unix_rpc_callback)) {
@@ -471,11 +461,6 @@ rcd_rpc_init(void)
     xmlrpc_env env;
 
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Initializing RPC system");
-
-#if 0
-    if (!g_thread_supported())
-        g_thread_init(NULL);
-#endif
 
     xmlrpc_env_init(&env);
     registry = xmlrpc_registry_new(&env);

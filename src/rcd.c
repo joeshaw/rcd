@@ -28,7 +28,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <popt.h>
 #include <signal.h>
 #include <syslog.h>
 #include <unistd.h>
@@ -43,12 +42,14 @@
 #include "rcd-identity.h"
 #include "rcd-log.h"
 #include "rcd-module.h"
+#include "rcd-options.h"
 #include "rcd-package-locks.h"
 #include "rcd-prefs.h"
 #include "rcd-privileges.h"
 #include "rcd-query.h"
 #include "rcd-rpc.h"
 #include "rcd-rpc-packsys.h"
+#include "rcd-rpc-license.h"
 #include "rcd-rpc-log.h"
 #include "rcd-rpc-mirror.h"
 #include "rcd-rpc-news.h"
@@ -59,101 +60,11 @@
 #include "rcd-transaction.h"
 #include "rcd-transfer.h"
 
-#ifndef POPT_TABLEEND
-#  define POPT_TABLEEND { NULL, '\0', 0, 0, 0, NULL, NULL }
-#endif
-
-/* global variables related to option parsing */
-/* If it isn't declared "static", then it's used "extern" somewhere.  Ew. */
-
-static gboolean show_version = FALSE;
-static gboolean non_daemon_flag = FALSE;
-static gboolean late_background = FALSE;
-static gboolean non_root_flag = FALSE;
-static int remote_port = 0;
-static gboolean remote_disable = FALSE;
-static char *dump_file = NULL;
-char *config_file = NULL;
-int debug_level = -1;
-int syslog_level = -1;
-gboolean no_network = FALSE;
-gboolean no_modules = FALSE;
-char *bind_ipaddress = NULL;
-
-static void
-option_parsing (int argc, const char **argv)
-{
-    const struct poptOption command_line_options[] = {
-        POPT_AUTOHELP
-
-        { "config", 'f', POPT_ARG_STRING, &config_file, 0,
-          "Specify an alternate config file to read.", "config file" },
-
-        { "non-daemon", 'n', POPT_ARG_NONE, &non_daemon_flag, 0,
-          "Don't run the daemon in the background.", NULL },
-
-        { "late-background", '\0', POPT_ARG_NONE, &late_background, 0,
-          "Run the daemon in the background, but not until it is ready "
-          "to accept connections.", NULL },
-
-        { "allow-non-root", '\0', POPT_ARG_NONE, &non_root_flag, 0,
-          "Allow the daemon to be run as a user other than root.", NULL },
-
-        { "no-network", '\0', POPT_ARG_NONE, &no_network, 0,
-          "Do not download any data from a server.", NULL },
-
-        { "no-modules", 'm', POPT_ARG_NONE, &no_modules, 0,
-          "Do not load any plugin modules.", NULL },
-
-        { "ipaddress", 'i', POPT_ARG_STRING, &bind_ipaddress, 0,
-          "Bind the remote server only to this IP address.", "ip address" },
-
-        { "port", 'p', POPT_ARG_INT, &remote_port, 0,
-          "Listen for remote connections on a different port", NULL },
-
-        { "no-remote", 'r', POPT_ARG_NONE, &remote_disable, 0,
-          "Don't listen for remote connections", NULL },
-
-        { "debug", 'd', POPT_ARG_INT, &debug_level, 0,
-          "Set the verbosity of debugging output.", "0-6" },
-
-        { "syslog", 's', POPT_ARG_INT, &syslog_level, 0,
-          "Set the verbosity of syslog output.", "0-6" },
-
-        { "undump", '\0', POPT_ARG_STRING, &dump_file, 0,
-          "Initialize daemon from a dump file.", "filename" },
-
-        { "version", '\0', POPT_ARG_NONE, &show_version, 0,
-          "Show version information", NULL },
-
-        { NULL, '\0', 0, 0, 0, NULL, NULL }
-    };
-
-    poptContext popt_context;
-    int rv;
-
-    popt_context = poptGetContext ("rcd",
-                                   argc, argv,
-                                   command_line_options, 0);
-    while ( (rv = poptGetNextOpt (popt_context)) > 0);
-
-    if (rv < -1) {
-        g_printerr ("%s: %s\n",
-                    poptBadOption(popt_context, 0), 
-                    poptStrerror (rv));
-        g_printerr ("rcd aborting\n");
-        exit (-1);
-    }
-
-    if (getenv ("RCD_NON_DAEMON"))
-        non_daemon_flag = TRUE;
-}
-
 static void
 root_check (void)
 {
     /* Not being root is fine when we initialize from a dump file. */
-    if (dump_file != NULL)
+    if (rcd_options_get_dump_file () != NULL)
         return;
 
     if (getuid () == 0)
@@ -167,7 +78,7 @@ root_check (void)
     g_printerr ("the system to install, upgrade or remove packages.\n");
     g_printerr ("\n");
 
-    if (! non_root_flag) {
+    if (!rcd_options_get_non_root_flag ()) {
         g_printerr ("If you really want to do this, re-run rcd with the "
                     "--allow-non-root\n");
         g_printerr ("option to suppress this warning message.  However, "
@@ -207,7 +118,8 @@ debug_message_handler (const char *str, RCDebugLevel level, gpointer user_data)
     }
 
     /* FIXME: Use RCDebug's display_level instead of hardcoding value here? */
-    if (!non_daemon_flag && level <= rcd_prefs_get_syslog_level ()) {
+    if (!rcd_options_get_non_daemon_flag () &&
+        level <= rcd_prefs_get_syslog_level ()) {
         char *log_name = g_strdup_printf ("rcd[%d]", pid_for_messages);
 
         openlog (log_name, 0, LOG_DAEMON);
@@ -253,10 +165,10 @@ daemonize (void)
     char *pid;
     
     /* We never daemonize when we initialize from a dump file. */
-    if (dump_file != NULL)
+    if (rcd_options_get_dump_file () != NULL)
         return;
 
-    if (non_daemon_flag)
+    if (rcd_options_get_non_daemon_flag ())
         return;
 #ifdef NEED_KERNEL_FD_WORKAROUND
    /*
@@ -335,6 +247,7 @@ initialize_rc_world (void)
 {
     RCPackman *packman;
     RCWorld *world;
+    const char *dump_file;
 
     /* Create a packman, hand it off to the world */
     packman = rc_distman_new ();
@@ -355,6 +268,7 @@ initialize_rc_world (void)
     
     rcd_shutdown_add_handler (shutdown_world, world);
 
+    dump_file = rcd_options_get_dump_file ();
     if (dump_file != NULL) {
         char *dump_file_contents;
 
@@ -389,6 +303,7 @@ static void
 initialize_rpc (void)
 {
     rcd_rpc_packsys_register_methods (rc_get_world ());
+    rcd_rpc_license_register_methods ();
     rcd_rpc_log_register_methods ();
     rcd_rpc_mirror_register_methods ();
     rcd_rpc_news_register_methods ();
@@ -516,7 +431,7 @@ initialize_data (void)
 
     /* If we have loaded a dump file, we don't want to initialize
        any of this stuff. */
-    if (dump_file != NULL)
+    if (rcd_options_get_dump_file () != NULL)
         return;
 
     if (!g_file_test (SYSCONFDIR "/mcookie", G_FILE_TEST_EXISTS))
@@ -537,16 +452,16 @@ initialize_data (void)
 
     supported_distro = is_supported_distro ();
 
-    if (!no_network && supported_distro) {
-        if (!rcd_fetch_channel_list_local ())
-            rcd_fetch_channel_list ();
+    if (!rcd_options_get_no_network_flag () && supported_distro) {
+        if (!rcd_fetch_channel_list_local (NULL))
+            rcd_fetch_channel_list (NULL);
     }
     
     rcd_subscriptions_load ();
     
-    if (!no_network && supported_distro) {
+    if (!rcd_options_get_no_network_flag () && supported_distro) {
         /* This will fall back and download from the net if necessary */
-        rcd_fetch_all_channels_local ();
+        rcd_fetch_all_channels_local (NULL);
 
         rcd_fetch_all_channel_icons (FALSE);
     }
@@ -555,10 +470,17 @@ initialize_data (void)
        list of channels. */
     rcd_package_locks_load (rc_get_world ());
 
-    if (!no_network && !rcd_fetch_news_local ())
+    /* Always try to download the licenses; it will fall back on
+       rcd_fetch_licenses_local() if it fails. */
+    if (!rcd_options_get_no_network_flag ())
+        rcd_fetch_licenses ();
+    else
+        rcd_fetch_licenses_local ();
+
+    if (!rcd_options_get_no_network_flag () && !rcd_fetch_news_local ())
         rcd_fetch_news ();
 
-    if (!no_network && !rcd_fetch_mirrors_local ())
+    if (!rcd_options_get_no_network_flag () && !rcd_fetch_mirrors_local ())
         rcd_fetch_mirrors ();
 
 } /* initialize_data */
@@ -613,7 +535,7 @@ sighup_handler (int sig_num)
 {
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "SIGHUP received; reloading data");
 
-    if (!non_daemon_flag) {
+    if (!rcd_options_get_non_daemon_flag ()) {
         int fd;
 
         close (STDOUT_FILENO);
@@ -667,6 +589,7 @@ main (int argc, const char **argv)
 {
     GMainLoop *main_loop;
     struct sigaction sig_action;
+    const char *config_file;
     char *python_path;
 
     g_type_init ();
@@ -677,14 +600,15 @@ main (int argc, const char **argv)
     rcd_shutdown_add_handler ((RCDShutdownFn) g_main_loop_quit,
                               main_loop);
 
-    option_parsing (argc, argv);
+    rcd_options_parse (argc, argv);
 
-    if (show_version) {
+    if (rcd_options_get_show_version ()) {
         g_print ("%s\n", rcd_about_name ());
         g_print ("%s\n\n", rcd_about_copyright ());
         exit (0);
     }
 
+    config_file = rcd_options_get_config_file ();
     if (config_file && !g_file_test (config_file, G_FILE_TEST_EXISTS)) {
         g_printerr ("Unable to find config file '%s'\n", config_file);
         g_printerr ("rcd aborting\n");
@@ -693,7 +617,7 @@ main (int argc, const char **argv)
     }
 
     root_check ();
-    if (! late_background)
+    if (!rcd_options_get_late_background ())
         daemonize ();
 
     /* Set up SIGTERM and SIGQUIT handlers */
@@ -747,14 +671,14 @@ main (int argc, const char **argv)
     initialize_rc_world ();
     initialize_rpc ();
 
-    if (!no_modules)
+    if (!rcd_options_get_no_modules_flag ())
         rcd_module_init ();
 
     initialize_data ();
     
     /* We can't daemonize any later than this, so hopefully module
        initialization won't be slow. */
-    if (late_background) {
+    if (rcd_options_get_late_background ()) {
         
         rc_debug (RC_DEBUG_LEVEL_ALWAYS, "Running daemon in background.");
         daemonize ();
@@ -767,16 +691,15 @@ main (int argc, const char **argv)
         hello ();
     }
 
-    if (remote_disable)
-        remote_port = -1;
-    
-    rcd_rpc_server_start (remote_port);
+    rcd_rpc_server_start ();
 
     /* No heartbeat if we have initialized from a dump file. */
-    if (dump_file == NULL)
+    if (rcd_options_get_dump_file () == NULL)
         rcd_heartbeat_start ();
 
     g_main_run (main_loop);
+
+    rc_debug (RC_DEBUG_LEVEL_ALWAYS, "Exited out of main loop");
 
     return 0;
 } /* main */

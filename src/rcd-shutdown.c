@@ -24,9 +24,12 @@
  */
 
 #include <config.h>
-#include "rcd-shutdown.h"
+#include <unistd.h>
 
 #include <libredcarpet.h>
+
+#include "rcd-options.h"
+#include "rcd-shutdown.h"
 
 typedef struct _ShutdownHandler ShutdownHandler;
 struct _ShutdownHandler {
@@ -78,9 +81,10 @@ rcd_shutdown_allow (void)
     }
 }
 
-static gint
+static gboolean
 shutdown_idle_cb (gpointer user_data)
 {
+    gboolean restart = GPOINTER_TO_INT (user_data);
     GSList *iter;    
 
     for (iter = shutdown_handlers; iter != NULL; iter = iter->next) {
@@ -94,17 +98,25 @@ shutdown_idle_cb (gpointer user_data)
 
     g_slist_free (shutdown_handlers);
 
-    /* We should be quitting the main loop (which will cause us to
-       exit) in a handler.  If not, we'll throw in an exit just to be
-       sure. */
-    exit (0);
+    if (!restart) {
+        /* We should be quitting the main loop (which will cause us to
+           exit) in a handler.  If not, we'll throw in an exit just to be
+           sure. */
+        exit (0);
+    }
+    else {
+        const char **argv = rcd_options_get_argv ();
+
+        execv (argv[0], (char **) argv);
+    }
+
+    /* We should never reach here... */
+    return FALSE;
 }
 
 void
-rcd_shutdown (void)
+do_shutdown (gboolean restart)
 {
-
-
     if (shutdown_counter > 0) {
         shutdown_pending = TRUE;
         return;
@@ -118,5 +130,17 @@ rcd_shutdown (void)
 
     shutting_down = TRUE;
 
-    g_idle_add (shutdown_idle_cb, NULL);
+    g_idle_add (shutdown_idle_cb, GINT_TO_POINTER (restart));
+}
+
+void
+rcd_shutdown (void)
+{
+    do_shutdown (FALSE);
+}
+
+void
+rcd_restart (void)
+{
+    do_shutdown (TRUE);
 }

@@ -43,6 +43,7 @@ void rcd_shutdown_allow (void);
    in an idle function. */
 
 void rcd_shutdown (void);
+void rcd_restart  (void);
 
 #endif /* __RCD_SHUTDOWN_H__ */
 

@@ -289,6 +289,15 @@ system_shutdown (xmlrpc_env   *env,
 }
 
 static xmlrpc_value *
+system_restart (xmlrpc_env   *env,
+                xmlrpc_value *param_array,
+                void         *user_data)
+{
+    rcd_restart ();
+    return xmlrpc_build_value (env, "i", 1);
+}
+
+static xmlrpc_value *
 system_activate (xmlrpc_env   *env,
                  xmlrpc_value *param_array,
                  void         *user_data)
@@ -449,6 +458,9 @@ rcd_rpc_system_register_methods(void)
                              NULL, NULL);
 	rcd_rpc_register_method ("rcd.system.shutdown",
                              system_shutdown,
+                             "superuser", NULL);
+	rcd_rpc_register_method ("rcd.system.restart",
+                             system_restart,
                              "superuser", NULL);
     rcd_rpc_register_method ("rcd.system.activate",
                              system_activate,

@@ -33,6 +33,7 @@
 
 #include <libredcarpet.h>
 #include "rcd-cache.h"
+#include "rcd-license.h"
 #include "rcd-mirror.h"
 #include "rcd-news.h"
 #include "rcd-prefs.h"
@@ -40,6 +41,67 @@
 #include "rcd-transfer-http.h"
 
 #define RCX_ACTIVATION_ROOT "https://activation.rc.ximian.com"
+
+gboolean
+rcd_fetch_licenses_local (void)
+{
+    const char *local_file = "/var/lib/rcd/licenses.xml";
+    RCBuffer *buf;
+
+    if (!g_file_test (local_file, G_FILE_TEST_EXISTS))
+        return FALSE;
+
+    buf = rc_buffer_map_file (local_file);
+
+    if (!buf)
+        return FALSE;
+
+    rcd_license_parse (buf->data, buf->size);
+
+    rc_buffer_unmap_file (buf);
+
+    return TRUE;
+}
+
+gboolean
+rcd_fetch_licenses (void)
+{
+    char *url;
+    RCDTransfer *t;
+    GByteArray *data;
+    gboolean successful = FALSE;
+
+    url = g_strdup_printf ("%s/licenses.xml", rcd_prefs_get_host ());
+    t = rcd_transfer_new (url, 0, rcd_cache_get_normal_cache ());
+    g_free (url);
+
+    data = rcd_transfer_begin_blocking (t);
+
+    if (rcd_transfer_get_error (t)) {
+        rc_debug (RC_DEBUG_LEVEL_CRITICAL,
+                  "Unable to download licenses info: %s ",
+                  rcd_transfer_get_error_string (t));
+        goto cleanup;
+    }
+
+    if (!rcd_license_parse (data->data, data->len)) {
+        rc_debug (RC_DEBUG_LEVEL_CRITICAL, "Unable to parse licenses info");
+        goto cleanup;
+    }
+    else
+        successful = TRUE;
+
+cleanup:
+    g_object_unref (t);
+
+    if (data)
+        g_byte_array_free (data, TRUE);
+
+    if (!successful)
+        successful = rcd_fetch_licenses_local ();
+
+    return successful;
+} /* rcd_fetch_licenses */
 
 gboolean
 rcd_fetch_register (const char  *activation_code,
@@ -270,13 +332,15 @@ get_channel_list_url (void)
 static void
 remove_channel_cb (RCChannel *channel, gpointer user_data)
 {
+    RCWorld *world = user_data;
+
     if (! rc_channel_has_refresh_magic (channel)) {
-        rc_world_remove_channel (rc_get_world (), channel);
+        rc_world_remove_channel (world, channel);
     }
 } /* remove_channel_cb */
 
 gboolean
-rcd_fetch_channel_list (void)
+rcd_fetch_channel_list (RCWorld *world)
 {
     RCDTransfer *t;
     gchar *url = NULL;
@@ -284,6 +348,9 @@ rcd_fetch_channel_list (void)
     xmlDoc *doc = NULL;
     xmlNode *root;
     gboolean success = FALSE;
+
+    if (!world)
+        world = rc_get_world ();
 
     url = get_channel_list_url ();
 
@@ -311,8 +378,8 @@ rcd_fetch_channel_list (void)
         goto cleanup;
     }
 
-    rc_world_foreach_channel (rc_get_world (), remove_channel_cb, NULL);
-    rc_world_add_channels_from_xml (rc_get_world (), root->xmlChildrenNode);
+    rc_world_foreach_channel (world, remove_channel_cb, world);
+    rc_world_add_channels_from_xml (world, root->xmlChildrenNode);
     write_file_contents ("/var/lib/rcd/channels.xml.gz", data);
 
     success = TRUE;
@@ -335,7 +402,7 @@ rcd_fetch_channel_list (void)
 }
 
 gboolean
-rcd_fetch_channel_list_local (void)
+rcd_fetch_channel_list_local (RCWorld *world)
 {
     gchar *url = NULL;
     gchar *local_file = NULL;
@@ -343,6 +410,9 @@ rcd_fetch_channel_list_local (void)
     xmlDoc *doc = NULL;
     xmlNode *root;
     gboolean success = FALSE;
+
+    if (!world)
+        world = rc_get_world ();
 
     local_file = "/var/lib/rcd/channels.xml.gz";
 
@@ -363,8 +433,8 @@ rcd_fetch_channel_list_local (void)
     if (!root)
         goto cleanup;
 
-    rc_world_foreach_channel (rc_get_world (), remove_channel_cb, NULL);
-    rc_world_add_channels_from_xml (rc_get_world (), root->xmlChildrenNode);
+    rc_world_foreach_channel (world, remove_channel_cb, NULL);
+    rc_world_add_channels_from_xml (world, root->xmlChildrenNode);
 
     success = TRUE;
 
@@ -381,6 +451,8 @@ rcd_fetch_channel_list_local (void)
 
     return success;
 }    
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 static char *
 merge_paths (const char *parent_path, const char *child_path)
@@ -430,7 +502,10 @@ merge_paths (const char *parent_path, const char *child_path)
     return ret;
 }
 
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
 typedef struct {
+    RCWorld    *world;
     GByteArray *data;
     RCChannel  *channel;
 } ChannelFetchClosure;
@@ -463,17 +538,17 @@ process_channel_cb (RCDTransfer *t, gpointer user_data)
     data = g_byte_array_append (data, "\0", 1);
 
     /* Clear any old channel info out of the world. */
-    rc_world_remove_packages (rc_get_world (), channel);
+    rc_world_remove_packages (closure->world, channel);
 
     if (rc_channel_get_pkginfo_compressed (channel)) {
         
-        success = rc_world_add_packages_from_buffer (rc_get_world (),
+        success = rc_world_add_packages_from_buffer (closure->world,
                                                      channel,
                                                      data->data,
                                                      data->len);
     } else {
         
-        success = rc_world_add_packages_from_buffer (rc_get_world (),
+        success = rc_world_add_packages_from_buffer (closure->world,
                                                      channel,
                                                      data->data,
                                                      0);
@@ -509,7 +584,7 @@ process_channel_cb (RCDTransfer *t, gpointer user_data)
 }
 
 gint
-rcd_fetch_channel (RCChannel *channel)
+rcd_fetch_channel (RCChannel *channel, RCWorld *world)
 {
     RCDTransfer *t;
     ChannelFetchClosure *closure;
@@ -517,6 +592,9 @@ rcd_fetch_channel (RCChannel *channel)
     RCDPending *pending;
 
     g_return_val_if_fail (channel != NULL, RCD_INVALID_PENDING_ID);
+
+    if (!world)
+        world = rc_get_world ();
 
     if (rc_channel_has_refresh_magic (channel)) {
         rc_channel_use_refresh_magic (channel);
@@ -530,6 +608,7 @@ rcd_fetch_channel (RCChannel *channel)
     g_free (url);
 
     closure = g_new0 (ChannelFetchClosure, 1);
+    closure->world = world;
     closure->data = g_byte_array_new ();
     closure->channel = rc_channel_ref (channel);
 
@@ -568,7 +647,7 @@ rcd_fetch_channel (RCChannel *channel)
 }
 
 gboolean
-rcd_fetch_channel_local (RCChannel *channel)
+rcd_fetch_channel_local (RCChannel *channel, RCWorld *world)
 {
     char *local_file;
     RCBuffer *buf;
@@ -579,6 +658,9 @@ rcd_fetch_channel_local (RCChannel *channel)
         rc_channel_use_refresh_magic (channel);
         return TRUE;
     }
+
+    if (!world)
+        world = rc_get_world ();
 
     local_file = g_strdup_printf (
         "/var/lib/rcd/channel-%d.xml%s",
@@ -597,17 +679,17 @@ rcd_fetch_channel_local (RCChannel *channel)
         return FALSE;
 
     /* Clear any old channel info out of the world. */
-    rc_world_remove_packages (rc_get_world (), channel);
+    rc_world_remove_packages (world, channel);
 
     if (rc_channel_get_pkginfo_compressed (channel)) {
 
-        rc_world_add_packages_from_buffer (rc_get_world (),
+        rc_world_add_packages_from_buffer (world,
                                            channel,
                                            buf->data,
                                            buf->size);
     } else {
 
-        rc_world_add_packages_from_buffer (rc_get_world (),
+        rc_world_add_packages_from_buffer (world,
                                            channel,
                                            buf->data,
                                            0);
@@ -621,6 +703,88 @@ rcd_fetch_channel_local (RCChannel *channel)
 
     return TRUE;
 }
+
+struct FetchAllInfo {
+    RCWorld *world;
+    GSList *id_list;
+    RCDFetchChannelFlags flags;
+};
+
+static void
+all_channels_cb (RCChannel *channel, gpointer user_data)
+{
+    struct FetchAllInfo *info = user_data;
+    int id;
+    RCDFetchChannelFlags ch_flags = 0;
+    
+    if (rc_channel_get_transient (channel)) {
+        ch_flags |= RCD_FETCH_TRANSIENT;
+    } else {
+        ch_flags |= RCD_FETCH_PERSISTENT;
+    }
+
+    if (! (info->flags & ch_flags))
+        return;
+
+    if (info->flags & RCD_FETCH_LOCAL) {
+        if (!rcd_fetch_channel_local (channel, info->world)) {
+            id = rcd_fetch_channel (channel, info->world);
+            if (id != RCD_INVALID_PENDING_ID)
+                info->id_list = g_slist_prepend (info->id_list,
+                                                 GINT_TO_POINTER (id));
+        }
+    }
+    else {
+        id = rcd_fetch_channel (channel, info->world);
+        if (id != RCD_INVALID_PENDING_ID)
+            info->id_list = g_slist_prepend (info->id_list,
+                                             GINT_TO_POINTER (id));
+    }
+}
+
+GSList *
+rcd_fetch_all_channels (RCWorld *world)
+{
+    GSList *ids;
+    
+    ids = rcd_fetch_some_channels (RCD_FETCH_TRANSIENT |
+                                   RCD_FETCH_PERSISTENT, world);
+    return ids;
+}
+
+void
+rcd_fetch_all_channels_local (RCWorld *world)
+{
+    GSList *ids;
+    
+    ids = rcd_fetch_some_channels (RCD_FETCH_LOCAL |
+                                   RCD_FETCH_TRANSIENT |
+                                   RCD_FETCH_PERSISTENT, world);
+
+    /* ids should just be NULL, but we free it just in case. */
+    g_slist_free (ids);
+}
+
+GSList *
+rcd_fetch_some_channels (RCDFetchChannelFlags flags, RCWorld *world)
+{
+    struct FetchAllInfo info;
+
+    if (!world)
+        world = rc_get_world ();
+
+    info.world = world;
+    info.id_list = NULL;
+    info.flags = flags;
+
+    rc_world_foreach_channel (world,
+                              all_channels_cb,
+                              &info);
+
+    return info.id_list;
+}
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 static void
 process_icon_cb (RCDTransfer *t, gpointer user_data)
@@ -703,81 +867,6 @@ rcd_fetch_all_channel_icons (gboolean refetch)
     rc_world_foreach_channel (rc_get_world (), fetch_icon_cb,
                               GINT_TO_POINTER (refetch));
 } /* rcd_fetch_all_channel_icons */
-
-struct FetchAllInfo {
-    GSList *id_list;
-    RCDFetchChannelFlags flags;
-};
-
-static void
-all_channels_cb (RCChannel *channel, gpointer user_data)
-{
-    struct FetchAllInfo *info = user_data;
-    int id;
-    RCDFetchChannelFlags ch_flags = 0;
-    
-    if (rc_channel_get_transient (channel)) {
-        ch_flags |= RCD_FETCH_TRANSIENT;
-    } else {
-        ch_flags |= RCD_FETCH_PERSISTENT;
-    }
-
-    if (! (info->flags & ch_flags))
-        return;
-
-    if (info->flags & RCD_FETCH_LOCAL) {
-        if (!rcd_fetch_channel_local (channel)) {
-            id = rcd_fetch_channel (channel);
-            if (id != RCD_INVALID_PENDING_ID)
-                info->id_list = g_slist_prepend (info->id_list,
-                                                 GINT_TO_POINTER (id));
-        }
-    }
-    else {
-        id = rcd_fetch_channel (channel);
-        if (id != RCD_INVALID_PENDING_ID)
-            info->id_list = g_slist_prepend (info->id_list,
-                                             GINT_TO_POINTER (id));
-    }
-}
-
-GSList *
-rcd_fetch_all_channels (void)
-{
-    GSList *ids;
-    
-    ids = rcd_fetch_some_channels (RCD_FETCH_TRANSIENT |
-                                   RCD_FETCH_PERSISTENT);
-    return ids;
-}
-
-void
-rcd_fetch_all_channels_local (void)
-{
-    GSList *ids;
-    
-    ids = rcd_fetch_some_channels (RCD_FETCH_LOCAL |
-                                   RCD_FETCH_TRANSIENT |
-                                   RCD_FETCH_PERSISTENT);
-
-    /* ids should just be NULL, but we free it just in case. */
-    g_slist_free (ids);
-}
-
-GSList *
-rcd_fetch_some_channels (RCDFetchChannelFlags flags)
-{
-    struct FetchAllInfo info;
-
-    info.id_list = NULL;
-    info.flags = flags;
-
-    rc_world_foreach_channel (rc_get_world (),
-                              all_channels_cb,
-                              &info);
-
-    return info.id_list;
-}
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
@@ -1051,7 +1140,7 @@ begin_package_download (RCDTransfer *t, PackageFetchClosure *closure)
     }
     else {
         rc_debug (RC_DEBUG_LEVEL_CRITICAL,
-                  "Attenpt to download package failed: %s",
+                  "Attempt to download package failed: %s",
                   rcd_transfer_get_error_string (t));
 
         closure->successful = FALSE;
