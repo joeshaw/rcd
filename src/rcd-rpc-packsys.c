@@ -889,8 +889,11 @@ prepend_pkg (RCPackage *pkg, RCPackageStatus status, gpointer user_data)
 {
     GHashTable **hash = user_data;
 
-    g_hash_table_insert (*hash, pkg->spec.name, pkg);
-    rc_package_ref (pkg);
+    if (status == RC_PACKAGE_STATUS_TO_BE_INSTALLED ||
+        (status == RC_PACKAGE_STATUS_TO_BE_UNINSTALLED && pkg->installed)) {
+        g_hash_table_insert (*hash, pkg->spec.name, pkg);
+        rc_package_ref (pkg);
+    }
 } /* prepend_pkg */
 
 static void

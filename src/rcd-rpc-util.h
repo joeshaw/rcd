@@ -134,26 +134,7 @@ RCDQueryPart rcd_xmlrpc_tuple_to_query_part (xmlrpc_value *tuple,
         xmlrpc_parse_value((env), member, "d", &(result));       \
     } while (0)
 
-#define DEBUG_SERIALIZE(v)                              \
-{                                                       \
-    xmlrpc_env        env;                              \
-    xmlrpc_mem_block *output;                           \
-    char *output_text;                                  \
-                                                        \
-    xmlrpc_env_init(&env);                              \
-                                                        \
-    output = xmlrpc_mem_block_new(&env, 0);             \
-    xmlrpc_serialize_value(&env, output, (v));          \
-                                                        \
-    output_text = g_strndup(                            \
-        XMLRPC_TYPED_MEM_BLOCK_CONTENTS(char, output),  \
-        XMLRPC_TYPED_MEM_BLOCK_SIZE(char, output));     \
-                                                        \
-    printf("Debug:\n%s\n-----\n", output_text);         \
-                                                        \
-    g_free(output_text);                                \
-    xmlrpc_mem_block_free(output);                      \
-    xmlrpc_env_clean(&env);                             \
-}
+/* For debugging purposes */
+void rcd_debug_serialize (xmlrpc_value *v);
 
 #endif /* __RCD_RPC_UTIL_H__ */

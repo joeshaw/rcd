@@ -1,3 +1,12 @@
+2002-06-18  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-packsys.c (prepend_pkg): Don't add a package to be
+	uninstalled to the hash if it's not already installed on the
+	system.
+
+	* rcd-rpc-util.c (rcd_debug_serialize): Make this a function from
+	a #define so I can call it in gdb.
+
 2002-06-17  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-packsys.c: Resurrected packsys_resolve_dependencies().
