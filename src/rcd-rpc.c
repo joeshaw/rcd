@@ -566,6 +566,10 @@ rcd_rpc_call_method (xmlrpc_env   *env,
 
     current_method_data = method_data;
 
+    xmlrpc_registry_set_preinvoke_method (env, registry,
+                                          access_control_check,
+                                          method_data->identity);
+
     value = xmlrpc_registry_dispatch_call (env, registry,
                                            (char *) method_name,
                                            param_array);
