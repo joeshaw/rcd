@@ -1,3 +1,11 @@
+2002-12-03  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-transaction.c (rcd_transaction_begin): If we don't need to
+	download anything, launch an idle function to call verify_packages
+	instead of calling it directly.  This allows the call to
+	rcd_transaction_begin to return immediately, instead of making us
+	wait for the (sometimes lengthy) verification process to finish.
+
 2002-12-02  Joe Shaw  <joe@ximian.com>
 
 	* Makefile.am: Install a bunch of headers that might be useful to

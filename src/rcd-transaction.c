@@ -1074,6 +1074,15 @@ download_packages (RCPackageSList *packages, RCDTransactionStatus *status)
     return g_slist_length (status->packages_to_download);
 } /* download_packages */
 
+static gboolean
+verify_only (gpointer user_data)
+{
+    RCDTransactionStatus *status = user_data;
+    verify_packages (status);
+    rcd_transaction_status_unref (status);
+    return FALSE;
+}
+
 void
 rcd_transaction_begin (const char          *name,
                        RCWorld             *world,
@@ -1156,8 +1165,10 @@ rcd_transaction_begin (const char          *name,
     }
 
     if (!download_count &&
-        status->flags != RCD_TRANSACTION_FLAGS_DOWNLOAD_ONLY)
-        verify_packages (status);
+        status->flags != RCD_TRANSACTION_FLAGS_DOWNLOAD_ONLY) {
+        rcd_transaction_status_ref (status);
+        g_idle_add (verify_only, status);
+    }
 
     rcd_transaction_status_unref (status);
 } /* rcd_transaction_begin */
