@@ -826,7 +826,8 @@ rcd.packsys.find_dangling_requires()
 	package, and "missing_req" is the requirement that it is
 	missing.
 
-rcd.packsys.mount_directory(string path)
+rcd.packsys.mount_directory(string path, string name, string alias,
+			    int recursive)
 
 	Returns: string
 	Faults: invalid_service
