@@ -1,5 +1,11 @@
 2002-07-09  Joe Shaw  <joe@ximian.com>
 
+	* rcd-rpc-packsys.c (packsys_dump): Added.  Takes an XML dump of
+	the RCWorld and sends it down the wire.
+	(rcd_rpc_packsys_register_methods): Register it.
+
+2002-07-09  Joe Shaw  <joe@ximian.com>
+
 	* rcd-rpc.c (soup_shutdown_cb): Added.  Unrefs the soup server so
 	it shuts down.
 	(run_server_thread): Add the shutdown handler.

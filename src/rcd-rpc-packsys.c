@@ -1387,6 +1387,26 @@ cleanup:
     return value;
 } /* packsys_verify_dependencies */
 
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+static xmlrpc_value *
+packsys_dump(xmlrpc_env   *env,
+             xmlrpc_value *param_array,
+             void         *user_data)
+{
+    RCWorld *world = (RCWorld *) user_data;
+    char *xml;
+    xmlrpc_value *value;
+
+    xml = rc_world_dump (world);
+
+    value = xmlrpc_build_value (env, "s", xml);
+    g_free (xml);
+
+cleanup:
+    return value;
+} /* packsys_dump */
+
 void
 rcd_rpc_packsys_register_methods(RCWorld *world)
 {
@@ -1433,6 +1453,11 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
     rcd_rpc_register_method("rcd.packsys.abort_download",
                             packsys_abort_download,
                             rcd_auth_action_list_from_1 (RCD_AUTH_NONE),
+                            world);
+
+    rcd_rpc_register_method("rcd.packsys.dump",
+                            packsys_dump,
+                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
                             world);
 
     rcd_rpc_register_method("rcd.packsys.get_channels",
