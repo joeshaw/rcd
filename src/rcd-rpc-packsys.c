@@ -34,6 +34,7 @@
 #include "rcd-fetch.h"
 #include "rcd-heartbeat.h"
 #include "rcd-pending.h"
+#include "rcd-prefs.h"
 #include "rcd-query-packages.h"
 #include "rcd-rpc.h"
 #include "rcd-rpc-util.h"
@@ -1704,6 +1705,11 @@ extra_dump_info (void)
         xmlNewTextChild (info, NULL, "domainname", uname_buf.domainname);
 #endif
     }
+
+    xmlNewTextChild (info, NULL, "host", rcd_prefs_get_host ());
+    xmlNewTextChild (info, NULL, "premium",
+                     rcd_prefs_get_premium () ? "1" : "0");
+    xmlNewTextChild (info, NULL, "proxy", rcd_prefs_get_proxy ());
 
     return info;
 
