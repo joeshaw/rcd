@@ -1,5 +1,8 @@
 2002-08-14  Jon Trowbridge  <trow@ximian.com>
 
+	* Makefile.am: Don't make rcd-buddy executable in the
+	install-data-hook.
+
 	* rcd.c (crash_handler): Invoke rcd-buddy as "python
 	SHAREDIR/rcd-buddy".  Don't stat to check if the rcd-buddy is
 	there, since we now do that check before seting up the crash
