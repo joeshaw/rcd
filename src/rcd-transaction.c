@@ -928,9 +928,6 @@ rcd_transaction_download (RCDTransaction *transaction)
         rcd_transfer_pool_begin (transaction->pool);
     }
     else {
-        rc_pending_begin (transaction->download_pending);
-        rc_pending_finished (transaction->download_pending, 0);
-
         if (transaction->flags == RCD_TRANSACTION_FLAGS_DOWNLOAD_ONLY)
             rcd_transaction_finished (transaction, NULL);
         else
