@@ -99,15 +99,15 @@ rcd_world_remote_assemble (RCWorldService *service, GError **error)
 
         url = g_strndup (service->url, query_part - service->url);
 
-        g_free (service->url);
-        service->url = url;
-
         /* Move past the '?' */
         query_part++;
 
         if (g_strncasecmp (query_part, "remote_only=1", 13) == 0)
             local = FALSE;
-    }
+
+        g_free (service->url); 
+        service->url = url;
+   }
 
     pending = rcd_world_remote_fetch (RCD_WORLD_REMOTE (service),
                                       local, &tmp_error);

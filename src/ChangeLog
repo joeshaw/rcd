@@ -1,5 +1,11 @@
 2003-09-15  Joe Shaw  <joe@ximian.com>
 
+	* rcd-world-remote.c (rcd_world_remote_assemble): Don't free the
+	service url and then replace it until after we're done with the
+	query_part, which is a substring of the service url.
+
+2003-09-15  Joe Shaw  <joe@ximian.com>
+
 	* rcd-world-remote.c (rcd_world_remote_assemble): Check 13 bytes,
 	not 15.
 	(rcd_world_remote_fetch_channels): If the channel data fails,
