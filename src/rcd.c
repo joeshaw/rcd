@@ -107,6 +107,7 @@ daemonize (void)
 {
     int fork_rv;
     int i;
+    int null_fd;
 
     if (non_daemon_flag)
         return;
@@ -128,6 +129,9 @@ daemonize (void)
     for (i = getdtablesize (); i >= 0; --i)
         close (i);
 
+    null_fd = open ("/dev/null", O_RDWR); /* open stdin */
+    dup (null_fd); /* dup to stdout */
+    dup (null_fd); /* dup to stderr */
 }
 
 static void

@@ -1,5 +1,7 @@
 2002-07-05  Jon Trowbridge  <trow@ximian.com>
 
+	* rcd.c (daemonize): Re-open stdin, stdout, stderr to /dev/null.
+
 	* rcd-cache.c: Replaced g_warning/g_error calls with rc_debug.
 
 	* rcd-fetch.c: Replaced g_warning/g_error calls with rc_debug.
