@@ -43,8 +43,9 @@ static struct QueryTypeStrings {
     { RCD_QUERY_EQUAL, "==" },
     { RCD_QUERY_EQUAL, "=" },
 
-    { RCD_QUERY_NOT_EQUAL, "!=" },
+    { RCD_QUERY_NOT_EQUAL, "is not" },
     { RCD_QUERY_NOT_EQUAL, "ne" },
+    { RCD_QUERY_NOT_EQUAL, "!=" },
 
     { RCD_QUERY_CONTAINS, "contains" },
 

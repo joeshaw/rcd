@@ -464,7 +464,8 @@ packsys_transact(xmlrpc_env   *env,
 
     install_packages = rcd_xmlrpc_array_to_rc_package_slist (
         xmlrpc_install_packages, env,
-        RCD_PACKAGE_FROM_ANY);
+        RCD_PACKAGE_FROM_FILE | RCD_PACKAGE_FROM_STREAMED_PACKAGE |
+        RCD_PACKAGE_FROM_XMLRPC_PACKAGE);
     XMLRPC_FAIL_IF_FAULT (env);
 
     remove_packages = rcd_xmlrpc_array_to_rc_package_slist (

@@ -85,6 +85,8 @@ access_control_check (xmlrpc_env   *env,
     RCDIdentity *identity = (RCDIdentity *) user_data;
     RCDRPCMethodInfo *method_info;
 
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Method being called: %s", method_name);
+
     if (getenv ("RCD_ENFORCE_AUTH")) {
         g_assert (identity != NULL);
 

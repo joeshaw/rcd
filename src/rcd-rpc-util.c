@@ -37,6 +37,7 @@ xmlrpc_value *
 rcd_rc_package_to_xmlrpc (RCPackage *package, xmlrpc_env *env)
 {
     xmlrpc_value *value = NULL;
+    gboolean installed;
 
     value = xmlrpc_struct_new(env);
     XMLRPC_FAIL_IF_FAULT(env);
@@ -46,11 +47,24 @@ rcd_rc_package_to_xmlrpc (RCPackage *package, xmlrpc_env *env)
     XMLRPC_FAIL_IF_FAULT(env);
 
     /* RCPackage members */
-    RCD_XMLRPC_STRUCT_SET_INT(env, value, "installed", package->installed);
-
     RCD_XMLRPC_STRUCT_SET_INT(
         env, value, "channel",
         package->channel ? rc_channel_get_id(package->channel) : 0);
+
+    /* Extra data useful to a client */
+    if (package->installed)
+        installed = TRUE;
+    else {
+        RCPackage *sys_pkg;
+
+        sys_pkg = rc_world_get_package (
+            rc_get_world(),
+            RC_WORLD_SYSTEM_PACKAGES,
+            RC_PACKAGE_SPEC(package)->name);
+
+        installed = (sys_pkg != NULL);
+    }
+    RCD_XMLRPC_STRUCT_SET_INT(env, value, "installed", installed);
         
 cleanup:
     if (env->fault_occurred) {
@@ -106,7 +120,8 @@ rcd_rc_package_from_name (xmlrpc_value *value,
     xmlrpc_parse_value (env, value, "s", &name);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    package = rc_world_get_package (world, RC_WORLD_ANY_CHANNEL, name);
+    /* FIXME: This should probably check EVR too */
+    package = rc_world_get_package (world, RC_WORLD_SYSTEM_PACKAGES, name);
 
     if (!package)
         xmlrpc_env_set_fault (env, -613, "Unable to find package");
