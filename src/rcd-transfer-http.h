@@ -33,6 +33,7 @@ typedef struct _RCDTransferProtocolHTTP RCDTransferProtocolHTTP;
 struct _RCDTransferProtocolHTTP {
     RCDTransferProtocol parent;
 
+    SoupSession *session;
     SoupMessage *message;
 
     const char *method;

@@ -1,3 +1,15 @@
+2004-02-10  Joe Shaw  <joe@ximian.com>
+
+	* rcd-transfer-http.c (http_done): Get rid of g_idle_add() of
+	http_done_real() and move most of the logic back in here.
+	(http_open): Defer the actual queuing of the message to an idle,
+	since it's also possible that we could get a file data callback
+	before http_open() returns as well, and that causes failed
+	assertions (#54102) By deferring it, we fix both this and the
+	original http_done() issue.  Ref the session and set it in the new
+	session field in the protocol structure.
+	(http_free): Unref the session.
+
 2004-02-04  Joe Shaw  <joe@ximian.com>
 
 	* rcd-transfer-http.c (http_done_real,

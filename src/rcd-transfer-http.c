@@ -190,12 +190,30 @@ copy_header_cb (gpointer name, gpointer value, gpointer user_data)
                          g_strdup (header_value));
 } /* copy_header_cb */
 
-static gboolean
-http_done_real (gpointer user_data)
+static void
+http_done (SoupMessage *message, gpointer user_data)
 {
     RCDTransfer *t = user_data;
     RCDTransferProtocolHTTP *protocol =
         (RCDTransferProtocolHTTP *) t->protocol;
+
+    /*
+     * libsoup will free the response headers after we leave this function,
+     * so we have to copy them.  Ew.
+     */
+    if (protocol->response_headers)
+        g_hash_table_destroy (protocol->response_headers);
+    
+    protocol->response_headers = g_hash_table_new_full (g_str_hash,
+                                                        g_str_equal,
+                                                        g_free, g_free);
+
+    soup_message_foreach_header (message->response_headers,
+                                 copy_header_cb, protocol);
+
+    if (RCD_SOUP_MESSAGE_IS_ERROR (message) &&
+        !message->status_code != SOUP_STATUS_NOT_MODIFIED)
+        map_soup_error_to_rcd_transfer_error (message, t);
 
     if (!rcd_transfer_get_error (t)) {
         if (t->cache_hit) {
@@ -229,7 +247,7 @@ http_done_real (gpointer user_data)
                 g_object_unref (t);
             }
             
-            return FALSE;
+            return;
         }
 
         if (t->cache_entry && rcd_cache_entry_is_open (t->cache_entry))
@@ -241,42 +259,6 @@ http_done_real (gpointer user_data)
     }
 
     rcd_transfer_emit_done (t);
-
-    return FALSE;
-}
-
-static void
-http_done (SoupMessage *message, gpointer user_data)
-{
-    RCDTransfer *t = user_data;
-    RCDTransferProtocolHTTP *protocol =
-        (RCDTransferProtocolHTTP *) t->protocol;
-
-    /*
-     * libsoup will free the response headers after we leave this function,
-     * so we have to copy them.  Ew.
-     */
-    if (protocol->response_headers)
-        g_hash_table_destroy (protocol->response_headers);
-    
-    protocol->response_headers = g_hash_table_new_full (g_str_hash,
-                                                        g_str_equal,
-                                                        g_free, g_free);
-
-    soup_message_foreach_header (message->response_headers,
-                                 copy_header_cb, protocol);
-
-    if (RCD_SOUP_MESSAGE_IS_ERROR (message) &&
-        !message->status_code != SOUP_STATUS_NOT_MODIFIED)
-        map_soup_error_to_rcd_transfer_error (message, t);
-
-    /*
-     * It's possible that this gets called from the transfer's open
-     * function.  Since we don't want to call rcd_transfer_file_done()
-     * before that happens, we defer as much processing as possible
-     * until the next time we hit the main loop.
-     */
-    g_idle_add (http_done_real, user_data);
 }
 
 static void
@@ -419,6 +401,19 @@ add_header_cb (gpointer key, gpointer value, gpointer user_data)
     soup_message_add_header (message->request_headers, header_name, header_value);
 } /* add_header_cb */
 
+static gboolean
+queue_message_cb (gpointer user_data)
+{
+    RCDTransfer *t = RCD_TRANSFER (user_data);
+    RCDTransferProtocolHTTP *protocol =
+        (RCDTransferProtocolHTTP *) t->protocol;
+
+    soup_session_queue_message (protocol->session, protocol->message,
+                                http_done, t);
+
+    return FALSE;
+}
+
 static int
 http_open (RCDTransfer *t)
 {
@@ -437,6 +432,8 @@ http_open (RCDTransfer *t)
     if (!session)
         session = soup_session_async_new ();
 
+    protocol->session = g_object_ref (session);
+    
     /* Set up the proxy */
     proxy_url = rcd_prefs_get_proxy_url ();
     if (proxy_url) {
@@ -595,10 +592,15 @@ http_open (RCDTransfer *t)
     
     http_debug (protocol->message);
 
-    soup_session_queue_message (session, protocol->message, http_done, t);
+    /*
+     * Defer queuing of the message to the idle loop because we
+     * could get immediate data or done events and that messes
+     * with our mojo.
+     */
+    g_idle_add (queue_message_cb, t);
 
     return 0;
-} /* http_open */
+} /* http_open */    
 
 static char *
 http_get_local_filename (RCDTransfer *t)
@@ -615,6 +617,9 @@ http_free (RCDTransferProtocol *protocol)
     RCDTransferProtocolHTTP *http_protocol = 
         (RCDTransferProtocolHTTP *) protocol;
 
+    if (http_protocol->session)
+        g_object_unref (http_protocol->session);
+    
     if (http_protocol->request_headers)
         g_hash_table_destroy (http_protocol->request_headers);
 
