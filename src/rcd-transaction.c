@@ -594,16 +594,23 @@ run_transaction(gpointer user_data)
     if (rc_packman_get_error (status->packman)) {
         fail_transaction (status, status->transaction_pending,
                           rc_packman_get_reason (status->packman));
+
+        /*
+         * The database may have changed even if the transaction failed,
+         * ie, if an RPM post-install script failed.
+         */
+        if (status->flags != RCD_TRANSACTION_FLAGS_DRY_RUN)
+            rc_world_get_system_packages (rc_get_world ());
+
         rcd_transaction_unlock ();
         return FALSE;
     }
-    else {
-        if (status->flags != RCD_TRANSACTION_FLAGS_DRY_RUN)
-            update_log (status);
 
-        if (rcd_prefs_get_premium ())
-            rcd_transaction_send_log (status, TRUE, NULL);
-    }
+    if (status->flags != RCD_TRANSACTION_FLAGS_DRY_RUN)
+        update_log (status);
+
+    if (rcd_prefs_get_premium ())
+        rcd_transaction_send_log (status, TRUE, NULL);
 
     /* Update the list of system packages */
     if (status->flags != RCD_TRANSACTION_FLAGS_DRY_RUN)

@@ -1,3 +1,10 @@
+2003-05-16  Joe Shaw  <joe@ximian.com>
+
+	* rcd-transaction.c (run_transaction): The transaction might fail
+	but still change the database (in the case of an RPM post-install
+	script failing), so reload our system packages even after a
+	failure.  Also remove some unncessary indenting.
+
 2003-05-14  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-rpc-util.c (rcd_rc_package_to_xmlrpc): Set an
