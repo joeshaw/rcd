@@ -1,3 +1,7 @@
+2002-09-09  Joe Shaw  <joe@ximian.com>
+
+	* rcd.init.in: Added init info for SuSE.
+
 2002-09-05  Jon Trowbridge  <trow@ximian.com>
 
 	* rugburn/tests/argumentabusetest.py: Added.  This is a test that
