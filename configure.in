@@ -166,11 +166,15 @@ RED_CARPET_SBINDIR="${prefix}/sbin"
 AC_SUBST(RED_CARPET_BINDIR)
 AC_SUBST(RED_CARPET_SBINDIR)
 
+DDIR=`echo $datadir | sed -e "s,"'${prefix}'",$prefix,"`
+AC_SUBST(DDIR)
+
 ### build makefiles
 
 AC_OUTPUT([
 Makefile
 src/Makefile
+src/rcd-buddy
 rcd
 ])
 

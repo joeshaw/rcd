@@ -100,11 +100,14 @@ rcd_module_LTLIBRARIES = 	\
 	librcd-autopull.la
 
 rcd_buddydir = $(datadir)/rcd
-rcd_buddy_DATA = \
-	rcd-buddy
+rcd_buddy_DATA = 		\
+	rcd-buddy		\
+	rcd-buddy-cmds
 
 EXTRA_DIST =			\
-	rcd-marshal.list
+	rcd-marshal.list	\
+	rcd-buddy		\
+	rcd-buddy-cmds
 
 librcd_sample_la_SOURCES =	\
 	rcd-rpc-sample.c	\

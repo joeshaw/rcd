@@ -1,3 +1,17 @@
+2002-08-05  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd.c (main): Only set up the crash handlers if it looks
+	like rcd-buddy is actually in the right place.
+
+	* Makefile.am (rcd_buddy_DATA): Added rcd-buddy-cmds.
+	(EXTRA_DIST): Added rcd-buddy and rcd-buddy-cmds.
+
+	* rcd-buddy-cmds: A file with the commands that rcd-buddy feeds
+	to gdb.
+
+	* rcd-buddy.in: We .in-ify this so that we can embed the path to
+	rcd-buddy-cmds in the script.
+
 2002-08-05  Joe Shaw  <joe@ximian.com>
 
 	* Makefile.am: Set librcd_autopull_la_LDFLAGS to match the

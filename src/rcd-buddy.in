@@ -1,0 +1,53 @@
+#!/usr/bin/python
+
+###
+### Copyright 2002 Ximian, Inc.
+###
+### This program is free software; you can redistribute it and/or modify
+### it under the terms of the GNU General Public License as published by
+### the Free Software Foundation, version 2 of the License.
+###
+### This program is distributed in the hope that it will be useful,
+### but WITHOUT ANY WARRANTY; without even the implied warranty of
+### MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+### GNU General Public License for more details.
+###
+### You should have received a copy of the GNU General Public License
+### along with this program; if not, write to the Free Software
+### Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+###
+
+import sys
+import os
+import time
+
+if len(sys.argv) == 0:
+	sys.stderr.write("Usage: rcd-buddy PID")
+	sys.exit(1)
+
+pid = sys.argv[1]
+
+gdb_cmd = "/usr/bin/gdb --batch --quiet --pid=%s --command=@DDIR@/rcd/rcd-buddy-cmds" % pid
+
+try:
+	gdb = os.popen(gdb_cmd, "r")
+except:
+	sys.stderr.write("Unable to execute:\n")
+	sys.stderr.write(gdb_cmd+"\n")
+	sys.exit(1)
+
+
+bt_filename = "/tmp/rcd-crash.%d" % os.getpid()
+out = open(bt_filename, "w")
+
+sys.stderr.write("rcd has crashed.\n")
+sys.stderr.write("Attempting to write backtrace to " + bt_filename + "\n")
+
+out.write("\n")
+out.write("Crashed at " + time.ctime(time.time()) + "\n")
+out.write("PID: " + str(os.getpid()) + "\n")
+out.write("\n")
+
+for x in gdb.readlines():
+	out.write(x)
+	sys.stderr.write(x)

@@ -449,11 +449,14 @@ main (int argc, const char **argv)
     sigaction (SIGTERM, &sig_action, NULL);
     sigaction (SIGQUIT, &sig_action, NULL);
     
-    /* Set up handlers for crashes */
-    sig_action.sa_handler = crash_handler;
-    sigaction (SIGSEGV, &sig_action, NULL);
-    sigaction (SIGFPE,  &sig_action, NULL);
-    sigaction (SIGBUS,  &sig_action, NULL);
+    /* If it looks like rcd-buddy is in the right place, set up
+       handlers for crashes */
+    if (g_file_test (SHAREDIR "/rcd-buddy", G_FILE_TEST_EXISTS)) {
+        sig_action.sa_handler = crash_handler;
+        sigaction (SIGSEGV, &sig_action, NULL);
+        sigaction (SIGFPE,  &sig_action, NULL);
+        sigaction (SIGBUS,  &sig_action, NULL);
+    }
 
     rcd_privileges_init ();
 

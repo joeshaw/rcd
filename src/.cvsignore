@@ -7,3 +7,4 @@ Makefile
 rcd
 rcd-marshal.c
 rcd-marshal.h
+rcd-buddy
