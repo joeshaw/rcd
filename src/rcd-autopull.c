@@ -49,16 +49,11 @@ ap_rec_destroy (RCDRecurring *rec)
     g_slist_foreach (pull->channels_to_update,
                      (GFunc) rc_channel_unref,
                      NULL);
-    g_slist_free (pull->channels_to_update);
 
-    g_slist_foreach (pull->packages_to_update,
-                     (GFunc) rc_package_unref,
-                     NULL);
+    rc_package_slist_unref (pull->packages_to_update);
     g_slist_free (pull->packages_to_update);
 
-    g_slist_foreach (pull->packages_to_hold,
-                     (GFunc) rc_package_unref,
-                     NULL);
+    rc_package_slist_unref (pull->packages_to_hold);
     g_slist_free (pull->packages_to_hold);
 }
 
@@ -320,6 +315,9 @@ rcd_module_load (RCDModule *module)
     /* Initialize the module */
     module->name = "rcd.autopull";
     module->description = "Autopull";
+    module->version = VERSION;
+    module->interface_major = 0;
+    module->interface_minor = 0;
 
     /* FIXME: We should actually do something. */
 }

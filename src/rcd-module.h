@@ -37,12 +37,29 @@ struct _RCDModule {
 
     const char *name;
     const char *description;
+    
+    /* Mostly for informational purposes */
+    const char *version;
+
+    /*
+     * interface_major should be incremented whenever an exported interface
+     * is changed or removed.  That is, backward compatibility is broken.
+     * interface_minor should also be reset to 0 when this happens.
+     *
+     * interface_minor should be incremented whenever an exported interface
+     * is added.
+     */
+
+    int interface_major;
+    int interface_minor;
 };
 
 /* Loads the modules */
-void rcd_module_init(void);
+void rcd_module_init (void);
 
 /* Query to see if a module is on this system */
-gboolean rcd_module_query(const char *name);
+gboolean rcd_module_query (const char *name,
+                           int         required_major,
+                           int         required_minor);
 
 #endif /* __RCD_MODULE_H__ */

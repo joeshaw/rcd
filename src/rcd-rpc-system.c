@@ -83,13 +83,18 @@ system_query_module(xmlrpc_env   *env,
 {
     char *module_name;
     gboolean module_present;
+    int required_major, required_minor;
     xmlrpc_value *result;
 
-    xmlrpc_parse_value(env, param_array, "(s)", &module_name);
+    xmlrpc_parse_value(env, param_array, "(sii)",
+                       &module_name, &required_major, &required_minor);
+
     if (env->fault_occurred)
         return NULL;
 
-    module_present = rcd_module_query(module_name);
+    module_present = rcd_module_query (module_name,
+                                       required_major,
+                                       required_minor);
 
     result = xmlrpc_build_value(env, "b", module_present);
     if (env->fault_occurred)

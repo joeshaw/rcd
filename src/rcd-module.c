@@ -118,7 +118,7 @@ rcd_module_init(void)
 } /* rcd_module_init */
     
 gboolean
-rcd_module_query(const char *name)
+rcd_module_query (const char *name, int required_major, int required_minor)
 {
     GSList *i;
 
@@ -127,8 +127,14 @@ rcd_module_query(const char *name)
     for (i = registered_modules; i; i = i->next) {
         RCDModule *module = i->data;
 
-        if (!strcmp(module->name, name))
-            return TRUE;
+        if (!strcmp (module->name, name)) {
+            if (required_major < 0 ||
+                (required_major == module->interface_major &&
+                 required_minor <= module->interface_minor))
+                return TRUE;
+            else
+                return FALSE;
+        }
     }
 
     return FALSE;

@@ -23,12 +23,14 @@
  * USA.
  */
 
+#include <config.h>
+#include "rcd-rpc-sample.h"
+
 #include <xmlrpc.h>
 #include <libredcarpet.h>
 
 #include "rcd-module.h"
 #include "rcd-rpc.h"
-#include "rcd-rpc-sample.h"
 
 static xmlrpc_value *
 sample_add(xmlrpc_env *env, xmlrpc_value *param_array, void *user_data)
@@ -50,6 +52,9 @@ rcd_module_load(RCDModule *module)
     /* Initialize the module */
     module->name = "rcd.sample";
     module->description = "A Sample Module";
+    module->version = VERSION;
+    module->interface_major = 1;
+    module->interface_minor = 0;
 
     /* Register RPC methods */
     rcd_rpc_register_method ("rcd.sample.add", sample_add, NULL, NULL);
