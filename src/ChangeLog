@@ -1,3 +1,8 @@
+2002-08-07  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-rpc-util.c (rcd_rc_package_from_xmlrpc_package): Memory
+	leak.
+
 2002-08-07  Joe Shaw  <joe@ximian.com>
 
 	* rcd-fetch.c (process_channel_cb): Unref the transfer.  Fixes a

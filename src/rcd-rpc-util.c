@@ -468,6 +468,8 @@ rcd_rc_package_from_xmlrpc_package (xmlrpc_value *value,
                 xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PACKAGE_NOT_FOUND,
                                       "Unable to find package");
 
+            g_free (filename);
+
             goto cleanup;
         }
 
