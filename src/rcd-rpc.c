@@ -97,19 +97,19 @@ access_control_check (xmlrpc_env   *env,
 
     method_info = g_hash_table_lookup (method_info_hash, method_name);
 
-    rc_debug (RC_DEBUG_LEVEL_INFO, 
+    rc_debug (RC_DEBUG_LEVEL_DEBUG, 
               "Method being called: %s", method_name);
 
     if (method_info) {
         str = rcd_privileges_to_string (method_info->req_privs);
-        rc_debug (RC_DEBUG_LEVEL_INFO,
+        rc_debug (RC_DEBUG_LEVEL_DEBUG,
                   "Requires Privileges: %s", str);
         g_free (str);
               
     }
 
     str = rcd_privileges_to_string (identity->privileges);
-    rc_debug (RC_DEBUG_LEVEL_INFO,
+    rc_debug (RC_DEBUG_LEVEL_DEBUG,
               "    User Privileges: %s", str);
     g_free (str);
 
@@ -131,11 +131,11 @@ process_rpc_call (xmlrpc_env       *env,
 {
     xmlrpc_mem_block *output;
 
-    rc_debug (RC_DEBUG_LEVEL_INFO, "Handling RPC connection");
+    rc_debug (RC_DEBUG_LEVEL_DEBUG, "Handling RPC connection");
 
     if (current_method_data)
-        rc_debug (RC_DEBUG_LEVEL_CRITICAL, 
-                  "### REENTRANCY in an RPC call");
+        rc_debug (RC_DEBUG_LEVEL_DEBUG, "Reentrancy in an RPC call");
+
     current_method_data = method_data;
 
     /* Set up the access control check function */
@@ -147,7 +147,7 @@ process_rpc_call (xmlrpc_env       *env,
     
     current_method_data = NULL;
 
-    rc_debug (RC_DEBUG_LEVEL_INFO, "Call processed");
+    rc_debug (RC_DEBUG_LEVEL_DEBUG, "Call processed");
 
     return output;
 } /* process_rpc_call */

@@ -2417,12 +2417,6 @@ packsys_find_dangling_requires (xmlrpc_env   *env,
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
-static void
-heartbeat_refresh_world_cb (gpointer user_data)
-{
-    rc_world_refresh (rc_get_world ());
-}
-
 void
 rcd_rpc_packsys_register_methods(RCWorld *world)
 {
@@ -2590,7 +2584,5 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
                             packsys_find_dangling_requires,
                             "superuser",
                             world);
-
-    rcd_heartbeat_register_func (heartbeat_refresh_world_cb, NULL);
 } /* rcd_rpc_packsys_register_methods */
 

@@ -545,6 +545,12 @@ cleanup:
     return xmlrpc_build_value (env, "i", 0);
 }
 
+static void
+heartbeat_refresh_world_cb (gpointer user_data)
+{
+    rc_world_refresh (rc_get_world ());
+}
+
 void
 rcd_rpc_service_register_methods (void)
 {
@@ -572,4 +578,6 @@ rcd_rpc_service_register_methods (void)
     rcd_rpc_register_method ("rcd.service.activate",
                              service_activate,
                              "superuser", NULL);
+
+    rcd_heartbeat_register_func (heartbeat_refresh_world_cb, NULL);
 }
