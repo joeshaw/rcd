@@ -413,7 +413,7 @@ transact_progress_cb(RCPackman *packman,
                      int total,
                      RCDTransactionStatus *status)
 {
-    rc_debug (RC_DEBUG_LEVEL_MESSAGE,
+    rc_debug (RC_DEBUG_LEVEL_INFO,
               "Transaction progress.  %d of %d", amount, total);
 
     if (status->transaction_size == 0) {
