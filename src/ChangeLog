@@ -1,3 +1,7 @@
+2003-08-06  Tambet Ingo  <tambet@ximian.com>
+
+	* rcd-rpc.c (rcd_rpc_get_xmlrpc_registry): Add.
+
 2003-07-28  Tambet Ingo  <tambet@ximian.com>
 
 	* rcd-xmlrpc.c (xmlrpc_server_info_set_auth): Use md5 sum of

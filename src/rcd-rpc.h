@@ -44,6 +44,8 @@ void          rcd_rpc_queue_push     (const char   *method_name,
                                       xmlrpc_value *param_array);
 xmlrpc_value *rcd_rpc_queue_pop      (xmlrpc_env   *env);
 
+xmlrpc_registry *rcd_rpc_get_xmlrpc_registry (void);
+
 int rcd_rpc_register_method (const char        *method_name,
                              xmlrpc_method      method,
                              const char        *privilege_string,
