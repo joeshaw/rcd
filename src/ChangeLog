@@ -1,3 +1,19 @@
+2002-08-13  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-rpc-packsys.c (packsys_transact): Expire the package
+	cache before every transaction.
+
+	* rcd-expire.c (rcd_expire_unlink): Added.  A static function that
+	just wraps unlink and produces some debug spew.
+	(expire_by_age_cb): Use rcd_expire_unlink.
+	(rcd_expire_by_size): Use rcd_expire_unlink.
+
+	* rcd-cache.c (rcd_cache_expire_package_cache): A convenience
+	function to expire the package cache using the cache-related
+	preferences as parameters.
+	(rcd_cache_get_package_cache): When we create the package cache,
+	register a shutdown handler that expires the cache.
+
 2002-08-13  Ian Peters  <itp@ximian.com>
 
 	* rcd-log-entry.c (rcd_log_entry_parse): fix a crash, argh

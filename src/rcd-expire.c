@@ -30,6 +30,8 @@
 #include <config.h>
 #include "rcd-expire.h"
 
+#include <errno.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -40,6 +42,23 @@ typedef void (*RCDExpireFn) (const char *full_path,
 			     int         size_in_bytes,
 			     double      age_in_secs,
 			     gpointer    user_data);
+
+/* Just a little wrapper around unlink. */
+static void
+rcd_expire_unlink (const char *file_name)
+{
+  rc_debug (RC_DEBUG_LEVEL_INFO,
+	    "Expiring file '%s'",
+	    file_name);
+
+  if (unlink (file_name)) {
+    rc_debug (RC_DEBUG_LEVEL_WARNING,
+	      "Couldn't delete file '%s': %s",
+	      file_name,
+	      strerror (errno));
+  }
+}
+
 static void
 rcd_expire_foreach (const char *base_path,
 		    const char *glob,
@@ -116,7 +135,7 @@ expire_by_age_cb (const char *file_name,
   double age_in_days = age_in_secs / (24 * 60 * 60);
 
   if (age_in_days >= max_age_in_days) {
-    unlink (file_name);
+    rcd_expire_unlink (file_name);
   }
 }
 
@@ -197,7 +216,7 @@ rcd_expire_by_size (const char *base_path,
     if (ci->age_in_days < min_age_in_days)
       break;
 
-    unlink (ci->file_name);
+    rcd_expire_unlink (ci->file_name);
   }
 
   /* Clean up our list of cache items. */

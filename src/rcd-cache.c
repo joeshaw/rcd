@@ -38,6 +38,7 @@
 
 #include "rcd-prefs.h"
 #include "rcd-expire.h"
+#include "rcd-shutdown.h"
 
 #include <errno.h>
 
@@ -303,6 +304,12 @@ rcd_cache_get_normal_cache (void)
     return cache;
 } /* rcd_cache_get_normal_cache */
 
+static void
+shutdown_expire_package_cache (gpointer user_data)
+{
+    rcd_cache_expire_package_cache ();
+}
+
 RCDCache *
 rcd_cache_get_package_cache (void)
 {
@@ -310,10 +317,15 @@ rcd_cache_get_package_cache (void)
 
     if (cache == NULL) {
         cache = rcd_cache_new (package_cache_filename_func);
+
+        rcd_shutdown_add_handler (shutdown_expire_package_cache,
+                                  NULL);
     }
 
     return cache;
 } /* rcd_cache_get_package_cache */
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 void
 rcd_cache_expire (RCDCache *cache,
@@ -345,4 +357,15 @@ rcd_cache_expire (RCDCache *cache,
 
     g_free (fake_path);
     g_free (cache_dirname);
+}
+
+void
+rcd_cache_expire_package_cache (void)
+{
+    if (rcd_prefs_get_cache_cleanup_enabled ()) {
+
+        rcd_cache_expire (rcd_cache_get_package_cache (),
+                          rcd_prefs_get_cache_max_age_in_days (),
+                          rcd_prefs_get_cache_max_size_in_mb ());
+    }
 }

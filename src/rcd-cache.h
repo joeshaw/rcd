@@ -57,4 +57,9 @@ void rcd_cache_expire (RCDCache *cache,
                        double    max_age_in_days,
                        double    max_size_in_mb);
 
+/*
+  A convenience function that (possibly) calls rcd_cache_expire on the
+  package cache using parameters pulled in from rcd-prefs */
+void rcd_cache_expire_package_cache (void);
+
 #endif /* __RCD_CACHE_H__ */

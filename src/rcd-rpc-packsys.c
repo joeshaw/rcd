@@ -30,6 +30,7 @@
 
 #include <xmlrpc.h>
 
+#include "rcd-cache.h"
 #include "rcd-fetch.h"
 #include "rcd-heartbeat.h"
 #include "rcd-pending.h"
@@ -866,6 +867,9 @@ packsys_transact(xmlrpc_env   *env,
     RCDRPCMethodData *method_data;
     int transaction_id;
     xmlrpc_value *result = NULL;
+
+    /* Before we begin any transaction, expire the package cache. */
+    rcd_cache_expire_package_cache ();
 
     xmlrpc_parse_value(
         env, param_array, "(AAb)",
