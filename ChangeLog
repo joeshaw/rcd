@@ -1,3 +1,7 @@
+2002-07-26  Joe Shaw  <joe@ximian.com>
+
+	* configure.in: Link against libutil to get openpty() for Debian.
+
 2002-07-25  Frank Belew  <frb@ximian.com>
 
 	* Makefile.am: add libredcarpet to SUBDIRS (order matters)

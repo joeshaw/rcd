@@ -916,7 +916,7 @@ update_log (RCDTransactionStatus *status)
         log_entry = rcd_log_entry_new (status->client_host,
                                        status->client_user);
 
-        old_p = rc_world_get_package (rc_get_world(),
+        old_p = rc_world_get_package (rc_get_world (),
                                       RC_WORLD_SYSTEM_PACKAGES,
                                       new_p->spec.name);
 
