@@ -1,3 +1,14 @@
+2002-07-11  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc.packsys.c (resolve_deps): Instead of returning a list of
+	packages to install or remove, return a list which contains
+	packages, the operation to perform, and details on why it's being
+	installed or removed.
+	(rcd_rc_package_slist_to_xmlrpc_op_array): Added.  Given a list of
+	packages and an RCResolver, create the operation array.
+	(dep_get_package_info): Added.  Gets details on why a dependency
+	is being added (ie, "depends on: libfoo")
+
 2002-07-11  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-unix-server.c (rcd_unix_server_run_async): Use

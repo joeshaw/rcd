@@ -1223,7 +1223,7 @@ append_dep_info (RCResolverInfo *info, gpointer user_data)
 } /* append_dep_info */
 
 static char *
-get_dep_failure_info (RCResolver *resolver)
+dep_get_failure_info (RCResolver *resolver)
 {
     RCResolverQueue *queue;
     char *dep_failure_info = g_strdup ("Unresolved dependencies:\n");
@@ -1235,7 +1235,7 @@ get_dep_failure_info (RCResolver *resolver)
                                       append_dep_info, &dep_failure_info);
 
     return dep_failure_info;
-} /* get_dep_failure_info */
+} /* dep_get_failure_info */
 
 static void
 prepend_pkg (RCPackage *pkg, RCPackageStatus status, gpointer user_data)
@@ -1281,6 +1281,149 @@ hash_to_list (GHashTable *hash)
 
     return list;
 } /* hash_to_list */
+
+typedef enum {
+    RCD_PACKAGE_OP_INSTALL,
+    RCD_PACKAGE_OP_REMOVE
+} RCDPackageOpType;
+
+static const char *
+rcd_package_op_type_to_string (RCDPackageOpType op_type)
+{
+    const char *type = NULL;
+
+    switch (op_type) {
+    case RCD_PACKAGE_OP_INSTALL:
+        type = "install";
+        break;
+    case RCD_PACKAGE_OP_REMOVE:
+        type = "remove";
+        break;
+    default:
+        g_assert_not_reached ();
+        break;
+    }
+    
+    return type;
+} /* rcd_package_op_type_to_string */
+
+static void
+dep_get_package_info_cb (RCResolverInfo *info, gpointer user_data)
+{
+    GSList **info_list = user_data;
+    char *pkgs;
+    char *info_str;
+
+    switch (info->type) {
+    case RC_RESOLVER_INFO_TYPE_NEEDED_BY:
+        pkgs = rc_resolver_info_packages_to_str (info, TRUE);
+        info_str = g_strconcat ("needed by: ", pkgs, NULL);
+        g_free (pkgs);
+        break;
+
+    case RC_RESOLVER_INFO_TYPE_CONFLICTS_WITH:
+        pkgs = rc_resolver_info_packages_to_str (info, TRUE);
+        info_str = g_strconcat ("conflicts with: ", pkgs, NULL);
+        g_free (pkgs);
+        break;
+
+    case RC_RESOLVER_INFO_TYPE_DEPENDS_ON:
+        pkgs = rc_resolver_info_packages_to_str (info, TRUE);
+        info_str = g_strconcat ("depends on: ", pkgs, NULL);
+        g_free (pkgs);
+        break;
+
+    default:
+        info_str = rc_resolver_info_to_str (info);
+        break;
+    }
+
+    *info_list = g_slist_append (*info_list, info_str);
+} /* dep_get_package_info_cb */
+
+static GSList *
+dep_get_package_info (RCResolver *resolver, RCPackage *package)
+{
+    GSList *info = NULL;
+
+    rc_resolver_context_foreach_info (resolver->best_context,
+                                      package,
+                                      RC_RESOLVER_INFO_PRIORITY_USER,
+                                      dep_get_package_info_cb,
+                                      &info);
+
+    return info;
+} /* dep_get_package_info */
+
+static xmlrpc_value *
+rcd_rc_package_slist_to_xmlrpc_op_array (RCPackageSList   *packages,
+                                         RCDPackageOpType  op_type,
+                                         RCResolver       *resolver,
+                                         xmlrpc_env       *env)
+{
+    RCPackageSList *iter;
+    xmlrpc_value *array = NULL;
+
+    array = xmlrpc_build_value (env, "()");
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    for (iter = packages; iter; iter = iter->next) {
+        RCPackage *package = iter->data;
+        xmlrpc_value *op;
+        xmlrpc_value *member;
+        GSList *infos;
+
+        op = xmlrpc_struct_new (env);
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        RCD_XMLRPC_STRUCT_SET_STRING (
+            env, op, "operation",
+            rcd_package_op_type_to_string (op_type));
+
+        member = rcd_rc_package_to_xmlrpc (package, env);
+        XMLRPC_FAIL_IF_FAULT (env);
+        xmlrpc_struct_set_value (env, op, "package", member);
+        XMLRPC_FAIL_IF_FAULT (env);
+        xmlrpc_DECREF (member);
+
+        infos = dep_get_package_info (resolver, package);
+        if (infos) {
+            GSList *i;
+
+            member = xmlrpc_build_value (env, "()");
+            XMLRPC_FAIL_IF_FAULT (env);
+
+            for (i = infos; i; i = i->next) {
+                char *str = i->data;
+                xmlrpc_value *v;
+
+                v = xmlrpc_build_value (env, "s", str);
+                XMLRPC_FAIL_IF_FAULT (env);
+                xmlrpc_array_append_item (env, member, v);
+                XMLRPC_FAIL_IF_FAULT (env);
+
+                g_free (str);
+                xmlrpc_DECREF (v);
+            }
+            
+            xmlrpc_struct_set_value (env, op, "details", member);
+            XMLRPC_FAIL_IF_FAULT (env);
+            xmlrpc_DECREF (member);
+
+            g_slist_free (infos);
+        }
+
+        xmlrpc_array_append_item (env, array, op);
+        XMLRPC_FAIL_IF_FAULT (env);
+        xmlrpc_DECREF (op);
+    }
+
+cleanup:
+    if (env->fault_occurred)
+        return NULL;
+
+    return array;
+} /* rc_package_slist_to_xmlrpc_op_array */
 
 static void
 resolve_deps (xmlrpc_env *env,
@@ -1335,7 +1478,7 @@ resolve_deps (xmlrpc_env *env,
     if (!resolver->best_context) {
         char *dep_failure_info;
 
-        dep_failure_info = get_dep_failure_info (resolver);
+        dep_failure_info = dep_get_failure_info (resolver);
         xmlrpc_env_set_fault(env, -604, dep_failure_info);
         g_free (dep_failure_info);
         goto cleanup;
@@ -1378,12 +1521,12 @@ resolve_deps (xmlrpc_env *env,
     g_hash_table_destroy (install_hash);
     g_hash_table_destroy (remove_hash);
 
-    *packages_to_install = rcd_rc_package_slist_to_xmlrpc_array (
-        install_packages, env);
+    *packages_to_install = rcd_rc_package_slist_to_xmlrpc_op_array (
+        install_packages, RCD_PACKAGE_OP_INSTALL, resolver, env);
     XMLRPC_FAIL_IF_FAULT(env);
 
-    *packages_to_remove = rcd_rc_package_slist_to_xmlrpc_array (
-        remove_packages, env);
+    *packages_to_remove = rcd_rc_package_slist_to_xmlrpc_op_array (
+        remove_packages, RCD_PACKAGE_OP_REMOVE, resolver, env);
     XMLRPC_FAIL_IF_FAULT(env);
 
 cleanup:
