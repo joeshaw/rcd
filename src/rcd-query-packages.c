@@ -118,6 +118,19 @@ installed_match (RCDQueryPart *part,
 }
 
 static gboolean
+name_installed_match (RCDQueryPart *part,
+                      gpointer      data)
+{
+    RCPackage *pkg = data;
+    RCPackage *sys_pkg = rc_world_get_package (
+        rc_get_world (), 
+        RC_WORLD_SYSTEM_PACKAGES,
+        g_quark_to_string (pkg->spec.nameq));
+
+    return rcd_query_match_bool (part, sys_pkg != NULL);
+} /* name_installed_match */
+
+static gboolean
 needs_upgrade_match (RCDQueryPart *part,
                    gpointer      data)
 {
@@ -185,6 +198,10 @@ static RCDQueryEngine query_packages_engine[] = {
     { "installed",
       rcd_query_validate_bool, NULL, NULL,
       installed_match },
+
+    { "name-installed", /* Any package by this name installed */
+      rcd_query_validate_bool, NULL, NULL,
+      name_installed_match },
 
     { "needs_upgrade",
       rcd_query_validate_bool, NULL, NULL,

@@ -1,5 +1,11 @@
 2002-08-12  Joe Shaw  <joe@ximian.com>
 
+	* rcd-query-packages.c (name_installed_match): Added.  Returns
+	TRUE if any package matching a name is installed.
+	(query_packages_engine): Added "name-installed".
+
+2002-08-12  Joe Shaw  <joe@ximian.com>
+
 	* rcd-transaction.c (download_packages): Return an int instead of
 	a gboolean.  If we have packages to download, check to make sure
 	we have the disk space to store them.  Otherwise, lose it.
