@@ -1,3 +1,10 @@
+2003-01-29  Joe Shaw  <joe@ximian.com>
+
+	* rcd-transaction.c (verify_packages): Check our trusted privilege
+	before we send a message to the client.  If we're trusted, tell
+	the user that when we say that the package is unsigned or we
+	cannot verify.
+
 2003-01-28  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc.c: If the user can't be authenticated over HTTP, we

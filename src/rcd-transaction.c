@@ -787,6 +787,7 @@ verify_packages (RCDTransactionStatus *status)
                  !gpg_attempted)
         {
             char *status_msg;
+            gboolean is_trusted;
 
             if (!gpg_attempted) {
                 msg = g_strdup_printf (
@@ -801,17 +802,27 @@ verify_packages (RCDTransactionStatus *status)
 
             rc_debug (RC_DEBUG_LEVEL_MESSAGE, msg);
 
-            status_msg = g_strconcat (
-                gpg_attempted ? "verify-undef:" : "verify-nosig:",
-                g_quark_to_string (package->spec.nameq),
-                NULL);
+            is_trusted = rcd_identity_approve_action (
+                status->identity,
+                rcd_privileges_from_string ("trusted"));
+
+            if (is_trusted) {
+                status_msg = g_strconcat (
+                    gpg_attempted ? "verify-undef:" : "verify-nosig:",
+                    g_quark_to_string (package->spec.nameq),
+                    "; package will be installed because user is trusted",
+                    NULL);
+            }
+            else {
+                status_msg = g_strconcat (
+                    gpg_attempted ? "verify-undef:" : "verify-nosig:",
+                    g_quark_to_string (package->spec.nameq),
+                    NULL);
+            }
             rcd_pending_add_message (status->transaction_pending, status_msg);
             g_free (status_msg);
 
-            if (!rcd_identity_approve_action (
-                    status->identity,
-                    rcd_privileges_from_string ("trusted")) &&
-                rcd_prefs_get_require_signed_packages ())
+            if (!is_trusted && rcd_prefs_get_require_signed_packages ())
             {
                 status_msg = g_strconcat (msg,
                                           "; verified package signatures "
