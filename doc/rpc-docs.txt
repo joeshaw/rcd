@@ -376,16 +376,6 @@ rcd.system.restart()
 
 	Restarts the daemon.
 
-rcd.system.activate(string activation_code, string email,
-		    string alias [optional])
-
-	Returns: 0 on success.
-	Faults: cant_activate
-
-	Activates the daemon against Red Carpet Enterprise servers.
-
-	LAMESPEC: this should be per-service
-
 rcd.system.get_recurring()
 
 	Returns: array [struct {
@@ -581,6 +571,23 @@ rcd.service.refresh_blocking(string identifier [optional])
 	the entire refresh is finished and will return 0 unless a
 	fault occurs.  See the rcd.service.refresh() method for more
 	information.
+
+rcd.service.activate(struct {
+		     activation_code : string,
+		     email : string,
+		     alias : string [optional],
+		     service : string [optional] })
+
+	Returns: 0 on success
+	Faults: cant_activate, invalid_service
+
+	Activates the daemon against Red Carpet Enterprise and Red
+	Carpet Express servers.  If "service" is omitted, there must
+	be only one remote service or else activation will fail.
+	"alias" is an optional alias for this machine.  If "service"
+	is not a valid service, an invalid_service fault will be
+	thrown.  If the daemon otherwise can't activate, a
+	cant_activate fault will be thrown.
 
 Packaging system methods
 ------------------------
