@@ -1,5 +1,3 @@
-Need to save/load prefs
-
 (Maybe further down the road...) Allow modules to register prefs
 
 We need to add code to XMLify the entire RCWorld, including all of the
@@ -11,5 +9,9 @@ There should be a get_update_count (or whatever) method that returns
 only the number of pending updates, possibly broken out by importance.
 This way we can make a soothingly-throbbing update-alert panel applet
 and not need to pass big chunks of data between it and the daemon.
+
+We need to implement calls for "solvedeps", "whatprovides",
+"whatrequires", etc. which take dependency dealies (package names,
+shared libraries on RPM, etc.)
 
 Need docs and a man page.
