@@ -1,3 +1,14 @@
+2002-07-08  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd.c (main): Add a shutdown handler to quit the main loop.
+
+	* rcd-rpc-system.c (system_shutdown): Added.  Glue for the
+	shutdown method.
+	(rcd_rpc_system_register_methods): Register rcd.system.shutdown.
+
+	* rcd-shutdown.c: Added.  Code to handle cleanly shutting down the
+	daemon.
+
 2002-07-08  Joe Shaw  <joe@ximian.com>
 
 	* Makefile.am: Add gnome-config.[ch] and parse-path.cP.

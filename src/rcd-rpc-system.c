@@ -31,6 +31,7 @@
 #include "rcd-about.h"
 #include "rcd-module.h"
 #include "rcd-pending.h"
+#include "rcd-shutdown.h"
 #include "rcd-rpc.h"
 #include "rcd-rpc-util.h"
 
@@ -242,6 +243,15 @@ system_get_all_pending (xmlrpc_env   *env,
 
     return value;
 }
+
+static xmlrpc_value *
+system_shutdown (xmlrpc_env   *env,
+                 xmlrpc_value *param_array,
+                 void         *user_data)
+{
+    rcd_shutdown ();
+    return xmlrpc_build_value (env, "i", 1);
+}
 	
 void
 rcd_rpc_system_register_methods(void)
@@ -254,5 +264,10 @@ rcd_rpc_system_register_methods(void)
         "rcd.system.poll_pending", system_poll_pending, NULL, NULL);
 	rcd_rpc_register_method(
         "rcd.system.get_all_pending", system_get_all_pending, NULL, NULL);
+
+	rcd_rpc_register_method(
+        "rcd.system.shutdown",
+        system_shutdown, rcd_auth_action_list_from_1 (RCD_AUTH_SUPERUSER), NULL);
+
 } /* rcd_rpc_system_register_methods */
 

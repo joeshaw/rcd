@@ -37,6 +37,8 @@
 #include <libredcarpet.h>
 
 #include "rcd-about.h"
+#include "rcd-fetch.h"
+#include "rcd-heartbeat.h"
 #include "rcd-log.h"
 #include "rcd-module.h"
 #include "rcd-query.h"
@@ -45,10 +47,9 @@
 #include "rcd-rpc-log.h"
 #include "rcd-rpc-news.h"
 #include "rcd-rpc-prefs.h"
-#include "rcd-transfer.h"
+#include "rcd-shutdown.h"
 #include "rcd-subscriptions.h"
-#include "rcd-fetch.h"
-#include "rcd-heartbeat.h"
+#include "rcd-transfer.h"
 
 /* global variables related to option parsing */
 
@@ -234,6 +235,10 @@ main (int argc, const char **argv)
 
     g_type_init ();
 
+    main_loop = g_main_loop_new (NULL, TRUE);
+    rcd_shutdown_add_handler ((RCDShutdownFn) g_main_loop_quit,
+                              main_loop);
+
     option_parsing (argc, argv);
 
     root_check ();
@@ -249,7 +254,6 @@ main (int argc, const char **argv)
     rcd_rpc_server_start ();
     rcd_heartbeat_start ();
 
-    main_loop = g_main_loop_new (NULL, TRUE);
     g_main_run (main_loop);
 
     return 0;

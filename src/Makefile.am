@@ -60,6 +60,8 @@ rcd_SOURCES = 			\
 	rcd-rpc-prefs.h		\
 	rcd-rpc-system.c	\
 	rcd-rpc-system.h	\
+	rcd-shutdown.c		\
+	rcd-shutdown.h		\
 	rcd-subscriptions.c	\
 	rcd-subscriptions.h	\
 	rcd-transfer.c		\
