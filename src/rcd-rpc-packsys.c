@@ -7,6 +7,8 @@
 
 #include <xmlrpc.h>
 
+#include "rcd-log.h"
+
 #include "rcd-fetch.h"
 #include "rcd-pending.h"
 #include "rcd-query-packages.h"
@@ -197,6 +199,15 @@ build_updates_list (RCPackage *old,
     if (info->failed)
         return;
 
+#if 0
+    /* Bogus test logging */
+    {
+        RCDLogEntry *foo = rcd_log_entry_new ("foo", "bar");
+        rcd_log_entry_set_upgrade (foo, old, nuevo);
+        rcd_log (foo);
+    }
+#endif
+
     old_xmlrpc = rcd_rc_package_to_xmlrpc (old, info->env);
     new_xmlrpc = rcd_rc_package_to_xmlrpc (nuevo, info->env);
 
@@ -224,7 +235,6 @@ build_updates_list (RCPackage *old,
         }
     }
     
-
     pair = xmlrpc_build_value (info->env,
                                "(VVV)",
                                old_xmlrpc,

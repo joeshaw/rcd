@@ -32,6 +32,7 @@
 #include <libredcarpet.h>
 
 #include "rcd-about.h"
+#include "rcd-log.h"
 #include "rcd-module.h"
 #include "rcd-query.h"
 #include "rcd-rpc.h"
@@ -54,6 +55,8 @@ debug_message_handler (const char *str, gpointer user_data)
 static void
 initialize_logging (void)
 {
+    rcd_log_init (NULL); /* use default path */
+
     rc_debug_set_display_handler (debug_message_handler, NULL);
     rc_debug_set_display_level (RC_DEBUG_LEVEL_INFO);
 

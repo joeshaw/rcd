@@ -28,6 +28,10 @@ rcd_SOURCES = 			\
 	rcd-heartbeat.h		\
 	rcd-identity.c		\
 	rcd-identity.h		\
+	rcd-log.c		\
+	rcd-log.h		\
+	rcd-log-entry.c		\
+	rcd-log-entry.h		\
 	rcd-module.c		\
 	rcd-module.h		\
 	rcd-pending.c		\
