@@ -137,7 +137,7 @@ map_soup_error_to_rcd_transfer_error (SoupMessage *message, RCDTransfer *t)
     const char *display_url = NULL;
     char *err;
 
-    soup_err = soup_error_get_phrase (message->errorcode);
+    soup_err = message->errorphrase;
 
     switch (message->errorcode) {
     case SOUP_ERROR_CANCELLED:

@@ -1,5 +1,13 @@
 2003-02-11  Joe Shaw  <joe@ximian.com>
 
+	* rcd-transfer-http.c (map_soup_error_to_rcd_transfer_error): Get
+	the error phrase from message->errorphrase instead of calling
+	soup_error_get_phrase() because we'll get more detailed info from
+	it.  (Like "Unable to resolve hostname" instead of "Can't
+	connect").
+
+2003-02-11  Joe Shaw  <joe@ximian.com>
+
 	* rcd-query-packages.c (summary_match, description_match,
 	text_match): Guard against the possibility of NULL summaries and
 	descriptions.  I actually have a package installed without a
