@@ -1,3 +1,7 @@
+2004-05-26  James Willcox  <james@ximian.com>
+
+	* rcd.logrotate: fix the postrotate stuff
+
 2004-04-23  James Willcox  <james@ximian.com>
 
 	* rcd.gpg:  Add two Red Hat keys

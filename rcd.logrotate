@@ -6,7 +6,7 @@
 	missingok
 	sharedscripts
 	postrotate
-                                if [ -x /var/run/rcd.pid ]; then
+                                if [ -e /var/run/rcd.pid ]; then
                                         kill -HUP `cat /var/run/rcd.pid`
                                 else
                                         killall -HUP rcd 2>/dev/null || true
