@@ -1,3 +1,7 @@
+2002-08-13  Ian Peters  <itp@ximian.com>
+
+	* rcd-log-entry.c (rcd_log_entry_parse): fix a crash, argh
+
 2002-08-12  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-cache.c (rcd_cache_expire): Added.  Finds the directory the

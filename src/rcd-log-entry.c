@@ -282,11 +282,9 @@ rcd_log_entry_parse (char         *buffer,
 
     spec_from_str (&entry.pkg_initial,
                    bufv[5], bufv[6], bufv[7], bufv[8]);
-    g_free (bufv[5]);
 
     spec_from_str (&entry.pkg_final,
                    bufv[9], bufv[10], bufv[11], bufv[12]);
-    g_free (bufv[9]);
 
     fn (&entry, user_data);
 }
