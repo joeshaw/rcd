@@ -72,6 +72,8 @@ struct _RCDTransactionStatus {
     RCDIdentity *identity;
 
     time_t start_time;
+
+    char *temp_repack_dir;
 };
 
 static gboolean transaction_lock = FALSE;
@@ -101,6 +103,7 @@ rcd_transaction_status_unref (RCDTransactionStatus *status)
         g_free (status->client_id);
         g_free (status->client_version);
         g_free (status->client_host);
+        g_free (status->temp_repack_dir);
         rcd_identity_free (status->identity);
 
         if (status->download_pending)
@@ -527,10 +530,75 @@ fail_transaction (RCDTransactionStatus *status,
     cleanup_after_transaction (status);
 } /* fail_transaction */
 
+static void
+add_rollback_packages (RCDTransactionStatus *status)
+{
+    RCPackageSList *packages = NULL;
+    GDir *dir;
+    GError *error;
+    const char *filename;
+    char *repackage_dir;
+    gboolean dirty = FALSE;
+
+    dir = g_dir_open (status->temp_repack_dir, 0, &error);
+
+    if (!dir) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING, "Unable to open '%s': %s",
+                  status->temp_repack_dir, error->message);
+        return;
+    }
+
+    repackage_dir = g_strconcat (rcd_prefs_get_cache_dir (),
+                                 "/repackage", NULL);
+
+    while ((filename = g_dir_read_name (dir))) {
+        char *fn = g_strconcat (status->temp_repack_dir, "/", filename, NULL);
+        char *newfn;
+        RCPackage *p = rc_packman_query_file (status->packman, fn);
+
+        if (!p) {
+            rc_debug (RC_DEBUG_LEVEL_WARNING,
+                      "Invalid package file in repack dir: %s", fn);
+            g_free (fn);
+            continue;
+        }
+
+        /* Move the file from the temporary directory */
+        newfn = g_strconcat (repackage_dir, "/", filename, NULL);
+        if (rename (fn, newfn) < 0) {
+            rc_debug (RC_DEBUG_LEVEL_WARNING, "Unable to move '%s' to '%s'",
+                      fn, newfn);
+            g_free (newfn);
+            dirty = TRUE;
+        }
+        else {
+            p->package_filename = newfn;
+
+            /*
+             * More efficient to add the packages as a list, so we don't sync
+             * to disk every time.
+             */
+            packages = g_slist_prepend (packages, p);
+        }
+
+        g_free (fn);
+    }
+
+    g_dir_close (dir);
+    g_free (repackage_dir);
+
+    rcd_rollback_add_package_slist (packages);
+    rc_package_slist_unref (packages);
+
+    if (!dirty)
+        rc_rmdir (status->temp_repack_dir);
+} /* add_rollback_packages */
+
 static gboolean
 run_transaction(gpointer user_data)
 {
     RCDTransactionStatus *status = user_data;
+    int flags = 0;
 
     if (rcd_transaction_is_locked ()) {
         fail_transaction (status, status->transaction_pending,
@@ -553,10 +621,50 @@ run_transaction(gpointer user_data)
         G_OBJECT (status->packman), "transact_done",
         G_CALLBACK (transact_done_cb), status);
 
+    if (rc_packman_get_capabilities (status->packman) & 
+        RC_PACKMAN_CAP_REPACKAGING && rcd_prefs_get_repackage ())
+    {
+        char *repackage_dir;
+
+        repackage_dir = g_strconcat (rcd_prefs_get_cache_dir (),
+                                     "/repackage", NULL);
+
+        if (!g_file_test (repackage_dir, G_FILE_TEST_EXISTS) &&
+            rc_mkdir (repackage_dir, 0755) < 0)
+        {
+            rc_debug (RC_DEBUG_LEVEL_WARNING, "Couldn't create '%s'",
+                      repackage_dir);
+        }
+        else {
+            status->temp_repack_dir = g_strconcat (repackage_dir,
+                                                   "/repack-XXXXXX", NULL);
+            if (!rc_mkdtemp (status->temp_repack_dir)) {
+                rc_debug (RC_DEBUG_LEVEL_WARNING, "Couldn't create '%s'",
+                          status->temp_repack_dir);
+            }
+            else {
+                rc_packman_set_repackage_dir (status->packman,
+                                              status->temp_repack_dir);
+                flags |= RC_TRANSACT_FLAG_REPACKAGE;
+            }
+        }
+
+        g_free (repackage_dir);
+    }
+
+    /*
+     * RPM has a bug (surprise!) where it will write out a 0 byte file
+     * when repackaging a package with the no act flag.  So that's why
+     * we're assigning RC_TRANSACT_FLAG_NO_ACT to flags instead of doing
+     * a logical or.
+     */
+    if (status->flags == RCD_TRANSACTION_FLAGS_DRY_RUN)
+        flags = RC_TRANSACT_FLAG_NO_ACT;
+
     rc_packman_transact (status->packman,
                          status->install_packages,
                          status->remove_packages,
-                         status->flags != RCD_TRANSACTION_FLAGS_DRY_RUN);
+                         flags);
 
     g_signal_handlers_disconnect_by_func (
         G_OBJECT (status->packman),
@@ -580,6 +688,10 @@ run_transaction(gpointer user_data)
     else {
         if (status->flags != RCD_TRANSACTION_FLAGS_DRY_RUN) {
             update_log (status);
+
+            if (rc_packman_get_capabilities (status->packman) & 
+                RC_PACKMAN_CAP_REPACKAGING && rcd_prefs_get_repackage ())
+                add_rollback_packages (status);
 
             if (rcd_prefs_get_premium ())
                 rcd_transaction_send_log (status, TRUE, NULL);
@@ -825,7 +937,7 @@ check_package_integrity (RCPackage *package, RCDTransactionStatus *status)
 {
     RCPackage *file_package;
     RCVerificationSList *vers;
-    gboolean inconclusive = TRUE;
+    gboolean inconclusive = FALSE;
 
     file_package = rc_packman_query_file (
         status->packman, package->package_filename);
@@ -838,6 +950,18 @@ check_package_integrity (RCPackage *package, RCDTransactionStatus *status)
     vers = rc_packman_verify (
         status->packman, package,
         RC_VERIFICATION_TYPE_SIZE | RC_VERIFICATION_TYPE_MD5);
+
+    if (rc_packman_get_error (status->packman)) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING, "Can't verify integrity of '%s': %s",
+                  g_quark_to_string (RC_PACKAGE_SPEC (package)->nameq),
+                  rc_packman_get_reason (status->packman));
+        return FALSE;
+    }
+
+    if (!vers) {
+        /* Nothing to verify?  Probably a repackaged RPM, so we're okay. */
+        return TRUE;
+    }
     
     for (; vers; vers = vers->next) {
         RCVerification *ver = vers->data;
@@ -849,13 +973,15 @@ check_package_integrity (RCPackage *package, RCDTransactionStatus *status)
     }
 
     /*
-     * RPM has a bug where if it can't read the header with the signatures,
-     * it'll just pretend it doesn't have any.  If we get UNDEF for all
-     * of the verifications we do, it's better safe than sorry and fail
-     * the thing.
+     * The check was inconclusive, so if we can download it again, we're
+     * better safe than sorry and fail the thing.
      */
-    if (inconclusive)
-        return FALSE;
+    if (inconclusive) {
+        if (rc_package_get_latest_update (package))
+            return FALSE;
+        else
+            return TRUE;
+    }
     else
         return TRUE;
 } /* check_package_integrity */

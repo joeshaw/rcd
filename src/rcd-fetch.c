@@ -925,7 +925,10 @@ package_completed_cb (RCDTransfer *t, gpointer user_data)
         rc_debug (RC_DEBUG_LEVEL_INFO, "Download of %s complete", t->url);
     
         package = g_object_get_data (G_OBJECT (t), "package");
-        package->package_filename = rcd_transfer_get_local_filename (t);
+        if (g_object_get_data (G_OBJECT (t), "is_signature"))
+            package->signature_filename = rcd_transfer_get_local_filename (t);
+        else
+            package->package_filename = rcd_transfer_get_local_filename (t);
 
         /* Fire off a queued transfer if there are any */
         begin_queued_package_download (closure);
@@ -956,7 +959,8 @@ package_completed_cb (RCDTransfer *t, gpointer user_data)
 static void
 download_package_file (RCPackage           *package,
                        const char          *file_url,
-                       PackageFetchClosure *closure)
+                       PackageFetchClosure *closure,
+                       gboolean             is_signature)
 {
     RCDTransfer *t;
     char *url;
@@ -970,6 +974,9 @@ download_package_file (RCPackage           *package,
         RCD_TRANSFER_FLAGS_RESUME_PARTIAL,
         rcd_cache_get_package_cache ());
     g_object_set_data (G_OBJECT (t), "package", package);
+
+    if (is_signature)
+        g_object_set_data (G_OBJECT (t), "is_signature", GINT_TO_POINTER (1));
 
     g_free (url);
 
@@ -1022,10 +1029,12 @@ rcd_fetch_packages (RCPackageSList        *packages,
         RCPackage *package = iter->data;
         RCPackageUpdate *update = rc_package_get_latest_update (package);
         
-        download_package_file (package, update->package_url, closure);
+        download_package_file (package, update->package_url, closure, FALSE);
 
-        if (update->signature_url)
-            download_package_file (package, update->signature_url, closure);
+        if (update->signature_url) {
+            download_package_file (package, update->signature_url,
+                                   closure, TRUE);
+        }
     }
 }
 

@@ -958,6 +958,50 @@ cleanup:
 
     return part;
 } /* rcd_xmlrpc_tuple_to_query_part */
+
+static void
+copy_array (xmlrpc_env *env, xmlrpc_value **out_array, xmlrpc_value *in_array)
+{
+    int size, i;
+
+    size = xmlrpc_array_size (env, in_array);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    for (i = 0; i < size; i++) {
+        xmlrpc_value *v;
+
+        v = xmlrpc_array_get_item (env, in_array, i);
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        xmlrpc_array_append_item (env, *out_array, v);
+        XMLRPC_FAIL_IF_FAULT (env);
+    }
+
+cleanup:
+} /* copy_array */
+
+xmlrpc_value *
+rcd_xmlrpc_array_copy (xmlrpc_env *env, int n_params, ...)
+{
+    va_list args;
+    xmlrpc_value *result;
+    int i;
+
+    result = xmlrpc_build_value (env, "()");
+    if (env->fault_occurred)
+        return NULL;
+
+    va_start (args, n_params);
+    for (i = 0; i < n_params; i++) {
+        copy_array (env, &result, va_arg (args, xmlrpc_value *));
+        XMLRPC_FAIL_IF_FAULT (env);
+    }
+
+cleanup:
+    va_end (args);
+
+    return result;
+} /* rcd_xmlrpc_array_copy */
     
 void
 rcd_debug_serialize (xmlrpc_value *v)

@@ -1,3 +1,39 @@
+2002-10-10  Joe Shaw  <joe@ximian.com>
+
+	* Makefile.am: Add rcd-rollback.[ch] to the build.
+
+	* rcd-fetch.c (package_completed_cb): If the "is_signature" flag
+	is set, set the signature_filename field instead of the
+	package_filename.
+	(download_package_file): If is_signature is set on the func, set
+	it on the transfer object.
+	(rcd_fetch_packages): Set is_signature appropriately.
+
+	* rcd-prefs.c (rcd_prefs_get_repackage): Add a pref for
+	repackaging.
+
+	* rcd-rollback.[ch]: Added.  Maintains a manifest of the available
+	packages to rollback.
+
+	* rcd-rpc-packsys.c (packsys_rollback_dependencies): Added.
+	Creates a temporary channel for the rollback packages, looks up
+	the packages specified, and does a dependency resolution on them.
+	(packsys_get_rollback_packages): Returns a list of the rollback
+	packages.
+	(rcd_rpc_packsys_register_methods): Add in the rollback functions.
+
+	* rcd-rpc-util.c (rcd_xmlrpc_array_copy): Copies (and
+	concatenates) xmlrpc arrays.
+
+	* rcd-transaction.c (run_transaction): If the repackaging
+	capability is set and repackaging is enabled, create and set up a
+	temporary directory to put the repackaged packages.  After the
+	transaction has finished, add the repackaged packages to the
+	rollback list.
+	(check_package_integrity): Call rc_packman_get_error() after
+	verifying since that's the right thing to do.  Shuffle things
+	around a little bit to deal with broken repackaged rpms.
+
 2002-10-10  Jon Trowbridge  <trow@ximian.com>
 
 	* Makefile.am: Add rcd-package-locks.h and rcd-package-locks.c to

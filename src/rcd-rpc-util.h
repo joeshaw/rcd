@@ -202,6 +202,8 @@ RCDQueryPart rcd_xmlrpc_tuple_to_query_part (xmlrpc_value *tuple,
         xmlrpc_parse_value((env), member, "d", &(result));       \
     } while (0)
 
+xmlrpc_value *rcd_xmlrpc_array_copy (xmlrpc_env *env, int n_params, ...);
+
 /* For debugging purposes */
 void rcd_debug_serialize (xmlrpc_value *v);
 

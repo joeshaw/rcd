@@ -477,6 +477,12 @@ rcd_prefs_set_cache_max_size_in_mb (gint size)
     SYNC_CONFIG;
 }
 
+gboolean
+rcd_prefs_get_repackage (void)
+{
+    return gnome_config_get_bool (get_config_path ("/System/repackage=FALSE"));
+}
+
 const char *
 rcd_prefs_get_mid (void)
 {

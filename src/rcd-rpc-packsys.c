@@ -37,6 +37,7 @@
 #include "rcd-pending.h"
 #include "rcd-prefs.h"
 #include "rcd-query-packages.h"
+#include "rcd-rollback.h"
 #include "rcd-rpc.h"
 #include "rcd-rpc-util.h"
 #include "rcd-subscriptions.h"
@@ -1481,6 +1482,167 @@ cleanup:
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
+static xmlrpc_value *
+parse_rollback_package_array (xmlrpc_value *package_names, xmlrpc_env *env)
+{
+    xmlrpc_value *package_list = NULL;
+    int size;
+    int i;
+
+    size = xmlrpc_array_size (env, package_names);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    package_list = xmlrpc_build_value (env, "()");
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    for (i = 0; i < size; i++) {
+        xmlrpc_value *v;
+        char *package_name;
+        RCPackage *package;
+        xmlrpc_value *xmlrpc_package;
+        xmlrpc_value *xmlrpc_package_filename;
+
+        v = xmlrpc_array_get_item (env, package_names, i);
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        xmlrpc_parse_value (env, v, "s", &package_name);
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        package = rcd_rollback_get_package_by_name (package_name);
+
+        if (!package) {
+            xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PACKAGE_NOT_FOUND,
+                                  "No rollback package found by name name");
+            goto cleanup;
+        }
+
+        xmlrpc_package = rcd_rc_package_to_xmlrpc (package, env);
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        /* We need to set the package_filename key manually */
+        xmlrpc_package_filename = xmlrpc_build_value (
+            env, "s", package->package_filename);
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        xmlrpc_struct_set_value (env, xmlrpc_package, "package_filename",
+                                 xmlrpc_package_filename);
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        xmlrpc_DECREF (xmlrpc_package_filename);
+
+        xmlrpc_array_append_item (env, package_list, xmlrpc_package);
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        xmlrpc_DECREF (xmlrpc_package);
+    }
+
+cleanup:
+    if (env->fault_occurred) {
+        if (package_list)
+            xmlrpc_DECREF (package_list);
+
+        return NULL;
+    }
+
+    return package_list;
+} /* parse_rollback_package_array */
+
+static xmlrpc_value *
+packsys_rollback_dependencies(xmlrpc_env   *env,
+                              xmlrpc_value *param_array,
+                              void         *user_data)
+{
+    RCWorld *world = (RCWorld *) user_data;
+    RCChannel *rollback_channel = NULL;
+    GSList *iter;
+    xmlrpc_value *xmlrpc_package_names;
+    xmlrpc_value *xmlrpc_packages = NULL;
+    xmlrpc_value *xmlrpc_installs = NULL;
+    xmlrpc_value *xmlrpc_removals = NULL;
+    xmlrpc_value *xmlrpc_extra_deps = NULL;
+    xmlrpc_value *tmp;
+    xmlrpc_value *result = NULL;
+
+    xmlrpc_parse_value (env, param_array, "(A)", &xmlrpc_package_names);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    xmlrpc_packages = parse_rollback_package_array (xmlrpc_package_names, env);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    xmlrpc_installs = rcd_xmlrpc_array_copy (env, 1, xmlrpc_packages);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    /* Create a dummy channel with all the rollback packages. */
+    rollback_channel = rc_world_add_channel (world,
+                                             "Rollback Packages",
+                                             "rollback-packages",
+                                             0, 0,
+                                             RC_CHANNEL_TYPE_UNKNOWN);
+
+    for (iter = rcd_rollback_get_packages (); iter; iter = iter->next) {
+        RCPackage *package = iter->data;
+
+        package->channel = rc_channel_ref (rollback_channel);
+        rc_world_add_package (world, package);
+    }
+
+    resolve_deps (
+        env, &xmlrpc_installs, &xmlrpc_removals, &xmlrpc_extra_deps,
+        NULL, FALSE, world);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    tmp = xmlrpc_packages;
+    xmlrpc_packages = rcd_xmlrpc_array_copy (env, 2, tmp, xmlrpc_installs);
+    xmlrpc_DECREF (tmp);
+
+    result = xmlrpc_build_value (env, "(VVV)",
+                                 xmlrpc_packages,
+                                 xmlrpc_removals,
+                                 xmlrpc_extra_deps);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+cleanup:
+    if (xmlrpc_packages)
+        xmlrpc_DECREF (xmlrpc_packages);
+
+    if (xmlrpc_installs)
+        xmlrpc_DECREF (xmlrpc_installs);
+
+    if (xmlrpc_removals)
+        xmlrpc_DECREF (xmlrpc_removals);
+
+    if (xmlrpc_extra_deps)
+        xmlrpc_DECREF (xmlrpc_extra_deps);
+
+    if (rollback_channel)
+        rc_world_remove_channel (world, rollback_channel);
+    
+    if (env->fault_occurred)
+        return NULL;
+
+    return result;
+} /* packsys_rollback_dependencies */
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+static xmlrpc_value *
+packsys_get_rollback_packages (xmlrpc_env   *env,
+                               xmlrpc_value *param_array,
+                               void         *user_data)
+{
+    xmlrpc_value *result;
+
+    result = rcd_rc_package_slist_to_xmlrpc_array (
+        rcd_rollback_get_packages (), env);
+
+    if (env->fault_occurred)
+        return NULL;
+
+    return result;
+} /* packsys_get_rollback_packages */
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
 struct WhatProvidesInfo {
     xmlrpc_env *env;
     xmlrpc_value *array;
@@ -1932,6 +2094,16 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
 
     rcd_rpc_register_method("rcd.packsys.verify_dependencies",
                             packsys_verify_dependencies,
+                            "view",
+                            world);
+
+    rcd_rpc_register_method("rcd.packsys.rollback_dependencies",
+                            packsys_rollback_dependencies,
+                            "view",
+                            world);
+
+    rcd_rpc_register_method("rcd.packsys.get_rollback_packages",
+                            packsys_get_rollback_packages,
                             "view",
                             world);
 
