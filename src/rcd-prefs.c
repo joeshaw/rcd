@@ -106,6 +106,18 @@ rcd_prefs_get_host (void)
     return host;
 } /* rcd_prefs_get_host */
 
+void
+rcd_prefs_set_host (const char *host)
+{
+    if (!host) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING, "Can't set empty host!");
+        return;
+    }
+
+    gnome_config_set_string (CONFIG_PATH "/Network/host", host);
+    SYNC_CONFIG;
+} /* rcd_prefs_set_host */
+
 gboolean
 rcd_prefs_get_premium (void)
 {
@@ -119,6 +131,13 @@ rcd_prefs_get_premium (void)
     }
 } /* rcd_prefs_get_premium */
 
+void
+rcd_prefs_set_premium (gboolean enabled)
+{
+    gnome_config_set_bool (CONFIG_PATH "/Network/enable-premium", enabled);
+    SYNC_CONFIG;
+} /* rcd_prefs_set_premium */
+
 const char *
 rcd_prefs_get_org_id (void)
 {
@@ -127,7 +146,7 @@ rcd_prefs_get_org_id (void)
     g_free (org_id);
     org_id = NULL;
 
-    org_id = gnome_config_get_string (CONFIG_PATH "/Network/org_id");
+    org_id = gnome_config_get_string (CONFIG_PATH "/Network/org-id");
 
     return org_id;
 } /* rcd_prefs_get_org_id */

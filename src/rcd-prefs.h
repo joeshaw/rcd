@@ -39,6 +39,11 @@ gboolean     rcd_prefs_get_cache_enabled      (void);
 void         rcd_prefs_set_cache_enabled      (gboolean);
 
 const gchar *rcd_prefs_get_host               (void);
+void         rcd_prefs_set_host               (const char *);
+
+gboolean     rcd_prefs_get_premium            (void);
+void         rcd_prefs_set_premium            (gboolean);
+
 const gchar *rcd_prefs_get_proxy              (void);
 
 const gchar *rcd_prefs_get_proxy_url          (void);
@@ -50,7 +55,6 @@ void         rcd_prefs_set_proxy_username     (const char *);
 const gchar *rcd_prefs_get_proxy_password     (void);
 void         rcd_prefs_set_proxy_password     (const char *);
 
-gboolean     rcd_prefs_get_premium            (void);
 const gchar *rcd_prefs_get_org_id             (void);
 
 gboolean     rcd_prefs_get_http10_enabled     (void);

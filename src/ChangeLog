@@ -1,5 +1,16 @@
 2002-09-06  Joe Shaw  <joe@ximian.com>
 
+	* rcd-prefs.c (rcd_prefs_set_host): Added.  Sets the server URL.
+	(rcd_prefs_set_premium): Added.  Sets whether this is a premium
+	server or a regular free one.
+	(rcd_prefs_get_org_id): Use "org-id" instead of "org_id" to match
+	all the other prefs.
+
+	* rcd-rpc-prefs.c (rcd_rpc_prefs_register_methods): Register the
+	prefs so clients can set them.
+
+2002-09-06  Joe Shaw  <joe@ximian.com>
+
 	* rcd-cache.c: Key all cache entries by the local cache filename,
 	not the URL.  This way we can do lookups based on the local
 	filename, and files should be cached across hosts in the same

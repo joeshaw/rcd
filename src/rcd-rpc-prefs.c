@@ -346,6 +346,16 @@ void
 rcd_rpc_prefs_register_methods (void)
 {
     rcd_rpc_prefs_register_pref (
+        "host", RCD_PREF_STRING,
+        (RCDPrefGetFunc) rcd_prefs_get_host, "view",
+        (RCDPrefSetFunc) rcd_prefs_set_host, "superuser");
+
+    rcd_rpc_prefs_register_pref (
+        "enable-premium", RCD_PREF_BOOLEAN,
+        (RCDPrefGetFunc) rcd_prefs_get_premium, "view",
+        (RCDPrefSetFunc) rcd_prefs_set_premium, "superuser");
+
+    rcd_rpc_prefs_register_pref (
         "proxy-url", RCD_PREF_STRING,
         (RCDPrefGetFunc) rcd_prefs_get_proxy_url, "superuser",
         (RCDPrefSetFunc) rcd_prefs_set_proxy_url, "superuser");
