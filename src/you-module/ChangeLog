@@ -1,5 +1,8 @@
 2004-08-27  Tambet Ingo  <tambet@ximian.com>
 
+	* you-util.c (parser_patch_end): Oops, forgot the "product" tag
+	hack in.
+
 	* suse-product.h: 
 	* suse-product.c: New file.
 

@@ -644,8 +644,6 @@ parser_patch_end (RCYouPatchSAXContext *ctx, const xmlChar *name)
     } else if (!strcmp(name, "patchname")) {
         ctx->current_patch->spec.nameq =
             g_quark_from_string (rc_xml_strip (ctx->text_buffer));
-        /* FIXME: Remove this when XML has "product" tag */
-        ctx->current_patch->product = g_strdup ("SUSE LINUX");
     } else if (!strcmp(name, "filename")) {
         ctx->current_patch->file =
             rc_you_file_new (rc_xml_strip (ctx->text_buffer));
