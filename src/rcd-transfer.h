@@ -81,6 +81,7 @@ struct _RCDTransfer {
     char *filename;
 
     RCDCacheEntry *cache_entry;
+    gboolean cache_hit;
 
     RCPending *pending;
 

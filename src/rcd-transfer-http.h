@@ -35,8 +35,6 @@ struct _RCDTransferProtocolHTTP {
 
     SoupMessage *message;
 
-    gboolean cache_hit;
-
     const char *method;
 
     char *request_body;

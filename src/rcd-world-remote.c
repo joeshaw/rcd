@@ -613,13 +613,50 @@ cleanup:
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 static gboolean
-load_package (RCPackage *package, gpointer user_data)
+prepend_package (RCPackage *package, gpointer user_data)
 {
-    RCWorldStore *store = RC_WORLD_STORE (user_data);
-
-    rc_world_store_add_package (store, package);
+    GSList **slist = (GSList **) user_data;
+    *slist = g_slist_prepend (*slist, rc_package_ref (package));
 
     return TRUE;
+}
+
+static gint
+compare_package_for_store (gconstpointer a, gconstpointer b,
+                           gpointer user_data)
+{
+    RCPackage *pa = (RCPackage *) a;
+    RCPackage *pb = (RCPackage *) b;
+    GSList *compat_arch_list = (GSList *) user_data;
+    int a_arch_score;
+    int b_arch_score;
+    int result;
+
+    /* Basic sort by name */
+    result = rc_package_spec_compare_name (RC_PACKAGE_SPEC (pa),
+                                           RC_PACKAGE_SPEC (pb));
+    if (result != 0)
+        return result;
+
+    /* Get higher-versioned packages first in the list */
+    result = rc_packman_version_compare (rc_packman_get_global (),
+                                         RC_PACKAGE_SPEC (pa),
+                                         RC_PACKAGE_SPEC (pb));
+    if (result != 0)
+        return result;
+
+    /* Same name, same version.  Get the best arch score first. */
+    a_arch_score = rc_arch_get_compat_score (compat_arch_list,
+                                             pa->arch);
+    b_arch_score = rc_arch_get_compat_score (compat_arch_list,
+                                             pb->arch);
+
+    if (a_arch_score > b_arch_score)
+        return -1;
+    else if (a_arch_score < b_arch_score)
+        return 1;
+    else
+        return 0;
 }
 
 static gboolean
@@ -629,6 +666,9 @@ rcd_world_remote_parse_channel_data (RCDWorldRemote *remote,
                                      gint            buffer_len)
 {
     GByteArray *decompressed_data = NULL;
+    GSList *package_list = NULL;
+    GSList *compat_arch_list, *package_iter;
+    GTimer *timer;
     int count;
 
     if (rc_memory_looks_compressed (buffer, buffer_len)) {
@@ -639,24 +679,30 @@ rcd_world_remote_parse_channel_data (RCDWorldRemote *remote,
         buffer_len = decompressed_data->len;
     }
 
+    timer = g_timer_new ();
+    g_timer_start (timer);
+
     switch (rc_channel_get_type (channel)) {
     case RC_CHANNEL_TYPE_HELIX:
         count = rc_extract_packages_from_helix_buffer (buffer, buffer_len,
-                                                       channel, load_package,
-                                                       remote);
+                                                       channel,
+                                                       prepend_package,
+                                                       &package_list);
         break;
 
     case RC_CHANNEL_TYPE_DEBIAN:
         count = rc_extract_packages_from_debian_buffer (buffer, buffer_len,
-                                                        channel, load_package,
-                                                        remote);
+                                                        channel,
+                                                        prepend_package,
+                                                        &package_list);
         break;
 
     case RC_CHANNEL_TYPE_APTRPM:
         count = rc_extract_packages_from_aptrpm_buffer (buffer, buffer_len,
                                                         rc_packman_get_global (),
-                                                        channel, load_package,
-                                                        remote);
+                                                        channel,
+                                                        prepend_package,
+                                                        &package_list);
         break;
 
     default:
@@ -672,12 +718,40 @@ rcd_world_remote_parse_channel_data (RCDWorldRemote *remote,
     if (count < 0) {
         rc_debug (RC_DEBUG_LEVEL_WARNING, "Unable to load packages in '%s'",
                   rc_channel_get_id (channel));
+        g_timer_destroy (timer);
         return FALSE;
-    } else {                 
-        rc_debug (RC_DEBUG_LEVEL_DEBUG, "Loaded %d packages in '%s'",
-                  count, rc_channel_get_id (channel));
-        return TRUE;
     }
+
+    /* Sort the packages so that they can get inserted quickly into
+     * the RCWorldStore
+     */
+    compat_arch_list =
+        rc_arch_get_compat_list (rc_arch_get_system_arch ());
+
+    package_list = g_slist_sort_with_data (package_list,
+                                           compare_package_for_store,
+                                           compat_arch_list);
+    g_slist_free (compat_arch_list);
+
+    for (package_iter = package_list;
+         package_iter != NULL;
+         package_iter = package_iter->next)
+    {
+        RCPackage *package = (RCPackage *) package_iter->data;
+        rc_world_store_add_package (RC_WORLD_STORE (remote), package);
+    }
+    
+    rc_package_slist_unref (package_list);
+    g_timer_stop (timer);
+
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE,
+              "Loaded %d packages in '%s' (%4.5f seconds)",
+              count, rc_channel_get_id (channel),
+              g_timer_elapsed (timer, NULL));
+
+    g_timer_destroy (timer);
+
+    return TRUE;
 }
 
 typedef struct {
@@ -826,7 +900,7 @@ rcd_world_remote_per_channel_cb (RCChannel *channel,
 
         if (channel_data->pool == NULL) {
             channel_data->pool =
-                rcd_transfer_pool_new (FALSE, "Package data download");
+                rcd_transfer_pool_new (FALSE, "Package icon download");
         }
 
         rcd_transfer_pool_add_transfer (channel_data->pool, t);

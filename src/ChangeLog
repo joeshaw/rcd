@@ -1,3 +1,23 @@
+2004-02-04  Joe Shaw  <joe@ximian.com>
+
+	* rcd-transfer-http.c (http_done_real,
+	http_response_not_modified): Move the cache_hit bit to the
+	RCDTransfer from the HTTP backend.
+
+	* rcd-world-remote.c (load_package): Remove this, it's replaced by
+	prepend_package() and an iteration in
+	rcd_world_remote_parse_channel_data().
+	(rcd_world_remote_per_channel_cb): Fix a typo where icon downloads
+	were being reported as "package data" and not "package icon".
+	Should make download debug logs more clear.
+
+2004-02-04  Vladimir Vukicevic  <vladimir@pobox.com>
+
+       * rcd-world-remote.c (rcd_world_remote_parse_channel_data):
+       Sort packages according to arch compat and other bits before
+       trying to insert them into the rc_world_store, as inserting
+       a "better" package is an expensive operation.
+
 2004-01-29  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc.c (rcd_rpc_remote_server_start): Create a SoupAddress

@@ -198,7 +198,7 @@ http_done_real (gpointer user_data)
         (RCDTransferProtocolHTTP *) t->protocol;
 
     if (!rcd_transfer_get_error (t)) {
-        if (protocol->cache_hit) {
+        if (t->cache_hit) {
             char *cache_filename;
             char *local_url;
             
@@ -314,10 +314,8 @@ static void
 http_response_not_modified (SoupMessage *message, gpointer data)
 {
     RCDTransfer *t = data;
-    RCDTransferProtocolHTTP *protocol =
-        (RCDTransferProtocolHTTP *) t->protocol;
 
-    protocol->cache_hit = TRUE;
+    t->cache_hit = TRUE;
 } /* http_response_not_modified */
 
 static void
