@@ -78,23 +78,26 @@ rcd_fetch_register (void)
         protocol, "X-RC-Secret", rcd_prefs_get_secret ());
 
     data = rcd_transfer_begin_blocking (t);
-    g_byte_array_free (data, TRUE);
 
     status = rcd_transfer_protocol_http_get_response_header (protocol,
                                                              "X-RC-Status");
     if (!status || atoi (status) != 1) {
-        const char *msg;
+        char *msg;
 
         if (rcd_transfer_get_error (t))
-            msg = rcd_transfer_get_error_string (t);
+            msg = g_strdup (rcd_transfer_get_error_string (t));
         else
-            msg = rcd_transfer_protocol_http_get_response_body (protocol);
+            msg = g_strndup (data->data, data->len);
 
         rc_debug (RC_DEBUG_LEVEL_WARNING,
                   "Unable to register with server: %s", msg);
+
+        g_free (msg);
     }
     else
         rc_debug (RC_DEBUG_LEVEL_INFO, "System registered successfully");
+
+    g_byte_array_free (data, TRUE);
 
     g_object_unref (t);
 } /* rcd_fetch_register */
