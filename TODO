@@ -1,8 +1,5 @@
 (Maybe further down the road...) Allow modules to register prefs
 
-Compress the enormous XML spit out by rc_world_dump() before sending it
-over the wire, and decompress it in the rc command-line client.
-
 Need to send more information down the wire when
 installing/updating/removing about why certain packages are being
 pulled in, removed, etc.
