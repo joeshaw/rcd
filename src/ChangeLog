@@ -1,3 +1,8 @@
+2002-06-12  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-rpc-packsys.c (build_updates_list): Send the relevant
+	package update descriptions along with each update.
+
 2002-06-12  Joe Shaw  <joe@ximian.com>
 
 	* rcd-fetch.c (rcd_fetch_packages): Take another callback to give

@@ -190,8 +190,9 @@ build_updates_list (RCPackage *old,
                     gpointer   user_data)
 {
     struct BuildUpdatesInfo *info = user_data;
+    RCPackageUpdateSList *iter;
     xmlrpc_value *pair;
-    xmlrpc_value *old_xmlrpc, *new_xmlrpc;
+    xmlrpc_value *old_xmlrpc, *new_xmlrpc, *history;
 
     if (info->failed)
         return;
@@ -199,10 +200,36 @@ build_updates_list (RCPackage *old,
     old_xmlrpc = rcd_rc_package_to_xmlrpc (old, info->env);
     new_xmlrpc = rcd_rc_package_to_xmlrpc (nuevo, info->env);
 
+    history = xmlrpc_build_value (info->env, "()");
+    XMLRPC_FAIL_IF_FAULT (info->env);
+
+    iter = nuevo->history;
+    while (iter != NULL) {
+
+        RCPackageUpdate *update = iter->data;
+
+        if (rc_package_spec_compare (&old->spec, &update->spec) < 0) {
+            xmlrpc_value *desc;
+            
+            if (update->description && *update->description) {
+                desc = xmlrpc_build_value (info->env, "s", update->description);
+                xmlrpc_array_append_item (info->env, history, desc);
+                xmlrpc_DECREF (desc);
+            }
+            
+            iter = iter->next;
+
+        } else {
+            iter = NULL;
+        }
+    }
+    
+
     pair = xmlrpc_build_value (info->env,
-                               "(VV)",
+                               "(VVV)",
                                old_xmlrpc,
-                               new_xmlrpc);
+                               new_xmlrpc,
+                               history);
     XMLRPC_FAIL_IF_FAULT (info->env);
 
     xmlrpc_array_append_item (info->env,
