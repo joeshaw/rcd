@@ -38,6 +38,9 @@
 	(main): Call rcd_rpc_server_start() with the port specified in -p
 	and -r.
 
+	* rcd-transact-log.[ch]: Added.  Handles connecting to the log on
+	the server and sending transaction data and success.
+
 2002-07-29  Joe Shaw  <joe@ximian.com>
 
 	* Makefile.am: Install the daemon into $prefix/sbin, like a good
