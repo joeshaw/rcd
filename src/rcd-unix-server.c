@@ -150,7 +150,6 @@ read_data(GIOChannel *iochannel,
     g_free(handle);
 
     g_io_channel_close(iochannel);
-    g_io_channel_unref(iochannel);
 
     return FALSE;
 } /* read_data */
@@ -198,6 +197,7 @@ try_again:
                     G_IO_IN,
                     (GIOFunc) read_data,
                     handle);
+    g_io_channel_unref (conn_chan);
 
     return TRUE;
 } /* conn_accept */

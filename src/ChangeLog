@@ -1,3 +1,11 @@
+2002-07-23  Joe Shaw  <joe@ximian.com>
+
+	* rcd-cache.c (rcd_cache_entry_new): Initialize the fd to -1.
+	(rcd_cache_entry_cancel): If the fd is -1, don't try to close it.
+
+	* rcd-unix-server.c (read_data): Remove the unref from here.
+	(conn_accept): And add it here, after we add the watch.
+
 2002-07-23  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-prefs.c (rcd_prefs_get_heartbeat_interval): Set the default

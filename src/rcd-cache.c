@@ -149,7 +149,8 @@ rcd_cache_entry_close (RCDCacheEntry *entry)
 void
 rcd_cache_entry_cancel (RCDCacheEntry *entry)
 {
-    rc_close (entry->fd);
+    if (entry->fd != -1)
+        rc_close (entry->fd);
 } /* rcd_cache_entry_cancel */
 
 void
@@ -202,6 +203,7 @@ rcd_cache_entry_new (RCDCache *cache, const char *url)
     
     entry->url = g_strdup (url);
     entry->local_file = rcd_cache_get_local_filename (cache, url);
+    entry->fd = -1;
 
     g_hash_table_insert (cache->entries, entry->url, entry);
 
