@@ -127,9 +127,9 @@ The level at which to log to standard error.  This can range from 0 to 6, where 
 .br 
 Specifies the interval at which rcd downloads new channel and package metadata.  This defaults to 21600 (6 hours). If the heartbeat is set to 0, the daemon will not refresh unless told to do so with the "rug refresh" command.
 
-\fBrepackage=[true | false]\fR
+\fBrollback=[true | false]\fR
 .br 
-Specifies whether to turn repackage and store the currently installed version of software as a backup, so that the "rug rollback" software reversion command can work (see rug(1) for more information). This option will cause a noticeable slowdown in upgrade and removal transactions, use a significant amount of disk space, and only works for RPM versions 4.0.4 and greater.
+Stores detailed package history information, enabling the "rug rollback" software reversion command (see rug(1) for more information). This option causes rcd to take additional time and disk space for upgrade and removal transactions, although not as much as storing archives of old packages themselves. Rollback only works on RPM\-based systems, and packages to which you downgrade must be available on the Red Carpet server.
 
 \fBrequire\-signatures=[true | false]\fR
 .br 
