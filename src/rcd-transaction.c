@@ -1052,11 +1052,36 @@ download_packages (RCPackageSList *packages, RCDTransactionStatus *status)
             }
         }
 
+        /*
+         * The package isn't already on the file system, so we have to
+         * download it.
+         */
         if (!package->package_filename) {
-            status->packages_to_download = g_slist_prepend (
-                status->packages_to_download, rc_package_ref (package));
-            status->total_download_size +=
-                rc_package_get_latest_update (package)->package_size;
+            RCPackageUpdate *update;
+
+            update = rc_package_get_latest_update (package);
+
+            /*
+             * Hmm, we got passed a request to install a package that's
+             * already installed and for which we don't have an update.
+             * This transaction is going to fail.
+             */
+            if (!update) {
+                char *msg;
+
+                msg = g_strdup_printf ("Package %s is already installed",
+                                       rc_package_spec_to_str_static (RC_PACKAGE_SPEC (package)));
+                /* We begin the transaction pending just to fail it. */
+                rcd_pending_begin (status->transaction_pending);
+                fail_transaction (status, status->transaction_pending, msg);
+                g_free (msg);
+                return -1;
+            }
+            else {
+                status->packages_to_download = g_slist_prepend (
+                    status->packages_to_download, rc_package_ref (package));
+                status->total_download_size += update->package_size;
+            }
         }
     }
 

@@ -1,5 +1,13 @@
 2003-03-11  Joe Shaw  <joe@ximian.com>
 
+	* rcd-transaction.c (download_packages): Fix a crash where we're
+	asked to download a package without an update section (which means
+	that we're trying to install a package that's already installed on
+	the system, which means a client bug... but we still shouldn't
+	crash).  Now we just fail the transaction happily.
+
+2003-03-11  Joe Shaw  <joe@ximian.com>
+
 	* rcd-fetch.c (rcd_fetch_register): Add a fourth argument,
 	err_msg, which is filled out when activation fails.  Check the
 	X-RC-Error header for an error message and return it.
