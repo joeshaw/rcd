@@ -284,9 +284,10 @@ xmlrpc_client_call_server_params (xmlrpc_env *env,
 	/* Build the xml block */
 	serialized_xml = xmlrpc_mem_block_new(env, 0);
 	XMLRPC_FAIL_IF_FAULT(env);
+
 	xmlrpc_serialize_call(env, serialized_xml, method_name, mungled_params);
 	XMLRPC_FAIL_IF_FAULT(env);
-    
+
 	/* Perform actual call */
 	do_soup_request(env, server->_server_url,
                     xmlrpc_mem_block_contents(serialized_xml),

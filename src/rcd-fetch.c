@@ -89,33 +89,35 @@ fetch_register_build_args (xmlrpc_env *env,
     else
         hostname = uname_buf.nodename;
 
-    value = xmlrpc_struct_new (env);
+    value = xmlrpc_build_value(env, "()");
     XMLRPC_FAIL_IF_FAULT (env);
 
     if (!activation_code) {
+	/*
         g_assert (rcd_prefs_get_org_id ());
         RCD_XMLRPC_STRUCT_SET_STRING (env, value,
                                       "orgtoken",
                                       rcd_prefs_get_org_id ());
         XMLRPC_FAIL_IF_FAULT (env);
+	*/
     } else {
-        RCD_XMLRPC_STRUCT_SET_STRING (env, value,
-                                      "activation_code",
-                                      activation_code);
+	xmlrpc_array_append_item (env, value,
+			xmlrpc_build_value(env, "s", activation_code));
         XMLRPC_FAIL_IF_FAULT (env);
     }
  
     if (email) {
-        RCD_XMLRPC_STRUCT_SET_STRING (env, value,
-                                      "email",
-                                      email);
+	xmlrpc_array_append_item (env, value,
+			xmlrpc_build_value(env, "s", email));
         XMLRPC_FAIL_IF_FAULT (env);
     }
+
+    xmlrpc_array_append_item(env, value,
+		    	xmlrpc_build_value(env, "s", hostname));
  
     if (alias) {
-        RCD_XMLRPC_STRUCT_SET_STRING (env, value,
-                                      "alias",
-                                      alias);
+	xmlrpc_array_append_item (env, value,
+			xmlrpc_build_value(env, "s", alias));
         XMLRPC_FAIL_IF_FAULT (env);
     }
  
