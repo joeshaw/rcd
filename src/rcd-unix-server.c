@@ -32,6 +32,8 @@
 
 #include <libredcarpet.h>
 
+#include "rcd-shutdown.h"
+
 #define SOCKET_PATH "/tmp/rcd"
 
 int
@@ -192,6 +194,17 @@ try_again:
     return TRUE;
 } /* conn_accept */
 
+static void
+shutdown_server_cb (gpointer user_data)
+{
+    int sockfd = GPOINTER_TO_INT (user_data);
+
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Shutting down local server");
+
+    close (sockfd);
+    unlink (SOCKET_PATH);
+} /* shutdown_server_cb */
+
 void
 rcd_unix_server_run_async(RCDUnixServerCallback callback)
 {
@@ -232,6 +245,8 @@ rcd_unix_server_run_async(RCDUnixServerCallback callback)
                   "Unable to listen to domain socket");
         return;
     }
+
+    rcd_shutdown_add_handler (shutdown_server_cb, GINT_TO_POINTER (sockfd));
 
     iochannel = g_io_channel_unix_new(sockfd);
     g_io_add_watch(iochannel, G_IO_IN, conn_accept, callback);

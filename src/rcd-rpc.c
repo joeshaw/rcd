@@ -40,6 +40,7 @@
 #include "rcd-auth.h"
 #include "rcd-identity.h"
 #include "rcd-rpc-system.h"
+#include "rcd-shutdown.h"
 #include "rcd-unix-server.h"
 
 typedef struct {
@@ -269,6 +270,16 @@ soup_auth_callback (SoupServerAuthContext *auth_ctx,
         return TRUE;
 } /* auth_callback */
 
+static void
+soup_shutdown_cb (gpointer user_data)
+{
+    SoupServer *server = user_data;
+
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Shutting down HTTP server");
+
+    soup_server_unref (server);
+} /* soup_shutdown_cb */
+
 static gboolean
 run_server_thread(gpointer user_data)
 {
@@ -293,6 +304,8 @@ run_server_thread(gpointer user_data)
         server, "/RPC2", &auth_ctx, soup_rpc_callback, NULL, NULL);
     soup_server_register(
         server, NULL, NULL, soup_default_callback, NULL, NULL);
+
+    rcd_shutdown_add_handler (soup_shutdown_cb, server);
 
     soup_server_run_async(server);
 

@@ -1,3 +1,13 @@
+2002-07-09  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc.c (soup_shutdown_cb): Added.  Unrefs the soup server so
+	it shuts down.
+	(run_server_thread): Add the shutdown handler.
+
+	* rcd-unix-server.c (shutdown_server_cb): Added.  Closes the
+	listening socket and unlinks it.
+	(rcd_unix_server_run_async): Add the shutdown handler.
+
 2002-07-09  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd.c (root_check): Even if the --allow-non-root option has been
