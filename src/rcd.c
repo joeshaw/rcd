@@ -237,6 +237,13 @@ daemonize (void)
 
     if (non_daemon_flag)
         return;
+#ifdef NEED_KERNEL_FD_WORKAROUND
+   /*
+    * This is an evil hack and I hate it, but it works around a broken ass
+    * kernel bug.
+    */
+   for (i = 0; i < 256; i++) fopen ("/dev/null", "r");
+#endif
 
     fork_rv = fork ();
     if (fork_rv < 0) {

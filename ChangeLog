@@ -1,3 +1,8 @@
+2002-12-10  Frank Belew  <frb@ximian.com>
+
+	* configure.in: added AC_ARG_ENABLE for the kernel workaround, it 
+	just #define's NEED_KERNEL_FD_WORKAROUND for src/rcd.c
+
 2002-12-10  Joe Shaw  <joe@ximian.com>
 
 	* Makefile.am: Install the init script into

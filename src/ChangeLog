@@ -1,3 +1,8 @@
+2002-12-10  Frank Belew  <frb@ximian.com>
+
+	* rcd.c: added #ifdef NEED_KERNEL_FD_WORKAROUND and appropriate line
+	of code
+
 2002-12-09  Joe Shaw  <joe@ximian.com>
 
 	* rcd.c: Add a --no-modules flag which does what you think it does.
