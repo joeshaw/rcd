@@ -1,5 +1,8 @@
 2003-01-24  Jon Trowbridge  <trow@ximian.com>
 
+	* rcd-rpc-packsys.c (packsys_rollback_dependencies): Make the
+	rollback channel silent.
+
 	* rcd-rpc-users.c (users_sequence_number): Added.  A method for
 	returning the identity sequence number.
 	(rcd_rpc_users_register_methods): Register the

@@ -1667,6 +1667,7 @@ packsys_rollback_dependencies(xmlrpc_env   *env,
         "Rollback Packages",
         "rollback-packages",
         0, 0,
+        TRUE, /* this is a silent channel */
         RC_CHANNEL_TYPE_UNKNOWN,
         channel_priority, channel_priority, channel_priority);
 
