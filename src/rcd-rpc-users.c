@@ -145,8 +145,11 @@ users_update (xmlrpc_env   *env,
               xmlrpc_value *param_array,
               void         *user_data)
 {
-    RCDIdentity *id = NULL;
     char *username, *password, *privileges;
+    RCDRPCMethodData *method_data;
+    RCDPrivileges req_priv;
+    gboolean is_superuser;
+    RCDIdentity *id = NULL;
     gboolean success = FALSE;
     xmlrpc_value *ret_value = NULL;
 
@@ -161,6 +164,19 @@ users_update (xmlrpc_env   *env,
         && strcmp (password, "-*-unchanged-*-"))
         goto cleanup;
 
+    method_data = rcd_rpc_get_method_data ();
+    req_priv = rcd_privileges_from_string ("superuser");
+
+    is_superuser = rcd_identity_approve_action (method_data->identity,
+                                                req_priv);
+
+    if (!is_superuser && strcmp (method_data->identity->username, username)) {
+        xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_PERMISSION_DENIED,
+                                        "User '%s' may not change this user",
+                                        method_data->identity->username);
+        goto cleanup;
+    }
+
     id = rcd_identity_new ();
 
     id->username   = g_strdup (username);
@@ -170,8 +186,22 @@ users_update (xmlrpc_env   *env,
     else
         id->password = NULL;
     
-    if (strcmp (privileges, "-*-unchanged-*-"))
+    if (strcmp (privileges, "-*-unchanged-*-")) {
+        RCDPrivileges *new_privs;
+
+        new_privs = rcd_privileges_from_string (privileges);
+
+        if (new_privs != method_data->identity->privileges && !is_superuser) {
+            xmlrpc_env_set_fault_formatted (env,
+                                            RCD_RPC_FAULT_PERMISSION_DENIED,
+                                            "User '%s' may not change user "
+                                            "privileges",
+                                            method_data->identity->username);
+            goto cleanup;
+        }
+
         id->privileges = rcd_privileges_from_string (privileges);
+    }
     else
         id->privileges = RCD_PRIVILEGES_UNCHANGED;
 
@@ -237,9 +267,10 @@ rcd_rpc_users_register_methods (void)
                              "view",
                              NULL);
 
+    /* privileges are checked in the method itself */
     rcd_rpc_register_method ("rcd.users.update",
                              users_update,
-                             "superuser",
+                             NULL,
                              NULL);
 
     rcd_rpc_register_method ("rcd.users.remove",
