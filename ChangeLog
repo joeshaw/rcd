@@ -1,5 +1,9 @@
 2002-10-01  Joe Shaw  <joe@ximian.com>
 
+	* configure.in: 1.0.0
+
+2002-10-01  Joe Shaw  <joe@ximian.com>
+
 	* rcd.conf.5: Add the Server section and keys
 
 2002-10-01  Joe Shaw  <joe@ximian.com>
