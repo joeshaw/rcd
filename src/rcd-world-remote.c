@@ -235,7 +235,7 @@ rcd_world_remote_fetch_distributions (RCDWorldRemote *remote, gboolean local)
         }
     }
 
-    if (!buf) {
+    if (!buffer) {
         RCDTransfer *t;
         const GByteArray *data;
 
@@ -295,7 +295,7 @@ rcd_world_remote_fetch_licenses (RCDWorldRemote *remote, gboolean local)
         }
     }
 
-    if (!buf) {
+    if (!buffer) {
         const GByteArray *data;
 
         t = rcd_transfer_new (remote->licenses_url,
@@ -353,7 +353,7 @@ rcd_world_remote_fetch_news (RCDWorldRemote *remote, gboolean local)
         }
     }
 
-    if (!buf) {
+    if (!buffer) {
         const GByteArray *data;
 
         t = rcd_transfer_new (remote->news_url,
@@ -431,7 +431,7 @@ rcd_world_remote_fetch_mirrors (RCDWorldRemote *remote, gboolean local)
         }
     }
 
-    if (!buf) {
+    if (!buffer) {
         const GByteArray *data;
 
         t = rcd_transfer_new (remote->mirrors_url,
@@ -874,7 +874,7 @@ saved_target_differs (RCDWorldRemote *remote)
 
     buf = rcd_cache_entry_map_file (entry);
 
-    if (!buf)
+    if (!buf || !buf->data)
         return TRUE;
 
     target = rc_distro_get_target (remote->distro);
@@ -933,7 +933,7 @@ rcd_world_remote_fetch_channels (RCDWorldRemote *remote, gboolean local,
         }
     }
 
-    if (!buf) {
+    if (!buffer) {
         const GByteArray *data;
 
         t = rcd_transfer_new (remote->channels_url,

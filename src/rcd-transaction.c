@@ -882,7 +882,7 @@ format_size (gsize size)
     else if (size > 1024)
         output = g_strdup_printf ("%.2fk", (float) size / 1024.0);
     else
-        output = g_strdup_printf ("%db", size);
+        output = g_strdup_printf ("%ldb", (long) size);
 
     return output;
 } /* format_size */

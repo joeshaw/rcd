@@ -1,3 +1,17 @@
+2003-11-14  Joe Shaw  <joe@ximian.com>
+
+	* rcd-transaction.c (format_size): Cast the file size to long to
+	avoid a warning on 64-bit archs where longs are 64 bits and gsize
+	is a long.
+
+	* rcd-world-remote.c (rcd_world_remote_fetch_distributions,
+	rcd_world_remote_fetch_licenses, rcd_world_remote_fetch_news,
+	rcd_world_remote_fetch_mirrors, saved_target_differs,
+	rcd_world_remote_fetch_channels): Instead of checking to see
+	if the mmapped RCBuffer is NULL, check if buffer is NULL,
+	since it's valid to have a non-NULL RCBuffer but with a NULL
+	data portion (ie, a 0 byte file). 
+
 2003-11-13  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-prefs.c (get_boolean_func, get_int_func,
