@@ -30,7 +30,10 @@
 
 #include <libredcarpet.h>
 
-static int priv_shift = 0;
+/* We start our assigned privileges as 1<<1, so that
+   the magic superuser privilege (~0) has a bit set that
+   no other privilege will contain. */
+static int priv_shift = 1;
 static GHashTable *priv_hash = NULL;
 
 #define SU_PRIV (~(guint64)0)

@@ -1,5 +1,9 @@
 2002-07-12  Jon Trowbridge  <trow@ximian.com>
 
+	* rcd-privileges.c: Make our first assigned privilege be 1<<1, so
+	that the superuser privilege (~0) will always have a unique bit
+	set.
+
 	* rcd-rpc-users.c: Added.  Highly preliminary (and still broken)
 	XML-RPC wrappers around account-manipulation info.
 
