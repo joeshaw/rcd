@@ -131,6 +131,34 @@ name_installed_match (RCDQueryPart *part,
 } /* name_installed_match */
 
 static gboolean
+package_installed_match (RCDQueryPart *part,
+                         gpointer      data)
+{
+    RCPackage *pkg = data;
+    RCPackage *sys_pkg;
+    const char *name;
+    gboolean installed;
+
+
+    if (rc_package_is_installed (pkg)) {
+        
+        installed = TRUE;
+
+    } else {
+
+        name = g_quark_to_string (RC_PACKAGE_SPEC (pkg)->nameq);
+        sys_pkg = rc_world_get_package (rc_get_world (),
+                                        RC_WORLD_SYSTEM_PACKAGES,
+                                        name);
+        installed = (sys_pkg != NULL
+                     && rc_package_spec_equal (RC_PACKAGE_SPEC (pkg),
+                                               RC_PACKAGE_SPEC (sys_pkg)));
+    }
+
+    return rcd_query_match_bool (part, installed);
+}
+
+static gboolean
 needs_upgrade_match (RCDQueryPart *part,
                    gpointer      data)
 {
@@ -195,13 +223,19 @@ static RCDQueryEngine query_packages_engine[] = {
       NULL, channel_init, NULL,
       channel_match },
 
-    { "installed",
+    { "installed",  /* This is a system package, essentially. */
       rcd_query_validate_bool, NULL, NULL,
       installed_match },
 
     { "name-installed", /* Any package by this name installed */
       rcd_query_validate_bool, NULL, NULL,
       name_installed_match },
+
+    /* This package is a system package, or appears to be the
+       in-channel version of an installed package. */
+    { "package-installed",  
+      rcd_query_validate_bool, NULL, NULL,
+      package_installed_match },
 
     { "needs_upgrade",
       rcd_query_validate_bool, NULL, NULL,

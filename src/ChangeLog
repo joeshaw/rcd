@@ -1,5 +1,12 @@
 2002-09-11  Jon Trowbridge  <trow@ximian.com>
 
+	* rcd-query-packages.c (package_installed_match): Added.  This is
+	a query method that returns true if the package is a system
+	package or is an in-channel package that has the same EVR as a
+	system package.
+	Also created an entry in the query_packages_engine array for
+	"package-installed".
+
 	* rcd-rpc-util.c (rcd_rc_package_to_xmlrpc): Added a name_installed
 	field to the package xml-rpc struct.  It is a flag that gets set
 	if a package of the same name is installed on the system.

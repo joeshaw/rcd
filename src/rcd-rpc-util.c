@@ -272,7 +272,7 @@ rcd_rc_package_to_xmlrpc (RCPackage *package, xmlrpc_env *env)
         env, value,
         "section_num", package->section);
 
-    if (package->installed) {
+    if (rc_package_is_installed (package)) {
         RCChannel *guess;
 
         installed = TRUE; 
@@ -300,11 +300,10 @@ rcd_rc_package_to_xmlrpc (RCPackage *package, xmlrpc_env *env)
     RCD_XMLRPC_STRUCT_SET_INT(env, value, "installed", installed);
 
     name = g_quark_to_string (RC_PACKAGE_SPEC (package)->nameq);
-    name_installed = rc_world_foreach_package_by_name (rc_get_world (),
-                                                       name,
-                                                       RC_WORLD_SYSTEM_PACKAGES,
-                                                       NULL, NULL);
-                                                       
+    name_installed = rc_world_get_package (rc_get_world (),
+                                           RC_WORLD_SYSTEM_PACKAGES,
+                                           name) != NULL;
+
     RCD_XMLRPC_STRUCT_SET_INT(env, value, "name_installed", name_installed);
         
 cleanup:
