@@ -44,6 +44,9 @@ typedef struct {
     RCPackageSList *install_packages;
     RCPackageSList *remove_packages;
 
+    /* Don't actually transact, just go through the motions */
+    gboolean dry_run;
+
     RCPackageSList *packages_to_download;
 
     RCDPending *pending;
@@ -759,6 +762,8 @@ run_transaction(gpointer user_data)
         G_OBJECT (status->packman), "transact_done",
         G_CALLBACK (transact_done_cb), status);
 
+    /* FIXME: Somehow set the transact to dry_run if it's set */
+
     rc_packman_transact (status->packman,
                          status->install_packages,
                          status->remove_packages);
@@ -1004,6 +1009,7 @@ packsys_transact(xmlrpc_env   *env,
     RCWorld *world = (RCWorld *) user_data;
     xmlrpc_value *xmlrpc_install_packages;
     xmlrpc_value *xmlrpc_remove_packages;
+    xmlrpc_bool *dry_run;
     RCPackageSList *install_packages = NULL;
     RCPackageSList *remove_packages = NULL;
     RCDRPCMethodData *method_data;
@@ -1011,8 +1017,8 @@ packsys_transact(xmlrpc_env   *env,
     xmlrpc_value *result = NULL;
 
     xmlrpc_parse_value(
-        env, param_array, "(AA)",
-        &xmlrpc_install_packages, &xmlrpc_remove_packages);
+        env, param_array, "(AAb)",
+        &xmlrpc_install_packages, &xmlrpc_remove_packages, &dry_run);
     XMLRPC_FAIL_IF_FAULT(env);
 
     install_packages = rcd_xmlrpc_array_to_rc_package_slist (
@@ -1042,6 +1048,7 @@ packsys_transact(xmlrpc_env   *env,
     status->packman = rc_world_get_packman (world);
     status->install_packages = install_packages;
     status->remove_packages = remove_packages;
+    status->dry_run = (gboolean) dry_run;
     status->pending = rcd_pending_new ("Beginning transaction");
     status->client_host = g_strdup (method_data->host);
     status->client_user = g_strdup (method_data->identity->username);

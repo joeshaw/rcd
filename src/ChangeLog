@@ -1,5 +1,11 @@
 2002-07-08  Joe Shaw  <joe@ximian.com>
 
+	* rcd-rpc-packsys.c (packsys_transact): Take a boolean third
+	argument to specify a "dry run".  It doesn't actually work yet, as
+	there isn't a hook in libredcarpet for it yet.
+
+2002-07-08  Joe Shaw  <joe@ximian.com>
+
 	* rcd-rpc-system.c (system_ping): Send distribution information
 	over the wire.
 
