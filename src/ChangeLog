@@ -1,3 +1,48 @@
+2003-09-08  Joe Shaw  <joe@ximian.com>
+
+	* rcd-identity.c: Virtualized the identity checking functions, so
+	that we can get privileges from an RCE server in addition to the
+	normal rcd.passwd file.
+	(rcd_identity_foreach_from_password_file,
+	rcd_identity_from_password_file,
+	rcd_identity_update_password_file,
+	rcd_identity_remove_from_password_file): Make these functions
+	static.
+	(RCDIdentityBackend): Added.  Introduces a data structure which
+	has a vtable and some info.
+	(rcd_identity_backend_new): Create an RCDIdentityBackend.
+	(rcd_identity_add_backend): Add a backend.
+	(rcd_identity_remove_backend): Remove a backend
+	(rcd_identity_lookup): Lookup a username, effectively replaces
+	rcd_itentity_from_password_file()
+	(rcd_identity_foreach): Walk across the list of identities.  Takes
+	a boolean on whether to return only identities that can be edited.
+	(rcd_identity_update): Add or update an identity
+	(rcd_identity_remove): Remove an identity.
+
+	* rcd-rpc-users.c (users_get_all): Use rcd_identity_foreach()
+	instead of rcd_identity_foreach_from_password_file().
+	(users_update): Use rcd_identity_update() instead of
+	rcd_identity_update_password_file().
+	(users_remove): Use rcd_identity_remove() instead of
+	rcd_identity_remove_from_password_file().
+
+	* rcd-rpc.c (unix_rpc_callback, soup_rpc_callback,
+	soup_auth_callback): Use rcd_identity_lookup() instead of
+	rcd_identity_from_password_file().
+
+	* rcd-world-remote.c (rcd_world_remote_fetch_channels): Clear out
+	the old channel and package data before refreshing.
+	(rcd_world_remote_fetch_privileges): If we're on an RCE server,
+	make a call to the server to get a list of privileges.
+	(got_privs_cb): Create identities from the server privilege data.
+	(rcd_world_remote_init): Create an identity backend for this
+	remote object and add it.
+	(rcd_world_remote_finalize): Remove the identity backend and free
+	it and the list of identities.
+	(rcd_world_remote_parse_serviceinfo): Fetch the privileges if
+	premium_service is set.
+
 2003-09-05  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-packsys.c (resolve_deps): Check the RC_DEPS_TIME

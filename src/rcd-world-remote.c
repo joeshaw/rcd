@@ -68,6 +68,12 @@ rcd_world_remote_finalize (GObject *obj)
     rcd_world_remote_clear_licenses (remote);
     rcd_world_remote_clear_news (remote);
 
+    rcd_identity_remove_backend (remote->identity_backend);
+    g_free (remote->identity_backend);
+
+    g_slist_foreach (remote->identities, (GFunc) rcd_identity_free, NULL);
+    g_slist_free (remote->identities);
+
     if (G_OBJECT_CLASS (parent_class)->finalize)
         G_OBJECT_CLASS (parent_class)->finalize (obj);
 }
@@ -119,6 +125,36 @@ rcd_world_remote_assemble (RCWorldService *service)
     return TRUE;
 }
 
+static RCDIdentity *
+lookup_identity (RCDIdentityBackend *backend, const char *username)
+{
+    RCDWorldRemote *remote = RCD_WORLD_REMOTE (backend->user_data);
+    GSList *iter;
+
+    for (iter = remote->identities; iter; iter = iter->next) {
+        RCDIdentity *identity = iter->data;
+
+        if (!strcmp (identity->username, username))
+            return rcd_identity_copy (identity);
+    }
+
+    return NULL;
+}
+
+static void
+foreach_identity (RCDIdentityBackend *backend, RCDIdentityFn fn,
+                  gpointer user_data)
+{
+    RCDWorldRemote *remote = RCD_WORLD_REMOTE (backend->user_data);
+    GSList *iter;
+
+    for (iter = remote->identities; iter; iter = iter->next) {
+        RCDIdentity *identity = iter->data;
+
+        fn (identity, user_data);
+    }
+}    
+
 static void
 rcd_world_remote_class_init (RCDWorldRemoteClass *klass)
 {
@@ -138,7 +174,13 @@ rcd_world_remote_class_init (RCDWorldRemoteClass *klass)
 static void
 rcd_world_remote_init (RCDWorldRemote *remote)
 {
+    remote->identity_backend = rcd_identity_backend_new (FALSE);
+    remote->identity_backend->is_editable = FALSE;
+    remote->identity_backend->user_data = remote;
+    remote->identity_backend->lookup_fn = lookup_identity;
+    remote->identity_backend->foreach_fn = foreach_identity;
 
+    rcd_identity_add_backend (remote->identity_backend);
 }
 
 GType
@@ -757,6 +799,16 @@ pending_complete_cb (RCPending *pending, gpointer user_data)
     g_object_unref (world);
 }
 
+static gboolean
+remove_channel_cb (RCChannel *channel, gpointer user_data)
+{
+    RCWorldStore *store = RC_WORLD_STORE (user_data);
+
+    rc_world_store_remove_channel (store, channel);
+
+    return TRUE;
+}
+
 static RCPending *
 rcd_world_remote_fetch_channels (RCDWorldRemote *remote, gboolean local)
 {
@@ -803,6 +855,9 @@ rcd_world_remote_fetch_channels (RCDWorldRemote *remote, gboolean local)
         buffer_len = data->len;
     }
 
+    /* Clear out the old channel and package data */
+    rc_world_foreach_channel (RC_WORLD (remote), remove_channel_cb, remote);
+
     channel_data.remote = remote;
     channel_data.local = local;
     channel_data.pool = NULL; /* May be set in _per_channel_cb() */
@@ -845,6 +900,106 @@ cleanup:
         g_object_unref (t);
 
     return pending;
+}
+
+static void
+got_privs_cb (char *server_url, char *method_name, xmlrpc_value *param_array,
+              void *user_data, xmlrpc_env *fault, xmlrpc_value *result)
+{
+    RCDWorldRemote *remote = RCD_WORLD_REMOTE (user_data);
+    GSList *prev_identities;
+    xmlrpc_env env;
+    int size = 0, i;
+
+    if (fault->fault_occurred) {
+        rc_debug (RC_DEBUG_LEVEL_ERROR,
+                  "Unable to download privileges from %s: %s",
+                  RC_WORLD_SERVICE (remote)->url, fault->fault_string);
+        return;
+    }
+
+    prev_identities = remote->identities;
+    remote->identities = NULL;
+
+    xmlrpc_env_init (&env);
+
+    size = xmlrpc_array_size (&env, result);
+    XMLRPC_FAIL_IF_FAULT (&env);
+
+    for (i = 0; i < size; i++) {
+        xmlrpc_value *v;
+        char *username, *password, *privs;
+        RCDIdentity *identity;
+
+        v = xmlrpc_array_get_item (&env, result, i);
+        XMLRPC_FAIL_IF_FAULT (&env);
+
+        RCD_XMLRPC_STRUCT_GET_STRING (&env, v, "username", username);
+
+        identity = rcd_identity_lookup (username);
+
+        /* Check to see if this username already has an identity */
+        if (identity) {
+            rc_debug (RC_DEBUG_LEVEL_WARNING,
+                      "Not replacing existing identity for '%s'",
+                      username);
+
+            rcd_identity_free (identity);
+            g_free (username);
+        } else {
+            RCD_XMLRPC_STRUCT_GET_STRING (&env, v, "password", password);
+
+            RCD_XMLRPC_STRUCT_GET_STRING (&env, v, "privs", privs);
+
+            identity = rcd_identity_new ();
+            identity->username = username;
+            identity->password = password;
+            identity->privileges = rcd_privileges_from_string (privs);
+            g_free (privs);
+
+            remote->identities = g_slist_prepend (remote->identities,
+                                                  identity);
+        }
+    }
+
+cleanup:
+    if (env.fault_occurred) {
+        rc_debug (RC_DEBUG_LEVEL_CRITICAL,
+                  "Privilege information from the server is malformed: %s",
+                  env.fault_string);
+        g_slist_foreach (remote->identities, (GFunc) rcd_identity_free, NULL);
+        g_slist_free (remote->identities);
+        remote->identities = prev_identities;
+    } else {
+        g_slist_foreach (prev_identities, (GFunc) rcd_identity_free, NULL);
+        g_slist_free (prev_identities);
+    }
+}
+
+static void
+rcd_world_remote_fetch_privileges (RCDWorldRemote *remote)
+{
+    xmlrpc_env env;
+    xmlrpc_server_info *server_info;
+
+    xmlrpc_env_init (&env);
+
+    server_info = rcd_xmlrpc_get_server (&env, RC_WORLD_SERVICE (remote)->url);
+    XMLRPC_FAIL_IF_FAULT (&env);
+
+    xmlrpc_client_call_server_asynch (server_info, "rcserver.machine.getPrivs",
+                                      got_privs_cb, remote, "()");
+
+    xmlrpc_server_info_free (server_info);
+
+cleanup:
+    if (env.fault_occurred) {
+        rc_debug (RC_DEBUG_LEVEL_ERROR,
+                  "Unable to download privileges from %s",
+                  RC_WORLD_SERVICE (remote)->url);
+    }
+
+    xmlrpc_env_clean (&env);
 }
 
 static gboolean
@@ -1061,6 +1216,9 @@ rcd_world_remote_parse_serviceinfo (RCDWorldRemote *remote,
 
     if (remote->channels_url)
         pending = rcd_world_remote_fetch_channels (remote, local);
+
+    if (remote->premium_service)
+        rcd_world_remote_fetch_privileges (remote);
 
     return pending;
 }

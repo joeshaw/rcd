@@ -184,9 +184,10 @@ rcd_identity_password_file_is_secure (void)
 
 static gboolean magic_foreach_password_terminate;
 
-void
-rcd_identity_foreach_from_password_file (RCDIdentityFn fn,
-                                         gpointer      user_data)
+static void
+rcd_identity_foreach_from_password_file (RCDIdentityBackend *backend,
+                                         RCDIdentityFn       fn,
+                                         gpointer            user_data)
 {
     FILE *in;
     char buffer[1024];
@@ -257,8 +258,9 @@ identity_from_file_cb (RCDIdentity *id,
     }
 }
 
-RCDIdentity *
-rcd_identity_from_password_file (const char *username)
+static RCDIdentity *
+rcd_identity_from_password_file (RCDIdentityBackend *backend,
+                                 const char *username)
 {
     struct IdentityFromFileInfo info;
 
@@ -270,7 +272,8 @@ rcd_identity_from_password_file (const char *username)
     info.username = username;
     info.id = NULL;
 
-    rcd_identity_foreach_from_password_file (identity_from_file_cb,
+    rcd_identity_foreach_from_password_file (backend,
+                                             identity_from_file_cb,
                                              &info);
     
     return info.id;
@@ -365,8 +368,9 @@ identity_update_cb (RCDIdentity *old_id,
     
 }
 
-gboolean
-rcd_identity_update_password_file (RCDIdentity *id)
+static gboolean
+rcd_identity_update_password_file (RCDIdentityBackend *backend,
+                                   RCDIdentity *id)
 {
     struct IdentityUpdateInfo info;
 
@@ -374,7 +378,8 @@ rcd_identity_update_password_file (RCDIdentity *id)
     info.out = NULL;
     info.new_id = id;
 
-    rcd_identity_foreach_from_password_file (identity_update_cb,
+    rcd_identity_foreach_from_password_file (backend,
+                                             identity_update_cb,
                                              &info);
 
     if (info.out == NULL && ! info.failed) {
@@ -399,14 +404,13 @@ rcd_identity_update_password_file (RCDIdentity *id)
     return ! info.failed;
 }
 
-gboolean
-rcd_identity_remove_from_password_file (const char *username)
+static gboolean
+rcd_identity_remove_from_password_file (RCDIdentityBackend *backend,
+                                        RCDIdentity *identity)
 {
     FILE *in, *out;
     char buffer[1024];
     int id_len;
-
-    g_return_val_if_fail (username && *username, FALSE);
 
     in = fopen (PASSWORD_FILE, "r");
 
@@ -420,14 +424,14 @@ rcd_identity_remove_from_password_file (const char *username)
        problem with several of these functions!) */
     out = create_password_file ();
 
-    id_len = strlen (username);
+    id_len = strlen (identity->username);
 
     while (fgets (buffer, 1024, in)) {
         char *colon = strchr (buffer, ':');
         
         if (! (colon
                && colon - buffer == id_len
-               && ! strncmp (buffer, username, colon - buffer)))
+               && ! strncmp (buffer, identity->username, colon - buffer)))
             fputs (buffer, out);
     }
 
@@ -443,4 +447,182 @@ guint
 rcd_identity_get_sequence_number (void)
 {
     return identity_seqno;
+}
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+static GSList *identity_backends = NULL;
+
+/*
+ * For right now, we always want to do a password file lookup.  If we add
+ * more complex identity methods in the future, we might not want to do
+ * this.
+ */
+static void
+init_password_backend (void)
+{
+    RCDIdentityBackend *password_backend;
+
+    password_backend = rcd_identity_backend_new (TRUE);
+    password_backend->lookup_fn = rcd_identity_from_password_file;
+    password_backend->foreach_fn = rcd_identity_foreach_from_password_file;
+    password_backend->update_fn = rcd_identity_update_password_file;
+    password_backend->remove_fn = rcd_identity_remove_from_password_file;
+
+    identity_backends = g_slist_append (identity_backends, password_backend);
+}
+
+RCDIdentityBackend *
+rcd_identity_backend_new (gboolean is_editable)
+{
+    RCDIdentityBackend *backend = g_new0 (RCDIdentityBackend, 1);
+
+    backend->is_editable = is_editable;
+
+    return backend;
+}
+
+void
+rcd_identity_add_backend (RCDIdentityBackend *backend)
+{
+    g_return_if_fail (backend != NULL);
+
+    if (identity_backends == NULL)
+        init_password_backend ();
+
+    identity_backends = g_slist_append (identity_backends, backend);
+}
+
+gboolean
+rcd_identity_remove_backend (RCDIdentityBackend *backend)
+{
+    GSList *link;
+
+    g_return_val_if_fail (backend != NULL, FALSE);
+
+    link = g_slist_find (identity_backends, backend);
+
+    if (!link)
+        return FALSE;
+
+    identity_backends = g_slist_delete_link (identity_backends, link);
+
+    return TRUE;
+}
+
+RCDIdentity *
+rcd_identity_lookup (const char *username)
+{
+    RCDIdentity *identity;
+    GSList *iter;
+
+    g_return_val_if_fail (username != NULL, NULL);
+
+    if (identity_backends == NULL)
+        init_password_backend ();
+
+    for (iter = identity_backends; iter; iter = iter->next) {
+        RCDIdentityBackend *backend = iter->data;
+
+        identity = backend->lookup_fn (backend, username);
+
+        if (identity)
+            return identity;
+    }
+
+    return NULL;
+}
+
+void
+rcd_identity_foreach (gboolean      editable_only,
+                      RCDIdentityFn fn,
+                      gpointer      user_data)
+{
+    GSList *iter;
+
+    g_return_if_fail (fn != NULL);
+
+    for (iter = identity_backends; iter; iter = iter->next) {
+        RCDIdentityBackend *backend = iter->data;
+
+        if (editable_only && !backend->is_editable)
+            continue;
+
+        backend->foreach_fn (backend, fn, user_data);
+    }
+}
+
+static RCDIdentityBackend *
+find_backend_for_identity (RCDIdentity *identity)
+{
+    GSList *iter;
+
+    if (identity_backends == NULL)
+        init_password_backend ();
+
+    for (iter = identity_backends; iter; iter = iter->next) {
+        RCDIdentityBackend *backend = iter->data;
+        RCDIdentity *matched_id;
+
+        matched_id = backend->lookup_fn (backend, identity->username);
+
+        if (matched_id) {
+            rcd_identity_free (matched_id);
+            return backend;
+        }
+    }
+
+    /* Ok, we didn't match any existing identity.  Lets just save to the
+       first one that's editable (which for now will always be the password
+       file. */
+    for (iter = identity_backends; iter; iter = iter->next) {
+        RCDIdentityBackend *backend = iter->data;
+
+        if (backend->is_editable)
+            return backend;
+    }
+
+    return NULL;
+}
+
+gboolean
+rcd_identity_update (RCDIdentity *identity)
+{
+    RCDIdentityBackend *backend;
+
+    g_return_val_if_fail (identity != NULL, FALSE);
+
+    if (identity_backends == NULL)
+        init_password_backend ();
+
+    backend = find_backend_for_identity (identity);
+
+    if (!backend)
+        return FALSE;
+
+    if (!backend->is_editable)
+        return FALSE;
+
+    return backend->update_fn (backend, identity);
+}
+
+gboolean
+rcd_identity_remove (RCDIdentity *identity)
+{
+    RCDIdentityBackend *backend;
+
+    g_return_val_if_fail (identity != NULL, FALSE);
+
+    if (identity_backends == NULL)
+        init_password_backend ();
+
+    backend = find_backend_for_identity (identity);
+
+    if (!backend)
+        return FALSE;
+
+    if (!backend->is_editable)
+        return FALSE;
+
+    return backend->remove_fn (backend, identity);
 }

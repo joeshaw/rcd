@@ -28,6 +28,7 @@
 
 #include <libredcarpet.h>
 
+#include "rcd-identity.h"
 #include "rcd-mirror.h"
 #include "rcd-news.h"
 
@@ -64,6 +65,9 @@ struct _RCDWorldRemote {
     GSList *mirrors;
     GHashTable *licenses;
     GSList *news_items;
+
+    RCDIdentityBackend *identity_backend;
+    GSList *identities;
 };
 
 struct _RCDWorldRemoteClass {

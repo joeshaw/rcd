@@ -135,7 +135,7 @@ users_get_all (xmlrpc_env   *env,
     info.env = env;
     info.array = xmlrpc_build_value (env, "()");
 
-    rcd_identity_foreach_from_password_file (get_all_cb, &info);
+    rcd_identity_foreach (FALSE, get_all_cb, &info);
 
     return info.array;
 }
@@ -215,7 +215,7 @@ users_update (xmlrpc_env   *env,
     else
         id->privileges = RCD_PRIVILEGES_UNCHANGED;
 
-    success = rcd_identity_update_password_file (id);
+    success = rcd_identity_update (id);
 
  cleanup:
     if (! env->fault_occurred) {
@@ -242,7 +242,14 @@ users_remove (xmlrpc_env   *env,
     XMLRPC_FAIL_IF_FAULT (env);
 
     if (username && *username) {
-        rv = rcd_identity_remove_from_password_file (username);
+        RCDIdentity *identity;
+
+        identity = rcd_identity_lookup (username);
+
+        if (identity != NULL) {
+            rv = rcd_identity_remove (identity);
+            rcd_identity_free (identity);
+        }
     }
 
     value = xmlrpc_build_value (env, "i", rv ? 1 : 0);

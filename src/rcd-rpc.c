@@ -173,8 +173,7 @@ unix_rpc_callback (RCDUnixServerHandle *handle)
             identity = NULL;
         }
         else {
-            if (rcd_identity_password_file_is_secure ())
-                identity = rcd_identity_from_password_file (pw->pw_name);
+            identity = rcd_identity_lookup (pw->pw_name);
 
             if (!identity) {
                 identity = rcd_identity_new ();
@@ -244,7 +243,7 @@ soup_rpc_callback (SoupServerContext *context, SoupMessage *msg, gpointer data)
         identity->privileges = rcd_privileges_from_string ("superuser");
     }
     else
-        identity = rcd_identity_from_password_file (username);
+        identity = rcd_identity_lookup (username);
 
     g_assert (identity != NULL);
 
@@ -328,7 +327,7 @@ soup_auth_callback (SoupServerAuthContext *auth_ctx,
             return TRUE;
     }
 
-    identity = rcd_identity_from_password_file (username);
+    identity = rcd_identity_lookup (username);
 
     if (!rcd_identity_password_file_is_secure () ||
         !identity ||

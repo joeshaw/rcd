@@ -55,19 +55,48 @@ gboolean     rcd_identity_well_formed_password (const char *str);
 
 gboolean     rcd_identity_password_file_is_secure (void);
 
-void         rcd_identity_foreach_from_password_file (RCDIdentityFn fn,
-                                                      gpointer user_data);
-
-RCDIdentity *rcd_identity_from_password_file (const char *username);
-
-/* If the identity already exists in the password file, replace the current
-   entry with the one contained in the RCDIdentity.  Otherwise just add it
-   to the file. */
-gboolean     rcd_identity_update_password_file (RCDIdentity *id);
-
-gboolean     rcd_identity_remove_from_password_file (const char *username);
-
 guint        rcd_identity_get_sequence_number (void);
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+typedef struct _RCDIdentityBackend RCDIdentityBackend;
+
+typedef RCDIdentity *(*RCDIdentityLookupFn)  (RCDIdentityBackend *backend,
+                                              const char         *username);
+typedef void         (*RCDIdentityForeachFn) (RCDIdentityBackend *backend,
+                                              RCDIdentityFn       fn,
+                                              gpointer            user_data);
+typedef gboolean     (*RCDIdentityUpdateFn)  (RCDIdentityBackend *backend,
+                                              RCDIdentity        *id);
+typedef gboolean     (*RCDIdentityRemoveFn)  (RCDIdentityBackend *backend,
+                                              RCDIdentity        *id);
+
+struct _RCDIdentityBackend {
+    gboolean is_editable;
+    gpointer user_data;
+
+    RCDIdentityLookupFn  lookup_fn;
+    RCDIdentityForeachFn foreach_fn;
+    RCDIdentityUpdateFn  update_fn;  /* Only needed if is_editable is TRUE */
+    RCDIdentityRemoveFn  remove_fn;  /* Only needed if is_editable is TRUE */
+};
+
+RCDIdentityBackend *rcd_identity_backend_new (gboolean is_editable);
+
+void      rcd_identity_add_backend    (RCDIdentityBackend *backend);
+gboolean  rcd_identity_remove_backend (RCDIdentityBackend *backend);
+
+RCDIdentity *rcd_identity_lookup (const char    *username);
+
+void         rcd_identity_foreach (gboolean       editable_only,
+                                   RCDIdentityFn  fn,
+                                   gpointer       user_data);
+
+/* If the identity already exists, replace the current entry with the one
+   contained in the RCDIdentity.  Otherwise just add it to the file. */
+gboolean     rcd_identity_update  (RCDIdentity   *identity);
+
+gboolean     rcd_identity_remove  (RCDIdentity   *identity);
 
 #endif /* __RCD_IDENTITY_H__ */
 
