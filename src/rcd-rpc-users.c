@@ -141,6 +141,16 @@ users_get_all (xmlrpc_env   *env,
 }
 
 static xmlrpc_value *
+users_get_current_user (xmlrpc_env   *env,
+                        xmlrpc_value *param_array,
+                        void         *user_data)
+{
+    RCDRPCMethodData *method_data = rcd_rpc_get_method_data ();
+
+    return xmlrpc_build_value (env, "s", method_data->identity->username);
+}
+
+static xmlrpc_value *
 users_update (xmlrpc_env   *env,
               xmlrpc_value *param_array,
               void         *user_data)
@@ -187,7 +197,7 @@ users_update (xmlrpc_env   *env,
         id->password = NULL;
     
     if (strcmp (privileges, "-*-unchanged-*-")) {
-        RCDPrivileges *new_privs;
+        RCDPrivileges new_privs;
 
         new_privs = rcd_privileges_from_string (privileges);
 
@@ -265,6 +275,11 @@ rcd_rpc_users_register_methods (void)
     rcd_rpc_register_method ("rcd.users.get_all",
                              users_get_all,
                              "view",
+                             NULL);
+
+    rcd_rpc_register_method ("rcd.users.get_current_user",
+                             users_get_current_user,
+                             NULL,
                              NULL);
 
     /* privileges are checked in the method itself */

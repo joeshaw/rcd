@@ -1,5 +1,13 @@
 2003-01-28  Joe Shaw  <joe@ximian.com>
 
+	* rcd-rpc-users.c (users_get_current_user): Return the current
+	user, so clients don't have to muck around with the transport.
+	(users_update): Fix a mis-pointered RCDPrivileges declaration.
+	(rcd_rpc_users_register_methods): Register
+	rcd.users.get_current_user.
+
+2003-01-28  Joe Shaw  <joe@ximian.com>
+
 	* rcd-rpc-users.c (users_update): Handle our own privilege
 	authorization here, so we can allow users to change their own
 	passwords.  Throw a permission denied fault if the user isn't a
