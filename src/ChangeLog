@@ -1,5 +1,12 @@
 2002-06-24  Jon Trowbridge  <trow@ximian.com>
 
+	* rcd-module.c (rcd_module_init): If the module dir doesn't
+	exist, print a warning and return.
+
+	* rcd-fetch.c (get_channel_list_url): Better error handling.
+	(rcd_fetch_channel_list): Better error handling.
+	(rcd_fetch_news): Better error handling.
+
 	* rcd-rpc-packsys.c (packsys_subscribe): Return zero and undo the
 	change if we couldn't save the subscriptions file to disk
 	(packsys_unsubscribe): Return zero and undo the change if we

@@ -41,7 +41,15 @@ get_channel_list_url (void)
     char *url;
 
     dt = rc_figure_distro ();
-    g_assert (dt != NULL); /* FIXME */
+
+    if (dt == NULL) {
+
+        rc_debug (RC_DEBUG_LEVEL_ERROR,
+                  "Unable to determine which distribution this system is running.  Aborting.");
+
+        /* FIXME: Can we just exit, or do we need to do any clean-up? */
+        exit (-1);
+    }
 
     if (dt->pretend_name) {
         rc_debug (RC_DEBUG_LEVEL_INFO, "Distro pretends to be %s", dt->pretend_name);
@@ -65,35 +73,52 @@ void
 rcd_fetch_channel_list (void)
 {
     RCDTransfer *t;
-    gchar *url;
+    gchar *url = NULL;
     GByteArray *data = NULL;
-    xmlDoc *doc;
+    xmlDoc *doc = NULL;
     xmlNode *root;
 
     url = get_channel_list_url ();
 
     t = rcd_transfer_new (0, rcd_cache_get_normal_cache ());
     data = rcd_transfer_begin_blocking (t, url);
-    g_free (url);
 
-    g_assert (data != NULL); /* FIXME */
-
-    if (rcd_transfer_get_error (t)) {
-        g_assert_not_reached (); /* FIXME */
+    if (data == NULL || rcd_transfer_get_error (t)) {
+        /* FIXME: can we give more detail about the problem? */
+        rc_debug (RC_DEBUG_LEVEL_CRITICAL,
+                  "Attempt to download the channel list failed.");
+        goto cleanup;
     }
 
-    g_object_unref (t);
-
     doc = rc_uncompress_xml (data->data, data->len);
-    g_byte_array_free (data, TRUE);
-    g_assert (doc != NULL); /* FIXME */
+    if (doc == NULL) {
+        rc_debug (RC_DEBUG_LEVEL_CRITICAL,
+                  "Unable to uncompress or parse channel list.");
+        goto cleanup;
+    }
 
     root = xmlDocGetRootElement (doc);
-    g_assert (root != NULL); /* FIXME */
+    if (root == NULL) {
+        rc_debug (RC_DEBUG_LEVEL_CRITICAL,
+                  "Channel list is empty.");
+        goto cleanup;
+    }
 
     rc_world_add_channels_from_xml (rc_get_world (), root->xmlChildrenNode);
+
+ cleanup:
+
+    if (url)
+        g_free (url);
     
-    xmlFreeDoc (doc);
+    if (t)
+        g_object_unref (t);
+    
+    if (data)
+        g_byte_array_free (data, TRUE);
+    
+    if (doc)
+        xmlFreeDoc (doc);
 }
 
 gboolean
@@ -368,9 +393,9 @@ void
 rcd_fetch_news (void)
 {
     RCDTransfer *t;
-    gchar *url;
-    GByteArray *data;
-    xmlDoc *doc;
+    gchar *url = NULL;
+    GByteArray *data = NULL;
+    xmlDoc *doc = NULL;
 
     url = get_news_url ();
 
@@ -378,13 +403,14 @@ rcd_fetch_news (void)
     data = rcd_transfer_begin_blocking (t, url);
     g_free (url);
 
-    g_assert (data != NULL); /* FIXME? */
+    if (data == NULL || rcd_transfer_get_error (t)) {
 
-    if (rcd_transfer_get_error (t)) {
-        g_assert_not_reached (); /* FIXME! */
+        /* FIXME: we could be a bit more specific here. */
+        rc_debug (RC_DEBUG_LEVEL_CRITICAL,
+                  "Attempt to download news failed.");
+        
+        goto cleanup;
     }
-
-    g_object_unref (t);
 
     {
         /* FIXME!  A silly hack to get around the fact that the
@@ -398,12 +424,27 @@ rcd_fetch_news (void)
     }
 
     doc = xmlParseMemory (data->data, data->len);
-    g_byte_array_free (data, TRUE);
-    g_assert (doc != NULL); /* FIXME */
+    if (doc != NULL) {
+        rc_debug (RC_DEBUG_LEVEL_CRITICAL,
+                  "Couldn't parse news XML file.");
+        goto cleanup;
+    }
 
     parse_news_xml (doc);
 
-    xmlFreeDoc (doc);
+ cleanup:
+
+    if (url)
+        g_free (url);
+
+    if (t)
+        g_object_unref (t);
+
+    if (data)
+        g_byte_array_free (data, TRUE);
+
+    if (doc)
+        xmlFreeDoc (doc);
 }
 
 gboolean

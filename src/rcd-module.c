@@ -85,7 +85,15 @@ rcd_module_init(void)
     }
 
     dir = g_dir_open(MODULEDIR, 0, NULL);
-    g_assert (dir);
+
+    if (dir == NULL) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Could not find module directory "
+                  MODULEDIR
+                  " -- no modules loaded");
+        return;
+    }
+
     while ((file_name = g_dir_read_name(dir))) {
         if (strstr(file_name, ".so")) {
             char *f;
