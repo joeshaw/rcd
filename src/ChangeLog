@@ -1,5 +1,10 @@
 2002-07-10  Joe Shaw  <joe@ximian.com>
 
+	* rcd-rpc.c (unix_rpc_callback): Implicitly give all local users
+	view rights unless specified otherwise in the password file.
+
+2002-07-10  Joe Shaw  <joe@ximian.com>
+
 	* rcd-prefs.c (rcd_prefs_get_host): Get the hostname from the
 	DefaultFreeURL override before looking in the actual
 	configuration.

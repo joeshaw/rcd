@@ -151,8 +151,16 @@ unix_rpc_callback (RCDUnixServerHandle *handle)
                       "Couldn't get info for UID %d\n", handle->uid);
             identity = NULL;
         }
-        else
+        else {
             identity = rcd_identity_from_password_file (pw->pw_name);
+
+            if (!identity) {
+                identity = rcd_identity_new ();
+                identity->username = g_strdup (pw->pw_name);
+                identity->privileges = rcd_auth_action_list_from_1 (
+                    RCD_AUTH_VIEW);
+            }
+        }
     }
     else {
         identity = rcd_identity_new ();
