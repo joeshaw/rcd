@@ -21,7 +21,7 @@ The daemon is kept apart from the control application so that the control applic
 Allows rcd to be run by non\-root users.  This is likely to cause errors when rc users attempt to do anything other than query the package database.
 .TP 
 \fB\-d, \-\-debug=\fI<INT>\fR
-Turn on debugging mode. The number specifies the amount of debugging output.
+Turn on debugging mode. You may specify a number between 1 and 6 to determine how much debugging output you woul d like. 1 displays only the highest priority messages, and 6 displays all messages. Choosing zero causes the debugging mode to display no messages at all.
 .TP 
 \fB\-n, \-\-nodaemon\fR
 Do not run the daemon in the background.
@@ -50,14 +50,13 @@ Output usage message and then exit.
 \fB\-\-version\fR
 Output version information and exit.
 .SH "FILES"
-
-.TP
+.TP 
 \fI/etc/ximian/rcd.conf\fP
 Configuration file.  Options such as the server to contact, proxy
 configuration, and other settings can be set through this file.
 
-.TP
-\fI/etc/ximian/rc-passwd\fP
+.TP 
+\fI/etc/ximian/rc\-passwd\fP
 Password file.  This file lists users, passwords for remote access,
 and privileges for various actions.
 
@@ -66,23 +65,23 @@ and privileges for various actions.
 Initialization script. It is recommended that you use this script to start and stop rcd, rather than running it directly.
 
 .TP 
-\fI/var/log/rcd/rcd-messages\fP 
+\fI/var/log/rcd/rcd\-messages\fP 
 Log file.
 
-.TP
-\fI/var/log/rcd/rcd-package-history\fP
+.TP 
+\fI/var/log/rcd/rcd\-package\-history\fP
 Transaction history.  This lists a record of all package
 installations, removals, and upgrades.
 
-.TP
+.TP 
 \fI/var/lib/rcd\fP
 Cached channel and package data.
 
-.TP
+.TP 
 \fI/var/lib/redcarpet/subscriptions.xml\fP
 Channel subscription information.
 
-.TP
+.TP 
 \fI/var/cache/redcarpet\fP
 Cached downloaded data.  Includes channel icons, package files, and
 channel and package metadata.
