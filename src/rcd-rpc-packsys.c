@@ -31,7 +31,6 @@
 #include <xmlrpc.h>
 
 #include "rcd-cache.h"
-#include "rcd-heartbeat.h"
 #include "rcd-package-locks.h"
 #include "rcd-prefs.h"
 #include "rcd-query-packages.h"

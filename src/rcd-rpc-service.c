@@ -26,6 +26,7 @@
 #include <config.h>
 #include "rcd-rpc-system.h"
 
+#include "rcd-heartbeat.h"
 #include "rcd-rpc.h"
 #include "rcd-rpc-util.h"
 #include "rcd-services.h"
