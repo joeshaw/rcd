@@ -130,12 +130,12 @@ SHARED_ONLY=
 HOST_OS=`uname`
 case "$HOST_OS" in
   SunOS)
-    FORCE_SHLIBS="dl resolv rt nsl pthread"
-    RCD_LIBS="$RCD_LIBS -lpthread"
+    FORCE_SHLIBS="dl resolv rt nsl pthread rt"
+    RCD_LIBS="$RCD_LIBS -lpthread -lrt"
   ;;
   Linux)
-    FORCE_SHLIBS="dl pthread"
-    RCD_LIBS="$RCD_LIBS -lutil -lpthread"
+    FORCE_SHLIBS="dl pthread rt"
+    RCD_LIBS="$RCD_LIBS -lutil -lpthread -lrt"
   ;;
   *)
   ;;
