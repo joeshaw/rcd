@@ -1,3 +1,8 @@
+2002-11-11  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc.c (rcd_rpc_init): Tune the maximum size of the XML-RPC
+	requests so we can handle extremely large requests better.
+
 2002-11-08  Joe Shaw  <joe@ximian.com>
 
 	* rcd-transaction.c (run_transaction): Remove the lock check and
