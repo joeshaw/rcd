@@ -1,3 +1,7 @@
+2004-09-01  Tambet Ingo  <tambet@ximian.com>
+
+	* rc-you-transaction.c (you_patch_to_xmlrpc): Implement.
+
 2004-08-30  Tambet Ingo  <tambet@ximian.com>
 
 	* you-util.c (write_patches): Write scripts to script directory.

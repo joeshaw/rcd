@@ -845,6 +845,32 @@ rc_you_transaction_abort (int download_id, RCDIdentity *identity)
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 static xmlrpc_value *
+you_patch_to_xmlrpc (xmlrpc_env *env, RCYouPatch *patch)
+{
+    RCPackageSpec *spec = RC_PACKAGE_SPEC (patch);
+    xmlrpc_value *xpatch = NULL;
+
+    xpatch = xmlrpc_struct_new (env);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    RCD_XMLRPC_STRUCT_SET_STRING
+        (env, xpatch, "name", rc_package_spec_get_name (spec));
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    RCD_XMLRPC_STRUCT_SET_STRING (env, xpatch, "version",
+                                  rc_package_spec_version_to_str_static (spec));
+    XMLRPC_FAIL_IF_FAULT (env);
+
+ cleanup:
+    if (env->fault_occurred && xpatch != NULL) {
+        xmlrpc_DECREF (xpatch);
+        xpatch = NULL;
+    }
+
+    return xpatch;
+}
+
+static xmlrpc_value *
 you_transaction_xml (xmlrpc_env       *env,
                      RCYouTransaction *transaction,
                      gboolean          successful,
@@ -908,9 +934,7 @@ you_transaction_xml (xmlrpc_env       *env,
         RCYouPatch *p = iter->data;
         xmlrpc_value *xpatch;
 
-        xpatch = xmlrpc_build_value
-            (env, "s",
-             rc_package_spec_to_str_static (RC_PACKAGE_SPEC (p)));
+        xpatch = you_patch_to_xmlrpc (env, p);
         XMLRPC_FAIL_IF_FAULT (env);
 
         xmlrpc_array_append_item (env, xmanifests, xpatch);
