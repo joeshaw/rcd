@@ -111,7 +111,7 @@ struct _RCDTransfer {
 struct _RCDTransferClass {
     GObjectClass parent_class;
     
-    void (*file_data) (RCDTransfer *, char *buffer, int size);
+    void (*file_data) (RCDTransfer *, char *buffer, gsize size);
     void (*file_done) (RCDTransfer *);
 };
 

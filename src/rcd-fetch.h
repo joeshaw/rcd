@@ -53,8 +53,11 @@ void rcd_fetch_all_channels (void);
  * Download a list of packages and call the specified callback when they
  * all finish.
  */
+typedef void (*RCDFetchProgressFunc) (gsize size, gpointer user_data);
+
 void rcd_fetch_packages (RCPackageSList *packages,
-                         GSourceFunc     callback,
+                         RCDFetchProgressFunc progress_callback,
+                         GSourceFunc     completed_callback,
                          gpointer        user_data);
 
 

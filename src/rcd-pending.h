@@ -40,6 +40,7 @@ enum _RCDPendingStatus {
     RCD_PENDING_STATUS_INVALID = 0,
     RCD_PENDING_STATUS_PRE_BEGIN,
     RCD_PENDING_STATUS_RUNNING,
+    RCD_PENDING_STATUS_BLOCKING,
     RCD_PENDING_STATUS_ABORTED,
     RCD_PENDING_STATUS_FAILED,
     RCD_PENDING_STATUS_FINISHED
@@ -65,7 +66,7 @@ struct _RCDPending {
     gint retval;
     char *error_msg;
 
-    gpointer user_data;
+    GSList *messages;
 };
 
 struct _RCDPendingClass {
@@ -100,8 +101,6 @@ void rcd_pending_fail     (RCDPending *, gint retval, const char *error_msg);
 
 const char      *rcd_pending_get_description      (RCDPending *);
 void             rcd_pending_set_description      (RCDPending *, const char *desc);
-gpointer         rcd_pending_get_user_data        (RCDPending *);
-void             rcd_pending_set_user_data        (RCDPending *, gpointer);
 gint             rcd_pending_get_id               (RCDPending *);
 RCDPendingStatus rcd_pending_get_status           (RCDPending *);
 double           rcd_pending_get_percent_complete (RCDPending *);
@@ -112,6 +111,8 @@ gint             rcd_pending_get_elapsed_secs     (RCDPending *);
 gint             rcd_pending_get_expected_secs    (RCDPending *);
 gint             rcd_pending_get_remaining_secs   (RCDPending *);
 
+void             rcd_pending_add_message  (RCDPending *, const char *message);
+GSList          *rcd_pending_get_messages (RCDPending *);
 #endif /* __RCD_PENDING_H__ */
 
 

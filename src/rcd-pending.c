@@ -55,6 +55,9 @@ rcd_pending_status_to_string (RCDPendingStatus status)
     case RCD_PENDING_STATUS_RUNNING:
         return "running";
 
+    case RCD_PENDING_STATUS_BLOCKING:
+        return "blocking";
+
     case RCD_PENDING_STATUS_ABORTED:
         return "aborted";
 
@@ -314,23 +317,6 @@ rcd_pending_set_description (RCDPending *pending,
     pending->description = g_strdup (desc);
 }
 
-gpointer
-rcd_pending_get_user_data (RCDPending *pending)
-{
-    g_return_val_if_fail (RCD_IS_PENDING (pending), NULL);
-
-    return pending->user_data;
-}
-
-void
-rcd_pending_set_user_data (RCDPending *pending,
-                           gpointer user_data)
-{
-    g_return_if_fail (RCD_IS_PENDING (pending));
-
-    pending->user_data = user_data;
-}
-
 gint
 rcd_pending_get_id (RCDPending *pending)
 {
@@ -423,3 +409,20 @@ rcd_pending_get_remaining_secs (RCDPending *pending)
 
     return elapsed <= expected ? expected - elapsed : 0;
 }
+
+void
+rcd_pending_add_message (RCDPending *pending, const char *message)
+{
+    g_return_if_fail (RCD_IS_PENDING (pending));
+    g_return_if_fail (message);
+
+    pending->messages = g_slist_append (pending->messages, g_strdup (message));
+} /* rcd_pending_add_message */
+
+GSList *
+rcd_pending_get_messages (RCDPending *pending)
+{
+    g_return_val_if_fail (RCD_IS_PENDING (pending), NULL);
+
+    return pending->messages;
+} /* rcd_pending_get_messages */

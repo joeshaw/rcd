@@ -89,6 +89,31 @@ system_query_module(xmlrpc_env   *env,
 } /* system_query_module */
 
 static xmlrpc_value *
+rcd_pending_messages_to_xmlrpc (xmlrpc_env *env, GSList *messages)
+{
+    xmlrpc_value *xmlrpc_msgs;
+    GSList *iter;
+
+    xmlrpc_msgs = xmlrpc_build_value (env, "()");
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    for (iter = messages; iter; iter = iter->next) {
+        xmlrpc_value *v;
+
+        v = xmlrpc_build_value (env, "s", (const char *) iter->data);
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        xmlrpc_array_append_item (env, xmlrpc_msgs, v);
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        xmlrpc_DECREF (v);
+    }
+
+cleanup:
+    return xmlrpc_msgs;
+} /* rcd_pending_messages_to_xmlrpc */
+
+static xmlrpc_value *
 system_poll_pending(xmlrpc_env   *env,
                     xmlrpc_value *param_array,
                     void         *user_data)
@@ -106,6 +131,7 @@ system_poll_pending(xmlrpc_env   *env,
     value = xmlrpc_struct_new (env);
 
     if (pending != NULL) {
+        xmlrpc_value *messages;
 
         RCD_XMLRPC_STRUCT_SET_INT (env, value, "id",
                                    rcd_pending_get_id (pending));
@@ -120,7 +146,7 @@ system_poll_pending(xmlrpc_env   *env,
                                       rcd_pending_status_to_string (rcd_pending_get_status (pending)));
 
         if (rcd_pending_get_elapsed_secs (pending) >= 0) {
-            RCD_XMLRPC_STRUCT_SET_INT (env, value, "elased_sec",
+            RCD_XMLRPC_STRUCT_SET_INT (env, value, "elapsed_sec",
                                        rcd_pending_get_elapsed_secs (pending));
         }
         
@@ -143,6 +169,13 @@ system_poll_pending(xmlrpc_env   *env,
             RCD_XMLRPC_STRUCT_SET_INT (env, value, "last_time",
                                        (gint) rcd_pending_get_last_time (pending));
         }
+
+        messages = rcd_pending_messages_to_xmlrpc (
+            env, rcd_pending_get_messages (pending));
+        XMLRPC_FAIL_IF_FAULT (env);
+        
+        xmlrpc_struct_set_value (env, value, "messages", messages);
+        XMLRPC_FAIL_IF_FAULT (env);
     }
 
  cleanup: 

@@ -270,7 +270,7 @@ rcd_transfer_set_error(RCDTransfer *t, RCDTransferError err,
 } /* rcd_transfer_set_error */
 
 static void
-rcd_transfer_emit_data(RCDTransfer *t, char *buf, int size)
+rcd_transfer_emit_data(RCDTransfer *t, char *buf, guint64 size)
 {
     t->trans_size += size;
 
@@ -455,7 +455,7 @@ file_read_data(GIOChannel *iochannel,
     RCDTransfer *transfer = data;
     GIOError err;
     char buf[BLOCK_SIZE];
-    int bytes;
+    gsize bytes;
     int watch;
 
     watch = GPOINTER_TO_INT(transfer->proto_data);

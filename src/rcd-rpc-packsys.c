@@ -21,7 +21,11 @@ typedef struct {
     RCPackageSList *remove_packages;
 
     RCDPending *pending;
-    int total_steps;
+
+    gsize total_download_size;
+    gsize current_download_size;
+
+    int total_transaction_steps;
 } RCDTransactionStatus;
 
 static void
@@ -310,6 +314,8 @@ cleanup:
     return xmlrpc_packages;
 } /* packsys_query */
 
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
 static xmlrpc_value *
 packsys_query_file (xmlrpc_env   *env,
                     xmlrpc_value *param_array,
@@ -341,6 +347,8 @@ cleanup:
 
     return xmlrpc_package;
 } /* packsys_query_file */
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 typedef struct {
     RCWorld *world;
@@ -396,6 +404,8 @@ cleanup:
     return result;
 } /* packsys_find_latest_version */
 
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
 static void
 transact_start_cb(RCPackman *packman,
                   int total_steps,
@@ -404,8 +414,7 @@ transact_start_cb(RCPackman *packman,
     rc_debug (RC_DEBUG_LEVEL_MESSAGE,
               "Transaction starting.  %d steps", total_steps);
 
-    status->total_steps = total_steps;
-    rcd_pending_begin (status->pending);
+    status->total_transaction_steps = total_steps;
 } /* transact_start_cb */
 
 static void
@@ -415,13 +424,32 @@ transact_step_cb(RCPackman *packman,
                  char *name,
                  RCDTransactionStatus *status)
 {
-    double percent;
+    char *action = NULL;
+    char *msg;
 
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Transaction step.  seqno %d", seqno);
 
-    percent = (double) seqno / (double) status->total_steps * 100.0;
+    switch (step) {
+    case RC_PACKMAN_STEP_UNKNOWN:
+        action = "Transmogrifying";
+        break;
+    case RC_PACKMAN_STEP_CONFIGURE:
+        action = "Configuring";
+        break;
+    case RC_PACKMAN_STEP_INSTALL:
+        action = "Installing";
+        break;
+    case RC_PACKMAN_STEP_REMOVE:
+        action = "Removing";
+        break;
+    default:
+        g_assert_not_reached ();
+        break;
+    }
 
-    rcd_pending_update (status->pending, percent);
+    msg = g_strdup_printf ("%s %s", action, name ? name : "packages");
+    rcd_pending_add_message (status->pending, msg);
+    g_free (msg);
 } /* transact_step_cb */
 
 static void
@@ -440,13 +468,16 @@ transact_done_cb(RCPackman *packman,
 {
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Transaction done");
 
+    rcd_pending_add_message (status->pending, "Transaction done");
     rcd_pending_finished (status->pending, 0);
 } /* transact_done_cb */
 
 static gboolean
-run_transaction(gpointer data)
+run_transaction(gpointer user_data)
 {
-    RCDTransactionStatus *status = data;
+    RCDTransactionStatus *status = user_data;
+
+    rcd_pending_add_message (status->pending, "Beginning transaction");
 
     g_signal_connect (
         G_OBJECT (status->packman), "transact_start",
@@ -483,10 +514,7 @@ run_transaction(gpointer data)
                   "packman error: %s",
                   rc_packman_get_reason (status->packman));
 
-        if (rcd_pending_get_status (status->pending) == 
-            RCD_PENDING_STATUS_PRE_BEGIN)
-            rcd_pending_begin (status->pending);
-
+        rcd_pending_add_message (status->pending, "Transaction failed");
         rcd_pending_fail (status->pending, -1,
                           rc_packman_get_reason (status->packman));
     }
@@ -496,11 +524,27 @@ run_transaction(gpointer data)
     return FALSE;
 } /* run_transaction */
 
+static void
+update_download_progress (gsize size, gpointer user_data)
+{
+    RCDTransactionStatus *status = user_data;
+    double percent;
+
+    status->current_download_size += size;
+
+    percent = (double) ((double) status->current_download_size /
+                        (double) status->total_download_size) * 100.0;
+
+    rcd_pending_update (status->pending, percent);
+} /* update_download_progress */
+
 static gboolean
 download_packages (RCPackageSList *packages, RCDTransactionStatus *status)
 {
     RCPackageSList *packages_to_download = NULL;
     RCPackageSList *iter;
+
+    status->total_download_size = 0;
 
     for (iter = packages; iter; iter = iter->next) {
         RCPackage *package = iter->data;
@@ -508,14 +552,23 @@ download_packages (RCPackageSList *packages, RCDTransactionStatus *status)
         if (!package->package_filename) {
             packages_to_download = g_slist_prepend (
                 packages_to_download, package);
+            status->total_download_size +=
+                rc_package_get_latest_update (package)->package_size;
         }
     }
 
     if (!packages_to_download)
         return FALSE;
 
+    rcd_pending_add_message (status->pending, "Downloading packages");
+    rcd_pending_update (status->pending, 0.0);
+
     packages_to_download = g_slist_reverse (packages_to_download);
-    rcd_fetch_packages (packages_to_download, run_transaction, status);
+    rcd_fetch_packages (
+        packages_to_download, 
+        update_download_progress,
+        run_transaction,
+        status);
 
     return TRUE;
 } /* download_packages */
@@ -637,9 +690,10 @@ packsys_transact(xmlrpc_env   *env,
     status->packman = rc_world_get_packman (world);
     status->install_packages = install_packages;
     status->remove_packages = remove_packages;
-    status->pending = rcd_pending_new ("Transaction status");
-    
-    rcd_pending_set_user_data(status->pending, status);
+    status->pending = rcd_pending_new ("Beginning transaction");
+
+    g_object_set_data (G_OBJECT (status->pending), "status", status);
+    rcd_pending_begin (status->pending);
 
     rc_package_slist_ref(status->install_packages);
     rc_package_slist_ref(status->remove_packages);
@@ -651,8 +705,8 @@ packsys_transact(xmlrpc_env   *env,
     if (!download_packages (status->install_packages, status))
         g_idle_add(run_transaction, status);
 
-    result = xmlrpc_build_value (
-        env, "i", rcd_pending_get_id (status->pending));
+    result = xmlrpc_build_value (env, "i",
+                                 rcd_pending_get_id (status->pending));
     XMLRPC_FAIL_IF_FAULT(env);
 
 cleanup:
