@@ -773,6 +773,7 @@ static gboolean
 get_packages_to_download (RCDTransaction *transaction, GError **err)
 {
     RCPackageSList *iter;
+    gboolean ignore_sizes = FALSE;
 
     transaction->packages_to_download = NULL;
     transaction->total_download_size = 0;
@@ -856,7 +857,12 @@ get_packages_to_download (RCDTransaction *transaction, GError **err)
                     g_slist_prepend (transaction->packages_to_download,
                                      rc_package_ref (package));
 
-                transaction->total_download_size += update->package_size;
+                if (update->package_size <= 0) {
+                    transaction->total_download_size = 0;
+                    ignore_sizes = TRUE;
+                } else if (!ignore_sizes) {
+                    transaction->total_download_size += update->package_size;
+                }
             }
         }
     }

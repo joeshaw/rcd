@@ -1,3 +1,11 @@
+2004-04-07  James Willcox  <james@ximian.com>
+
+	* rcd-transaction.c: (get_packages_to_download):
+
+        If there are any packages in the transaction with 0 size (like, say,
+        packages from apt repos), make the total download size 0 as well.  This
+        avoids nasty problems with trying to calculate download progress, etc.
+
 2004-04-01  Tambet Ingo  <tambet@ximian.com>
 
 	* rcd-package-locks.c (rcd_package_locks_load): Fix a leak of the
