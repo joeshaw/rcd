@@ -1,5 +1,5 @@
 # This is the Red Carpet Daemon password file.  It allows administrators to
-# grant privileges to users perform various actions on the daemon.
+# grant privileges to users to perform various actions on the daemon.
 #
 # The file is in the format:
 #
