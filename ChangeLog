@@ -1,3 +1,7 @@
+2002-07-05  Jon Trowbridge  <trow@ximian.com>
+
+	* configure.in: Added -lpopt to RCD_LIBS.
+
 2002-06-19  Joe Shaw  <joe@ximian.com>
 
 	* configure.in: Require Soup 0.7.5.

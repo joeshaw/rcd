@@ -109,17 +109,13 @@ process_rpc_call (xmlrpc_env       *env,
                   gsize             size,
                   RCDRPCMethodData *method_data)
 {
-    static int call_num = 1;
-
     xmlrpc_mem_block *output;
-    time_t start_time, finish_time;
 
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Handling RPC connection");
 
-    time (&start_time);
-
     if (current_method_data)
-        g_warning ("### REENTRANCY in an RPC call");
+        rc_debug (RC_DEBUG_LEVEL_CRITICAL, 
+                  "### REENTRANCY in an RPC call");
     current_method_data = method_data;
 
     /* Set up the access control check function */
@@ -129,13 +125,6 @@ process_rpc_call (xmlrpc_env       *env,
     output = xmlrpc_registry_process_call (
         env, registry, NULL, (char *) data, size);
     
-    time (&finish_time);
-
-    rc_debug (RC_DEBUG_LEVEL_MESSAGE,
-              "Call #%d processed.  (t=%ds)",
-              call_num, finish_time - start_time);
-    ++call_num;
-
     current_method_data = NULL;
 
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Call processed");
@@ -194,7 +183,7 @@ unix_rpc_callback (RCDUnixServerHandle *handle)
     g_free (method_data);
 
     if (env.fault_occurred) {
-        g_warning ("Some weird fault during registry processing");
+        rc_debug (RC_DEBUG_LEVEL_ERROR, "Some weird fault during registry processing");
         return NULL;
     }
 
@@ -297,12 +286,15 @@ run_server_thread(gpointer user_data)
     SoupServer *server;
     SoupServerAuthContext auth_ctx = { 0 };
 
-    rc_debug (RC_DEBUG_LEVEL_ALWAYS, "Starting server");
+    rc_debug (RC_DEBUG_LEVEL_INFO, "Starting server");
 
     server = soup_server_new(SOUP_PROTOCOL_HTTP, 5505);
 
-    if (!server)
-        g_error("Could not start RPC server");
+    if (!server) {
+        rc_debug (RC_DEBUG_LEVEL_ERROR, "Could not start RPC server");
+        rc_debug (RC_DEBUG_LEVEL_ERROR, "(This probably means that another rcd process is already running.)");
+        exit (-1);
+    }
 
     auth_ctx.types = SOUP_AUTH_TYPE_BASIC;
     auth_ctx.callback = soup_auth_callback;
@@ -346,7 +338,8 @@ rcd_rpc_register_method(const char        *method_name,
         &env, registry, NULL, (char *) method_name, method, user_data);
 
     if (env.fault_occurred) {
-        g_warning("Unable to add \"%s\" method: %s (%d)",
+        rc_debug (RC_DEBUG_LEVEL_ERROR,
+                  "Unable to add \"%s\" method: %s (%d)",
                   method_name, env.fault_string, env.fault_code);
         return -1;
     }

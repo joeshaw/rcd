@@ -1,3 +1,29 @@
+2002-07-05  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-rpc.c (process_rpc_call): Don't measure the time it takes to
+	process each call.  Replace some g_warnings with rc_debugs.
+	(unix_rpc_callback): Replaced g_warning with rc_debug.
+	(run_server_thread): Replaced g_warning with rc_debug.  Added a
+	note indicating that if we can't start the RPC server, it is
+	probably because another rcd process is already running.
+	(rcd_rpc_register_method): Replaced g_warning with rc_debug.
+
+	* rcd.c (option_parsing): Added.  Handles option processing with
+	popt.
+	(root_check): Added.  Check to make sure that the daemon is being
+	run as root.  Complain if it isn't, unless the --allow-non-root
+	was passed in on the command line.
+	(daemonize): Fork, make a new process group for ourselves, close
+	all file descriptors.  Unless rcd was run with --non-daemon on the
+	command line, of course.
+	(debug_message_handler): Write everything to /tmp/rcd-messages.
+	(Or to stderr if we are running in non-daemon mode.)
+	(initialize_logging): Put a notice that rcd has started in the
+	system log.
+	(initialize_rpc): Added.  Moved a few calls from main.
+	(initialize_data): Added.  Also a small bit of code moved from
+	main.  Today is gratuitous encapsulation day.
+
 2002-07-03  Joe Shaw  <joe@ximian.com>
 
 	* rcd-prefs.c: Add a bunch of "set" functions for many of the
