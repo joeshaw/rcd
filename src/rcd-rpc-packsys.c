@@ -99,6 +99,62 @@ packsys_refresh_channel (xmlrpc_env   *env,
     return value;
 }
 
+static xmlrpc_value *
+packsys_subscribe (xmlrpc_env   *env,
+                   xmlrpc_value *param_array,
+                   void         *user_data)
+{
+    RCWorld *world = user_data;
+    RCChannel *channel = NULL;
+    xmlrpc_value *value = NULL;
+    gint channel_id = -1;
+
+    xmlrpc_parse_value (env, param_array, "(i)", &channel_id);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    channel = rc_world_get_channel_by_id (world, channel_id);
+    if (channel != NULL && ! rc_channel_subscribed (channel)) {
+        rc_channel_set_subscription (channel, TRUE);
+        rcd_subscriptions_save ();
+    }
+
+    value = xmlrpc_build_value (env, "i", channel ? 1 : 0);
+
+ cleanup:
+    if (env->fault_occurred)
+        return NULL;
+        
+    return value;
+}
+
+static xmlrpc_value *
+packsys_unsubscribe (xmlrpc_env   *env,
+                     xmlrpc_value *param_array,
+                     void         *user_data)
+{
+    RCWorld *world = user_data;
+    RCChannel *channel = NULL;
+    xmlrpc_value *value = NULL;
+    gint channel_id = -1;
+
+    xmlrpc_parse_value (env, param_array, "(i)", &channel_id);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    channel = rc_world_get_channel_by_id (world, channel_id);
+    if (channel != NULL && rc_channel_subscribed (channel)) {
+        rc_channel_set_subscription (channel, FALSE);
+        rcd_subscriptions_save ();
+    }
+
+    value = xmlrpc_build_value (env, "i", channel ? 1 : 0);
+
+ cleanup:
+    if (env->fault_occurred)
+        return NULL;
+        
+    return value;
+}
+
 static void
 add_package_cb (RCPackage *package, gpointer user_data)
 {
@@ -609,6 +665,18 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
 
     rcd_rpc_register_method("rcd.packsys.refresh_channel",
                             packsys_refresh_channel,
+                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            world);
+
+    rcd_rpc_register_method("rcd.packsys.subscribe",
+                            packsys_subscribe,
+                            /* FIXME: what is the right auth to use here? */
+                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            world);
+
+    rcd_rpc_register_method("rcd.packsys.unsubscribe",
+                            packsys_unsubscribe,
+                            /* FIXME: what is the right auth to use here? */
                             rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
                             world);
 
