@@ -39,7 +39,7 @@ void     rcd_fetch_register (void);
 /*
  * Download the (un)supported/deprecated distro information from the server.
  * This -must- be done before the RCWorld is initialized.  If we don't find
- * it, we'll fall back to some built-in data.  Returns whether it succeded.
+ * it, we'll fall back to some built-in data.  Returns TRUE on success.
  */
 gboolean rcd_fetch_distro (void);
 
