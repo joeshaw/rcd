@@ -1,3 +1,17 @@
+2002-05-24  Joe Shaw  <joe@ximian.com>
+
+	* Makefile.am: Lots of magic
+
+	* rcd-module.c: Added dynamic module loading.
+
+	* rcd-rpc.c:
+	* rcd-rpc-system.c:
+	* rcd-rpc-sample.c: Added RPC framework with a sample module
+	implementation and some system functions (query_module, ping,
+	etc.)
+
+	* rcd.c: Initialize the module loader, run a main loop.
+
 2002-05-23  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-query.c: Added a framework for complex queries.

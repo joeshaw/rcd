@@ -9,9 +9,8 @@
 
 /*
  * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of the
- * License, or (at your option) any later version.
+ * modify it under the terms of the GNU General Public License, version 2,
+ * as published by the Free Software Foundation.
  * 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -25,11 +24,16 @@
  */
 
 #include <config.h>
-#include <glib.h>
 
+#include <sys/types.h>
+#include <unistd.h>
+
+#include <glib.h>
 #include <libredcarpet.h>
 
+#include "rcd-module.h"
 #include "rcd-query.h"
+#include "rcd-rpc.h"
 
 static void
 rcd_query_fn (RCPackage *package, gpointer user_data)
@@ -63,21 +67,44 @@ rcd_query_test (void)
                NULL);
 }
 
-int
-main (int argc, char *argv[])
+static void
+initialize_rc_world (void)
 {
-    RCWorld *world;
     RCPackman *packman;
-
-    g_type_init ();
+    RCWorld *world;
 
     /* Create a packman, hand it off to the world */
-    world = rc_get_world ();
     packman = rc_distman_new ();
+    if (!packman)
+        g_error("Couldn't get a packman");
+    rc_packman_set_packman (packman);
+
+    world = rc_get_world ();
     rc_world_register_packman (world, packman);
     rc_world_get_system_packages (world);
 
+#if 0
+    rcd_rpc_packsys_register_methods (packman);
+#endif
+
     rcd_query_test ();
+} /* initialize_rc_world */
+
+int
+main (int argc, char *argv[])
+{
+    GMainLoop *main_loop;
+
+    g_print ("[%d]: Starting rcd\n", getpid());
+
+    g_type_init ();
+
+    main_loop = g_main_loop_new (NULL, TRUE);
+
+    rcd_module_init ();
+    initialize_rc_world ();
+
+    g_main_run (main_loop);
 
     return 0;
-}
+} /* main */
