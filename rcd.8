@@ -50,13 +50,43 @@ Output usage message and then exit.
 \fB\-\-version\fR
 Output version information and exit.
 .SH "FILES"
+
+.TP
+\fI/etc/ximian/rcd.config\fP
+Configuration file.  Options such as the server to contact, proxy
+configuration, and other settings can be set through this file.
+
+.TP
+\fI/etc/ximian/rc-passwd\fP
+Password file.  This file lists users, passwords for remote access,
+and privileges for various actions.
+
 .TP 
 \fI/etc/init.d/rcd\fP 
 Initialization script. It is recommended that you use this script to start and stop rcd, rather than running it directly.
 
 .TP 
-\fI/var/log/rcd.log\fP 
-Log file. This may be in another location if specified otherwise at compile time.
+\fI/var/log/rcd/rcd-messages\fP 
+Log file.
+
+.TP
+\fI/var/log/rcd/rcd-package-history\fP
+Transaction history.  This lists a record of all package
+installations, removals, and upgrades.
+
+.TP
+\fI/var/lib/rcd\fP
+Cached channel and package data.
+
+.TP
+\fI/var/lib/redcarpet/subscriptions.xml\fP
+Channel subscription information.
+
+.TP
+\fI/var/cache/redcarpet\fP
+Cached downloaded data.  Includes channel icons, package files, and
+channel and package metadata.
+
 .SH "EXAMPLES"
 This program normally runs as root.
 
@@ -72,7 +102,7 @@ Copyright Ximian, Inc. 2002
 http://www.ximian.com
 .SH "SEE ALSO"
 .LP 
-rc(1) red\-carpet(1) rcman(1)
+rc(1), red\-carpet(1)
 .LP 
 Visit http://ximian.com for more information about rcd and the full family of Ximian Red Carpet products and servies, as well as Evolution and other software from Ximian.
 To report problems with this software or its documentation, visit http://bugzilla.ximian.com

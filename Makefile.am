@@ -10,7 +10,7 @@ cert_DATA = rcd.pem
 gpgdir = $(datadir)/rcd
 gpg_DATA = rcd.gpg
 
-man_MANS = rcd.8
+man_MANS = rcd.8 rcd.config.5
 
 EXTRA_DIST = rc-passwd $(cert_DATA) $(gpg_DATA) $(man_MANS)
 

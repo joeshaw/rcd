@@ -1,0 +1,193 @@
+.\" To report problems with this software, visit http://bugzilla.ximian.com
+.TH "rcd.config" "5" "1.0" "Ximian, Inc. 2002" "RCD Configuration File"
+.SH "NAME"
+rcd.config \- RCD configuration file
+.SH "DESCRIPTION"
+.B rcd
+uses a system-wide configuration file for setting various options
+related to its operation.
+.SH "CONFIGURATION FILE FORMAT"
+.LP
+The configuration file is in the GNOME config file format, similar to
+Windows .ini files.  Entries are grouped into sections.  A section
+begins with the line
+.LP
+.I [Section]
+.LP
+and continues until the next section.  Entries in sections are
+specified in key-value pairs, in the form:
+.LP
+.I entry=value
+.LP
+Neither
+.I entry
+nor
+.I value
+should be enclosed in double quotes.
+.SH "SUPPORTED SECTIONS AND ENTRIES"
+.LP
+.B [Network]
+.TP
+This section contains settings for rcd's network options, including
+what server to connect to, what proxy to use, and how many concurrent
+downloads are permitted.
+
+.TP
+.B host=<url>
+.br
+This key specifies the server that rcd should connect to.  This is a
+URL.  By default rcd contacts
+.I http://red-carpet.ximian.com
+
+.TP
+.B enable-premium=[true | false]
+.br
+This key specifies whether the server is an enhanced server.  Set this
+to true when connecting to a Red Carpet Express or Red Carpet
+Corporate Connect server.  This defaults to false.
+
+.TP
+.B org_id=<organization id>
+.br
+When using an enhanced server, set this to the organization id so that
+the daemon can register the machine with the server.  This is unset
+and ignored by default; this key has no effect if
+.B enable-premium
+is not true.
+
+.TP
+.B proxy=<url>
+.br
+The URL for a proxy.  Valid protocols are "http", "https", "socks4",
+and "socks5."  For example, if you're running squid on your local
+machine, you'll want to set this to http://localhost:3128.  This is
+unset and ignored by default.  This key can be set through rcd's
+preferences mechanism.
+
+.TP
+.B proxy-username=<username>
+.br
+For proxies requiring authentication, this is the username used.
+This is unset and ignored by default; this key has no effect if
+.B proxy
+is not set.  This key can be set through rcd's preferences mechanism.
+
+.TP
+.B proxy-password=<password>
+.br
+For proxies requiring authentication, this is the password used.
+This is unset and ignored by default; this key has no effect if
+.B proxy
+is not set.  This key can be set through rcd's preferences mechanism.
+.TP
+
+.TP
+.B http10=[true | false]
+.br
+This option determines whether or not rcd uses HTTP 1.0 or 1.1 to
+connect to servers.  This setting may be helpful with some
+uncooperative proxies.  This defaults to false.  This key can be set
+through rcd's preferences mechanism.
+
+.TP
+.B max-downloads=<number>
+.br
+This option specifies how many concurrent package downloads rcd may
+start.  Users on slower connections will want to decrease this,
+whereas users with high bandwidth connections may want to increase
+this.  If set to 0, there is no limit and rcd will make as many
+connections as needed.  This defaults to 5.  This key can be set
+through rcd's preferences mechanism.
+
+.LP
+.B [Cache]
+.TP
+This section contains settings related to rcd's download caches.
+
+.TP
+.B enabled=[true | false]
+.br
+Specifies whether rcd should cache downloaded data.  This defaults to
+true.  This key can be set through rcd's preferences mechanism.
+
+.TP
+.B directory=<directory>
+.br
+Specifies the parent directory where rcd should store cached
+downloaded data.  This defaults to /var/cache/redcarpet.  This key can
+be set through rcd's preferences mechanism.
+
+.TP
+.B [System]
+.br
+This section contains settings related to rcd behavior.
+
+.TP
+.B heartbeat=<number>
+.br
+Specifies the interval at which rcd downloads new channel and package
+metadata.  This defaults to 21600 (6 hours).  This key can be set
+through rcd's preferences mechanism.
+
+.TP
+.B require-verified=[true | false]
+.br
+Specifies whether packages being installed must pass a GPG signature
+check.  Packages which are inconclusive for whatever reason (gpg not
+installed, public key unavailable, etc.) are not installed.
+.I Not that rcd will never install packages in which a gpg signature
+explicitly fails.
+This defaults to false.  This key can be set through rcd's preferences
+mechanism.
+
+.TP
+.B debug-level=<number>
+.br
+The level at which to log to standard error.  This can range
+from 0 to 6, where 6 is extremely verbose.  This defaults to 4.  This
+can be set through rcd's preferences mechanism.
+
+.TP
+.B syslog-level=<number>
+.br
+The level at which to log to syslog.  This can range from 0 to 6,
+where 6 is extremely verbose.  This defaults to 4.  This can be set
+through rcd's preferences mechanism.
+
+.TP
+.B cache-cleanup=[true | false]
+.br
+Specifies whether the package cache should be cleaned up.  If this is
+off and caching is enabled, packages will accumulate in the cache
+directory until it is cleared manually.  This defaults to true.  This
+can be set through rcd's preferences mechanism.
+
+.TP
+.B cache-age-in-days=<number>
+.br
+Specifies the number of days a package may be in the cache before it
+is removed.  This defaults to 30.  It has no effect if
+.B cache-cleanup
+is not set.  This can be set through rcd's preferences mechanism.
+
+.TP
+.B cache-size-in-mb=<number>
+.br
+Specifies the total size in megabytes that the package cache may be
+before it is cleaned up.  This defaults to 300.  It has no effect if
+.B cache-cleanup
+is not set.  This can be set through rcd's preferences mechanism.
+
+.SH "AUTHORS"
+.LP
+Copyright Ximian, Inc. 2002
+http://www.ximian.com
+
+.SH "SEE ALSO"
+.LP
+rcd(8)
+
+.LP 
+Visit http://ximian.com for more information about rcd and the full family of Ximian Red Carpet products and servies, as well as Evolution and other software from Ximian.
+To report problems with this software or its documentation, visit http://bugzilla.ximian.com
+

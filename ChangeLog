@@ -1,3 +1,9 @@
+2002-08-29  Joe shaw  <joe@ximian.com>
+
+	* rcd.8: Update a little bit.
+
+	* rcd.config.5: Added.  manpage for the rcd.config file.
+
 2002-08-26  Joe Shaw  <joe@ximian.com>
 
 	* rcd.init.in: Renamed from rcd.in, since it makes more sense.
