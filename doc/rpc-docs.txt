@@ -623,7 +623,7 @@ rcd.packsys.subscribe(string channel_id)
 	Subscribes to the channel specified by "channel_id".  Returns
 	1 on success, 0 on failure.
 
-rcd.packsys.unsubscribe()
+rcd.packsys.unsubscribe(string channel_id)
 
 	Returns: int
 	Faults: none
