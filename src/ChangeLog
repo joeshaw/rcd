@@ -1,3 +1,9 @@
+2003-04-03  Ian Peters  <itp@ximian.com>
+
+	* rcd-transaction.c (check_download_space): make sure the cache
+	directory exists before calling statvfs, and if statvfs fails,
+	return, don't try to divide by the 0 blocksize.
+
 2003-04-02  Ian Peters  <itp@ximian.com>
 
 	* rcd-transaction.c (verify_packages): don't set the gpg keyring

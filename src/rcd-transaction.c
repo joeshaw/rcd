@@ -933,8 +933,13 @@ check_download_space (gsize download_size)
     gsize block_size;
     gsize avail_blocks;
     struct statvfs vfs_info;
+    const char *cache_dir = rcd_prefs_get_cache_dir ();
 
-    statvfs (rcd_prefs_get_cache_dir (), &vfs_info);
+    if (!g_file_test (cache_dir, G_FILE_TEST_EXISTS))
+        rc_mkdir (cache_dir, 0755);
+
+    if (statvfs (rcd_prefs_get_cache_dir (), &vfs_info))
+        return FALSE;
     block_size = vfs_info.f_frsize;
     avail_blocks = vfs_info.f_bavail;
 
