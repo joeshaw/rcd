@@ -1,3 +1,8 @@
+2003-09-29  Tambet Ingo  <tambet@ximian.com>
+
+	* rcd-world-remote.c (build_register_params): Send port number
+	along with activation.
+
 2003-09-29  Joe Shaw  <joe@ximian.com>
 
 	* rcd-transaction.c: It's no longer sufficient to assume that the

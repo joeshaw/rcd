@@ -555,6 +555,9 @@ build_register_params (xmlrpc_env *env,
     RCD_XMLRPC_STRUCT_SET_STRING (env, value, "hostname", hostname);
     XMLRPC_FAIL_IF_FAULT (env);
 
+    RCD_XMLRPC_STRUCT_SET_STRING (env, value, "port",
+                                  rcd_prefs_get_remote_server_port ());
+
 cleanup:
     if (env->fault_occurred) {
         xmlrpc_DECREF (value);
