@@ -9,7 +9,10 @@ init_DATA = rcd
 certdir = $(datadir)/rcd
 cert_DATA = rcd.pem
 
-EXTRA_DIST = $(passwd_DATA) $(init_DATA) $(cert_DATA) rcd.8 
+gpgdir = $(datadir)/rcd
+gpg_DATA = rcd.gpg
+
+EXTRA_DIST = $(passwd_DATA) $(init_DATA) $(cert_DATA) $(gpg_DATA) rcd.8 
 
 man_MANS = rcd.8
 

@@ -1,5 +1,9 @@
 2002-08-06  Joe Shaw  <joe@ximian.com>
 
+	* Makefile.am: Install rcd.gpg
+
+2002-08-06  Joe Shaw  <joe@ximian.com>
+
 	* configure.in: Remove gthread-2.0 from the pkg-config line.
 
 2002-08-06  Ian Peters  <itp@ximian.com>
