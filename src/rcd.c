@@ -400,6 +400,24 @@ signal_handler (int sig_num)
     rcd_shutdown ();
 } /* signal_handler */
 
+static void
+crash_handler (int sig_num)
+{
+    char cmd[128];
+    struct stat buf;
+
+    write (2, "Crash!\n", 7);
+    
+    /* FIXME: Just to be sure, we should drop privileges before doing
+       this. */
+    if (stat (SHAREDIR "/rcd-buddy", &buf) == 0) {
+        sprintf (cmd, SHAREDIR "/rcd-buddy %d", getpid ());
+        system (cmd);
+    }
+
+    exit (1);
+}
+
 int
 main (int argc, const char **argv)
 {
@@ -430,6 +448,12 @@ main (int argc, const char **argv)
     sigaction (SIGINT,  &sig_action, NULL);
     sigaction (SIGTERM, &sig_action, NULL);
     sigaction (SIGQUIT, &sig_action, NULL);
+    
+    /* Set up handlers for crashes */
+    sig_action.sa_handler = crash_handler;
+    sigaction (SIGSEGV, &sig_action, NULL);
+    sigaction (SIGFPE,  &sig_action, NULL);
+    sigaction (SIGBUS,  &sig_action, NULL);
 
     rcd_privileges_init ();
 

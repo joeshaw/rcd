@@ -99,6 +99,10 @@ rcd_module_LTLIBRARIES = 	\
 	librcd-sample.la	\
 	librcd-autopull.la
 
+rcd_buddydir = $(datadir)/rcd
+rcd_buddy_DATA = \
+	rcd-buddy
+
 EXTRA_DIST =			\
 	rcd-marshal.list
 
@@ -110,6 +114,9 @@ librcd_autopull_la_SOURCES =	\
 	rcd-autopull.c
 
 librcd_sample_la_LDFLAGS = -module -avoid-version
+
+install-exec-hook:
+	chmod 0755 $(DESTDIR)$(rcd_buddydir)/$(rcd_buddy_DATA)
 
 ###
 ### Deal with auto-generating the signal marshallers

@@ -1,5 +1,16 @@
 2002-08-04  Jon Trowbridge  <trow@ximian.com>
 
+	* Makefile.am: Install rcd-buddy into PREFIX/share/rcd and make it
+	executable.
+
+	* rcd-buddy: Added.  A little python script that runs gdb,
+	attaches to a crashing rcd process, and dumps the backtrace into
+	/tmp/rcd-crash.PID.
+	
+	* rcd.c (main): Handle SIGSEGV, SIGFPE and SIGBUS with
+	crash_handler.
+	(crash_handler): If we can find it, run rcd-buddy.
+
 	* rcd-autopull.c: Added.  The beginnings of some code for an
 	autopull module.  Still incomplete.
 
