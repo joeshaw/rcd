@@ -418,6 +418,11 @@ crash_handler (int sig_num)
 {
     char cmd[128];
 
+    /* Restore the default signal handlers. */
+    sigaction (SIGSEGV, SIG_DFL, NULL);
+    sigaction (SIGFPE, SIG_DFL, NULL);
+    sigaction (SIGBUS, SIG_DFL, NULL);
+
     write (2, "Crash!\n", 7);
     
     /* FIXME: Just to be sure, we should drop privileges before doing
