@@ -122,6 +122,8 @@ manifest_xml_node(int             cid,
 static xmlChar *
 transaction_xml (RCPackageSList *install_packages, 
                  RCPackageSList *remove_packages,
+                 const char     *client_id,
+                 const char     *client_version,
                  int            *bytes)
 {
     xmlDoc *doc;
@@ -136,15 +138,16 @@ transaction_xml (RCPackageSList *install_packages,
     root = xmlNewNode (NULL, "transaction");
     xmlDocSetRootElement (doc, root);
 
-    xmlNewTextChild(root, NULL, "mid", mid);
-    
-    tmp = g_strdup_printf("%ld", curtime);
-    xmlNewTextChild(root, NULL, "start_time", tmp);
-    g_free(tmp);
+    xmlNewTextChild (root, NULL, "client_id", client_id);
+    xmlNewTextChild (root, NULL, "client_version", client_version);
 
-    xmlNewTextChild(
-        root, NULL, "distro",
-        rc_distro_get_target ());
+    xmlNewTextChild (root, NULL, "mid", mid);
+    
+    tmp = g_strdup_printf ("%ld", curtime);
+    xmlNewTextChild (root, NULL, "start_time", tmp);
+    g_free (tmp);
+
+    xmlNewTextChild (root, NULL, "distro", rc_distro_get_target ());
 
     i = install_packages;
     while (i) {
@@ -236,7 +239,9 @@ cleanup:
 
 char **
 rcd_transact_log_send_transaction (RCPackageSList  *install_packages,
-                                   RCPackageSList  *remove_packages)
+                                   RCPackageSList  *remove_packages,
+                                   const char      *client_id,
+                                   const char      *client_version)
 {
     xmlChar *xml_string;
     int bytes;
@@ -261,7 +266,8 @@ rcd_transact_log_send_transaction (RCPackageSList  *install_packages,
 
     rcd_transfer_protocol_http_set_method (protocol, SOUP_METHOD_POST);
 
-    xml_string = transaction_xml (install_packages, remove_packages, &bytes);
+    xml_string = transaction_xml (install_packages, remove_packages,
+                                  client_id, client_version, &bytes);
     rcd_transfer_protocol_http_set_request_body (
         protocol, xml_string, bytes);
 

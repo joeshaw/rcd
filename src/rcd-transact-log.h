@@ -29,7 +29,9 @@
 #include <libredcarpet.h>
 
 char **rcd_transact_log_send_transaction (RCPackageSList  *install_packages,
-                                          RCPackageSList  *remove_packages);
+                                          RCPackageSList  *remove_packages,
+                                          const char      *client_id,
+                                          const char      *client_version);
 
 void rcd_transact_log_send_success       (char           **tid,
                                           gboolean         successful,

@@ -31,6 +31,8 @@
 #include "rcd-transfer.h"
 #include "rcd-prefs.h"
 
+static RCDModule *rcd_module = NULL;
+
 typedef struct _RCDAutopull RCDAutopull;
 
 struct _RCDAutopull {
@@ -205,6 +207,7 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
 
     if (to_install != NULL || to_remove != NULL) {
         GSList *iter;
+
         rc_debug (RC_DEBUG_LEVEL_INFO,
                   "Beginning Autopull");
         for (iter = to_install; iter != NULL; iter = iter->next) {
@@ -217,13 +220,16 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
                       "   Remove: %s",
                       rc_package_to_str_static (iter->data));
         }
-        
+
         tid = rcd_transaction_begin (rc_get_world (),
                                      to_install,
                                      to_remove,
                                      FALSE,
+                                     rcd_module->description,
+                                     VERSION,
                                      "localhost",
                                      "autopull " VERSION);
+
     } else {
         rc_debug (RC_DEBUG_LEVEL_INFO,
                   "Autopull: no action necessary.");
@@ -761,6 +767,8 @@ rcd_module_load (RCDModule *module)
     module->version = VERSION;
     module->interface_major = 0;
     module->interface_minor = 0;
+
+    rcd_module = module;
 
     recurring_autopull_xml_fetch_init ();
 }

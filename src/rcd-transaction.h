@@ -32,6 +32,8 @@ int rcd_transaction_begin (RCWorld        *world,
                            RCPackageSList *install_packages,
                            RCPackageSList *remove_packages,
                            gboolean        dry_run,
+                           const char     *client_id,
+                           const char     *client_version,
                            const char     *client_host,
                            const char     *client_user);
 

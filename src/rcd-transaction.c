@@ -61,6 +61,8 @@ struct _RCDTransactionStatus {
 
     int total_transaction_steps;
 
+    char *client_id;
+    char *client_version;
     char *client_host;
     char *client_user;
 
@@ -173,6 +175,8 @@ cleanup_after_transaction (RCDTransactionStatus *status)
     rc_package_slist_unref (status->remove_packages);
     rc_package_slist_unref (status->packages_to_download);
     g_object_unref (status->pending);
+    g_free (status->client_id);
+    g_free (status->client_version);
     g_free (status->client_host);
     g_free (status->client_user);
     
@@ -545,6 +549,8 @@ rcd_transaction_begin (RCWorld        *world,
                        RCPackageSList *install_packages,
                        RCPackageSList *remove_packages,
                        gboolean        dry_run,
+                       const char     *client_id,
+                       const char     *client_version,
                        const char     *client_host,
                        const char     *client_user)
 {
@@ -556,6 +562,8 @@ rcd_transaction_begin (RCWorld        *world,
     status->install_packages = rc_package_slist_ref (install_packages);
     status->remove_packages = rc_package_slist_ref (remove_packages);
     status->dry_run = dry_run;
+    status->client_id = g_strdup (client_id);
+    status->client_version = g_strdup (client_version);
     status->client_host = g_strdup (client_host);
     status->client_user = g_strdup (client_user);
 
@@ -573,7 +581,8 @@ rcd_transaction_begin (RCWorld        *world,
     if (rcd_prefs_get_premium ()) {
         status->log_tid = rcd_transact_log_send_transaction (
             status->install_packages,
-            status->remove_packages);
+            status->remove_packages,
+            status->client_id, status->client_version);
     }
 
     /*

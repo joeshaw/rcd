@@ -869,6 +869,7 @@ packsys_transact(xmlrpc_env   *env,
     xmlrpc_value *xmlrpc_install_packages;
     xmlrpc_value *xmlrpc_remove_packages;
     xmlrpc_bool dry_run;
+    char *client_id, *client_version;
     RCPackageSList *install_packages = NULL;
     RCPackageSList *remove_packages = NULL;
     RCDRPCMethodData *method_data;
@@ -879,8 +880,9 @@ packsys_transact(xmlrpc_env   *env,
     rcd_cache_expire_package_cache ();
 
     xmlrpc_parse_value(
-        env, param_array, "(AAb)",
-        &xmlrpc_install_packages, &xmlrpc_remove_packages, &dry_run);
+        env, param_array, "(AAbss)",
+        &xmlrpc_install_packages, &xmlrpc_remove_packages,
+        &dry_run, &client_id, &client_version);
     XMLRPC_FAIL_IF_FAULT(env);
 
     install_packages = rcd_xmlrpc_array_to_rc_package_slist (
@@ -909,6 +911,8 @@ packsys_transact(xmlrpc_env   *env,
                                             install_packages,
                                             remove_packages,
                                             dry_run,
+                                            client_id,
+                                            client_version,
                                             method_data->host,
                                             method_data->identity->username);
 
