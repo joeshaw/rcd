@@ -1,9 +1,8 @@
 SUBDIRS = src
 
 passwddir = $(sysconfdir)/ximian
-
 initdir = $(sysconfdir)/init.d
-init_DATA = rcd
+logrotatedir = $(sysconfdir)/logrotate.d
 
 certdir = $(datadir)/rcd
 cert_DATA = rcd.pem
@@ -13,7 +12,7 @@ gpg_DATA = rcd.gpg
 
 man_MANS = rcd.8
 
-EXTRA_DIST = rc-passwd $(init_DATA) $(cert_DATA) $(gpg_DATA) $(man_MANS)
+EXTRA_DIST = rc-passwd $(cert_DATA) $(gpg_DATA) $(man_MANS)
 
 install-data-hook:
 	if test '!' -d $(DESTDIR)$(passwddir); then \
@@ -24,10 +23,22 @@ install-data-hook:
 	if test '!' -f $(DESTDIR)$(passwddir)/rc-passwd; then \
 		$(INSTALL_DATA) $(srcdir)/rc-passwd $(DESTDIR)$(passwddir)/rc-passwd; \
 	fi
-	chmod 0600 $(DESTDIR)$(passwddir)/rc-passwd;
-	-chown root $(DESTDIR)$(passwddir)/rc-passwd;
+	chmod 0600 $(DESTDIR)$(passwddir)/rc-passwd
+	-chown root $(DESTDIR)$(passwddir)/rc-passwd
 
 	$(INSTALL_DATA) $(srcdir)/rc-passwd $(DESTDIR)$(passwddir)/rc-passwd.default
 
-	chmod 0755 $(DESTDIR)$(initdir)/$(init_DATA)
+	if test '!' -d $(DESTDIR)$(initdir); then \
+		$(mkinstalldirs) $(DESTDIR)$(initdir); \
+		chmod 0755 $(DESTDIR)$(initdir); \
+	fi
+
+	$(INSTALL_DATA) -m 0755 $(srcdir)/rcd.init $(DESTDIR)$(initdir)/rcd;
+
+	if test '!' -d $(DESTDIR)$(logrotatedir); then \
+		$(mkinstalldirs) $(DESTDIR)$(logrotatedir); \
+		chmod 0755 $(DESTDIR)$(logrotatedir); \
+	fi
+
+	$(INSTALL_DATA) -m 0755 $(srcdir)/rcd.logrotate $(DESTDIR)$(logrotatedir)/rcd;
 

@@ -1,0 +1,21 @@
+/var/log/rcd/rcd-messages {
+	rotate 5
+	weekly
+	notifempty
+	missingok
+}
+
+/var/log/rcd/rcd-package-history {
+	rotate 5
+	size 1M
+	notifempty
+	missingok
+	nocompress
+}
+
+/var/log/rcd/* {
+	nosharedscripts
+	postrotate
+					kill -HUP `cat /var/run/rcd.pid`
+	endscript
+}

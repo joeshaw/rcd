@@ -1,4 +1,13 @@
-2002-08-23  Joe Shaw  <joe@ximian.com>
+2002-08-26  Joe Shaw  <joe@ximian.com>
+
+	* rcd.init.in: Renamed from rcd.in, since it makes more sense.
+
+	* rcd.logrotate: Added.  Adds a logrotate script to
+	/etc/logrotate.d.
+
+	* Makefile.am, configure.in: Output and install the above.
+
+2002-08-26  Joe Shaw  <joe@ximian.com>
 
 	* configure.in: 0.6.1
 

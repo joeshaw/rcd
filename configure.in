@@ -168,7 +168,7 @@ AC_OUTPUT([
 Makefile
 src/Makefile
 src/rcd-buddy
-rcd
+rcd.init
 ])
 
 echo "
