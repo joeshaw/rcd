@@ -44,10 +44,14 @@
  * currently set host.  Otherwise, it will connect to the default
  * activation host.
  *
+ * As of 1.4 a third field, "alias" was added.  It specifies an alias
+ * for the machine when it can't be readily identified by hostname.
+ *
  * Returns TRUE on success.
  */
 gboolean rcd_fetch_register (const char *activation_code,
-                             const char *email);
+                             const char *email,
+                             const char *alias);
 
 /*
  * Download the (un)supported/deprecated distro information from the server.

@@ -1,3 +1,17 @@
+2003-03-10  Joe Shaw  <joe@ximian.com>
+
+	* rcd-fetch.c (rcd_fetch_register): Add a third argument, alias,
+	for activating when a hostname is not sufficient to distinguish a
+	machine.  Send it along in the X-RC-Alias HTTP header.
+
+	* rcd-rpc-system.c (system_activate_with_alias): Added, takes a
+	third argument which is the alias.
+	(system_activate): Call rcd_fetch_register() with a NULL third
+	argument.
+
+	* rcd.c (initialize_data): Call rcd_fetch_register() with a third
+	NULL argument.
+
 2003-03-07  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-rpc-packsys.c (resolve_deps): Walk across the list of

@@ -41,7 +41,9 @@
 #define RCX_ACTIVATION_ROOT "https://activation.rc.ximian.com"
 
 gboolean
-rcd_fetch_register (const char *activation_code, const char *email)
+rcd_fetch_register (const char *activation_code,
+                    const char *email,
+                    const char *alias)
 {
     const char *server;
     char *url;
@@ -114,6 +116,11 @@ rcd_fetch_register (const char *activation_code, const char *email)
     if (email) {
         rcd_transfer_protocol_http_set_request_header (
             protocol, "X-RC-Email", email);
+    }
+
+    if (alias) {
+        rcd_transfer_protocol_http_set_request_header (
+            protocol, "X-RC-Alias", alias);
     }
 
     data = rcd_transfer_begin_blocking (t);

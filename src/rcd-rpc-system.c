@@ -298,7 +298,28 @@ system_activate (xmlrpc_env   *env,
     xmlrpc_parse_value (env, param_array, "(ss)", &activation_code, &email);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    success = rcd_fetch_register (activation_code, email);
+    success = rcd_fetch_register (activation_code, email, NULL);
+
+cleanup:
+    if (env->fault_occurred)
+        return NULL;
+
+    return xmlrpc_build_value (env, "i", success);
+}
+
+static xmlrpc_value *
+system_activate_with_alias (xmlrpc_env   *env,
+                            xmlrpc_value *param_array,
+                            void         *user_data)
+{
+    char *activation_code, *email, *alias;
+    gboolean success = FALSE;
+
+    xmlrpc_parse_value (env, param_array, "(sss)",
+                        &activation_code, &email, &alias);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    success = rcd_fetch_register (activation_code, email, alias);
 
 cleanup:
     if (env->fault_occurred)
@@ -379,20 +400,30 @@ system_get_recurring (xmlrpc_env   *env,
 void
 rcd_rpc_system_register_methods(void)
 {
-    rcd_rpc_register_method(
-        "rcd.system.ping", system_ping, NULL, NULL);
-	rcd_rpc_register_method(
-        "rcd.system.query_module", system_query_module, NULL, NULL);
-	rcd_rpc_register_method(
-        "rcd.system.poll_pending", system_poll_pending, NULL, NULL);
-	rcd_rpc_register_method(
-        "rcd.system.get_all_pending", system_get_all_pending, NULL, NULL);
-	rcd_rpc_register_method(
-        "rcd.system.shutdown", system_shutdown, "superuser", NULL);
-    rcd_rpc_register_method(
-        "rcd.system.activate", system_activate, "superuser", NULL);
-    rcd_rpc_register_method(
-        "rcd.system.get_recurring", system_get_recurring, NULL, NULL);
+    rcd_rpc_register_method ("rcd.system.ping",
+                             system_ping,
+                             NULL, NULL);
+	rcd_rpc_register_method ("rcd.system.query_module",
+                             system_query_module,
+                             NULL, NULL);
+	rcd_rpc_register_method ("rcd.system.poll_pending",
+                             system_poll_pending,
+                             NULL, NULL);
+	rcd_rpc_register_method ("rcd.system.get_all_pending",
+                             system_get_all_pending,
+                             NULL, NULL);
+	rcd_rpc_register_method ("rcd.system.shutdown",
+                             system_shutdown,
+                             "superuser", NULL);
+    rcd_rpc_register_method ("rcd.system.activate",
+                             system_activate,
+                             "superuser", NULL);
+    rcd_rpc_register_method ("rcd.system.activate_with_alias",
+                             system_activate_with_alias,
+                             "superuser", NULL);
+    rcd_rpc_register_method ("rcd.system.get_recurring",
+                             system_get_recurring,
+                             NULL, NULL);
 
 } /* rcd_rpc_system_register_methods */
 
