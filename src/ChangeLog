@@ -1,3 +1,8 @@
+2003-05-14  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-rpc-util.c (rcd_rc_package_to_xmlrpc): Set an
+	"is_package_set" flag in our package xmlrpc.
+	
 2003-05-12  Joe Shaw  <joe@ximian.com>
 
 	* rcd-prefs.c: Replace the "repackage" pref with "rollback".

@@ -467,6 +467,10 @@ rcd_rc_package_to_xmlrpc (RCPackage *package, xmlrpc_env *env)
 
     RCD_XMLRPC_STRUCT_SET_INT(
         env, value,
+        "is_package_set", rc_package_is_package_set (package));
+
+    RCD_XMLRPC_STRUCT_SET_INT(
+        env, value,
         "file_size", package->file_size);
 
     RCD_XMLRPC_STRUCT_SET_INT(
