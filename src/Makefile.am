@@ -1,5 +1,6 @@
 INCLUDES =						\
 	-I$(top_srcdir) 				\
+	-I$(top_srcdir)/libredcarpet/src		\
 	$(RCD_CFLAGS)					\
 	-DGNOMELOCALEDIR=\""$(datadir)/locale"\"	\
 	-DMODULEDIR=\""$(rcd_moduledir)"\"		\
@@ -78,8 +79,11 @@ rcd_SOURCES = 			\
 	rcd-unix-server.h	\
 	rcd.c
 
+red_carpet_libs = 		\
+	$(top_builddir)/libredcarpet/src/libredcarpet.a
+
 rcd_LDADD =	\
-	$(RCD_LIBS)
+	$(red_carpet_libs) $(RCD_LIBS)
 
 rcd_moduledir = $(libdir)/rcd
 rcd_module_LTLIBRARIES = librcd-sample.la

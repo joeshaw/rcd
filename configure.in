@@ -46,30 +46,36 @@ AM_PROG_LIBTOOL
 
 ### get cflags and libs
 
-PKG_CHECK_MODULES(RCD, glib-2.0 gthread-2.0 gmodule-2.0 libredcarpet-2.0 soup >= 0.7.5)
+PKG_CHECK_MODULES(RCD, glib-2.0 gthread-2.0 gmodule-2.0 gobject-2.0 soup >= 0.7.5)
 
 # I'm sure there is a cleaner way to do this
-if test -z "$with_xmlrpc_prefix"; then
-  xmlrpc_config="xmlrpc-c-config"
-  AC_PATH_PROG(XMLRPC_CONFIG, xmlrpc-c-config, no)
-else
-  xmlrpc_config="env PATH=$with_xmlrpc_prefix/bin xmlrpc-c-config"
-  AC_PATH_PROG(XMLRPC_CONFIG, xmlrpc-c-config, no, $with_xmlrpc_prefix/bin)
-fi
+AC_PATH_PROG(XMLRPC_CONFIG, xmlrpc-c-config, no, ${with_xmlrpc_prefix:+$with_xmlrpc_prefix/bin:}${PATH})
 
 if test x$XMLRPC_CONFIG = xno; then
   AC_MSG_ERROR(Couldn't find xmlrpc-c-config -- please install the xmlrpc-c library)
 fi
 
 
-XMLRPC_CFLAGS=`$xmlrpc_config --cflags`
-XMLRPC_LIBS=`$xmlrpc_config --libs`
+XMLRPC_CFLAGS=`$XMLRPC_CONFIG --cflags`
+XMLRPC_LIBS=`$XMLRPC_CONFIG --libs`
 
 RCD_CFLAGS="$RCD_CFLAGS $XMLRPC_CFLAGS"
 RCD_LIBS="$RCD_LIBS $XMLRPC_LIBS -lpopt"
 
 AC_SUBST(RCD_CFLAGS)
 AC_SUBST(RCD_LIBS)
+
+##
+## configure libredcarpet
+##
+
+AC_CONFIG_SUBDIRS(libredcarpet)
+
+RED_CARPET_BINDIR="${prefix}/bin"
+RED_CARPET_SBINDIR="${prefix}/sbin"
+
+AC_SUBST(RED_CARPET_BINDIR)
+AC_SUBST(RED_CARPET_SBINDIR)
 
 ### build makefiles
 

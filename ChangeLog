@@ -1,3 +1,12 @@
+2002-07-25  Frank Belew  <frb@ximian.com>
+
+	* Makefile.am: add libredcarpet to SUBDIRS (order matters)
+		       add final newline to get diff to stop complaining
+
+	* configure.in: remove check for libredcarpet, add check for gobject
+			clean up xmlrpc-c-config check
+			add libredcarpet configure stuff
+
 2002-07-24  Joe Shaw  <joe@ximian.com>
 
 	* rcd.pem: Added a generic certificate for the daemon.

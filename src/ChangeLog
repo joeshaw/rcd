@@ -1,3 +1,7 @@
+2002-07-25  Frank Belew  <frb@ximian.com>
+
+	* Makefile.am: add libredcarpet.a to libs, add libredcarpet to INCLUDES
+
 2002-07-25  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-rpc-packsys.c (run_transaction): Properly handle dry runs.

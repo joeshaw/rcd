@@ -1,4 +1,4 @@
-SUBDIRS = src
+SUBDIRS = libredcarpet src
 
 passwddir = $(sysconfdir)/ximian
 passwd_DATA = rc-passwd
@@ -17,3 +17,4 @@ install-data-hook:
 	chmod 0755 $(DESTDIR)$(initdir)/$(init_DATA)
 	chmod 0600 $(DESTDIR)$(passwddir)/$(passwd_DATA)
 	-chown root $(DESTDIR)$(passwddir)/$(passwd_DATA)
+
