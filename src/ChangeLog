@@ -1,3 +1,26 @@
+2002-07-11  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-unix-server.c (rcd_unix_server_run_async): Use
+	g_return_val_if_fail instead of g_return_if_fail.
+
+	* rcd-rpc-util.c (rcd_rc_package_spec_to_xmlrpc): Properly
+	handle the has_epoch flag.
+	(rcd_rc_package_dep_to_xmlrpc): Added.
+	(rcd_xmlrpc_to_rc_package_dep): Added.
+
+	* rcd-rpc-packsys.c (packsys_what_provides): Added.  XML-RPC
+	wrapper around the rc_world_foreach_providing_package function.
+	(packsys_what_requires): Added.  Wrapper around the
+	rc_world_foreach_requiring_package function.
+	(packsys_what_conflicts): Added. Wrapper around the
+	rc_world_foreach_conflicting_package function.
+	(rcd_rpc_packsys_register_methods): Register our new methods.
+
+2002-07-10  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-identity.c (rcd_identity_free): Free the password
+	and the privileges list.
+
 2002-07-10  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc.c (unix_rpc_callback): Implicitly give all local users

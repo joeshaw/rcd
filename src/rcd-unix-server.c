@@ -215,7 +215,7 @@ rcd_unix_server_run_async(RCDUnixServerCallback callback)
     struct sockaddr_un servaddr;
     GIOChannel *iochannel;
 
-    g_return_if_fail(callback);
+    g_return_val_if_fail(callback, -1);
 
     /* 
      * We need to ignore SIGPIPE or else the daemon will die if the client

@@ -45,6 +45,8 @@ rcd_identity_free (RCDIdentity *id)
 {
     if (id) {
         g_free (id->username);
+        g_free (id->password);
+        g_slist_free (id->privileges);
         g_free (id);
     }
 }

@@ -4,9 +4,8 @@ Need to send more information down the wire when
 installing/updating/removing about why certain packages are being
 pulled in, removed, etc.
 
-We need to implement calls for "solvedeps", "whatprovides",
-"whatrequires", etc. which take dependency dealies (package names,
-shared libraries on RPM, etc.)
+We need to implement a call for "solvedeps" that take dependency
+dealies (package names, shared libraries on RPM, etc.)
 
 Need to be able to add users, remove users, set passwords, etc. via
 the daemon.

@@ -1451,6 +1451,156 @@ cleanup:
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
+struct WhatProvidesInfo {
+    xmlrpc_env *env;
+    xmlrpc_value *array;
+};
+
+static void
+what_provides_cb (RCPackage *pkg,
+                  RCPackageSpec *spec,
+                  gpointer user_data)
+{
+    struct WhatProvidesInfo *info = user_data;
+    xmlrpc_value *pkg_value;
+    xmlrpc_value *spec_value;
+    xmlrpc_value *pkg_spec_pair;
+
+    pkg_value = rcd_rc_package_to_xmlrpc (pkg, info->env);
+
+    spec_value = xmlrpc_struct_new (info->env);
+    rcd_rc_package_spec_to_xmlrpc (spec, spec_value, info->env);
+
+    pkg_spec_pair = xmlrpc_build_value (info->env, "(VV)", pkg_value, spec_value);
+    XMLRPC_FAIL_IF_FAULT (info->env);
+
+    xmlrpc_array_append_item (info->env, info->array, pkg_spec_pair);
+    XMLRPC_FAIL_IF_FAULT (info->env);
+
+ cleanup:
+    xmlrpc_DECREF (pkg_value);
+    xmlrpc_DECREF (spec_value);
+    xmlrpc_DECREF (pkg_spec_pair);
+}
+
+static xmlrpc_value *
+packsys_what_provides (xmlrpc_env   *env,
+                       xmlrpc_value *param_array,
+                       void         *user_data)
+{
+    RCWorld *world = (RCWorld *) user_data;
+    struct WhatProvidesInfo info;
+    xmlrpc_value *dep_value;
+    RCPackageDep *dep;
+
+    xmlrpc_parse_value (env, param_array, "(V)", &dep_value);
+
+    dep = rcd_xmlrpc_to_rc_package_dep (dep_value, env);
+
+    info.env = env;
+    info.array = xmlrpc_build_value (env, "()");
+
+    if (dep != NULL) {
+        rc_world_foreach_providing_package (world,
+                                            dep,
+                                            RC_WORLD_ANY_CHANNEL,
+                                            what_provides_cb,
+                                            &info);
+    }
+
+    return info.array;
+}
+
+struct WhatRequiresOrConflictsInfo {
+    xmlrpc_env *env;
+    xmlrpc_value *array;
+};
+
+static void
+what_requires_or_conflicts_cb (RCPackage    *pkg,
+                               RCPackageDep *dep,
+                               gpointer      user_data)
+{
+    struct WhatRequiresOrConflictsInfo *info = user_data;
+    xmlrpc_value *pkg_value;
+    xmlrpc_value *dep_value;
+    xmlrpc_value *pkg_dep_pair;
+
+    pkg_value = rcd_rc_package_to_xmlrpc (pkg, info->env);
+
+    dep_value = xmlrpc_struct_new (info->env);
+    rcd_rc_package_dep_to_xmlrpc (dep, dep_value, info->env);
+
+    pkg_dep_pair = xmlrpc_build_value (info->env, "(VV)", pkg_value, dep_value);
+    XMLRPC_FAIL_IF_FAULT (info->env);
+
+    xmlrpc_array_append_item (info->env, info->array, pkg_dep_pair);
+    XMLRPC_FAIL_IF_FAULT (info->env);
+
+ cleanup:
+    xmlrpc_DECREF (pkg_value);
+    xmlrpc_DECREF (dep_value);
+    xmlrpc_DECREF (pkg_dep_pair);
+}
+
+static xmlrpc_value *
+packsys_what_requires (xmlrpc_env   *env,
+                       xmlrpc_value *param_array,
+                       void         *user_data)
+{
+    RCWorld *world = user_data;
+    struct WhatRequiresOrConflictsInfo info;
+    xmlrpc_value *dep_value;
+    RCPackageDep *dep;
+
+    xmlrpc_parse_value (env, param_array, "(V)", &dep_value);
+    
+    dep = rcd_xmlrpc_to_rc_package_dep (dep_value, env);
+
+    info.env = env;
+    info.array = xmlrpc_build_value (env, "()");
+
+    if (dep != NULL) {
+        rc_world_foreach_requiring_package (world,
+                                            dep,
+                                            RC_WORLD_ANY_CHANNEL,
+                                            what_requires_or_conflicts_cb,
+                                            &info);
+    }
+
+    return info.array;
+}
+
+static xmlrpc_value *
+packsys_what_conflicts (xmlrpc_env   *env,
+                        xmlrpc_value *param_array,
+                        void         *user_data)
+{
+    RCWorld *world = user_data;
+    struct WhatRequiresOrConflictsInfo info;
+    xmlrpc_value *dep_value;
+    RCPackageDep *dep;
+
+    xmlrpc_parse_value (env, param_array, "(V)", &dep_value);
+    
+    dep = rcd_xmlrpc_to_rc_package_dep (dep_value, env);
+
+    info.env = env;
+    info.array = xmlrpc_build_value (env, "()");
+
+    if (dep != NULL) {
+        rc_world_foreach_conflicting_package (world,
+                                              dep,
+                                              RC_WORLD_ANY_CHANNEL,
+                                              what_requires_or_conflicts_cb,
+                                              &info);
+    }
+
+    return info.array;
+}
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
 static xmlrpc_value *
 packsys_dump(xmlrpc_env   *env,
              xmlrpc_value *param_array,
@@ -1522,6 +1672,21 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
     rcd_rpc_register_method("rcd.packsys.abort_download",
                             packsys_abort_download,
                             rcd_auth_action_list_from_1 (RCD_AUTH_NONE),
+                            world);
+
+    rcd_rpc_register_method("rcd.packsys.what_provides",
+                            packsys_what_provides,
+                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            world);
+
+    rcd_rpc_register_method("rcd.packsys.what_requires",
+                            packsys_what_requires,
+                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            world);
+
+    rcd_rpc_register_method("rcd.packsys.what_conflicts",
+                            packsys_what_conflicts,
+                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
                             world);
 
     rcd_rpc_register_method("rcd.packsys.dump",

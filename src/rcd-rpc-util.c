@@ -34,6 +34,11 @@ rcd_rc_package_spec_to_xmlrpc(RCPackageSpec *spec,
     XMLRPC_FAIL_IF_FAULT (env);
 
     RCD_XMLRPC_STRUCT_SET_INT(
+        env, value, "has_epoch",
+        spec->has_epoch);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    RCD_XMLRPC_STRUCT_SET_INT(
         env, value, "epoch",
         spec->epoch);
     XMLRPC_FAIL_IF_FAULT (env);
@@ -50,6 +55,71 @@ rcd_rc_package_spec_to_xmlrpc(RCPackageSpec *spec,
 cleanup:
 } /* rcd_rc_package_spec_to_xmlrpc */
 
+void
+rcd_rc_package_dep_to_xmlrpc (RCPackageDep *dep,
+                              xmlrpc_value *value,
+                              xmlrpc_env   *env)
+{
+    rcd_rc_package_spec_to_xmlrpc ((RCPackageSpec *)dep, value, env);
+    
+    RCD_XMLRPC_STRUCT_SET_STRING (env, value, "relation",
+                                  rc_package_relation_to_string (dep->relation, 0));
+    
+ cleanup:
+}
+
+RCPackageDep *
+rcd_xmlrpc_to_rc_package_dep (xmlrpc_value *value,
+                              xmlrpc_env   *env)
+{
+    RCPackageDep *dep = NULL;
+    int has_epoch, epoch;
+    char *name = NULL, *version = NULL, *release = NULL, *relation_str = NULL;
+    RCPackageRelation relation;
+
+    if (! xmlrpc_struct_has_key (env, value, "name"))
+        goto cleanup;
+    RCD_XMLRPC_STRUCT_GET_STRING (env, value, "name", name);
+
+    if (! xmlrpc_struct_has_key (env, value, "has_epoch"))
+        goto cleanup;
+    RCD_XMLRPC_STRUCT_GET_INT (env, value, "has_epoch", has_epoch);
+    
+    if (! xmlrpc_struct_has_key (env, value, "epoch"))
+        goto cleanup;
+    RCD_XMLRPC_STRUCT_GET_INT (env, value, "epoch", epoch);
+
+    if (! xmlrpc_struct_has_key (env, value, "version"))
+        goto cleanup;
+    RCD_XMLRPC_STRUCT_GET_STRING (env, value, "version", version);
+
+    if (! xmlrpc_struct_has_key (env, value, "release"))
+        goto cleanup;
+    RCD_XMLRPC_STRUCT_GET_STRING (env, value, "release", release);
+
+    if (! xmlrpc_struct_has_key (env, value, "relation"))
+        goto cleanup;
+    RCD_XMLRPC_STRUCT_GET_STRING (env, value, "relation", relation_str);
+
+    relation = rc_string_to_package_relation (relation_str);
+    if (relation == RC_RELATION_INVALID)
+        goto cleanup;
+    
+    dep = rc_package_dep_new (name,
+                              has_epoch,
+                              epoch,
+                              version,
+                              release,
+                              relation);
+
+ cleanup:
+    g_free (name);
+    g_free (version);
+    g_free (release);
+    g_free (relation_str);
+    
+    return dep;
+}
 
 xmlrpc_value *
 rcd_rc_package_to_xmlrpc (RCPackage *package, xmlrpc_env *env)
