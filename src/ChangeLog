@@ -1,3 +1,15 @@
+2002-08-29  Joe Shaw  <joe@ximian.com>
+
+	* rcd-prefs.c (rcd_prefs_set_proxy_url,
+	rcd_prefs_get_proxy_username, rcd_prefs_get_proxy_password): If
+	the string coming in is NULL, unset the key rather than trying to
+	set it to NULL (which doesn't work).
+
+	* rcd-rpc-prefs.c (get_string_func): Use RC_STRING_TO_XMLRPC() so
+	we don't pass in NULL to xmlrpc_build_value().
+	(set_string_func): Use XMLRPC_STRING_TO_RC() so we get back NULL
+	if the string is empty.
+
 2002-08-28  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-rpc-packsys.c (prepend_pkg): Use the

@@ -146,7 +146,7 @@ rcd_prefs_get_proxy (void)
     proxy_url = NULL;
 
     proxy = gnome_config_get_string (CONFIG_PATH "/Network/proxy");
-    
+
     if (!proxy)
         return NULL;
 
@@ -190,8 +190,14 @@ rcd_prefs_get_proxy_url (void)
 void
 rcd_prefs_set_proxy_url (const char *proxy_url)
 {
-    gnome_config_set_string (CONFIG_PATH "/Network/proxy", proxy_url);
-    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Proxy URL set: %s", proxy_url);
+    if (proxy_url) {
+        gnome_config_set_string (CONFIG_PATH "/Network/proxy", proxy_url);
+        rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Proxy URL set: %s", proxy_url);
+    }
+    else {
+        gnome_config_clean_key (CONFIG_PATH "/Network/proxy");
+        rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Proxy URL unset");
+    }
 
     SYNC_CONFIG;
 }
@@ -216,11 +222,17 @@ rcd_prefs_get_proxy_username (void)
 void
 rcd_prefs_set_proxy_username (const char *proxy_username)
 {
-    gnome_config_set_string (
-        CONFIG_PATH "/Network/proxy-user", proxy_username);
+    if (proxy_username) {
+        gnome_config_set_string (CONFIG_PATH "/Network/proxy-user",
+                                 proxy_username);
 
-    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Proxy username set: %s",
-              proxy_username);
+        rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Proxy username set: %s",
+                  proxy_username);
+    }
+    else {
+        gnome_config_clean_key (CONFIG_PATH "/Network/proxy-user");
+        rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Proxy username unset");
+    }
 
     SYNC_CONFIG;
 }
@@ -245,9 +257,15 @@ rcd_prefs_get_proxy_password (void)
 void
 rcd_prefs_set_proxy_password (const char *proxy_password)
 {
-    gnome_config_set_string (
-        CONFIG_PATH "/Network/proxy-password", proxy_password);
-    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Proxy password set");
+    if (proxy_password) {
+        gnome_config_set_string (
+            CONFIG_PATH "/Network/proxy-password", proxy_password);
+        rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Proxy password set");
+    }
+    else {
+        gnome_config_clean_key (CONFIG_PATH "/Network/proxy-password");
+        rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Proxy password unset");
+    }
 
     SYNC_CONFIG;
 }

@@ -59,7 +59,7 @@ get_string_func (xmlrpc_env *env, gpointer value)
 {
     xmlrpc_value *v = NULL;
 
-    v = xmlrpc_build_value (env, "s", (char *) value);
+    v = xmlrpc_build_value (env, "s", (char *) RC_STRING_TO_XMLRPC (value));
 
     return v;
 } /* get_string_func */
@@ -94,7 +94,7 @@ set_string_func (xmlrpc_env *env, xmlrpc_value *value)
 
     xmlrpc_parse_value (env, value, "s", &str);
 
-    return str;
+    return XMLRPC_STRING_TO_RC (str);
 } /* set_string_func */
 
 static gpointer
