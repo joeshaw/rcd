@@ -1,3 +1,9 @@
+2002-10-15  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-rpc-users.c (users_update): Allow the "-*-unchanged-*-"
+	token through, even though it isn't a well-formed md5ified
+	password.
+
 2002-10-15  Joe Shaw  <joe@ximian.com>
 
 	* rcd-fetch.c (rcd_fetch_register): Make this return a gboolean,

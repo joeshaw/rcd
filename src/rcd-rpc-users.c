@@ -154,8 +154,11 @@ users_update (xmlrpc_env   *env,
                         &username, &password, &privileges);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    if (! (rcd_identity_well_formed_username (username)
-           && rcd_identity_well_formed_password (password)))
+    if (! rcd_identity_well_formed_username (username))
+        goto cleanup;
+
+    if (! rcd_identity_well_formed_password (password)
+        && strcmp (password, "-*-unchanged-*-"))
         goto cleanup;
 
     id = rcd_identity_new ();
