@@ -32,6 +32,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <libsoup/soup-address.h>
 #include <libsoup/soup-message.h>
 #include <libsoup/soup-server.h>
 #include <libsoup/soup-server-auth.h>
@@ -462,11 +463,30 @@ rcd_rpc_remote_server_start (void)
     bind_ip = rcd_prefs_get_bind_ipaddress ();
 
     if (bind_ip) {
-        soup_server = soup_server_new (SOUP_SERVER_INTERFACE, bind_ip,
+        SoupAddress *bind_address;
+
+        bind_address = soup_address_new (bind_ip, port);
+
+        if (!bind_address) {
+            rc_debug (RC_DEBUG_LEVEL_ERROR,
+                      "Unable to bind remote server to '%s'", bind_ip);
+            return FALSE;
+        }
+
+        if (soup_address_resolve_sync (bind_address) != SOUP_STATUS_OK) {
+            rc_debug (RC_DEBUG_LEVEL_ERROR,
+                      "Unable to bind remote server to '%s': Unable to "
+                      "resolve address", bind_ip);
+            return FALSE;
+        }
+
+        soup_server = soup_server_new (SOUP_SERVER_INTERFACE, bind_address,
                                        SOUP_SERVER_PORT, port,
                                        SOUP_SERVER_SSL_CERT_FILE, SHAREDIR"/rcd.pem",
                                        SOUP_SERVER_SSL_KEY_FILE, SHAREDIR"/rcd.pem",
                                        NULL);
+
+        g_object_unref (bind_address);
     } else {
         soup_server = soup_server_new (SOUP_SERVER_PORT, port,
                                        SOUP_SERVER_SSL_CERT_FILE, SHAREDIR"/rcd.pem",

@@ -1,5 +1,9 @@
 2004-01-29  Joe Shaw  <joe@ximian.com>
 
+	* rcd-rpc.c (rcd_rpc_remote_server_start): Create a SoupAddress
+	from the bind_ip setting and resolve it before passing it into
+	soup_server_new().  Fixes #53471.
+
 	* rcd-rpc-packsys.c (packsys_get_channel_icon): Fix a few
 	instances where "%d" was used instead of "%s" for channel ids.
 
