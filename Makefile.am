@@ -12,7 +12,7 @@ gpg_DATA = rcd.gpg
 
 man_MANS = rcd.8 rcd.conf.5
 
-EXTRA_DIST = rcd.passwd $(cert_DATA) $(gpg_DATA) $(man_MANS)
+EXTRA_DIST = rcd.passwd rcd.init rcd.logrotate $(cert_DATA) $(gpg_DATA) $(man_MANS)
 
 install-data-hook:
 	if test '!' -d $(DESTDIR)$(passwddir); then \

@@ -1,3 +1,7 @@
+2002-09-04  Joe Shaw  <joe@ximian.com>
+
+	* Makefile.am: Added rcd.init and rcd.logrotate to EXTRA_DIST
+
 2002-09-03  Joe Shaw  <joe@ximian.com>
 
 	* rcd.conf.5: Renamed from rcd.config.5
