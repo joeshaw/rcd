@@ -1,3 +1,7 @@
+2004-07-15  James Willcox  <james@ximian.com>
+
+	* wrapper.cc: Cast to GFileTest to make the compiler stop whining.
+
 2004-07-12  Tambet Ingo  <tambet@ximian.com>
 
 	* wrapper.cc (read_installed_patches): Test if INSTALLED_YOU_PATH
