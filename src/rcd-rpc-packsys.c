@@ -1134,9 +1134,11 @@ download_packages (RCPackageSList *packages, RCDTransactionStatus *status)
     for (iter = packages; iter; iter = iter->next) {
         RCPackage *package = iter->data;
 
-        if (!g_file_test (package->package_filename, G_FILE_TEST_EXISTS)) {
-            g_free (package->package_filename);
-            package->package_filename = NULL;
+        if (package->package_filename) {
+            if (!g_file_test (package->package_filename, G_FILE_TEST_EXISTS)) {
+                g_free (package->package_filename);
+                package->package_filename = NULL;
+            }
         }
 
         if (!package->package_filename) {

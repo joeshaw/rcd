@@ -1,3 +1,15 @@
+2002-07-31  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-packsys.c (download_packages): Don't call g_file_test()
+	if the package filename is NULL.
+
+	* rcd-transact-log.c (manifest_xml_node): Drop the URL argument.
+	Only send update info if we have an update associated with our
+	package.
+	(transaction_xml): If we don't have a channel, send along -1, drop
+	the RCPackageUpdate from the call to manifest_xml_node().
+	(rcd_transact_log_send_transaction): Fix a double free.
+
 2002-07-30  Ian Peters  <itp@ximian.com>
 
 	* rcd-prefs.h, rcd-prefs.c: added

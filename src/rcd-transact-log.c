@@ -94,8 +94,7 @@ static xmlNode *
 manifest_xml_node(int             cid,
                   RCPackage      *new_pkg,
                   RCPackage      *old_pkg,
-                  ManifestAction  action,
-                  const char     *url)
+                  ManifestAction  action)
 {
     xmlNode *node, *pkgnode;
     char *tmp = NULL;
@@ -132,25 +131,29 @@ manifest_xml_node(int             cid,
     g_free(tmp);
     xmlNewTextChild(pkgnode, NULL, "version", new_pkg->spec.version);
     xmlNewTextChild(pkgnode, NULL, "release", new_pkg->spec.release);
+
     if (action != MANIFEST_REMOVE) {
         RCPackageUpdate *upd = rc_package_get_latest_update(new_pkg);
 
-        tmp = g_strdup_printf("%d", upd->package_size);
-        xmlNewTextChild(pkgnode, NULL, "size", tmp);
-        g_free(tmp);
-
-        tmp = g_strdup_printf("%d", upd->hid);
-        xmlNewTextChild(pkgnode, NULL, "hid", tmp);
-        g_free(tmp);
-
-        if (new_pkg->channel) {
-            tmp = g_strdup_printf ("%d", rc_channel_get_id (new_pkg->channel));
-            xmlNewTextChild(pkgnode, NULL, "channel_id", tmp);
+        if (upd) {
+            tmp = g_strdup_printf("%d", upd->package_size);
+            xmlNewTextChild(pkgnode, NULL, "size", tmp);
             g_free(tmp);
-        }
 
-        if (url)
-            xmlNewTextChild(pkgnode, NULL, "url", url);
+            tmp = g_strdup_printf("%d", upd->hid);
+            xmlNewTextChild(pkgnode, NULL, "hid", tmp);
+            g_free(tmp);
+
+            if (new_pkg->channel) {
+                tmp = g_strdup_printf ("%d",
+                                       rc_channel_get_id (new_pkg->channel));
+                xmlNewTextChild(pkgnode, NULL, "channel_id", tmp);
+                g_free(tmp);
+            }
+
+            if (upd->package_url)
+                xmlNewTextChild(pkgnode, NULL, "url", upd->package_url);
+        }
     }
 
     /* write info on the old package, if any */
@@ -197,7 +200,6 @@ transaction_xml (RCPackageSList *install_packages,
     i = install_packages;
     while (i) {
         RCPackage *p = i->data;
-        RCPackageUpdate *u = rc_package_get_latest_update(p);
         RCPackage *sys_pkg;
         ManifestAction action;
         xmlNode *n;
@@ -210,8 +212,8 @@ transaction_xml (RCPackageSList *install_packages,
             action = MANIFEST_INSTALL;
 
         n = manifest_xml_node (
-            rc_channel_get_id (p->channel), p,
-            sys_pkg, action, u->package_url);
+            p->channel ? rc_channel_get_id (p->channel) : -1,
+            p, sys_pkg, action);
 
         xmlAddChild(root, n);
 
@@ -223,7 +225,7 @@ transaction_xml (RCPackageSList *install_packages,
         RCPackage *p = i->data;
         xmlNode *n;
 
-        n = manifest_xml_node (0, p, NULL, MANIFEST_REMOVE, NULL);
+        n = manifest_xml_node (0, p, NULL, MANIFEST_REMOVE);
 
         xmlAddChild(root, n);
 
@@ -279,7 +281,6 @@ rcd_transact_log_send_transaction (RCPackageSList  *install_packages,
     xml_string = transaction_xml (install_packages, remove_packages, &bytes);
     url = g_strdup_printf ("%s/log.php", rcd_prefs_get_host ());
     soup_uri = get_premium_uri (url);
-    g_free (url);
 
     if (!soup_uri) {
         rc_debug (RC_DEBUG_LEVEL_WARNING, "Invalid log URL: %s", url);
