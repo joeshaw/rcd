@@ -162,10 +162,11 @@ rcd_recurring_next_action (void)
     return next;
 }
 
+static void rcd_recurring_setup_timeout (void);
+
 static gboolean
 rcd_recurring_timeout_cb (gpointer execute_if_null)
 {
-    static void rcd_recurring_setup_timeout (void);
 
     rc_debug (RC_DEBUG_LEVEL_DEBUG, "Recurring timer hit");
 

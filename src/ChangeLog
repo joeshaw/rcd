@@ -1,3 +1,9 @@
+2005-04-05  James Willcox  <james@ximian.com>
+
+	* rcd-recurring.c: (rcd_recurring_timeout_cb):
+
+	Fix the build with gcc4.  Patch from Henne Vogelsang <hvogel@suse.de>
+
 2005-03-11  James Willcox  <james@ximian.com>
 
 	* rcd-buddy.in: write the time of the crash
