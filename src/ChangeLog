@@ -1,5 +1,14 @@
 2003-08-27  Joe Shaw  <joe@ximian.com>
 
+	* rcd-transaction.c (transact_start_cb): Move the pending begin
+	stuff to the main rcd_transaction_transaction() function.
+	(transact_done_cb): Move the pending finished stuff to the main
+	rcd_transaction_transaction() function.
+	(rcd_transaction_transaction): Add a comment about how we need to
+	move the packman's signals to the world at some point.
+
+2003-08-27  Joe Shaw  <joe@ximian.com>
+
 	* rcd-transaction.c (rcd_transaction_download): Remove two dubious
 	lines of code which didn't appear to have any useful effect and
 	had no clever comment justifying their existence.

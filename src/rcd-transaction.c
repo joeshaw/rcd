@@ -439,9 +439,6 @@ transact_start_cb(RCPackman *packman,
     rc_debug (RC_DEBUG_LEVEL_MESSAGE,
               "Transaction starting.  %d steps", total_steps);
 
-    rc_pending_begin (transaction->transaction_pending);
-    rc_pending_begin (transaction->transaction_step_pending);
-
     transaction->total_transaction_steps = total_steps;
 } /* transact_start_cb */
 
@@ -523,11 +520,6 @@ transact_done_cb(RCPackman *packman,
                  RCDTransaction *transaction)
 {
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Transaction done");
-
-    rc_pending_finished (transaction->transaction_pending, 0);
-    if (rc_pending_get_status (transaction->transaction_step_pending) !=
-        RC_PENDING_STATUS_PRE_BEGIN)
-        rc_pending_finished (transaction->transaction_step_pending, 0);
 } /* transact_done_cb */
 
 /* Ahem */
@@ -536,6 +528,13 @@ rcd_transaction_transaction (RCDTransaction *transaction)
 {
     RCPackman *packman = rc_packman_get_global ();
     int flags = 0;
+
+    /*
+     * FIXME: This needs fixing.  These signals should be on the world now,
+     * not the packman, and the packman should probably be associated with
+     * the system world only and not dealt with at all here.  It's kind of
+     * a wart when you take the synthetic db into account.
+     */
 
     g_signal_connect (packman, "transact_start",
                       G_CALLBACK (transact_start_cb), transaction);
@@ -550,6 +549,9 @@ rcd_transaction_transaction (RCDTransaction *transaction)
 
     if (transaction->flags == RCD_TRANSACTION_FLAGS_DRY_RUN)
         flags |= RC_TRANSACT_FLAG_NO_ACT;
+
+    rc_pending_begin (transaction->transaction_pending);
+    rc_pending_begin (transaction->transaction_step_pending);
 
     rc_world_transact (transaction->world,
                        transaction->install_packages,
@@ -576,6 +578,12 @@ rcd_transaction_transaction (RCDTransaction *transaction)
 
         return;
     }
+
+    if (rc_pending_get_status (transaction->transaction_step_pending) !=
+        RC_PENDING_STATUS_PRE_BEGIN)
+        rc_pending_finished (transaction->transaction_step_pending, 0);
+
+    rc_pending_finished (transaction->transaction_pending, 0);
 
     rcd_transaction_finished (transaction, NULL);
 }
