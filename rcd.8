@@ -2,7 +2,7 @@
 .TH "rcd" "8" "1.0" "Ximian, Inc. 2002" "Software management daemon"
 .SH "NAME"
 .LP 
-rcd \- The backend daemon for rc, the command\-line version of the Ximian Red Carpet software management tool.
+rcd \- The backend daemon for rug, the command\-line version of the Ximian Red Carpet software management tool.
 .SH "SYNTAX"
 .LP 
 /etc/init.d/rcd [\fIstart|stop|restart\fR] \fI<options>\fR
@@ -10,9 +10,9 @@ rcd \- The backend daemon for rc, the command\-line version of the Ximian Red Ca
 rcd \fI<options>\fR
 .SH "DESCRIPTION"
 .LP 
-This daemon performs the Red Carpet software management functions that are asked of it by the rc software management tool, including the updating, installation, and removal of software, in addition to basic queries of the system's package management database. In general, you will not need to interact directly with rcd.
+This daemon performs the Red Carpet software management functions that are asked of it by the rug software management tool, including the updating, installation, and removal of software, in addition to basic queries of the system's package management database. In general, you will not need to interact directly with rcd.
 .LP 
-The daemon is kept apart from the control application so that the control application can be used to administer remote systems. See the rc man page for more information about this process.
+The daemon is kept apart from the control application so that the control application can be used to administer remote systems. See the rug man page for more information about this process.
 .SH "OPTIONS"
 .LP 
 \fBUSAGE OPTIONS:\fR
@@ -21,7 +21,7 @@ The daemon is kept apart from the control application so that the control applic
 Choose an alternate configuration file. Normally the daemon uses rcd.conf; see the man page for rcd.conf(8) for details of the configuration file format.
 .TP 
 \fB\-\-allow\-non\-root\fR <\fIdirectory\fP>
-Allows rcd to be run by non\-root users.  This is likely to cause errors when rc users attempt to do anything other than query the package database.
+Allows rcd to be run by non\-root users.  This is likely to cause errors when rug users attempt to do anything other than query the package database.
 .TP 
 \fB\-d, \-\-debug=\fI<INT>\fR
 Turn on debugging mode. You may specify a number between 1 and 6 to determine how much debugging output you woul d like. 1 displays only the highest priority messages, and 6 displays all messages. Choosing zero causes the debugging mode to display no messages at all. The default is 4.
@@ -116,7 +116,7 @@ Copyright Ximian, Inc. 2002\-2003
 http://www.ximian.com
 .SH "SEE ALSO"
 .LP 
-rcd.conf(5), rcserver.conf(5), rc(1), rcman(1), rcreports(1), rce\-dump, rce\-init, rce\-restore, rcmirror(1) rcd\-mp\-server(8), rcd\-mp\-middleman(8), rcd\-mp\-client(8)
+rcd.conf(5), rcserver.conf(5), rug(1), rcman(1), rcreports(1), rce\-dump, rce\-init, rce\-restore, rcmirror(1) rcd\-mp\-server(8), rcd\-mp\-middleman(8), rcd\-mp\-client(8)
 .LP 
 The graphical Red Carpet client, red\-carpet, has a manual accessible through the GNOME help system; select items from the Help menu within the application to read it. Visit http://ximian.com for more information about rcd and the full family of Ximian Red Carpet products and servies, as well as Evolution and other software from Ximian.
 To report problems with this software or its documentation, visit http://bugzilla.ximian.com
