@@ -69,6 +69,12 @@ system_ping(xmlrpc_env   *env,
     time (&now);
     RCD_XMLRPC_STRUCT_SET_INT(env, value, "current_time", (gint) now);
     XMLRPC_FAIL_IF_FAULT(env);
+
+    RCD_XMLRPC_STRUCT_SET_STRING (env, value, "server_url",
+                                  rcd_prefs_get_host ());
+    
+    RCD_XMLRPC_STRUCT_SET_INT (env, value, "server_premium",
+                               rcd_prefs_get_premium ());
     
  cleanup: 
     if (env->fault_occurred) {

@@ -110,6 +110,8 @@ manifest_xml_node(int             cid,
     if (old_pkg) {
         pkgnode = xmlNewChild (node, NULL, "oldpackage", NULL);
         tmp = g_strdup_printf("%d", old_pkg->spec.epoch);
+        xmlNewTextChild(pkgnode, NULL, "name",
+                        g_quark_to_string (new_pkg->spec.nameq));
         xmlNewTextChild(pkgnode, NULL, "epoch", tmp);
         g_free(tmp);
         xmlNewTextChild(pkgnode, NULL, "version", old_pkg->spec.version);
