@@ -5,10 +5,7 @@ initdir = $(sysconfdir)/rc.d/init.d
 logrotatedir = $(sysconfdir)/logrotate.d
 
 certdir = $(datadir)/rcd
-cert_DATA = rcd.pem
-
-cadir = $(datadir)/rcd/ca
-ca_DATA = rcd-ca-bundle.pem ximian-ca.pem
+cert_DATA = rcd.pem rcd-ca-bundle.pem
 
 gpgdir = $(datadir)/rcd
 gpg_DATA = rcd.gpg
@@ -19,8 +16,7 @@ pkgconfig_DATA = rcd.pc
 man_MANS = rcd.8 rcd.conf.5
 
 EXTRA_DIST = rcd.passwd rcd.init.redhat rcd.init.suse rcd.init.debian    \
-             rcd.logrotate rcd.pc.in $(cert_DATA) $(ca_DATA) $(gpg_DATA) \
-             $(man_MANS)
+             rcd.logrotate rcd.pc.in $(cert_DATA) $(gpg_DATA) $(man_MANS)
 
 if INIT_REDHAT
 init_file = rcd.init.redhat
