@@ -392,7 +392,11 @@ build_updates_list (RCPackage *old,
 
         RCPackageUpdate *update = iter->data;
 
-        if (rc_package_spec_compare (&old->spec, &update->spec) < 0) {
+        if (rc_packman_version_compare (
+                rc_world_get_packman (rc_get_world ()),
+                RC_PACKAGE_SPEC (old),
+                RC_PACKAGE_SPEC (update)) < 0)
+        {
             xmlrpc_value *desc;
             
             if (update->description && *update->description) {

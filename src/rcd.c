@@ -281,10 +281,8 @@ initialize_rc_world (void)
         exit (-1);
     }
 
-    rc_packman_set_packman (packman);
-
-    world = rc_get_world ();
-    rc_world_register_packman (world, packman);
+    world = rc_world_new (packman);
+    rc_set_world (world);
     
     rcd_shutdown_add_handler (shutdown_world, world);
 
