@@ -437,14 +437,14 @@ rcd_rpc_prefs_register_methods (void)
         "proxy-url", RCD_PREF_STRING,
         "Proxy URL",
         "Proxy",
-        (RCDPrefGetFunc) rcd_prefs_get_proxy_url, "superuser",
+        (RCDPrefGetFunc) rcd_prefs_get_proxy_url, "view",
         (RCDPrefSetFunc) rcd_prefs_set_proxy_url, "superuser");
 
     rcd_rpc_prefs_register_pref (
         "proxy-username", RCD_PREF_STRING,
         "Proxy username",
         "Proxy",
-        (RCDPrefGetFunc) rcd_prefs_get_proxy_username, "superuser",
+        (RCDPrefGetFunc) rcd_prefs_get_proxy_username, "view",
         (RCDPrefSetFunc) rcd_prefs_set_proxy_username, "superuser");
 
     rcd_rpc_prefs_register_pref (
@@ -465,7 +465,7 @@ rcd_rpc_prefs_register_methods (void)
         "require-verified-certificates", RCD_PREF_BOOLEAN,
         "Verify server SSL certificates",
         "Server",
-        (RCDPrefGetFunc) rcd_prefs_get_require_verified_certificates, "superuser",
+        (RCDPrefGetFunc) rcd_prefs_get_require_verified_certificates, "view",
         (RCDPrefSetFunc) rcd_prefs_set_require_verified_certificates, "superuser");
 
     rcd_rpc_prefs_register_pref (

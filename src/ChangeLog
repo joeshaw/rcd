@@ -1,3 +1,9 @@
+2004-06-19  Tambet Ingo  <tambet@ximian.com>
+
+	* rcd-rpc-prefs.c (rcd_rpc_prefs_register_methods): Don't require
+	superuser privilege to view preferences. The only exception is
+	"proxy-password".
+
 2004-06-17  James Willcox  <james@ximian.com>
 
 	* rcd-world-remote.c: (parse_nevra),
