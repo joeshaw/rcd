@@ -1,3 +1,9 @@
+2003-12-15  Tambet Ingo  <tambet@ximian.com>
+
+	* rcd-rpc-packsys.c (packsys_get_rollback_actions): Use xmlrpc_int32
+	instead of time_t when parsing xmlrpc value.
+	(setup_rollback): Ditto.
+
 2003-12-03  Joe Shaw  <joe@ximian.com>
 
 	* rcd-world-remote.c (rcd_world_remote_fetch_channels): Don't call

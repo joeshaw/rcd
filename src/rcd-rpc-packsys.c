@@ -1640,7 +1640,7 @@ packsys_get_rollback_actions (xmlrpc_env   *env,
                               xmlrpc_value *param_array,
                               void         *user_data)
 {
-    time_t when;
+    xmlrpc_int32 when;
     RCRollbackActionSList *actions = NULL;
     RCPackageSList *install_packages = NULL, *remove_packages = NULL;
     xmlrpc_value *xinstall = NULL, *xremove = NULL;
@@ -1708,7 +1708,7 @@ setup_rollback (xmlrpc_env   *env,
                 void         *user_data)
 {
     RCWorld *world = (RCWorld *) user_data;
-    time_t when;
+    xmlrpc_int32 when;
     RCDTransactionFlags flags;
     char *trid, *client_id, *client_version;
     RCRollbackActionSList *actions;
