@@ -418,14 +418,10 @@ fetch_channels_cb (gpointer user_data)
 }
 
 static void
-rcd_autopull_fetch_all_channels (RCDAutopull *pull,
-                                 void (*finished_cb) (gpointer),
+rcd_autopull_fetch_all_channels (void (*finished_cb) (gpointer),
                                  gpointer user_data)
 {
     struct FetchChannels *frc;
-
-    g_return_if_fail (pull != NULL);
-
 
     frc = g_new0 (struct FetchChannels, 1);
     
@@ -440,6 +436,22 @@ rcd_autopull_fetch_all_channels (RCDAutopull *pull,
 
     g_timeout_add (500, fetch_channels_cb, frc);
 }
+
+static void
+rcd_autopull_fetch_channel_list (void (*finished_cb) (gpointer),
+                                 gpointer user_data)
+{
+    /* If we can't download the channel list, fail silently.
+       This is probably not a good thing to do. */
+    if (! rcd_fetch_channel_list ()) {
+        if (finished_cb)
+            finished_cb (user_data);
+        return;
+    }
+
+    rcd_autopull_fetch_all_channels (finished_cb, user_data);
+}
+
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
@@ -523,9 +535,7 @@ ap_rec_execute (RCDRecurring *rec)
     pull->locked = TRUE;
 
     rcd_autopull_ref (pull);
-    rcd_autopull_fetch_all_channels (pull,
-                                     ap_rec_execute_part_two,
-                                     pull);
+    rcd_autopull_fetch_all_channels (ap_rec_execute_part_two, pull);
 }
 
 static time_t
@@ -849,15 +859,17 @@ autopull_from_session_xml_node (xmlNode *node)
 }
 
 /* Walk down through our XML looking for package or channel tags that
-   mention unknown channels.  If we find such a tag, re-fetch our
-   channel list and return. 
+   mention unknown channels.
 */
-static void
-rcd_autopull_check_xml_for_unknown_channels (xmlNode *node)
+static gboolean
+rcd_autopull_xml_contains_unknown_channels (xmlDoc *doc)
 {
-    xmlNode *node2;
+    xmlNode *node, *node2;
 
-    g_return_if_fail (node != NULL);
+    g_return_val_if_fail (doc != NULL, FALSE);
+
+    node = xmlDocGetRootElement (doc);
+    g_return_val_if_fail (node != NULL, FALSE);
 
     for (node = node->xmlChildrenNode; node; node = node->next) {
 
@@ -870,30 +882,32 @@ rcd_autopull_check_xml_for_unknown_channels (xmlNode *node)
 
                     if (channel_from_xml_props (node2) == NULL) {
                         /* Channel?  I've never heard of it! */
-
-                        /* FIXME: At this point we need to re-load the
-                           channel list and refresh all of our package
-                           data. */
-                        return;
+                        return TRUE;
                     }
                 }
             }
         }
     }
+
+    return FALSE;
 }
 
 static void
-rcd_autopull_process_xml (xmlNode *node)
+process_xml_cb (xmlDoc *doc)
 {
-    g_return_if_fail (node != NULL);
+    xmlNode *node;
+
+    g_return_if_fail (doc != NULL);
+
+    node = xmlDocGetRootElement (doc);
+    if (node == NULL)
+        goto cleanup;
 
     if (g_strcasecmp (node->name, "autopull")) {
         rc_debug (RC_DEBUG_LEVEL_WARNING,
                   "This doesn't look like autopull XML!");
-        return;
+        goto cleanup;
     }
-
-    rcd_autopull_check_xml_for_unknown_channels (node);
 
     /* We reset the check-in interval to the default every time. */
     autopull_checkin_interval = AUTOPULL_CHECKIN_DEFAULT;
@@ -926,6 +940,19 @@ rcd_autopull_process_xml (xmlNode *node)
                 rcd_recurring_add ((RCDRecurring *) pull);
         }
     }
+
+ cleanup:
+    xmlFreeDoc (doc);
+}
+
+static void
+rcd_autopull_process_xml (xmlDoc *doc)
+{
+    if (rcd_autopull_xml_contains_unknown_channels (doc)) {
+        rcd_autopull_fetch_channel_list (process_xml_cb, doc);
+    } else {
+        process_xml_cb (doc);
+    }
 }
 
 static void
@@ -953,9 +980,8 @@ rcd_autopull_get_xml_from_file (const char *filename)
                            (RCDRecurringFn) rcd_recurring_remove,
                            NULL);
 
-    rcd_autopull_process_xml (xmlDocGetRootElement (doc));
-
-    xmlFreeDoc (doc);
+    /* rcd_autopull_process_xml is responsible for freeing doc */
+    rcd_autopull_process_xml (doc);
 }
 
 static void
@@ -995,7 +1021,8 @@ rcd_autopull_download_xml (void)
                            (RCDRecurringFn) rcd_recurring_remove,
                            NULL);
 
-    rcd_autopull_process_xml (xmlDocGetRootElement (doc));
+    /* rcd_autopull_process_xml is responsible for freeing doc */
+    rcd_autopull_process_xml (doc);
 
  cleanup:
 
@@ -1006,9 +1033,6 @@ rcd_autopull_download_xml (void)
 
     if (data)
         g_byte_array_free (data, TRUE);
-
-    if (doc)
-        xmlFreeDoc (doc);
 }
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */

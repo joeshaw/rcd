@@ -1,3 +1,22 @@
+2002-09-23  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-autopull.c (rcd_autopull_fetch_all_channels): We don't use
+	the RCDAutopull we were passing in, so that argument has been
+	removed.
+	(rcd_autopull_fetch_channel_list): Added.  Re-fetch the channel
+	list and then call rcd_autopull_fetch_all_channels.
+	(rcd_autopull_xml_contains_unknown_channels): A renamed
+	rcd_autopull_check_xml_for_unknown_channels that returns a
+	boolean.
+	(process_xml_cb): The code that actually processes the autopull
+	XML.  This used to be in rcd_autopull_process_xml, but is now in a
+	callback that can be executed after the channel info is refreshed.
+	(rcd_autopull_process_xml): If the XML contains unknown channels,
+	reload the channel info before proceeding.
+	(rcd_autopull_get_xml_from_file): rcd_autopull_process_xml now takes
+	an xmlDoc, which it frees.
+	(rcd_autopull_download_xml): Ditto.
+
 2002-09-20  Joe Shaw  <joe@ximian.com>
 
 	* rcd-autopull.c (rcd_autopull_resolve_and_transact): Call
