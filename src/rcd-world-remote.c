@@ -105,7 +105,7 @@ rcd_world_remote_assemble (RCWorldService *service, GError **error)
         /* Move past the '?' */
         query_part++;
 
-        if (g_strncasecmp (query_part, "remote_only=1", 15) == 0)
+        if (g_strncasecmp (query_part, "remote_only=1", 13) == 0)
             local = FALSE;
     }
 
@@ -877,9 +877,9 @@ rcd_world_remote_fetch_channels (RCDWorldRemote *remote, gboolean local,
 
         g_set_error (error, RC_ERROR, RC_ERROR,
                      "Invalid channel data");
+        goto cleanup;
     }
 
-    /* If N < 0, then pool will always be NULL */
     if (channel_data.pool != NULL) {
         rcd_transfer_pool_begin (channel_data.pool);
         pending = rcd_transfer_pool_get_pending (channel_data.pool);
@@ -1324,9 +1324,17 @@ rcd_world_remote_fetch (RCDWorldRemote *remote, gboolean local, GError **error)
                                                   data->data, data->len,
                                                   &tmp_error);
         
-    /* We don't want to cache bad data */
     if (tmp_error != NULL) {
+        /* We don't want to cache bad data */
         rcd_cache_entry_invalidate (entry);
+
+        /*
+         * If an error has occurred, we'll need to say that the refresh
+         * is finished.
+         */
+        if (rc_world_is_refreshing (RC_WORLD (remote)))
+            rc_world_refresh_complete (RC_WORLD (remote));
+
         g_propagate_error (error, tmp_error);
     }
 

@@ -1,3 +1,13 @@
+2003-09-15  Joe Shaw  <joe@ximian.com>
+
+	* rcd-world-remote.c (rcd_world_remote_assemble): Check 13 bytes,
+	not 15.
+	(rcd_world_remote_fetch_channels): If the channel data fails,
+	short circuit to the cleanup label.  Remove a comment which no
+	longer applies.
+	(rcd_world_remote_fetch): If we get an error we'll need to call
+	rc_world_refresh_complete() or else the refresh will hang.
+
 2003-09-12  Tambet Ingo  <tambet@ximian.com>
 
 	* rcd-rpc.[ch] (rcd_rpc_get_xmlrpc_registry): Remove. There's no
