@@ -9,8 +9,14 @@ INCLUDES =						\
 	-DMODULEDIR=\""$(rcd_moduledir)"\"		\
 	-DSHAREDIR=\""$(datadir)/rcd"\"			\
 	-DSYSCONFDIR=\""$(sysconfdir)/ximian"\"		\
+	-DHELPERDIR=\""$(rcd_helperdir)"\"		\
 	-DG_LOG_DOMAIN=\"rcd\"				\
 	-Wall
+
+rcd_helperdir = $(libdir)/rcd
+rcd_helper_PROGRAMS = rcd-statvfs
+
+rcd_statvfs_SOURCES = rcd-statvfs.c
 
 sbin_PROGRAMS = rcd
 

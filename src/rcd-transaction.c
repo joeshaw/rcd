@@ -29,6 +29,8 @@
 #include <unistd.h>
 #include <sys/vfs.h>
 #include <sys/statvfs.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #include "rcd-log.h"
 #include "rcd-marshal.h"
@@ -59,6 +61,10 @@ static void rcd_transaction_send_log (RCDTransaction *transaction,
                                       const char     *message);
 
 #define RCD_TRANSACTION_ERROR_DOMAIN rcd_transaction_error_quark()
+
+#define HELPER_WAIT 7
+#define HELPER_TIMEOUT_INTERVAL 100
+#define REAP_TIMEOUT_INTERVAL 30 * 1000 /* 30 seconds */
 
 enum {
     RCD_TRANSACTION_ERROR_DOWNLOAD,
@@ -561,6 +567,10 @@ save_old_packages (RCDTransaction *transaction)
     }
 }
 
+
+
+
+
 /* Ahem */
 static void
 rcd_transaction_transaction (RCDTransaction *transaction)
@@ -636,6 +646,76 @@ rcd_transaction_transaction (RCDTransaction *transaction)
     rc_pending_finished (transaction->transaction_pending, 0);
 
     rcd_transaction_finished (transaction, NULL);
+}
+
+static gboolean
+rcd_transaction_monitor_reap_cb (gpointer data)
+{
+    int status;
+
+    if (waitpid (GPOINTER_TO_INT (data), &status, WNOHANG) != 0) {
+        return FALSE;
+    } else {
+        return TRUE;
+    }
+}
+
+static gboolean
+rcd_transaction_monitor_cb (RCDTransaction *transaction)
+{
+    int status = 0;
+
+    if (waitpid ((int) transaction->stat_pid, &status, WNOHANG) != 0) {
+
+        /* if it exited normally with 0, that's good */
+        if (WIFEXITED (status) && WEXITSTATUS (status) == 0) {
+            rcd_transaction_transaction (transaction);
+        } else {
+            rcd_transaction_failed (transaction, transaction->transaction_pending,
+                                    "Filesystem has stale mounts");
+
+            g_timeout_add (REAP_TIMEOUT_INTERVAL,
+                           (GSourceFunc) rcd_transaction_monitor_reap_cb,
+                           GINT_TO_POINTER (transaction->stat_pid));
+        }
+
+        return FALSE;
+    } else if (time (NULL) - transaction->stat_start > HELPER_WAIT) {
+        rcd_transaction_failed (transaction, transaction->transaction_pending,
+                                "Filesystem has stale mounts");
+
+        g_timeout_add (REAP_TIMEOUT_INTERVAL,
+                       (GSourceFunc) rcd_transaction_monitor_reap_cb,
+                       GINT_TO_POINTER (transaction->stat_pid));
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+static void
+rcd_transaction_check_fs (RCDTransaction *transaction)
+{
+    char *argv[] = { HELPERDIR "/rcd-statvfs", NULL };
+    GError *error = NULL;
+
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Checking for stale mounts...");
+    
+    time (&transaction->stat_start);
+    g_spawn_async (NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL,
+                   &transaction->stat_pid, &error);
+
+    if (error != NULL) {
+        char *msg = g_strdup_printf ("Failed to launch helper: %s", error->message);
+        
+        rc_debug (RC_DEBUG_LEVEL_MESSAGE, msg);
+        g_free (msg);
+        rcd_transaction_transaction (transaction);
+        return;
+    }
+
+    g_timeout_add (HELPER_TIMEOUT_INTERVAL,
+                   (GSourceFunc) rcd_transaction_monitor_cb, transaction);
 }
 
 static void
@@ -769,7 +849,7 @@ rcd_transaction_verification (RCDTransaction *transaction)
         }
     }
 
-    rcd_transaction_transaction (transaction);
+    rcd_transaction_check_fs (transaction);
     return;
 
 ERROR:

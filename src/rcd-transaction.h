@@ -80,6 +80,9 @@ struct _RCDTransaction {
     char *client_host;
     RCDIdentity *client_identity;
 
+    GPid stat_pid;
+    time_t stat_start;
+    
     time_t start_time;
 };
 

@@ -1,3 +1,15 @@
+2005-03-09  James Willcox  <james@ximian.com>
+
+	* Makefile.am:
+	* rcd-statvfs.c: (main): added
+	* rcd-transaction.c: (rcd_transaction_monitor_reap_cb),
+	(rcd_transaction_monitor_cb), (rcd_transaction_check_fs),
+	(rcd_transaction_verification):
+	* rcd-transaction.h:
+
+	Add some machinery for detecting stale nfs volumes, and failing the
+	transaction in that case.
+
 2005-02-23  James Willcox  <james@ximian.com>
 
 	* rcd.c: (shutdown_packman): call rc_verification_cleanup() at shutdown
