@@ -62,6 +62,9 @@
 
 #define SYNTHETIC_PACKAGE_DB_PATH "/var/lib/rcd/synthetic-packages.xml"
 
+static gchar *rcd_executable_name = NULL;
+static int pid_for_messages = 0;
+
 static void
 root_check (void)
 {
@@ -89,8 +92,6 @@ root_check (void)
         exit (-1);
     }
 }
-
-static int pid_for_messages = 0;
 
 static void
 debug_message_handler (const char *str, RCDebugLevel level, gpointer user_data)
@@ -298,7 +299,9 @@ initialize_rc_world (void)
 
     } else {
 
+        rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Loading system packages");
         rc_world_get_system_packages (world);
+        rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Done loading system packages");
         
     }
   
@@ -561,8 +564,6 @@ sighup_handler (int sig_num)
     g_idle_add (rehash_data, NULL);
 } /* sighup_handler */
 
-static gchar *rcd_executable_name = NULL;
-
 static void
 crash_handler (int sig_num)
 {
@@ -587,6 +588,15 @@ crash_handler (int sig_num)
     system (cmd);
     
     exit (1);
+}
+
+static gboolean
+load_distro_info (void)
+{
+    if (rcd_options_get_download_distro_flag ())
+        return rcd_fetch_distro ();
+    else
+        return rc_distro_parse_xml (NULL, 0);
 }
 
 int
@@ -666,9 +676,9 @@ main (int argc, const char **argv)
     if (rcd_prefs_get_require_verified_certificates ())
         soup_set_ssl_ca_file (SHAREDIR "/rcd-ca-bundle.pem");
 
-    /* We have to fetch this before the RCWorld gets initialized. */
-    if (!rcd_fetch_distro ()) {
-        rc_debug (RC_DEBUG_LEVEL_CRITICAL, 
+    /* Load the distribution info */
+    if (!load_distro_info ()) {
+        rc_debug (RC_DEBUG_LEVEL_CRITICAL,
                   "Unable to determine system or distribution type.");
         exit (-1);
     }
@@ -679,8 +689,6 @@ main (int argc, const char **argv)
     if (!rcd_options_get_no_modules_flag ())
         rcd_module_init ();
 
-    initialize_data ();
-    
     /* We can't daemonize any later than this, so hopefully module
        initialization won't be slow. */
     if (rcd_options_get_late_background ()) {
@@ -696,8 +704,15 @@ main (int argc, const char **argv)
         hello ();
     }
 
-    rcd_rpc_server_start ();
+    rcd_rpc_local_server_start ();
 
+    if (rcd_prefs_get_remote_server_enabled ()) {
+        if (!rcd_rpc_remote_server_start ())
+            exit (-1);
+    }
+
+    initialize_data ();
+    
     /* No heartbeat if we have initialized from a dump file. */
     if (rcd_options_get_dump_file () == NULL)
         rcd_heartbeat_start ();

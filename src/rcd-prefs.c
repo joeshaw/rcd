@@ -35,6 +35,7 @@
 #include "gnome-config.h"
 #include "rcd-heartbeat.h"
 #include "rcd-options.h"
+#include "rcd-rpc.h"
 
 #define DEFAULT_CONFIG_FILE SYSCONFDIR "/rcd.conf"
 #define SYNC_CONFIG if (prefs_auto_save) gnome_config_sync_file ((char *) get_config_path (NULL))
@@ -90,7 +91,11 @@ rcd_prefs_get_string (const char *path)
 void
 rcd_prefs_set_string (const char *path, const char *str)
 {
-    gnome_config_set_string (get_config_path (path), str);
+    if (str)
+        gnome_config_set_string (get_config_path (path), str);
+    else
+        gnome_config_clean_key (get_config_path (path));
+
     SYNC_CONFIG;
 }
 
@@ -132,6 +137,24 @@ rcd_prefs_get_remote_server_enabled (void)
         get_config_path ("/Server/remote-enabled=TRUE"));
 } /* rcd_prefs_get_remote_server_enabled */
 
+gboolean
+rcd_prefs_set_remote_server_enabled (gboolean enabled)
+{
+    /* Don't obey the command-line option anymore */
+    rcd_options_reset_remote_disable_flag ();
+
+    if (enabled)
+        rcd_rpc_remote_server_start ();
+    else
+        rcd_rpc_remote_server_stop ();
+
+    gnome_config_set_bool (get_config_path ("/Server/remote-enabled"),
+                           enabled);
+    SYNC_CONFIG;
+
+    return TRUE;
+} /* rcd_prefs_get_remote_server_enabled */
+
 int
 rcd_prefs_get_remote_server_port (void)
 {
@@ -142,6 +165,30 @@ rcd_prefs_get_remote_server_port (void)
 
     return gnome_config_get_int (get_config_path ("/Server/port=505"));
 } /* rcd_prefs_get_remote_server_port */
+
+gboolean
+rcd_prefs_set_remote_server_port (int new_port)
+{
+    int old_port = rcd_prefs_get_remote_server_port ();
+
+    /* Don't obey the command-line option anymore */
+    rcd_options_reset_server_port ();
+
+    /*
+     * Note: We have to sync to disk first, since the remote start call below
+     * will try to fetch this setting.
+     */
+    gnome_config_set_int (get_config_path ("/Server/port"), new_port);
+    SYNC_CONFIG;
+
+    if (new_port != old_port && rcd_prefs_get_remote_server_enabled ()) {
+        /* Restart the remote server on the new port */
+        rcd_rpc_remote_server_stop();
+        rcd_rpc_remote_server_start();
+    }
+
+    return TRUE;
+} /* rcd_prefs_set_remote_server_port */
 
 const char *
 rcd_prefs_get_bind_ipaddress (void)
@@ -159,6 +206,43 @@ rcd_prefs_get_bind_ipaddress (void)
     return ip;
 } /* rcd_prefs_get_bind_ipaddress */
 
+gboolean
+rcd_prefs_set_bind_ipaddress (const char *new_ip)
+{
+    const char *old_ip = rcd_prefs_get_bind_ipaddress ();
+    gboolean diff;
+
+    /* Don't obey the command-line option anymore */
+    rcd_options_reset_bind_ipaddress ();
+
+    /*
+     * Note: We have to sync to disk first, since the remote start call below
+     * will try to fetch this setting.
+     */
+    if (new_ip)
+        gnome_config_set_string (get_config_path ("/Server/bind-ip"), new_ip);
+    else
+        gnome_config_clean_key (get_config_path ("/Server/bind-ip"));
+    SYNC_CONFIG;
+
+    if (old_ip == NULL && new_ip != NULL)
+        diff = TRUE;
+    else if (old_ip != NULL && new_ip == NULL)
+        diff = TRUE;
+    else if (old_ip == NULL && new_ip == NULL)
+        diff = FALSE;
+    else
+        diff = (g_strcasecmp (old_ip, new_ip) != 0);
+
+    if (diff) {
+        /* Restart the remote server on the new IP address */
+        rcd_rpc_remote_server_stop ();
+        rcd_rpc_remote_server_start ();
+    }
+
+    return TRUE;
+}
+
 const char *
 rcd_prefs_get_cache_dir (void)
 {
@@ -172,13 +256,20 @@ rcd_prefs_get_cache_dir (void)
     return cache_dir;
 }
 
-void
+gboolean
 rcd_prefs_set_cache_dir (const char *cache_dir)
 {
+    if (!cache_dir) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING, "Can't set empty cache directory!");
+        return FALSE;
+    }
+
     gnome_config_set_string (get_config_path ("/Cache/directory"), cache_dir);
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Cache dir set: %s", cache_dir);
 
     SYNC_CONFIG;
+
+    return TRUE;
 }
 
 gboolean
@@ -187,7 +278,7 @@ rcd_prefs_get_cache_enabled (void)
     return gnome_config_get_bool (get_config_path ("/Cache/enabled=TRUE"));
 }
 
-void
+gboolean
 rcd_prefs_set_cache_enabled (gboolean enabled)
 {
     gnome_config_set_bool (get_config_path ("/Cache/enabled"), enabled);
@@ -195,6 +286,8 @@ rcd_prefs_set_cache_enabled (gboolean enabled)
               enabled ? "TRUE" : "FALSE");
 
     SYNC_CONFIG;
+
+    return FALSE;
 }
 
 const char *
@@ -210,18 +303,20 @@ rcd_prefs_get_host (void)
     return host;
 } /* rcd_prefs_get_host */
 
-void
+gboolean
 rcd_prefs_set_host (const char *host)
 {
     if (!host) {
         rc_debug (RC_DEBUG_LEVEL_WARNING, "Can't set empty host!");
-        return;
+        return FALSE;
     }
 
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Host URL changed: %s", host);
 
     gnome_config_set_string (get_config_path ("/Network/host"), host);
     SYNC_CONFIG;
+
+    return TRUE;
 } /* rcd_prefs_set_host */
 
 gboolean
@@ -231,7 +326,7 @@ rcd_prefs_get_premium (void)
         get_config_path ("/Network/enable-premium=FALSE"));
 } /* rcd_prefs_get_premium */
 
-void
+gboolean
 rcd_prefs_set_premium (gboolean enabled)
 {
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Premium services %s",
@@ -241,6 +336,8 @@ rcd_prefs_set_premium (gboolean enabled)
         get_config_path ("/Network/enable-premium"), enabled);
 
     SYNC_CONFIG;
+
+    return TRUE;
 } /* rcd_prefs_set_premium */
 
 const char *
@@ -311,7 +408,7 @@ rcd_prefs_get_proxy_url (void)
     return proxy;
 } /* rcd_prefs_get_proxy_url */
 
-void
+gboolean
 rcd_prefs_set_proxy_url (const char *proxy_url)
 {
     if (proxy_url) {
@@ -325,6 +422,8 @@ rcd_prefs_set_proxy_url (const char *proxy_url)
     }
 
     SYNC_CONFIG;
+
+    return TRUE;
 }
 
 const char *
@@ -344,7 +443,7 @@ rcd_prefs_get_proxy_username (void)
     return proxy_username;
 } /* rcd_prefs_get_proxy_username */
 
-void
+gboolean
 rcd_prefs_set_proxy_username (const char *proxy_username)
 {
     if (proxy_username) {
@@ -360,6 +459,8 @@ rcd_prefs_set_proxy_username (const char *proxy_username)
     }
 
     SYNC_CONFIG;
+
+    return TRUE;
 }
 
 const char *
@@ -379,7 +480,7 @@ rcd_prefs_get_proxy_password (void)
     return proxy_password;
 } /* rcd_prefs_get_proxy_password */
 
-void
+gboolean
 rcd_prefs_set_proxy_password (const char *proxy_password)
 {
     if (proxy_password) {
@@ -393,6 +494,8 @@ rcd_prefs_set_proxy_password (const char *proxy_password)
     }
 
     SYNC_CONFIG;
+
+    return TRUE;
 }
 
 gboolean
@@ -401,7 +504,7 @@ rcd_prefs_get_http10_enabled (void)
     return gnome_config_get_bool (get_config_path ("/Network/http10=FALSE"));
 }
 
-void
+gboolean
 rcd_prefs_set_http10_enabled (gboolean enabled)
 {
     gnome_config_set_bool (get_config_path ("/Network/http10"), enabled);
@@ -409,6 +512,8 @@ rcd_prefs_set_http10_enabled (gboolean enabled)
               enabled ? "TRUE" : "FALSE");
 
     SYNC_CONFIG;
+
+    return TRUE;
 }
 
 gboolean
@@ -423,7 +528,7 @@ rcd_prefs_get_require_verified_certificates (void)
     return enabled;
 }
 
-void
+gboolean
 rcd_prefs_set_require_verified_certificates (gboolean enabled)
 {
     gnome_config_set_bool (get_config_path ("/Network/require-verified-certificates"), enabled);
@@ -434,6 +539,8 @@ rcd_prefs_set_require_verified_certificates (gboolean enabled)
               enabled ? "enabled" : "disabled");
 
     SYNC_CONFIG;
+
+    return TRUE;
 }
 
 guint32
@@ -445,7 +552,7 @@ rcd_prefs_get_heartbeat_interval (void)
 } /* rcd_prefs_get_heartbeat_interval */
 
 #define HEARTBEAT_MINIMUM 1800
-void
+gboolean
 rcd_prefs_set_heartbeat_interval (guint32 interval)
 {
     guint32 old_interval;
@@ -454,7 +561,7 @@ rcd_prefs_set_heartbeat_interval (guint32 interval)
         rc_debug (RC_DEBUG_LEVEL_WARNING,
                   "Heartbeat frequencies less than %d are not allowed.",
                   HEARTBEAT_MINIMUM);
-        return;
+        return FALSE;
     }
 
     old_interval = rcd_prefs_get_heartbeat_interval ();
@@ -471,6 +578,8 @@ rcd_prefs_set_heartbeat_interval (guint32 interval)
 
     if (!old_interval && interval)
         rcd_heartbeat_start ();
+
+    return TRUE;
 }
 
 int
@@ -480,7 +589,7 @@ rcd_prefs_get_max_downloads (void)
         get_config_path ("/Network/max-downloads=5"));
 } /* rcd_prefs_get_max_downloads */
 
-void
+gboolean
 rcd_prefs_set_max_downloads (int max_downloads)
 {
     if (max_downloads < 0)
@@ -490,6 +599,8 @@ rcd_prefs_set_max_downloads (int max_downloads)
         get_config_path ("/Network/max-downloads"), max_downloads);
 
     SYNC_CONFIG;
+
+    return TRUE;
 } /* rcd_prefs_set_max_downloads */
 
 gboolean
@@ -499,7 +610,7 @@ rcd_prefs_get_require_signed_packages (void)
         get_config_path ("/System/require-signatures=TRUE"));
 } /* rcd_prefs_get_require_signed_packages */
 
-void
+gboolean
 rcd_prefs_set_require_signed_packages (gboolean enabled)
 {
     gnome_config_set_bool (
@@ -508,6 +619,8 @@ rcd_prefs_set_require_signed_packages (gboolean enabled)
               enabled ? "TRUE" : "FALSE");
 
     SYNC_CONFIG;
+
+    return TRUE;
 } /* rcd_prefs_set_require_signed_packages */
 
 gint
@@ -523,18 +636,17 @@ rcd_prefs_get_debug_level (void)
         get_config_path ("/System/debug-level=4"));
 } /* rcd_prefs_get_debug_level */
 
-void
+gboolean
 rcd_prefs_set_debug_level (gint level)
 {
-    /* Command-line debug level option */
-    int debug_level = rcd_options_get_debug_level ();
-
     /* Don't obey the command-line option anymore */
-    debug_level = -1;
+    rcd_options_reset_debug_level ();
 
     gnome_config_set_int (
         get_config_path ("/System/debug-level"), level);
     SYNC_CONFIG;
+
+    return TRUE;
 } /* rcd_prefs_set_debug_level */
 
 gint
@@ -550,19 +662,18 @@ rcd_prefs_get_syslog_level (void)
         get_config_path ("/System/syslog-level=4"));
 } /* rcd_prefs_get_syslog_level */
 
-void
+gboolean
 rcd_prefs_set_syslog_level (gint level)
 {
-    /* Command-line debug level option */
-    int syslog_level = rcd_options_get_syslog_level ();
-
     /* Don't obey the command-line option anymore */
-    syslog_level = -1;
+    rcd_options_reset_syslog_level ();
 
     gnome_config_set_int (
         get_config_path ("/System/syslog-level"), level);
 
     SYNC_CONFIG;
+
+    return TRUE;
 } /* rcd_prefs_set_syslog_level */
 
 gboolean
@@ -572,13 +683,15 @@ rcd_prefs_get_cache_cleanup_enabled (void)
         get_config_path ("/System/cache-cleanup=TRUE"));
 }
 
-void
+gboolean
 rcd_prefs_set_cache_cleanup_enabled (gboolean enabled)
 {
     gnome_config_set_bool (
         get_config_path ("/System/cache-cleanup"), enabled);
 
     SYNC_CONFIG;
+
+    return TRUE;
 }
 
 gint
@@ -588,7 +701,7 @@ rcd_prefs_get_cache_max_age_in_days (void)
         get_config_path ("/System/cache-age-in-days=30"));
 }
 
-void
+gboolean
 rcd_prefs_set_cache_max_age_in_days (gint days)
 {
     if (days < 0)
@@ -598,6 +711,8 @@ rcd_prefs_set_cache_max_age_in_days (gint days)
         get_config_path ("/System/cache-age-in-days"), days);
 
     SYNC_CONFIG;
+
+    return TRUE;
 }
 
 gint
@@ -607,7 +722,7 @@ rcd_prefs_get_cache_max_size_in_mb (void)
         get_config_path ("/System/cache-size-in-mb=300"));
 }
 
-void
+gboolean
 rcd_prefs_set_cache_max_size_in_mb (gint size)
 {
     if (size < 0)
@@ -617,6 +732,8 @@ rcd_prefs_set_cache_max_size_in_mb (gint size)
         get_config_path ("/System/cache-size-in-mb"), size);
 
     SYNC_CONFIG;
+
+    return TRUE;
 }
 
 gboolean
@@ -625,7 +742,7 @@ rcd_prefs_get_rollback (void)
     return gnome_config_get_bool (get_config_path ("/System/rollback=FALSE"));
 }
 
-void
+gboolean
 rcd_prefs_set_rollback (gboolean enabled)
 {
     gnome_config_set_bool (get_config_path ("/System/rollback"), enabled);
@@ -633,6 +750,8 @@ rcd_prefs_set_rollback (gboolean enabled)
               enabled ? "TRUE" : "FALSE");
 
     SYNC_CONFIG;
+
+    return TRUE;
 }
 
 const char *

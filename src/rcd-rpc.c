@@ -58,6 +58,7 @@ typedef struct {
     xmlrpc_value *param_array;
 } RCDRPCQueueItem;
 
+static SoupServer *soup_server = NULL;
 static xmlrpc_registry *registry = NULL;
 static GHashTable *method_info_hash = NULL;
 static RCDRPCMethodData *current_method_data = NULL;
@@ -398,16 +399,6 @@ soup_auth_callback (SoupServerAuthContext *auth_ctx,
     return TRUE;
 } /* auth_callback */
 
-static void
-soup_shutdown_cb (gpointer user_data)
-{
-    SoupServer *server = user_data;
-
-    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Shutting down HTTP server");
-
-    soup_server_unref (server);
-} /* soup_shutdown_cb */
-
 RCDRPCMethodData *
 rcd_rpc_get_method_data (void)
 {
@@ -459,59 +450,77 @@ rcd_rpc_register_method(const char   *method_name,
 } /* rcd_rpc_register_method */
 
 void
-rcd_rpc_server_start (void)
+rcd_rpc_local_server_start (void)
 {
-    SoupServer *server;
-    SoupServerAuthContext auth_ctx = { 0 };
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Starting local server");
 
-    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Starting server");
-
-    if (rcd_prefs_get_remote_server_enabled ()) {
-        int port = rcd_prefs_get_remote_server_port ();
-        const char *bind_ip;
-
-        soup_set_ssl_cert_files(SHAREDIR "/rcd.pem",
-                                SHAREDIR "/rcd.pem");
-
-        bind_ip = rcd_prefs_get_bind_ipaddress ();
-
-        if (bind_ip) {
-            server = soup_server_new_with_host (bind_ip,
-                                                SOUP_PROTOCOL_HTTPS,
-                                                port);
-        }
-        else
-            server = soup_server_new(SOUP_PROTOCOL_HTTPS, port);
-
-        if (!server) {
-            rc_debug (RC_DEBUG_LEVEL_ERROR, "Could not start RPC server on port %d", port);
-            rc_debug (RC_DEBUG_LEVEL_ERROR, "(This probably means that you're running not as root and not using");
-            rc_debug (RC_DEBUG_LEVEL_ERROR, "a non-privileged port, or another rcd process is already running.)");
-            exit (-1);
-        }
-
-        auth_ctx.types = SOUP_AUTH_TYPE_DIGEST;
-        auth_ctx.callback = soup_auth_callback;
-        auth_ctx.digest_info.realm = "RCD";
-        auth_ctx.digest_info.allow_algorithms = SOUP_ALGORITHM_MD5;
-        auth_ctx.digest_info.force_integrity = FALSE;
-        
-        soup_server_register(
-            server, "/RPC2", &auth_ctx, soup_rpc_callback, NULL, NULL);
-        soup_server_register(
-            server, NULL, NULL, soup_default_callback, NULL, NULL);
-        
-        rcd_shutdown_add_handler (soup_shutdown_cb, server);
-        
-        soup_server_run_async(server);
-        soup_server_unref (server);
-    }
-
-    if (rcd_unix_server_run_async(unix_rpc_callback)) {
-        rc_debug (RC_DEBUG_LEVEL_ERROR, "Unable to listen for local connections.");
+    if (rcd_unix_server_run_async (unix_rpc_callback)) {
+        rc_debug (RC_DEBUG_LEVEL_ERROR,
+                  "Unable to listen for local connections.");
         exit (-1);
     }
-} /* rcd_rpc_server_start */
+}
+
+gboolean
+rcd_rpc_remote_server_start (void)
+{
+    SoupServerAuthContext auth_ctx = { 0 };
+    int port = rcd_prefs_get_remote_server_port ();
+    const char *bind_ip;
+
+    if (soup_server != NULL)
+        return TRUE; /* FIXME? */
+
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Starting remote server");
+
+    soup_set_ssl_cert_files(SHAREDIR "/rcd.pem",
+                            SHAREDIR "/rcd.pem");
+
+    bind_ip = rcd_prefs_get_bind_ipaddress ();
+
+    if (bind_ip) {
+        soup_server = soup_server_new_with_host (bind_ip,
+                                                 SOUP_PROTOCOL_HTTPS,
+                                                 port);
+    }
+    else
+        soup_server = soup_server_new (SOUP_PROTOCOL_HTTPS, port);
+
+    if (!soup_server) {
+        rc_debug (RC_DEBUG_LEVEL_ERROR, "Could not start RPC server on port %d", port);
+        rc_debug (RC_DEBUG_LEVEL_ERROR, "(This probably means that you're running not as root and not using");
+        rc_debug (RC_DEBUG_LEVEL_ERROR, "a non-privileged port, or another rcd process is already running.)");
+        return FALSE;
+    }
+
+    auth_ctx.types = SOUP_AUTH_TYPE_DIGEST;
+    auth_ctx.callback = soup_auth_callback;
+    auth_ctx.digest_info.realm = "RCD";
+    auth_ctx.digest_info.allow_algorithms = SOUP_ALGORITHM_MD5;
+    auth_ctx.digest_info.force_integrity = FALSE;
+        
+    soup_server_register (soup_server, "/RPC2", &auth_ctx,
+                          soup_rpc_callback, NULL, NULL);
+    soup_server_register (soup_server, NULL, NULL,
+                          soup_default_callback, NULL, NULL);
+        
+    soup_server_run_async (soup_server);
+    soup_server_unref (soup_server);
+
+    return TRUE;
+}
+
+void
+rcd_rpc_remote_server_stop (void)
+{
+    if (!soup_server)
+        return;
+
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Shutting down remote server");
+
+    soup_server_unref (soup_server);
+    soup_server = NULL;
+}
 
 static void
 pop_queue_cb (gpointer user_data)
@@ -524,6 +533,12 @@ pop_queue_cb (gpointer user_data)
         rcd_rpc_queue_pop (&env);
     }
 }
+
+static void
+soup_shutdown_cb (gpointer user_data)
+{
+    rcd_rpc_remote_server_stop ();
+} /* soup_shutdown_cb */
 
 void
 rcd_rpc_init(void)
@@ -553,4 +568,7 @@ rcd_rpc_init(void)
 
     /* Register a heartbeat function for popping items off the queue */
     rcd_heartbeat_register_func (pop_queue_cb, NULL);
+
+    /* Register a shutdown function for the soup server (if it's started) */
+    rcd_shutdown_add_handler (soup_shutdown_cb, NULL);
 } /* rcd_rpc_init */

@@ -215,7 +215,11 @@ prefs_set_pref (xmlrpc_env   *env,
         if (env->fault_occurred)
             return NULL;
 
-        pt.set_pref_func (v);
+        if (!pt.set_pref_func (v)) {
+            xmlrpc_env_set_fault (env, RCD_RPC_FAULT_CANT_SET_PREFERENCE,
+                                  "Unable to set preference: invalid setting");
+            return NULL;
+        }
 
         return xmlrpc_build_value (env, "i", 0);
     }
@@ -490,12 +494,33 @@ rcd_rpc_prefs_register_methods (void)
         (RCDPrefGetFunc) rcd_prefs_get_syslog_level, "view",
         (RCDPrefSetFunc) rcd_prefs_set_syslog_level, "superuser");
 
+    rcd_rpc_prefs_register_pref (
+        "remote-enabled", RCD_PREF_BOOLEAN,
+        "Allow clients to connect remotely to this daemon",
+        "Advanced",
+        (RCDPrefGetFunc) rcd_prefs_get_remote_server_enabled, "view",
+        (RCDPrefSetFunc) rcd_prefs_set_remote_server_enabled, "superuser");
+
+    rcd_rpc_prefs_register_pref (
+        "remote-port", RCD_PREF_INT,
+        "Port to listen on for remote clients",
+        "Advanced",
+        (RCDPrefGetFunc) rcd_prefs_get_remote_server_port, "view",
+        (RCDPrefSetFunc) rcd_prefs_set_remote_server_port, "superuser");
+
+    rcd_rpc_prefs_register_pref (
+        "bind-ip", RCD_PREF_STRING,
+        "IP address to bind to (empty means \"all\"",
+        "Advanced",
+        (RCDPrefGetFunc) rcd_prefs_get_bind_ipaddress, "view",
+        (RCDPrefSetFunc) rcd_prefs_set_bind_ipaddress, "superuser");
+
     world = rc_get_world ();
     packman = rc_world_get_packman (world);
     if (rc_packman_get_capabilities (packman) & RC_PACKMAN_CAP_ROLLBACK) {
         rcd_rpc_prefs_register_pref (
             "rollback", RCD_PREF_BOOLEAN,
-            "Save transaction history and changed files, allowing undo/rollback",
+            "Save transaction history and changed files, allowing rollback",
             "Advanced",
             (RCDPrefGetFunc) rcd_prefs_get_rollback, "view",
             (RCDPrefSetFunc) rcd_prefs_set_rollback, "superuser");

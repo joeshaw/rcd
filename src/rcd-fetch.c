@@ -289,15 +289,14 @@ rcd_fetch_distro (void)
 
     if (rcd_transfer_get_error (t)) {
         rc_debug (RC_DEBUG_LEVEL_CRITICAL,
-                  "Unable to download supported distribution info; "
-                  "falling back: %s", rcd_transfer_get_error_string (t));
+                  "Unable to download supported distribution info: %s",
+                  rcd_transfer_get_error_string (t));
         goto cleanup;
     }
 
     if (!rc_distro_parse_xml (data->data, data->len)) {
         rc_debug (RC_DEBUG_LEVEL_CRITICAL,
-                  "Unable to parse supported distribution info; "
-                  "falling back");
+                  "Unable to parse supported distribution info");
         goto cleanup;
     }
     else
@@ -309,15 +308,7 @@ cleanup:
     if (data)
         g_byte_array_free (data, TRUE);
 
-    /* Fall back onto compiled in distro info. */
-    if (!successful) {
-        if (rc_distro_parse_xml (NULL, 0))
-            return TRUE;
-        else
-            return FALSE;
-    }
-    else
-        return TRUE;
+    return successful;
 } /* rcd_fetch_distro */
 
 static char *

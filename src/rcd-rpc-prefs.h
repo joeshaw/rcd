@@ -29,7 +29,7 @@
 #include <glib.h>
 
 typedef gpointer      (*RCDPrefGetFunc) (void);
-typedef void          (*RCDPrefSetFunc) (gpointer);
+typedef gboolean      (*RCDPrefSetFunc) (gpointer);
 
 typedef enum _RCDPrefType RCDPrefType;
 

@@ -39,6 +39,7 @@ static const char **rcd_argv = NULL;
 /* global variables related to option parsing */
 static char *config_file = NULL;
 static gboolean non_daemon_flag = FALSE;
+static gboolean download_distro_flag = FALSE;
 static gboolean late_background = FALSE;
 static gboolean non_root_flag = FALSE;
 static gboolean no_network_flag = FALSE;
@@ -63,9 +64,15 @@ rcd_options_parse (int argc, const char **argv)
         { "non-daemon", 'n', POPT_ARG_NONE, &non_daemon_flag, 0,
           "Don't run the daemon in the background.", NULL },
 
+#if 0
+        /* This doesn't work right now, let's not even offer it */
         { "late-background", '\0', POPT_ARG_NONE, &late_background, 0,
           "Run the daemon in the background, but not until it is ready "
           "to accept connections.", NULL },
+#endif
+
+        { "download-distro", 'd', POPT_ARG_NONE, &download_distro_flag, 0,
+          "Download updated distribution information from the server", NULL },
 
         { "allow-non-root", '\0', POPT_ARG_NONE, &non_root_flag, 0,
           "Allow the daemon to be run as a user other than root.", NULL },
@@ -141,6 +148,12 @@ rcd_options_get_non_daemon_flag (void)
 }
 
 gboolean
+rcd_options_get_download_distro_flag (void)
+{
+    return download_distro_flag;
+}
+
+gboolean
 rcd_options_get_late_background (void)
 {
     return late_background;
@@ -205,3 +218,34 @@ rcd_options_get_show_version (void)
 {
     return show_version;
 }
+
+void
+rcd_options_reset_bind_ipaddress (void)
+{
+    bind_ipaddress = NULL;
+}
+
+void
+rcd_options_reset_remote_disable_flag (void)
+{
+    remote_disable_flag = FALSE;
+}
+
+void
+rcd_options_reset_server_port (void)
+{
+    server_port = 0;
+}
+
+void
+rcd_options_reset_debug_level (void)
+{
+    debug_level = -1;
+}
+
+void
+rcd_options_reset_syslog_level (void)
+{
+    syslog_level = -1;
+}
+

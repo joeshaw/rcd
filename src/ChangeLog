@@ -1,3 +1,61 @@
+2003-06-12  Joe Shaw  <joe@ximian.com>
+
+	* rcd-fetch.c (rcd_fetch_distro): Don't fallback onto internal
+	data anymore.
+
+	* rcd-module.h: Bump up the module major version before I forget.
+
+	* rcd-options.c: Add a --donwload-distro/-d option which instructs
+	the daemon to download the distributions.xml file from the
+	server.  (Mainly useful for RCE customers with custom distros)
+	(rcd_options_get_download_distro_flag): Added.
+	(rcd_options_reset_*): Added.  Resets the command-line options for
+	when the user uses a pref to change the operation of the running
+	daemon.
+
+	* rcd-prefs.c (rcd_prefs_set_string): If the value is NULL, unset
+	the key.
+	(rcd_prefs_set_*): Make these return a gboolean indicating success
+	or failure.
+	(rcd_prefs_set_cache_dir): Do not allow an empty cache directory
+	(rcd_prefs_set_debug_level, rcd_prefs_set_syslog_level): Reset the
+	command-line option if this is called.
+	(rcd_prefs_set_remote_server_enabled): Added.  Starts or stops the
+	remote server.
+	(rcd_prefs_set_remote_server_port): Added.  Sets the port for the
+	remote server and restarts it on the new port.
+	(rcd_prefs_set_bind_ipaddress): Added.  Sets the IP address for
+	the remote server to bind to and restarts it on that IP.
+
+	* rcd-rpc-prefs.c (prefs_set_pref): Check the return value from
+	the set function and emit a fault if it returns FALSE.
+	(rcd_rpc_prefs_register_methods): Register the remote-enabled,
+	remote-port, and bind-ip prefs.
+
+	* rcd-rpc-util.h: Add a new fault,
+	RCD_RPC_FAULT_CANT_SET_PREFERENCE (-616).
+
+	* rcd-rpc.c (rcd_rpc_server_start): Split this out into two
+	functions, one for the local server and one for the remote server.
+	(rcd_rpc_remote_server_start): Keep around a global static
+	SoupServer so it can be properly stopped.  Return a boolean
+	indicating success.
+	(rcd_rpc_remote_server_stop): And stop it here.
+	(rcd_rpc_init): Add a shutdown handler for the remote server here
+	(if running) instead of in rcd_rpc_remote_server_start().
+
+	* rcd-shutdown.c (do_shutdown): A little more debugging info.
+
+	* rcd.c (initialize_rc_world): Wrap the call to
+	rc_world_get_system_packages() with some rc_debug() so it's easier
+	to pinpoint when rpmlib hangs due to a stale lock.
+	(load_distro_info): Added.  Either downloads the distro info and
+	loads it (if -d is set) or just loads the internal data.
+	(main): Don't initialize data until after the RPC server has
+	started, so we can start listening to requests immediately.  Fixes
+	#44413, #43880.  Also always start the local server but only start
+	the remote server if enabled.
+
 2003-06-04  Joe Shaw  <joe@ximian.com>
 
 	* rcd-transfer-file.c (file_abort): Check to make sure

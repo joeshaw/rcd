@@ -122,6 +122,8 @@ do_shutdown (gboolean restart)
         return;
     }
 
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Shutting down daemon...");
+
     if (shutting_down) {
         rc_debug (RC_DEBUG_LEVEL_WARNING,
                   "Shut-down request received while shut-down is already in progress!");

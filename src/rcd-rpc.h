@@ -49,7 +49,10 @@ int rcd_rpc_register_method (const char        *method_name,
                              const char        *privilege_string,
                              gpointer           user_data);
 
-void rcd_rpc_server_start (void);
+void     rcd_rpc_local_server_start  (void);
+gboolean rcd_rpc_remote_server_start (void);
+void     rcd_rpc_remote_server_stop  (void);
+
 void rcd_rpc_init (void);
 
 #endif /* __RCD_RPC_H__ */
