@@ -402,38 +402,6 @@ system_flush_cache (xmlrpc_env   *env,
     return xmlrpc_build_value (env, "i", 0);
 }
 
-static xmlrpc_value *
-system_queue_method (xmlrpc_env   *env,
-                     xmlrpc_value *param_array,
-                     void         *user_data)
-{
-    int size, i;
-
-    size = xmlrpc_array_size (env, param_array);
-    XMLRPC_FAIL_IF_FAULT (env);
-
-    for (i = 0; i < size; i++) {
-        xmlrpc_value *value;
-        char *method_name;
-        xmlrpc_value *child_param_array;
-
-        value = xmlrpc_array_get_item (env, param_array, i);
-        XMLRPC_FAIL_IF_FAULT (env);
-
-        xmlrpc_parse_value (env, value, "(sV)",
-                            &method_name, &child_param_array);
-        XMLRPC_FAIL_IF_FAULT (env);
-
-        rcd_rpc_queue_push (method_name, child_param_array);
-    }
-
-cleanup:
-    if (env->fault_occurred)
-        return NULL;
-    else
-        return xmlrpc_build_value (env, "i", 0);
-}
-
 typedef struct {
     xmlrpc_env *env;
     xmlrpc_value *result;
@@ -600,9 +568,6 @@ rcd_rpc_system_register_methods(void)
     rcd_rpc_register_method ("rcd.system.flush_cache",
                              system_flush_cache,
                              "superuser", NULL);
-    rcd_rpc_register_method ("rcd.system.queue_method",
-                             system_queue_method,
-                             "", NULL);
     rcd_rpc_register_method ("rcd.system.list_services",
                              system_list_services,
                              "view", NULL);

@@ -1244,13 +1244,6 @@ transaction_xml (xmlrpc_env     *env,
             rcd_prefs_get_mid());
     XMLRPC_FAIL_IF_FAULT (env);
 
-#if 0
-    RCD_XMLRPC_STRUCT_SET_STRING(
-            env, xtrans, "distro",
-            rc_distro_get_target());
-    XMLRPC_FAIL_IF_FAULT (env);
-#endif
-
     RCD_XMLRPC_STRUCT_SET_INT(
             env, xtrans, "dry_run",
             transaction->flags & RCD_TRANSACTION_FLAGS_DRY_RUN ? 1 : 0);

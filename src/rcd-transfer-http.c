@@ -502,10 +502,6 @@ http_open (RCDTransfer *t)
                     "If-None-Match", entity_tag);
             }
         }
-#if 0
-        else
-            protocol->entry = rcd_cache_entry_new (t->cache, t->url);
-#endif
 
         soup_message_add_header_handler (
             message, "ETag", SOUP_HANDLER_PRE_BODY,

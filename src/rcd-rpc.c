@@ -53,67 +53,10 @@ typedef struct {
     RCDPrivileges  req_privs;
 } RCDRPCMethodInfo;
 
-typedef struct {
-    char         *method_name;
-    xmlrpc_value *param_array;
-} RCDRPCQueueItem;
-
 static SoupServer *soup_server = NULL;
 static xmlrpc_registry *registry = NULL;
 static GHashTable *method_info_hash = NULL;
 static RCDRPCMethodData *current_method_data = NULL;
-static GSList *queue_items = NULL;
-
-gboolean
-rcd_rpc_queue_is_empty (void)
-{
-    return queue_items == NULL;
-}
-
-void
-rcd_rpc_queue_push (const char *method_name, xmlrpc_value *param_array)
-{
-    RCDRPCQueueItem *item;
-
-    g_return_if_fail (method_name != NULL);
-    g_return_if_fail (param_array != NULL);
-
-    item = g_new0 (RCDRPCQueueItem, 1);
-    item->method_name = g_strdup (method_name);
-    item->param_array = param_array;
-
-    xmlrpc_INCREF (param_array);
-
-    queue_items = g_slist_append (queue_items, item);
-}
-
-xmlrpc_value *
-rcd_rpc_queue_pop (xmlrpc_env *env)
-{
-    RCDRPCQueueItem *item;
-    xmlrpc_value *result;
-
-    g_return_val_if_fail (rcd_rpc_queue_is_empty () == FALSE, NULL);
-
-    item = (RCDRPCQueueItem *) queue_items->data;
-    queue_items = g_slist_delete_link (queue_items, queue_items);
-
-    /* Commented out because this requires an xmlrpc-c patch */
-#if 0
-    result = xmlrpc_registry_dispatch_call (env,
-                                            registry,
-                                            item->method_name,
-                                            item->param_array);
-#else
-    result = NULL;
-#endif
-
-    xmlrpc_DECREF (item->param_array);
-    g_free (item->method_name);
-    g_free (item);
-
-    return result;
-}
 
 static xmlrpc_mem_block *
 serialize_fault (int fault_code, const char *fault_string)
@@ -529,18 +472,6 @@ rcd_rpc_remote_server_stop (void)
 }
 
 static void
-pop_queue_cb (gpointer user_data)
-{
-    while (!rcd_rpc_queue_is_empty ()) {
-        xmlrpc_env env;
-
-        xmlrpc_env_init (&env);
-
-        rcd_rpc_queue_pop (&env);
-    }
-}
-
-static void
 soup_shutdown_cb (gpointer user_data)
 {
     rcd_rpc_remote_server_stop ();
@@ -571,9 +502,6 @@ rcd_rpc_init(void)
 
     /* Register the basic RPC calls (ping, querying for modules, etc.) */
     rcd_rpc_system_register_methods();
-
-    /* Register a heartbeat function for popping items off the queue */
-    rcd_heartbeat_register_func (pop_queue_cb, NULL);
 
     /* Register a shutdown function for the soup server (if it's started) */
     rcd_shutdown_add_handler (soup_shutdown_cb, NULL);
