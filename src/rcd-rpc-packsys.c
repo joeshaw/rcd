@@ -307,14 +307,10 @@ build_updates_list (RCPackage *old,
     if (info->failed)
         return;
 
-#if 0
-    /* Bogus test logging */
-    {
-        RCDLogEntry *foo = rcd_log_entry_new ("foo", "bar");
-        rcd_log_entry_set_upgrade (foo, old, nuevo);
-        rcd_log (foo);
-    }
-#endif
+    /* Filter out updates in unsubscribed channels. */
+    if (nuevo->channel
+        && ! rc_channel_subscribed (nuevo->channel))
+        return;
 
     old_xmlrpc = rcd_rc_package_to_xmlrpc (old, info->env);
     new_xmlrpc = rcd_rc_package_to_xmlrpc (nuevo, info->env);
@@ -388,6 +384,72 @@ packsys_get_updates (xmlrpc_env   *env,
         return NULL;
 
     return update_array;
+}
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+struct UpdateSummaryInfo {
+    int total;
+    int by_importance[RC_IMPORTANCE_LAST];
+};
+
+static void
+count_updates (RCPackage *old,
+               RCPackage *nuevo,
+               gpointer   user_data)
+{
+    struct UpdateSummaryInfo *info = user_data;
+    RCPackageUpdate *update;
+
+    /* Filter out updates in unsubscribed channels. */
+    if (nuevo->channel
+        && ! rc_channel_subscribed (nuevo->channel))
+        return;
+
+    update = rc_package_get_latest_update (nuevo);
+
+    if (update) {
+        ++info->total;
+        ++info->by_importance[update->importance];
+    }
+}
+
+static xmlrpc_value *
+packsys_update_summary (xmlrpc_env   *env,
+                        xmlrpc_value *param_array,
+                        void         *user_data)
+{
+    struct UpdateSummaryInfo info;
+    RCWorld *world = user_data;
+    xmlrpc_value *summary;
+    int i;
+
+    summary = xmlrpc_struct_new (env);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    info.total = 0;
+    for (i = 0; i < RC_IMPORTANCE_LAST; ++i)
+        info.by_importance[i] = 0;
+
+    rc_world_foreach_system_upgrade (world,
+                                     count_updates,
+                                     &info);
+
+    RCD_XMLRPC_STRUCT_SET_INT (env, summary, "total", info.total);
+
+    for (i = 0; i < RC_IMPORTANCE_LAST; ++i) {
+        if (info.by_importance[i] > 0) {
+            RCD_XMLRPC_STRUCT_SET_INT (env, summary,
+                                       (char *) rc_package_importance_to_string ((RCPackageImportance) i),
+                                       info.by_importance[i]);
+        }
+    }
+
+ cleanup:
+    if (env->fault_occurred)
+        return NULL;
+
+    return summary;
 }
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
@@ -1401,6 +1463,7 @@ packsys_dump(xmlrpc_env   *env,
     xml = rc_world_dump (world);
 
     value = xmlrpc_build_value (env, "s", xml);
+    XMLRPC_FAIL_IF_FAULT (env);
     g_free (xml);
 
 cleanup:
@@ -1432,6 +1495,11 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
 
     rcd_rpc_register_method("rcd.packsys.get_updates",
                             packsys_get_updates,
+                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            world);
+
+    rcd_rpc_register_method("rcd.packsys.update_summary",
+                            packsys_update_summary,
                             rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
                             world);
 

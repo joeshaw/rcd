@@ -3,16 +3,9 @@
 Compress the enormous XML spit out by rc_world_dump() before sending it
 over the wire, and decompress it in the rc command-line client.
 
-Filter out updates for unsubscribed channels on daemon side.
-
 Need to send more information down the wire when
 installing/updating/removing about why certain packages are being
 pulled in, removed, etc.
-
-There should be a get_update_count (or whatever) method that returns
-only the number of pending updates, possibly broken out by importance.
-This way we can make a soothingly-throbbing update-alert panel applet
-and not need to pass big chunks of data between it and the daemon.
 
 We need to implement calls for "solvedeps", "whatprovides",
 "whatrequires", etc. which take dependency dealies (package names,

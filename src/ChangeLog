@@ -1,3 +1,14 @@
+2002-07-10  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-rpc-packsys.c (build_updates_list): Filter out updates to
+	unsubscribed channels.
+	(packsys_update_summary): Added.  An XML-RPC method that returns a
+	summary of the number of available updates.  This allows us to
+	quickly check for updates w/o having to send all of the update
+	information across the wire.
+	(rcd_rpc_packsys_register_methods): Register the
+	rcd.packsys.update_summary method.
+
 2002-07-09  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-packsys.c (packsys_dump): Added.  Takes an XML dump of
