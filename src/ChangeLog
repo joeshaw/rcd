@@ -1,5 +1,11 @@
 2002-08-02  Joe Shaw  <joe@ximian.com>
 
+	* rcd-transfer-http.c (http_debug_pre_handler, http_debug): More
+	output!
+	(http_open): Actually include the request body in the message.
+
+2002-08-02  Joe Shaw  <joe@ximian.com>
+
 	* rcd-fetch.c (rcd_fetch_register): Don't do any checks here; do
 	them all in rcd.c.  Call uname() to get the hostname, and send it
 	along on the query string with the orgtoken.  Use the standard

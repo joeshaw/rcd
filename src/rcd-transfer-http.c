@@ -65,6 +65,8 @@ print_header (gpointer name, gpointer value, gpointer user_data)
 static void
 http_debug_pre_handler (SoupMessage *message, gpointer user_data)
 {
+    rc_debug (RC_DEBUG_LEVEL_DEBUG, "[%p]: Receiving response.", message);
+
     rc_debug (RC_DEBUG_LEVEL_DEBUG,
               "[%p]: %d %s",
               message,
@@ -123,7 +125,9 @@ http_debug (SoupMessage *message)
                               http_debug_pre_handler, NULL);
     soup_message_add_handler (message, SOUP_HANDLER_PRE_BODY,
                               http_debug_post_handler, NULL);
-} /* http_debug_request */
+    
+    rc_debug (RC_DEBUG_LEVEL_DEBUG, "[%p]: Request sent.", message);
+} /* http_debug */
 
 static void
 map_soup_error_to_rcd_transfer_error (SoupMessage *message, RCDTransfer *t)
@@ -403,7 +407,12 @@ http_open (RCDTransfer *t)
         return -1;
     }
     
-    protocol->message = message = soup_message_new (context, protocol->method);
+    protocol->message = message = soup_message_new_full (
+        context,
+        protocol->method,
+        SOUP_BUFFER_USER_OWNED,
+        protocol->request_body,
+        protocol->request_length);
 
     /* Set up the proxy */
     proxy_url = rcd_prefs_get_proxy ();
