@@ -4,5 +4,3 @@ Daemonize the daemon.
 Turn on authentication by default.
 
 Need docs and a man page.
-
-The transact step needs to verify the packages' signatures.
