@@ -5,3 +5,5 @@
 Makefile.in
 Makefile
 rcd
+rcd-marshal.c
+rcd-marshal.h
