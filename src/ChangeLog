@@ -1,5 +1,11 @@
 2003-03-17  Ian Peters  <itp@ximian.com>
 
+	* rcd-transaction.c (transact_step_cb): move the update of the
+	pending object to after the addition of the corresponding message,
+	so that update signal handlers will see the appropriate message.
+
+2003-03-17  Ian Peters  <itp@ximian.com>
+
 	* rcd-pending.c, rcd-pending.h: add a message signal that is
 	emitted whenever a new message is added to an RCDPending object.
 

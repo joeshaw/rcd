@@ -393,9 +393,6 @@ transact_step_cb(RCPackman *packman,
 
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Transaction step.  seqno %d", seqno);
 
-    rcd_pending_update_by_size (status->transaction_pending, seqno - 1,
-                                status->total_transaction_steps);
-
     status->transaction_size = 0;
 
     switch (step) {
@@ -428,6 +425,9 @@ transact_step_cb(RCPackman *packman,
         rcd_pending_add_message (status->transaction_pending, msg);
 
     g_free (msg);
+
+    rcd_pending_update_by_size (status->transaction_pending, seqno - 1,
+                                status->total_transaction_steps);
 } /* transact_step_cb */
 
 static void
