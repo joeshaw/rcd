@@ -105,7 +105,6 @@ packsys_refresh_all_channels (xmlrpc_env   *env,
                               xmlrpc_value *param_array,
                               void         *user_data)
 {
-    /* RCWorld *world = user_data; */
     xmlrpc_value *value;
 
     rcd_fetch_channel_list ();
@@ -343,6 +342,60 @@ cleanup:
     return xmlrpc_package;
 } /* packsys_query_file */
 
+typedef struct {
+    RCWorld *world;
+    RCPackage *package;
+} LatestVersionClosure;
+
+static void
+find_latest_version (RCPackage *package, gpointer user_data)
+{
+    LatestVersionClosure *closure = user_data;
+    RCPackman *packman = rc_world_get_packman (closure->world);
+
+    if (!closure->package)
+        closure->package = package;
+    else {
+        if (rc_packman_version_compare (
+                packman, 
+                RC_PACKAGE_SPEC (package),
+                RC_PACKAGE_SPEC (closure->package)) > 0)
+            closure->package = package;
+    }
+} /* find_latest_version */
+
+static xmlrpc_value *
+packsys_find_latest_version (xmlrpc_env   *env,
+                             xmlrpc_value *param_array,
+                             void         *user_data)
+{
+    RCWorld *world = (RCWorld *) user_data;
+    char *name;
+    LatestVersionClosure closure;
+    xmlrpc_value *result = NULL;
+
+    xmlrpc_parse_value (env, param_array, "(s)", &name);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    closure.world = world;
+    closure.package = NULL;
+    rc_world_foreach_package_by_name (
+        world, name, RC_WORLD_ANY_NON_SYSTEM, find_latest_version, &closure);
+
+    if (!closure.package) {
+        xmlrpc_env_set_fault(env, -601, "Couldn't get package from file");
+        return NULL;
+    }
+    
+    result = rcd_rc_package_to_xmlrpc(closure.package, env);
+
+cleanup:
+    if (env->fault_occurred)
+        return NULL;
+
+    return result;
+} /* packsys_find_latest_version */
+
 static void
 transact_start_cb(RCPackman *packman,
                   int total_steps,
@@ -442,6 +495,30 @@ run_transaction(gpointer data)
 
     return FALSE;
 } /* run_transaction */
+
+static gboolean
+download_packages (RCPackageSList *packages, RCDTransactionStatus *status)
+{
+    RCPackageSList *packages_to_download = NULL;
+    RCPackageSList *iter;
+
+    for (iter = packages; iter; iter = iter->next) {
+        RCPackage *package = iter->data;
+
+        if (!package->package_filename) {
+            packages_to_download = g_slist_prepend (
+                packages_to_download, package);
+        }
+    }
+
+    if (!packages_to_download)
+        return FALSE;
+
+    packages_to_download = g_slist_reverse (packages_to_download);
+    rcd_fetch_packages (packages_to_download, run_transaction, status);
+
+    return TRUE;
+} /* download_packages */
 
 static void
 check_install_package_auth (xmlrpc_env     *env,
@@ -567,8 +644,12 @@ packsys_transact(xmlrpc_env   *env,
     rc_package_slist_ref(status->install_packages);
     rc_package_slist_ref(status->remove_packages);
 
-    /* Schedule the transaction */
-    g_idle_add(run_transaction, status);
+    /*
+     * If we have to download files, start the download.  Otherwise,
+     * schedule the transaction
+     */
+    if (!download_packages (status->install_packages, status))
+        g_idle_add(run_transaction, status);
 
     result = xmlrpc_build_value (
         env, "i", rcd_pending_get_id (status->pending));
@@ -696,23 +777,25 @@ cleanup:
 void
 rcd_rpc_packsys_register_methods(RCWorld *world)
 {
-    rcd_rpc_register_method(
-        "rcd.packsys.query",
-        packsys_query,
-        rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
-        world);
+    rcd_rpc_register_method("rcd.packsys.query",
+                            packsys_query,
+                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            world);
 
-    rcd_rpc_register_method(
-        "rcd.packsys.query_file",
-        packsys_query_file,
-        rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
-        world);
+    rcd_rpc_register_method("rcd.packsys.query_file",
+                            packsys_query_file,
+                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            world);
 
-    rcd_rpc_register_method(
-        "rcd.packsys.transact",
-        packsys_transact,
-        rcd_auth_action_list_from_1 (RCD_AUTH_NONE),
-        world);
+    rcd_rpc_register_method("rcd.packsys.find_latest_version",
+                            packsys_find_latest_version,
+                            rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+                            world);
+
+    rcd_rpc_register_method("rcd.packsys.transact",
+                            packsys_transact,
+                            rcd_auth_action_list_from_1 (RCD_AUTH_NONE),
+                            world);
 
     rcd_rpc_register_method("rcd.packsys.get_updates",
                             packsys_get_updates,

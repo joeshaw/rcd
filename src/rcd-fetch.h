@@ -49,5 +49,14 @@ gint rcd_fetch_channel (RCChannel *channel);
 */
 void rcd_fetch_all_channels (void);
 
+/*
+ * Download a list of packages and call the specified callback when they
+ * all finish.
+ */
+void rcd_fetch_packages (RCPackageSList *packages,
+                         GSourceFunc     callback,
+                         gpointer        user_data);
+
+
 #endif /* __RCD_FETCH_H__ */
 

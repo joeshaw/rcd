@@ -5,6 +5,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <stdio.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -101,13 +102,14 @@ read_data(GIOChannel *iochannel,
         return FALSE;
 
     do {
-        g_io_channel_write(iochannel, 
-                           result->data + total_written,
-                           result->len - total_written,
-                           &bytes_written);
+        err = g_io_channel_write(iochannel, 
+                                 result->data + total_written,
+                                 result->len - total_written,
+                                 &bytes_written);
         
         total_written += bytes_written;
-    } while (total_written < result->len);
+    } while ((err == G_IO_ERROR_NONE || err == G_IO_ERROR_AGAIN) &&
+             total_written < result->len);
 
     g_byte_array_free(result, TRUE);
     g_byte_array_free(handle->data, TRUE);
@@ -174,6 +176,12 @@ rcd_unix_server_run_async(RCDUnixServerCallback callback)
     GIOChannel *iochannel;
 
     g_return_if_fail(callback);
+
+    /* 
+     * We need to ignore SIGPIPE or else the daemon will die if the client
+     * aborts or does some other sort of unsavory thing.
+     */
+    signal (SIGPIPE, SIG_IGN);
 
     sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (sockfd < 0) {

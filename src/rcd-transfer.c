@@ -665,12 +665,12 @@ http_done(SoupMessage *message, gpointer user_data)
         gte = RCD_TRANSFER_ERROR_CANT_CONNECT;
         gte_msg = g_strdup("Connection prematurely dropped");
     }
+#endif
 
     if (is_cacheable(transfer) &&
         rcd_cache_is_active(transfer->cache, transfer->filename)) {
         rcd_cache_close(transfer->cache, transfer->filename);
     }
-#endif
 
     rc_debug(RC_DEBUG_LEVEL_DEBUG, "\n\n");
 

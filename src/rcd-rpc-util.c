@@ -203,32 +203,18 @@ rcd_rc_package_from_xmlrpc_package (xmlrpc_value *value,
                                     xmlrpc_env   *env)
 {
     char *name;
-    gboolean installed;
+    int channel_id;
     RCWorld *world = rc_get_world ();
     RCPackage *package = NULL;
 
     RCD_XMLRPC_STRUCT_GET_STRING (env, value, "name", name);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    RCD_XMLRPC_STRUCT_GET_INT (env, value, "installed", installed);
+    RCD_XMLRPC_STRUCT_GET_INT (env, value, "channel", channel_id);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    if (installed) {
-        package = rc_world_get_package (world, RC_WORLD_SYSTEM_PACKAGES, name);
-
-        if (!package) {
-            xmlrpc_env_set_fault (env, -611, "Unable to find package");
-            return NULL;
-        }
-
-        return package;
-    }
-    else {
-        int channel_id;
+    if (channel_id) {
         RCChannel *channel;
-
-        RCD_XMLRPC_STRUCT_GET_INT (env, value, "channel", channel_id);
-        XMLRPC_FAIL_IF_FAULT (env);
 
         channel = rc_world_get_channel_by_id (world, channel_id);
         if (!channel) {
@@ -241,6 +227,16 @@ rcd_rc_package_from_xmlrpc_package (xmlrpc_value *value,
             xmlrpc_env_set_fault (env, -611, "Unable to find package");
             return NULL;
         }
+    }
+    else {
+        package = rc_world_get_package (world, RC_WORLD_SYSTEM_PACKAGES, name);
+
+        if (!package) {
+            xmlrpc_env_set_fault (env, -611, "Unable to find package");
+            return NULL;
+        }
+            
+        return package;
     }
 
 cleanup:
