@@ -801,6 +801,8 @@ download_package_file (RCPackage           *package,
         rcd_cache_get_package_cache ());
     g_object_set_data (G_OBJECT (t), "package", package);
 
+    g_free (url);
+
     g_signal_connect (t,
                       "file_data",
                       (GCallback) package_progress_cb,
