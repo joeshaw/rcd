@@ -87,6 +87,7 @@ rc_you_solvable_to_rc_package_spec (RCPackageSpec *spec, PMSolvablePtr solvable)
        There's only one thing left to say: *sigh* */
 
     if (g_str_has_prefix (name, "patch-")) {
+        int i;
         gchar **pieces = g_strsplit (name, "-", 0);
 
         /* Find the last piece */

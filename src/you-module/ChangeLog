@@ -1,5 +1,7 @@
 2004-09-11  Tambet Ingo  <tambet@ximian.com>
 
+	* wrapper.cc (rc_you_solvable_to_rc_package_spec): Fix typo.
+
 	* you-util.c (write_directory_files): Use patch' file name in
 	directory.3 file instead of it's name. This fixes the name-munging
 	we do with unamed patches.
