@@ -1,3 +1,13 @@
+2002-08-07  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd.c (option_parsing): If the RCD_NON_DAEMON environment
+	variable is set, act as if the --non-daemon option was used.
+
+	* rcd-identity.c (rcd_identity_update_password_file): When I fixed
+	this bug the other day, I only fixed it half-way... we need to
+	also handle the case of an file that is empty or contains only
+	comments.
+
 2002-08-07  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-packsys.c (cleanup_after_transaction): Don't free

@@ -372,17 +372,16 @@ rcd_identity_update_password_file (RCDIdentity *id)
     info.out = NULL;
     info.new_id = id;
 
-    if (g_file_test (PASSWORD_FILE, G_FILE_TEST_EXISTS)) {
+    rcd_identity_foreach_from_password_file (identity_update_cb,
+                                             &info);
 
-        rcd_identity_foreach_from_password_file (identity_update_cb,
-                                                 &info);
+    if (info.out == NULL && ! info.failed) {
 
-    } else {
-
-        /* If the password file doesn't exist, the identity_update_cb
-           callback will never get called, so we have to create the
-           password file manually in order for our final call to
-           write_identity to have a place to put the information. */
+        /* If the password file doesn't exist or contains only
+           comments, the identity_update_cb callback will never get
+           called, so we have to create the password file manually in
+           order for our final call to write_identity to have a place
+           to put the information. */
 
         info.out = create_password_file ();
     }

@@ -105,6 +105,9 @@ option_parsing (int argc, const char **argv)
         exit (-1);
     }
 
+    if (getenv ("RCD_NON_DAEMON"))
+        non_daemon_flag = TRUE;
+
     if (debug_level > -1)
         rcd_prefs_set_debug_level (debug_level);
     if (syslog_level > -1)
