@@ -1,3 +1,10 @@
+2003-07-11  Tambet Ingo  <tambet@ximian.com>
+
+	* Makefile.am: Add new module called "rcd-script" for executing
+	system commands/scripts.
+
+	* rcd-rpc-script.c: New file.
+
 2003-07-09  Joe shaw  <joe@ximian.com>
 
 	* rcd-rpc-system.c, rcd-rpc-util.h: Remove the execution stuff,
