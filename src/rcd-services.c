@@ -45,6 +45,7 @@ rcd_services_load (RCWorldMulti *multi)
     RCWorld *world;
     xmlDoc *doc;
     xmlNode *node;
+    GError *err = NULL;
 
     if (loaded) {
         rc_debug (RC_DEBUG_LEVEL_ERROR, "Cannot load services more than once");
@@ -55,12 +56,12 @@ rcd_services_load (RCWorldMulti *multi)
 
 
     /* Create our default services */
-    world = rc_world_service_mount ("system:///");
+    world = rc_world_service_mount ("system:///", NULL);
     RC_WORLD_SERVICE (world)->is_unsaved = TRUE;
     rc_world_multi_add_subworld (multi, world);
     g_object_unref (world);
 
-    world = rc_world_service_mount ("synthetic:" SYNTH_DB_FILE);
+    world = rc_world_service_mount ("synthetic:" SYNTH_DB_FILE, NULL);
     RC_WORLD_SERVICE (world)->is_unsaved = TRUE;
     rc_world_multi_add_subworld (multi, world);
     g_object_unref (world);
@@ -72,11 +73,18 @@ rcd_services_load (RCWorldMulti *multi)
         /* For compatibility with pre-2.0 rcds */
         default_url = rcd_prefs_get_string ("/Network/host=" DEFAULT_HOST_URL);
 
-        world = rc_world_service_mount (default_url);
-        rc_world_multi_add_subworld (multi, world);
-        g_object_unref (world);
+        world = rc_world_service_mount (default_url, &err);
+        if (!world) {
+            rc_debug (RC_DEBUG_LEVEL_CRITICAL,
+                      "Unable to load service for default host URL '%s': %s",
+                      default_url, err->message);
+            g_error_free (err);
+        } else {
+            rc_world_multi_add_subworld (multi, world);
+            g_object_unref (world);
 
-        rcd_services_save ();
+            rcd_services_save ();
+        }
 
         return;
     }
@@ -102,11 +110,14 @@ rcd_services_load (RCWorldMulti *multi)
             continue;
         }
 
-        world = rc_world_service_mount (url);
+        world = rc_world_service_mount (url, &err);
 
         if (!world) {
-            rc_debug (RC_DEBUG_LEVEL_WARNING, "Unable to load service '%s'",
-                      url);
+            rc_debug (RC_DEBUG_LEVEL_WARNING,
+                      "Unable to load service '%s': %s",
+                      url, err->message);
+            g_error_free (err);
+            err = NULL;
         } else {
             rc_world_multi_add_subworld (multi, world);
             g_object_unref (world);

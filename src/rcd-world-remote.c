@@ -39,14 +39,11 @@
 #include "rcd-rpc-util.h"
 #include "rcd-xmlrpc.h"
 
-#define RCD_WORLD_REMOTE_FETCH_FAILED ((gpointer) 0xdeadbeef)
-
-#define RCD_WORLD_REMOTE_VALID_PENDING(p) ((p) != NULL && (p) != RCD_WORLD_REMOTE_FETCH_FAILED)
-
 static RCWorldServiceClass *parent_class;
 
-static RCPending *rcd_world_remote_fetch (RCDWorldRemote *remote,
-                                          gboolean        local);
+static RCPending *rcd_world_remote_fetch (RCDWorldRemote  *remote,
+                                          gboolean         local,
+                                          GError         **error);
 
 static void
 rcd_world_remote_finalize (GObject *obj)
@@ -81,23 +78,16 @@ rcd_world_remote_finalize (GObject *obj)
 static RCPending *
 rcd_world_remote_refresh (RCWorld *world)
 {
-    RCDWorldRemote *remote = RCD_WORLD_REMOTE (world);
-    RCPending *pending;
-
-    pending = rcd_world_remote_fetch (remote, FALSE);
-
-    if (pending == RCD_WORLD_REMOTE_FETCH_FAILED)
-        return NULL;
-
-    return pending;
+    return rcd_world_remote_fetch (RCD_WORLD_REMOTE (world), FALSE, NULL);
 }
 
 static gboolean
-rcd_world_remote_assemble (RCWorldService *service)
+rcd_world_remote_assemble (RCWorldService *service, GError **error)
 {
     char *query_part;
     gboolean local = TRUE;
     RCPending *pending;
+    GError *tmp_error = NULL;
 
     /* Find the query part. */
     query_part = strchr (service->url, '?');
@@ -117,10 +107,13 @@ rcd_world_remote_assemble (RCWorldService *service)
             local = FALSE;
     }
 
-    pending = rcd_world_remote_fetch (RCD_WORLD_REMOTE (service), local);
+    pending = rcd_world_remote_fetch (RCD_WORLD_REMOTE (service),
+                                      local, &tmp_error);
 
-    if (pending == RCD_WORLD_REMOTE_FETCH_FAILED)
+    if (tmp_error != NULL) {
+        g_propagate_error (error, tmp_error);
         return FALSE;
+    }
 
     return TRUE;
 }
@@ -564,7 +557,8 @@ rcd_world_remote_activate (RCDWorldRemote  *remote,
     xmlrpc_value *params, *value;
     gboolean success = TRUE;
 
-    *err_msg = NULL;
+    if (err_msg)
+        *err_msg = NULL;
 
     g_return_val_if_fail (RCD_IS_WORLD_REMOTE (remote), FALSE);
 
@@ -585,7 +579,9 @@ cleanup:
         rc_debug (RC_DEBUG_LEVEL_WARNING, "Unable to activate with '%s': %s",
                   remote->activation_root_url, env.fault_string);
 
-        *err_msg = g_strdup (env.fault_string);
+        if (err_msg)
+            *err_msg = g_strdup (env.fault_string);
+
         success = FALSE;
     } else
         xmlrpc_DECREF (value);
@@ -812,7 +808,8 @@ remove_channel_cb (RCChannel *channel, gpointer user_data)
 }
 
 static RCPending *
-rcd_world_remote_fetch_channels (RCDWorldRemote *remote, gboolean local)
+rcd_world_remote_fetch_channels (RCDWorldRemote *remote, gboolean local,
+                                 GError **error)
 {
     RCDCacheEntry *entry;
     RCDTransfer *t = NULL;
@@ -846,10 +843,12 @@ rcd_world_remote_fetch_channels (RCDWorldRemote *remote, gboolean local)
         data = rcd_transfer_begin_blocking (t);
 
         if (rcd_transfer_get_error (t)) {
+            g_set_error (error, RC_ERROR, RC_ERROR,
+                         "Unable to download channel list: %s",
+                         rcd_transfer_get_error_string (t));
             rc_debug (RC_DEBUG_LEVEL_CRITICAL,
                       "Unable to downloaded channel list: %s",
                       rcd_transfer_get_error_string (t));
-            pending = RCD_WORLD_REMOTE_FETCH_FAILED;
             goto cleanup;
         }
 
@@ -874,10 +873,11 @@ rcd_world_remote_fetch_channels (RCDWorldRemote *remote, gboolean local)
         /* Don't cache invalid data */
         rcd_cache_entry_invalidate (entry);
 
-        /* Set the pending to failed */
-        pending = RCD_WORLD_REMOTE_FETCH_FAILED;
+        g_set_error (error, RC_ERROR, RC_ERROR,
+                     "Invalid channel data");
     }
 
+    /* If N < 0, then pool will always be NULL */
     if (channel_data.pool != NULL) {
         rcd_transfer_pool_begin (channel_data.pool);
         pending = rcd_transfer_pool_get_pending (channel_data.pool);
@@ -886,7 +886,7 @@ rcd_world_remote_fetch_channels (RCDWorldRemote *remote, gboolean local)
     }
 
     if (rc_world_is_refreshing (RC_WORLD (remote))) {
-        if (RCD_WORLD_REMOTE_VALID_PENDING (pending)) {
+        if (pending != NULL) {
             g_signal_connect (pending, "complete",
                               (GCallback) pending_complete_cb,
                               g_object_ref (remote));
@@ -1171,16 +1171,20 @@ extract_service_info (RCDWorldRemote *remote,
 }
 
 static RCPending *
-rcd_world_remote_parse_serviceinfo (RCDWorldRemote *remote,
-                                    gboolean        local,
-                                    const guint8   *buffer,
-                                    gint            buffer_len)
+rcd_world_remote_parse_serviceinfo (RCDWorldRemote  *remote,
+                                    gboolean         local,
+                                    const guint8    *buffer,
+                                    gint             buffer_len,
+                                    GError         **error)
 {
     RCPending *pending = NULL;
+    GError *tmp_error;
 
     if (!extract_service_info (remote, buffer, buffer_len)) {
+        g_set_error (error, RC_ERROR, RC_ERROR,
+                     "Unable to parse service info");
         rc_debug (RC_DEBUG_LEVEL_CRITICAL, "Unable to parse service info");
-        return RCD_WORLD_REMOTE_FETCH_FAILED;
+        return NULL;
     }
 
     if (remote->premium_service && rcd_prefs_get_org_id ()) {
@@ -1197,14 +1201,37 @@ rcd_world_remote_parse_serviceinfo (RCDWorldRemote *remote,
      * print and error and just ignore this service
      */
     if (!remote->distro) {
-        rc_debug (RC_DEBUG_LEVEL_CRITICAL,
+        rc_debug (RC_DEBUG_LEVEL_INFO,
                   "Unknown distro info for '%s' [%s], not downloading "
                   "channel data", RC_WORLD_SERVICE (remote)->name,
                   RC_WORLD_SERVICE (remote)->unique_id);
-        return RCD_WORLD_REMOTE_FETCH_FAILED;
+        g_set_error (error, RC_ERROR, RC_ERROR,
+                     "Unable to determine distribution type");
+        return NULL;
     } else {
-        if (!is_supported_distro (remote->distro))
-            return RCD_WORLD_REMOTE_FETCH_FAILED;
+        if (!is_supported_distro (remote->distro)) {
+            g_set_error (error, RC_ERROR, RC_ERROR,
+                         "%s %s (%s) is not a supported distribution",
+                         rc_distro_get_name (remote->distro),
+                         rc_distro_get_version (remote->distro),
+                         rc_distro_get_target (remote->distro));
+            rc_debug (RC_DEBUG_LEVEL_INFO,
+                      "%s %s (%s) is not a supported distro for '%s' [%s]",
+                      rc_distro_get_name (remote->distro),
+                      rc_distro_get_version (remote->distro),
+                      rc_distro_get_target (remote->distro),
+                      RC_WORLD_SERVICE (remote)->name,
+                      RC_WORLD_SERVICE (remote)->unique_id);
+            return NULL;
+        }
+    }
+
+    if (remote->channels_url)
+        pending = rcd_world_remote_fetch_channels (remote, local, &tmp_error);
+
+    if (tmp_error) {
+        g_propagate_error (error, tmp_error);
+        return NULL;
     }
 
     if (remote->mirrors_url)
@@ -1216,9 +1243,6 @@ rcd_world_remote_parse_serviceinfo (RCDWorldRemote *remote,
     if (remote->news_url)
         rcd_world_remote_fetch_news (remote, local);
 
-    if (remote->channels_url)
-        pending = rcd_world_remote_fetch_channels (remote, local);
-
     if (remote->premium_service)
         rcd_world_remote_fetch_privileges (remote);
 
@@ -1226,7 +1250,7 @@ rcd_world_remote_parse_serviceinfo (RCDWorldRemote *remote,
 }
 
 static RCPending *
-rcd_world_remote_fetch (RCDWorldRemote *remote, gboolean local)
+rcd_world_remote_fetch (RCDWorldRemote *remote, gboolean local, GError **error)
 {
     char *url;
     char *cache_entry_str;
@@ -1234,6 +1258,7 @@ rcd_world_remote_fetch (RCDWorldRemote *remote, gboolean local)
     RCDTransfer *t;
     const GByteArray *data;
     RCPending *pending;
+    GError *tmp_error = NULL;
 
     if (!strncmp (RC_WORLD_SERVICE (remote)->url, "http://", 7))
         cache_entry_str = g_strdup (RC_WORLD_SERVICE (remote)->url + 7);
@@ -1258,12 +1283,20 @@ rcd_world_remote_fetch (RCDWorldRemote *remote, gboolean local)
 
             pending = rcd_world_remote_parse_serviceinfo (remote, TRUE,
                                                           buf->data,
-                                                          buf->size);
+                                                          buf->size,
+                                                          &tmp_error);
 
             rc_buffer_unmap_file (buf);
 
-            if (pending != RCD_WORLD_REMOTE_FETCH_FAILED) {
+            if (tmp_error == NULL)
                 return pending;
+            else {
+                g_error_free (tmp_error);
+                /* 
+                 * The data is bad on disk, so let's invalidate the
+                 * cache entry so we download it again
+                 */
+                rcd_cache_entry_invalidate (entry);
             }
         }
     }
@@ -1276,18 +1309,24 @@ rcd_world_remote_fetch (RCDWorldRemote *remote, gboolean local)
     data = rcd_transfer_begin_blocking (t);
 
     if (rcd_transfer_get_error (t)) {
+        g_set_error (error, RC_ERROR, RC_ERROR,
+                     "Unable to download service info: %s",
+                     rcd_transfer_get_error_string (t));
         rc_debug (RC_DEBUG_LEVEL_CRITICAL,
-                  "Attempt to download service info failed: %s",
+                  "Unable to download service info: %s",
                   rcd_transfer_get_error_string (t));
-        return RCD_WORLD_REMOTE_FETCH_FAILED;
+        return NULL;
     }
 
     pending = rcd_world_remote_parse_serviceinfo (remote, FALSE,
-                                                  data->data, data->len);
-
+                                                  data->data, data->len,
+                                                  &tmp_error);
+        
     /* We don't want to cache bad data */
-    if (pending == RCD_WORLD_REMOTE_FETCH_FAILED)
+    if (tmp_error != NULL) {
         rcd_cache_entry_invalidate (entry);
+        g_propagate_error (error, tmp_error);
+    }
 
     return pending;
 }

@@ -2259,6 +2259,7 @@ packsys_mount_directory(xmlrpc_env   *env,
     RCWorld *world = (RCWorld *) user_data;
     char *path, *name, *alias;
     char *url;
+    GError *err = NULL;
     gboolean success;
     RCChannel *channel;
     xmlrpc_value *retval;
@@ -2270,12 +2271,16 @@ packsys_mount_directory(xmlrpc_env   *env,
                            path[0] == '/' ? "file://" : "",
                            path, name, alias);
 
-    success = rc_world_multi_mount_service (RC_WORLD_MULTI (world), url);
+    success = rc_world_multi_mount_service (RC_WORLD_MULTI (world), url, &err);
 
     g_free (url);
 
-    if (!success)
-        return xmlrpc_build_value (env, "s", "");
+    if (!success) {
+        xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_INVALID_SERVICE,
+                                        "Unable to mount '%s': %s",
+                                        path, err->message);
+        return NULL;
+    }
 
     rcd_services_save ();
 

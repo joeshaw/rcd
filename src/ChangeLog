@@ -1,5 +1,36 @@
 2003-09-09  Joe Shaw  <joe@ximian.com>
 
+	* rcd-rpc-packsys.c (packsys_mount_directory): Throw a fault with
+	the GError message if a directory can't be mounted.
+
+	* rcd-rpc-service.c (add_service_cb): Add a bunch of additional
+	service info to be sent down to clients.
+	(service_add): Pass in a GError to rc_world_multi_mount_service()
+	and pass the error message into the XML-RPC fault if it fails.
+
+	* rcd-services.c (rcd_services_load): Update for service GErrors.
+
+	* rcd-world-remote.c (rcd_world_remote_refresh): Get rid of the
+	RCD_WORLD_REMOTE_FETCH_FAILED crap
+	(rcd_world_remote_assemble): Take a GError argument and pass it
+	into rcd_world_remote_fetch() if an error occurs.
+	(rcd_world_remote_activate): Check to make sure err_msg is NULL
+	before dereferencing it.
+	(rcd_world_remote_fetch_channels): Take a GError argument and set
+	it if downloading the channel list fails.
+	(rcd_world_remote_parse_serviceinfo): Take a GError argument and
+	set it if parsing the serviceinfo.xml.gz file fails, if the
+	distribution type can't be determined or is unsupported.  Don't
+	fetch privileges if downloading the channel list failed.
+	(rcd_world_remote_fetch): Take a GError argument and pass it into
+	rcd_world_remote_parse_serviceinfo().  If we fail loading the
+	serviceinfo off disk, invalidate the cache.  If we're downloading
+	it and it fails, set the GError to the transfer error.  If we
+	can't parse the downloaded data, invalidate the cache and
+	propagate the error.
+
+2003-09-09  Joe Shaw  <joe@ximian.com>
+
 	* rcd-world-remote.c (channel_data_file_done_cb): Don't try to
 	parse the transfer buffer as channel data if the transfer failed,
 	it'll probably just be useless HTML then.

@@ -84,6 +84,31 @@ add_service_cb (RCWorld *subworld, gpointer user_data)
     RCD_XMLRPC_STRUCT_SET_INT (info->env, xmlrpc_service,
                                "is_singleton", service->is_singleton);
 
+    if (g_type_is_a (G_TYPE_FROM_INSTANCE (service), RCD_TYPE_WORLD_REMOTE)) {
+        RCDWorldRemote *remote = RCD_WORLD_REMOTE (service);
+
+        RCD_XMLRPC_STRUCT_SET_STRING (info->env, xmlrpc_service,
+                                      "distro_name",
+                                      rc_distro_get_name (remote->distro));
+
+        RCD_XMLRPC_STRUCT_SET_STRING (info->env, xmlrpc_service,
+                                      "distro_version",
+                                      rc_distro_get_version (remote->distro));
+
+        RCD_XMLRPC_STRUCT_SET_STRING (info->env, xmlrpc_service,
+                                      "distro_target",
+                                      rc_distro_get_target (remote->distro));
+
+        if (remote->contact_email) {
+            RCD_XMLRPC_STRUCT_SET_STRING (info->env, xmlrpc_service,
+                                          "contact_email",
+                                          remote->contact_email);
+        }
+
+        RCD_XMLRPC_STRUCT_SET_INT (info->env, xmlrpc_service,
+                                   "premium_service", remote->premium_service);
+    }
+
     xmlrpc_array_append_item (info->env, info->result, xmlrpc_service);
     XMLRPC_FAIL_IF_FAULT (info->env);
 
@@ -128,6 +153,7 @@ service_add (xmlrpc_env   *env,
              void         *user_data)
 {
     char *service_url, *mangled_url;
+    GError *err = NULL;
 
     xmlrpc_parse_value (env, param_array, "(s)", &service_url);
     XMLRPC_FAIL_IF_FAULT (env);
@@ -136,10 +162,10 @@ service_add (xmlrpc_env   *env,
     mangled_url = g_strconcat (service_url, "?remote_only=1", NULL);
 
     if (!rc_world_multi_mount_service (RC_WORLD_MULTI (rc_get_world ()),
-                                       mangled_url)) {
+                                       mangled_url, &err)) {
         xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_INVALID_SERVICE,
-                                        "Unable to mount service for '%s'",
-                                        service_url);
+                                        "Unable to mount service for '%s': %s",
+                                        service_url, err->message);
     } else
         rcd_services_save ();
 
