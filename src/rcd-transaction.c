@@ -536,8 +536,7 @@ fail_transaction (RCDTransactionStatus *status,
 
     rcd_pending_fail (pending, -1, msg);
 
-    if (status->flags == RCD_TRANSACTION_FLAGS_NONE &&
-        rcd_prefs_get_premium ())
+    if (rcd_prefs_get_premium ())
         rcd_transaction_send_log (status, FALSE, msg);
 
     cleanup_after_transaction (status);
@@ -697,10 +696,10 @@ run_transaction(gpointer user_data)
             if (rc_packman_get_capabilities (status->packman) & 
                 RC_PACKMAN_CAP_REPACKAGING && rcd_prefs_get_repackage ())
                 add_rollback_packages (status);
-
-            if (rcd_prefs_get_premium ())
-                rcd_transaction_send_log (status, TRUE, NULL);
         }
+
+        if (rcd_prefs_get_premium ())
+            rcd_transaction_send_log (status, TRUE, NULL);
     }
 
     /* Update the list of system packages */
@@ -865,8 +864,7 @@ download_completed (gboolean    successful,
         g_free (msg);
     }
 
-    if (status->flags == RCD_TRANSACTION_FLAGS_NONE &&
-        rcd_prefs_get_premium ())
+    if (rcd_prefs_get_premium ())
     {
         msg = g_strdup_printf ("Download failed - %s", error_message);
         rcd_transaction_send_log (status, FALSE, msg);
