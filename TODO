@@ -13,3 +13,5 @@ likely that people would go around deleting packageinfo.xml files from
 that directory and not the channels.xml.gz
 
 Need docs and a man page.
+
+The transact step needs to verify the packages' signatures.
