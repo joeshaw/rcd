@@ -1,5 +1,13 @@
 2002-12-03  Joe Shaw  <joe@ximian.com>
 
+	* rcd-rpc-util.c (rcd_rc_package_from_xmlrpc_package): Don't
+	bother looking at the installed bit at all.  If the channel id is
+	set, always look for the package in that channel.  Otherwise, fall
+	back onto the system packages.  Should fix a crash when you try to
+	install a package from a channel that's already installed.
+
+2002-12-03  Joe Shaw  <joe@ximian.com>
+
 	* rcd.c (daemonize): Change our CWD to / after forking.  Spotted
 	my Mike MacDonald.
 
