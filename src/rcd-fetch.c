@@ -147,6 +147,7 @@ rcd_fetch_register (const char *activation_code, const char *email)
         if (new_host) {
             rc_debug (RC_DEBUG_LEVEL_INFO, "Setting new host to %s", new_host);
             rcd_prefs_set_host (new_host);
+            rcd_prefs_set_premium (TRUE);
         }
     }
 

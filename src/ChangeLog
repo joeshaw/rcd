@@ -1,3 +1,8 @@
+2002-12-04  Joe Shaw  <joe@ximian.com>
+
+	* rcd-fetch.c (rcd_fetch_register): Also enable premium mode when
+	activating and getting the X-RC-Host header.
+
 2002-12-04  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-unix-server.c (read_data): If our iochannel has an error
