@@ -43,6 +43,7 @@ AC_ARG_ENABLE(kernel-workaround,
 ### basic checks
 
 AC_PROG_CC
+AC_PROG_CXX
 AC_ISC_POSIX
 AC_STDC_HEADERS
 AM_PROG_CC_STDC

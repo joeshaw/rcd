@@ -1,3 +1,7 @@
+2004-06-15  James Willcox  <james@ximian.com>
+
+	* configure.in: add AC_PROG_CXX (eeek)
+
 2004-06-10  Tambet Ingo  <tambet@ximian.com>
 
 	* configure.in: Add yast package manager library checks.
