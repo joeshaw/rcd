@@ -35,5 +35,5 @@ rcd_about_name (void)
 const char *
 rcd_about_copyright (void)
 {
-    return "Copyright (C) 2000-2002 Ximian Inc.  All rights reserved.";
+    return "Copyright (C) 2000-2002 Ximian Inc.";
 }
