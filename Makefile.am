@@ -60,3 +60,7 @@ install-data-hook:
 
 	$(INSTALL_DATA) -m 0755 $(srcdir)/rcd.logrotate $(DESTDIR)$(logrotatedir)/rcd;
 
+uninstall-hook:
+	rm -f $(DESTDIR)$(passwddir)/rcd.passwd.default
+	rm -f $(DESTDIR)$(initdir)/rcd
+	rm -f $(DESTDIR)$(logrotatedir)/rcd

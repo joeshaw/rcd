@@ -176,7 +176,7 @@ rcd_xmlrpc_to_rc_package_dep (xmlrpc_value *value,
                               xmlrpc_env   *env)
 {
     RCPackageSpec spec;
-    char *name;
+    const char *name;
     gboolean is_or;
     RCPackageDep *dep = NULL;
     char *relation_str = NULL;
