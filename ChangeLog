@@ -1,3 +1,11 @@
+2003-03-14  Frank Belew  <frb@ximian.com>
+
+	* configure.in: add rcd.init.solaris.in clause
+
+	* Makefile.am: add rcd.init.solaris.in to EXTRA_DIST
+
+	* rcd.init.solaris.in: initial checkin
+
 2003-03-10  Joe Shaw  <joe@ximian.com>
 
 	* configure.in: Bump version up to 1.3.0

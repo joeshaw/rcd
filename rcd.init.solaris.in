@@ -1,0 +1,41 @@
+#!/sbin/sh
+#
+# Init script for the Red Carpet Daemon on Solaris
+#
+# $Id$
+
+PATH=@prefix@/bin:@prefix@/sbin/bin:/usr/bin:/sbin:/usr/sbin
+DAEMON=@prefix@/sbin/rcd
+PIDFILE=@localstatedir@/run/rcd.pid
+
+# Arguments to rcd
+#
+ARGS=""
+
+test -x $DAEMON || exit 1
+
+case "$1" in
+  start)
+    echo -n "Starting deferred execution scheduler: rcd"
+    $DAEMON -- $ARGS
+    echo "."
+    ;;
+  stop)
+    echo -n "Stopping deferred execution scheduler: rcd"
+    /usr/bin/pkill -x -u 0 rcd
+    echo "."
+    ;;
+  reload)
+    echo "Not implemented."
+    ;;
+  force-reload|restart)
+    sh $0 stop
+    sh $0 start
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|restart|force-reload|reload}"
+    exit 1
+    ;;
+esac
+
+exit 0

@@ -175,13 +175,14 @@ DDIR=`echo $datadir | sed -e "s,"'${prefix}'",$prefix,"`
 AC_SUBST(DDIR)
 
 AC_ARG_WITH(init-script-type,
-  [  --with-init-script-type=TYPE (redhat, suse, debian)],
+  [  --with-init-script-type=TYPE (redhat, suse, debian, solaris)],
   with_init_script_type="$withval",
   with_init_script_type="redhat")
 
 AM_CONDITIONAL(INIT_REDHAT, false)
 AM_CONDITIONAL(INIT_SUSE, false)
 AM_CONDITIONAL(INIT_DEBIAN, false)
+AM_CONDITIONAL(INIT_SOLARIS, false)
 
 if test "x$with_init_script_type" = "xredhat"; then
   INIT_SCRIPT=rcd.init.redhat
@@ -192,6 +193,9 @@ elif test "x$with_init_script_type" = "xsuse"; then
 elif test "x$with_init_script_type" = "xdebian"; then
   INIT_SCRIPT=rcd.init.debian
   AM_CONDITIONAL(INIT_DEBIAN, true)
+elif test "x$with_init_script_type" = "xsolaris"; then
+  INIT_SCRIPT=rcd.init.solaris
+  AM_CONDITIONAL(INIT_SOLARIS, true)
 else
   AC_ERROR([Unsupported init script type])
 fi
@@ -205,6 +209,7 @@ src/rcd-buddy
 rcd.init.redhat
 rcd.init.suse
 rcd.init.debian
+rcd.init.solaris
 rcd.pc
 ])
 

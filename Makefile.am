@@ -15,8 +15,9 @@ pkgconfig_DATA = rcd.pc
 
 man_MANS = rcd.8 rcd.conf.5
 
-EXTRA_DIST = rcd.passwd rcd.init.redhat rcd.init.suse rcd.init.debian    \
-             rcd.logrotate rcd.pc.in $(cert_DATA) $(gpg_DATA) $(man_MANS)
+EXTRA_DIST = rcd.init.redhat.in rcd.init.suse.in rcd.init.debian.in \
+	     rcd.init.solaris.in rcd.pc.in rcd.passwd rcd.logrotate \
+	     $(cert_DATA) $(gpg_DATA) $(man_MANS)
 
 if INIT_REDHAT
 init_file = rcd.init.redhat
@@ -28,6 +29,10 @@ endif
 
 if INIT_DEBIAN
 init_file = rcd.init.debian
+endif
+
+if INIT_SOLARIS
+init_file = rcd.init.solaris
 endif
 
 install-data-hook:
