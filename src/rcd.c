@@ -414,6 +414,11 @@ main (int argc, const char **argv)
 
     option_parsing (argc, argv);
 
+    /* FIXME: needs to be done right */
+    if (!rc_distro_parse_xml (NULL, 0)) {
+        exit (-1);
+    }
+
     root_check ();
     if (! late_background)
         daemonize ();

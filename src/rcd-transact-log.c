@@ -127,7 +127,6 @@ transaction_xml (RCPackageSList *install_packages,
     xmlNode *root;
     const char *mid = rcd_prefs_get_mid ();
     time_t curtime = time (NULL);
-    RCDistroType *dt = rc_figure_distro ();
     char *tmp;
     RCPackageSList *i;
     xmlChar *xml_string;
@@ -144,7 +143,7 @@ transaction_xml (RCPackageSList *install_packages,
 
     xmlNewTextChild(
         root, NULL, "distro",
-        dt->pretend_name ? dt->pretend_name : dt->unique_name);
+        rc_distro_get_target ());
 
     i = install_packages;
     while (i) {

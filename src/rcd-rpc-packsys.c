@@ -2005,26 +2005,20 @@ extra_dump_info (void)
     time_t now;
     char *tmp_str;
     struct utsname uname_buf;
-    RCDistroType *distro;
     xmlNode *distro_node;
 
     info = xmlNewNode (NULL, "general_information");
 
     xmlNewTextChild (info, NULL, "rcd_version", VERSION);
 
-    distro = rc_figure_distro ();
-    if (distro) {
-        distro_node = xmlNewNode (NULL, "distro");
-        xmlAddChild (info, distro_node);
-        if (distro->unique_name)
-            xmlNewTextChild (distro_node, NULL, "unique_name", distro->unique_name);
-        if (distro->pretend_name)
-            xmlNewTextChild (distro_node, NULL, "pretend_name", distro->pretend_name);
-        if (distro->full_name)
-            xmlNewTextChild (distro_node, NULL, "full_name", distro->full_name);
-        if (distro->ver_string)
-            xmlNewTextChild (distro_node, NULL, "version", distro->ver_string);
-    }
+    distro_node = xmlNewNode (NULL, "distro");
+    xmlAddChild (info, distro_node);
+    xmlNewTextChild (distro_node, NULL, "name",
+                     rc_distro_get_name ());
+    xmlNewTextChild (distro_node, NULL, "version",
+                     rc_distro_get_version ());
+    xmlNewTextChild (distro_node, NULL, "target",
+                     rc_distro_get_target ());
 
     time (&now);
     xmlNewTextChild (info, NULL, "time", ctime (&now));

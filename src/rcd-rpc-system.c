@@ -41,7 +41,6 @@ system_ping(xmlrpc_env   *env,
             void         *user_data)
 {
     xmlrpc_value *value = NULL;
-    RCDistroType *dt;
     char *distro_info;
     time_t now;
 
@@ -55,10 +54,10 @@ system_ping(xmlrpc_env   *env,
     RCD_XMLRPC_STRUCT_SET_STRING(env, value, "copyright", rcd_about_copyright ());
     XMLRPC_FAIL_IF_FAULT(env);
 
-    dt = rc_figure_distro ();
-    distro_info = g_strdup_printf ("%s %s (%s)", dt->full_name, dt->ver_string,
-                                   dt->pretend_name ? dt->pretend_name :
-                                   dt->unique_name);
+    distro_info = g_strdup_printf ("%s %s (%s)",
+                                   rc_distro_get_name (),
+                                   rc_distro_get_version (),
+                                   rc_distro_get_target ());
     RCD_XMLRPC_STRUCT_SET_STRING(env, value, "distro_info", distro_info);
     g_free (distro_info);
     XMLRPC_FAIL_IF_FAULT (env);

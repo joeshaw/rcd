@@ -116,30 +116,12 @@ write_file_contents (const char *filename, GByteArray *data)
 static char *
 get_channel_list_url (void)
 {
-    RCDistroType *dt;
     char *url = NULL;
-
-    dt = rc_figure_distro ();
-
-    if (dt == NULL) {
-
-        rc_debug (RC_DEBUG_LEVEL_ERROR,
-                  "Unable to determine which distribution this system is running.  Aborting.");
-
-        /* FIXME: Can we just exit, or do we need to do any clean-up? */
-        exit (-1);
-    }
-
-    if (dt->pretend_name) {
-        rc_debug (RC_DEBUG_LEVEL_INFO, "Distro pretends to be %s", dt->pretend_name);
-    } else {
-        rc_debug (RC_DEBUG_LEVEL_INFO, "Distro is %s", dt->unique_name);
-    }
 
     if (rcd_prefs_get_premium ()) {
         url = g_strdup_printf ("%s/channels.php?distro_target=%s",
                                rcd_prefs_get_host (),
-                               dt->pretend_name ? dt->pretend_name : dt->unique_name);
+                               rc_distro_get_target ());
     } else {
         url = g_strdup_printf ("%s/channels.xml.gz",
                                rcd_prefs_get_host ());

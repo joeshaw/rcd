@@ -1,3 +1,22 @@
+2002-08-03  Ian Peters  <itp@ximian.com>
+
+	* rcd-fetch.c (get_channel_list_url): no need to call
+	rc_figure_distro, etc anymore, just check rc_distro_get_target
+
+	* rcd-rpc-packsys.c (extra_dump_info): no rc_figure_distro, access
+	the distro name, version, and target directly
+
+	* rcd-rpc-system.c (system_ping): no rc_figure_distro, access
+	name, version, and target directly
+
+	* rcd-transact-log.c (transaction_xml): no rc_figure_distro,
+	access target directly
+
+	* rcd.c (main): as a HACK, call rc_distro_parse_xml (NULL, 0) to
+	initialize the distribution with the internal distribution XML.
+	This needs to eventually download and parse a distribution XML
+	file, but we need to discuss how best to do that.
+
 2002-08-02  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-rpc-packsys.c (append_dep_info): Fixed memory leak.
