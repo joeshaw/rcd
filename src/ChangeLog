@@ -3,7 +3,7 @@
 	* rcd-rpc-system.c (system_execute, system_execute_script): Add
 	execution of programs.
 
-	* rcd-rpc-util.h: Add CANT_EXECUTE pref
+	* rcd-rpc-util.h: Add CANT_EXECUTE fault
 
 2003-06-26  Joe Shaw  <joe@ximian.com>
 
