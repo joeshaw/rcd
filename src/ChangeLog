@@ -1,3 +1,8 @@
+2003-10-21  Joe Shaw  <joe@ximian.com>
+
+	* rcd-transaction.c (transact_step_cb): Print out the action
+	during the transaction step.
+
 2003-10-20  Joe Shaw  <joe@Ximian.com>
 
 	* rcd-world-remote.c (rcd_world_remote_parse_channel_data): Return

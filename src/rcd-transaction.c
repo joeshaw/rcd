@@ -463,8 +463,6 @@ transact_step_cb(RCPackman *packman,
     char *msg;
     const char *last;
 
-    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Transaction step.  seqno %d", seqno);
-
     transaction->transaction_size = 0;
 
     switch (step) {
@@ -490,6 +488,9 @@ transact_step_cb(RCPackman *packman,
         msg = g_strconcat (action, ":", name, NULL);
     else
         msg = g_strdup (action);
+
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Transaction step.  seqno %d (%s)",
+              seqno, msg);
 
     /* We don't want to push the same message multiple times */
     last = rc_pending_get_latest_message (transaction->transaction_pending);
