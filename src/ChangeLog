@@ -1,5 +1,19 @@
 2003-01-28  Joe Shaw  <joe@ximian.com>
 
+	* rcd-rpc.c: If the user can't be authenticated over HTTP, we
+	should send an HTTP 401 code back instead of an XML-RPC fault.
+	(soup_auth_callback): Move the authentication code into here.  If
+	we fail, return FALSE which will reissue the HTTP auth challenge
+	to a client.
+	(soup_rpc_callback): This function becomes a lot simpler since it
+	doesn't handle authentication any longer.  If we get the MID as
+	the user, set up an identity with name "server" and superuser
+	privileges, otherwise get it from the password file and assert
+	that an identity exists.  (It must, since we passed
+	authentication).
+
+2003-01-28  Joe Shaw  <joe@ximian.com>
+
 	* rcd-rpc-users.c (users_get_current_user): Return the current
 	user, so clients don't have to muck around with the transport.
 	(users_update): Fix a mis-pointered RCDPrivileges declaration.
