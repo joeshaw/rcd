@@ -35,6 +35,7 @@ static GObjectClass *parent_class;
 enum {
     UPDATE,
     COMPLETE,
+    MESSAGE,
     LAST_SIGNAL
 };
 
@@ -130,6 +131,15 @@ rcd_pending_class_init (RCDPendingClass *klass)
 
     signals[COMPLETE] =
         g_signal_new ("complete",
+                      G_TYPE_FROM_CLASS (klass),
+                      G_SIGNAL_RUN_FIRST,
+                      G_STRUCT_OFFSET (RCDPendingClass, complete),
+                      NULL, NULL,
+                      rcd_marshal_VOID__VOID,
+                      G_TYPE_NONE, 0);
+
+    signals[MESSAGE] =
+        g_signal_new ("message",
                       G_TYPE_FROM_CLASS (klass),
                       G_SIGNAL_RUN_FIRST,
                       G_STRUCT_OFFSET (RCDPendingClass, complete),
@@ -577,6 +587,8 @@ rcd_pending_add_message (RCDPending *pending, const char *message)
     g_return_if_fail (message);
 
     pending->messages = g_slist_append (pending->messages, g_strdup (message));
+
+    g_signal_emit (pending, signals[MESSAGE], 0);
 } /* rcd_pending_add_message */
 
 GSList *

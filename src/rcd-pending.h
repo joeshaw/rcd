@@ -77,6 +77,7 @@ struct _RCDPendingClass {
 
     void (*update) (RCDPending *);
     void (*complete) (RCDPending *);
+    void (*message) (RCDPending *);
 };
 
 #define RCD_TYPE_PENDING            (rcd_pending_get_type ())
