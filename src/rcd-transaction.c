@@ -34,7 +34,6 @@
 #include "rcd-log.h"
 #include "rcd-pending.h"
 #include "rcd-prefs.h"
-#include "rcd-rollback.h"
 #include "rcd-shutdown.h"
 #include "rcd-transfer.h"
 #include "rcd-transfer-http.h"
@@ -554,77 +553,11 @@ fail_transaction (RCDTransactionStatus *status,
     cleanup_after_transaction (status);
 } /* fail_transaction */
 
-static void
-add_rollback_packages (RCDTransactionStatus *status)
-{
-    RCPackageSList *packages = NULL;
-    GDir *dir;
-    GError *error = NULL;
-    const char *filename;
-    char *repackage_dir;
-    gboolean dirty = FALSE;
-
-    dir = g_dir_open (status->temp_repack_dir, 0, &error);
-
-    if (!dir) {
-        rc_debug (RC_DEBUG_LEVEL_WARNING, "Unable to open '%s': %s",
-                  status->temp_repack_dir, error->message);
-        return;
-    }
-
-    repackage_dir = g_strconcat (rcd_prefs_get_cache_dir (),
-                                 "/repackage", NULL);
-
-    while ((filename = g_dir_read_name (dir))) {
-        char *fn = g_strconcat (status->temp_repack_dir, "/", filename, NULL);
-        char *newfn;
-        RCPackage *p = rc_packman_query_file (status->packman, fn);
-
-        if (!p) {
-            rc_debug (RC_DEBUG_LEVEL_WARNING,
-                      "Invalid package file in repack dir: %s", fn);
-            g_free (fn);
-            dirty = TRUE;
-            continue;
-        }
-
-        /* Move the file from the temporary directory */
-        newfn = g_strconcat (repackage_dir, "/", filename, NULL);
-        if (rename (fn, newfn) < 0) {
-            rc_debug (RC_DEBUG_LEVEL_WARNING, "Unable to move '%s' to '%s'",
-                      fn, newfn);
-            g_free (newfn);
-            dirty = TRUE;
-        }
-        else {
-            p->package_filename = newfn;
-
-            /*
-             * More efficient to add the packages as a list, so we don't sync
-             * to disk every time.
-             */
-            packages = g_slist_prepend (packages, p);
-        }
-
-        g_free (fn);
-    }
-
-    g_dir_close (dir);
-    g_free (repackage_dir);
-
-    rcd_rollback_add_package_slist (packages);
-    rc_package_slist_unref (packages);
-
-    if (!dirty)
-        rc_rmdir (status->temp_repack_dir);
-} /* add_rollback_packages */
-
 static gboolean
 run_transaction(gpointer user_data)
 {
     RCDTransactionStatus *status = user_data;
     RCWorld *world = rc_get_world ();
-    gboolean repackage;
     int flags = 0;
 
     g_signal_connect (
@@ -639,47 +572,6 @@ run_transaction(gpointer user_data)
     g_signal_connect (
         G_OBJECT (status->packman), "transact_done",
         G_CALLBACK (transact_done_cb), status);
-
-    repackage = (rc_packman_get_capabilities (status->packman) &
-                 RC_PACKMAN_CAP_REPACKAGING && rcd_prefs_get_repackage ());
-
-    if (repackage) {
-        char *repackage_dir;
-
-        repackage_dir = g_strconcat (rcd_prefs_get_cache_dir (),
-                                     "/repackage", NULL);
-
-        if (!g_file_test (repackage_dir, G_FILE_TEST_EXISTS) &&
-            rc_mkdir (repackage_dir, 0755) < 0)
-        {
-            rc_debug (RC_DEBUG_LEVEL_WARNING, "Couldn't create '%s'",
-                      repackage_dir);
-        }
-        else {
-            status->temp_repack_dir = g_strconcat (repackage_dir,
-                                                   "/repack-XXXXXX", NULL);
-            if (!rc_mkdtemp (status->temp_repack_dir)) {
-                rc_debug (RC_DEBUG_LEVEL_WARNING, "Couldn't create '%s'",
-                          status->temp_repack_dir);
-            }
-            else {
-                rc_packman_set_repackage_dir (status->packman,
-                                              status->temp_repack_dir);
-                flags |= RC_TRANSACT_FLAG_REPACKAGE;
-            }
-        }
-
-        g_free (repackage_dir);
-    }
-
-    /*
-     * RPM has a bug (surprise!) where it will write out a 0 byte file
-     * when repackaging a package with the no act flag.  So that's why
-     * we're assigning RC_TRANSACT_FLAG_NO_ACT to flags instead of doing
-     * a logical or.
-     */
-    if (status->flags == RCD_TRANSACTION_FLAGS_DRY_RUN)
-        flags = RC_TRANSACT_FLAG_NO_ACT;
 
     rc_world_transact (world,
                        status->install_packages,
@@ -706,12 +598,8 @@ run_transaction(gpointer user_data)
         return FALSE;
     }
     else {
-        if (status->flags != RCD_TRANSACTION_FLAGS_DRY_RUN) {
+        if (status->flags != RCD_TRANSACTION_FLAGS_DRY_RUN)
             update_log (status);
-
-            if (repackage)
-                add_rollback_packages (status);
-        }
 
         if (rcd_prefs_get_premium ())
             rcd_transaction_send_log (status, TRUE, NULL);

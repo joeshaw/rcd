@@ -1,3 +1,22 @@
+2003-05-12  Joe Shaw  <joe@ximian.com>
+
+	* rcd-prefs.c: Replace the "repackage" pref with "rollback".
+
+	* rcd-rollback.[ch]: Remove these.
+
+	* rcd-rpc-packsys.c: Kill off the old rollback stuff and start on
+	the new.
+	(packsys_rollback_dependencies, packsys_get_rollback_packages):
+	Remove.
+	(packsys_get_rollback_actions): Add.
+	(dep_get_package_info): Make a NULL resolver ok.
+
+	* rcd-rpc-prefs.c (rcd_rpc_prefs_register_methods): Replace the
+	"repackage" preference with a "rollback" preference.
+
+	* rcd-transaction.c: Remove all the work to harvest the repackaged
+	RPMs.
+
 2003-05-12  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-fetch.c (rcd_fetch_channel_list): Replace a call to

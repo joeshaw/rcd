@@ -37,7 +37,6 @@
 #include "rcd-pending.h"
 #include "rcd-prefs.h"
 #include "rcd-query-packages.h"
-#include "rcd-rollback.h"
 #include "rcd-rpc.h"
 #include "rcd-rpc-util.h"
 #include "rcd-subscriptions.h"
@@ -1223,6 +1222,9 @@ dep_get_package_info (RCResolver *resolver, RCPackage *package)
 {
     GSList *info = NULL;
 
+    if (resolver == NULL)
+        return NULL;
+
     rc_resolver_context_foreach_info (resolver->best_context,
                                       package,
                                       RC_RESOLVER_INFO_PRIORITY_USER,
@@ -1547,241 +1549,97 @@ cleanup:
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
-static xmlrpc_value *
-parse_rollback_package_array (xmlrpc_value *package_names, xmlrpc_env *env)
+/* This function is evil. */
+RCPackage *
+synth_package_from_update (RCPackage *real_package, RCPackageUpdate *update)
 {
-    xmlrpc_value *package_list = NULL;
-    int size;
-    int i;
+    RCPackage *package;
 
-    size = xmlrpc_array_size (env, package_names);
-    XMLRPC_FAIL_IF_FAULT (env);
+    package = rc_package_copy (real_package);
 
-    package_list = xmlrpc_build_value (env, "()");
-    XMLRPC_FAIL_IF_FAULT (env);
+    /* Reset the channel */
+    rc_channel_unref (package->channel);
+    package->channel = NULL;
 
-    for (i = 0; i < size; i++) {
-        xmlrpc_value *v;
-        char *package_name;
-        RCPackage *package;
-        xmlrpc_value *xmlrpc_package;
-        xmlrpc_value *xmlrpc_package_filename;
+    /* Delete the old history and replace it with one entry: the update */
+    rc_package_update_slist_free (package->history);
+    package->history = NULL;
+    package->history = g_slist_prepend (package->history,
+                                        rc_package_update_copy (update));
 
-        v = xmlrpc_array_get_item (env, package_names, i);
-        XMLRPC_FAIL_IF_FAULT (env);
-
-        xmlrpc_parse_value (env, v, "s", &package_name);
-        XMLRPC_FAIL_IF_FAULT (env);
-
-        package = rcd_rollback_get_package_by_name (package_name);
-
-        if (!package) {
-            xmlrpc_env_set_fault_formatted (env,
-                                            RCD_RPC_FAULT_PACKAGE_NOT_FOUND,
-                                            "No rollback package found by "
-                                            "name '%s'",
-                                            package_name);
-            goto cleanup;
-        }
-
-        xmlrpc_package = rcd_rc_package_to_xmlrpc (package, env);
-        XMLRPC_FAIL_IF_FAULT (env);
-
-        /* We need to set the package_filename key manually */
-        xmlrpc_package_filename = xmlrpc_build_value (
-            env, "s", package->package_filename);
-        XMLRPC_FAIL_IF_FAULT (env);
-
-        xmlrpc_struct_set_value (env, xmlrpc_package, "package_filename",
-                                 xmlrpc_package_filename);
-        XMLRPC_FAIL_IF_FAULT (env);
-
-        xmlrpc_DECREF (xmlrpc_package_filename);
-
-        xmlrpc_array_append_item (env, package_list, xmlrpc_package);
-        XMLRPC_FAIL_IF_FAULT (env);
-
-        xmlrpc_DECREF (xmlrpc_package);
-    }
-
-cleanup:
-    if (env->fault_occurred) {
-        if (package_list)
-            xmlrpc_DECREF (package_list);
-
-        return NULL;
-    }
-
-    return package_list;
-} /* parse_rollback_package_array */
+    return package;
+}
 
 static xmlrpc_value *
-packsys_rollback_dependencies(xmlrpc_env   *env,
+packsys_get_rollback_actions (xmlrpc_env   *env,
                               xmlrpc_value *param_array,
                               void         *user_data)
 {
-    RCWorld *world = (RCWorld *) user_data;
-    RCPackman *packman = rc_world_get_packman (world);
-    int channel_priority;
-    RCChannel *rollback_channel = NULL;
-    int size, i;
-    GSList *iter;
-    xmlrpc_value *xmlrpc_package_names;
-    xmlrpc_value *xmlrpc_packages = NULL;
-    xmlrpc_value *xmlrpc_installs = NULL;
-    xmlrpc_value *xmlrpc_removals = NULL;
-    xmlrpc_value *xmlrpc_extra_deps = NULL;
-    xmlrpc_value *tmp;
+    time_t when;
+    RCRollbackActionSList *actions = NULL, *iter;
+    RCPackageSList *install_packages = NULL, *remove_packages = NULL;
+    xmlrpc_value *xinstall = NULL, *xremove = NULL;
     xmlrpc_value *result = NULL;
 
-    if (!(rc_packman_get_capabilities (packman) & RC_PACKMAN_CAP_REPACKAGING))
-    {
-        xmlrpc_env_set_fault(env, RCD_RPC_FAULT_NOT_SUPPORTED,
-                             "Rollback is not supported by this system");
-        return NULL;
-    }
-
-    xmlrpc_parse_value (env, param_array, "(A)", &xmlrpc_package_names);
+    xmlrpc_parse_value (env, param_array, "(i)", &when);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    xmlrpc_packages = parse_rollback_package_array (xmlrpc_package_names, env);
-    XMLRPC_FAIL_IF_FAULT (env);
+    actions = rc_rollback_get_actions (when);
+    for (iter = actions; iter; iter = iter->next) {
+        RCRollbackAction *action = iter->data;
+        RCPackage *package;
 
-    xmlrpc_installs = rcd_xmlrpc_array_copy (env, 1, xmlrpc_packages);
-    XMLRPC_FAIL_IF_FAULT (env);
+        if (rc_rollback_action_is_install (action)) {
+            RCPackage *real_package = rc_rollback_action_get_package (action);
+            RCPackageUpdate *update =
+                rc_rollback_action_get_package_update (action);
 
-    /* 
-     * Create a dummy channel with all the rollback packages.  Give it
-     * a very high priority so it picks packages from there first.
-     */
-    channel_priority = rc_channel_priority_parse ("private") * 1000;
+            package = synth_package_from_update (real_package, update);
 
-    rollback_channel = rc_world_add_channel_with_priorities (
-        world,
-        "Rollback Packages",
-        "rollback-packages",
-        "rollback!",
-        TRUE, /* this is a silent channel */
-        RC_CHANNEL_TYPE_UNKNOWN,
-        channel_priority, channel_priority);
-
-    for (iter = rcd_rollback_get_packages (); iter; iter = iter->next) {
-        RCPackage *package = iter->data;
-
-        package->channel = rc_channel_ref (rollback_channel);
-        rc_world_add_package (world, package);
-    }
-
-    resolve_deps (
-        env, &xmlrpc_installs, &xmlrpc_removals, &xmlrpc_extra_deps,
-        NULL, FALSE, world);
-    XMLRPC_FAIL_IF_FAULT (env);
-
-    /* 
-     * This is an exceptionally lame hack to set the package filename field
-     * on the XML-RPC package because the rollback channel doesn't persist
-     * dependency resolution.
-     */
-    size = xmlrpc_array_size (env, xmlrpc_installs);
-    XMLRPC_FAIL_IF_FAULT (env);
-
-    for (i = 0; i < size; i++) {
-        xmlrpc_value *dep_op_value, *package_value;
-        char *package_name;
-        RCPackage *pkg;
-
-        dep_op_value = xmlrpc_array_get_item (env, xmlrpc_installs, i);
-        XMLRPC_FAIL_IF_FAULT (env);
-
-        package_value = xmlrpc_struct_get_value (env, dep_op_value, "package");
-        XMLRPC_FAIL_IF_FAULT (env);
-
-        RCD_XMLRPC_STRUCT_GET_STRING (env, package_value,
-                                      "name", package_name);
-
-        pkg = rc_world_get_package (world, rollback_channel, package_name);
-
-        if (!pkg) {
-            xmlrpc_env_set_fault_formatted (
-                env, RCD_RPC_FAULT_PACKAGE_NOT_FOUND,
-                "Unable to find '%s' in rollback packages",
-                package_name);
-            goto cleanup;
+            install_packages = g_slist_prepend (install_packages, package);
         }
+        else {
+            package = rc_package_ref (rc_rollback_action_get_package (action));
 
-        RCD_XMLRPC_STRUCT_SET_STRING (env, package_value, "package_filename",
-                                      pkg->package_filename);
+            remove_packages = g_slist_prepend (remove_packages, package);
+        }
     }
 
-    tmp = xmlrpc_packages;
-    xmlrpc_packages = rcd_xmlrpc_array_copy (env, 2, tmp, xmlrpc_installs);
-    xmlrpc_DECREF (tmp);
+    xinstall = rcd_rc_package_slist_to_xmlrpc_op_array (install_packages,
+                                                        RCD_PACKAGE_OP_INSTALL,
+                                                        NULL, env);
+    XMLRPC_FAIL_IF_FAULT (env);
 
-    result = xmlrpc_build_value (env, "(VVV)",
-                                 xmlrpc_packages,
-                                 xmlrpc_removals,
-                                 xmlrpc_extra_deps);
+    xremove = rcd_rc_package_slist_to_xmlrpc_op_array (remove_packages,
+                                                       RCD_PACKAGE_OP_REMOVE,
+                                                       NULL, env);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    result = xmlrpc_build_value (env, "(VV)", xinstall, xremove);
     XMLRPC_FAIL_IF_FAULT (env);
 
 cleanup:
-    if (xmlrpc_packages)
-        xmlrpc_DECREF (xmlrpc_packages);
+    if (actions)
+        rc_rollback_action_slist_free (actions);
 
-    if (xmlrpc_installs)
-        xmlrpc_DECREF (xmlrpc_installs);
-
-    if (xmlrpc_removals)
-        xmlrpc_DECREF (xmlrpc_removals);
-
-    if (xmlrpc_extra_deps)
-        xmlrpc_DECREF (xmlrpc_extra_deps);
-
-    if (rollback_channel) {
-        rc_world_remove_channel (world, rollback_channel);
-
-        /*
-         * Removing a channel doesn't remove it from the packages' channel
-         * field, so we need to reset that here.
-         */
-        for (iter = rcd_rollback_get_packages (); iter; iter = iter->next) {
-            RCPackage *package = iter->data;
-            
-            package->channel = NULL;
-        }
-    }
-    
-    if (env->fault_occurred)
-        return NULL;
-
-    return result;
-} /* packsys_rollback_dependencies */
-
-/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
-
-static xmlrpc_value *
-packsys_get_rollback_packages (xmlrpc_env   *env,
-                               xmlrpc_value *param_array,
-                               void         *user_data)
-{
-    RCWorld *world = (RCWorld *) user_data;
-    RCPackman *packman = rc_world_get_packman (world);
-    xmlrpc_value *result;
-
-    if (!(rc_packman_get_capabilities (packman) & RC_PACKMAN_CAP_REPACKAGING))
-    {
-        xmlrpc_env_set_fault(env, RCD_RPC_FAULT_NOT_SUPPORTED,
-                             "Rollback is not supported by this system");
-        return NULL;
+    if (install_packages) {
+        rc_package_slist_unref (install_packages);
+        g_slist_free (install_packages);
     }
 
-    result = rcd_rc_package_slist_to_xmlrpc_array (
-        rcd_rollback_get_packages (), env);
+    if (remove_packages) {
+        rc_package_slist_unref (remove_packages);
+        g_slist_free (remove_packages);
+    }
 
-    if (env->fault_occurred)
-        return NULL;
+    if (xinstall)
+        xmlrpc_DECREF (xinstall);
+
+    if (xremove)
+        xmlrpc_DECREF (xremove);
 
     return result;
-} /* packsys_get_rollback_packages */
+}
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
@@ -2391,13 +2249,8 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
                             "view",
                             world);
 
-    rcd_rpc_register_method("rcd.packsys.rollback_dependencies",
-                            packsys_rollback_dependencies,
-                            "view",
-                            world);
-
-    rcd_rpc_register_method("rcd.packsys.get_rollback_packages",
-                            packsys_get_rollback_packages,
+    rcd_rpc_register_method("rcd.packsys.get_rollback_actions",
+                            packsys_get_rollback_actions,
                             "view",
                             world);
 

@@ -615,16 +615,16 @@ rcd_prefs_set_cache_max_size_in_mb (gint size)
 }
 
 gboolean
-rcd_prefs_get_repackage (void)
+rcd_prefs_get_rollback (void)
 {
-    return gnome_config_get_bool (get_config_path ("/System/repackage=FALSE"));
+    return gnome_config_get_bool (get_config_path ("/System/rollback=FALSE"));
 }
 
 void
-rcd_prefs_set_repackage (gboolean enabled)
+rcd_prefs_set_rollback (gboolean enabled)
 {
-    gnome_config_set_bool (get_config_path ("/System/repackage"), enabled);
-    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Repackaging enabled: %s",
+    gnome_config_set_bool (get_config_path ("/System/rollback"), enabled);
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Rollback enabled: %s",
               enabled ? "TRUE" : "FALSE");
 
     SYNC_CONFIG;

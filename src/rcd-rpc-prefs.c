@@ -492,13 +492,13 @@ rcd_rpc_prefs_register_methods (void)
 
     world = rc_get_world ();
     packman = rc_world_get_packman (world);
-    if (rc_packman_get_capabilities (packman) & RC_PACKMAN_CAP_REPACKAGING) {
+    if (rc_packman_get_capabilities (packman) & RC_PACKMAN_CAP_ROLLBACK) {
         rcd_rpc_prefs_register_pref (
-            "repackage", RCD_PREF_BOOLEAN,
-            "Repackage old software on upgrade or removal, allowing undo/rollback",
+            "rollback", RCD_PREF_BOOLEAN,
+            "Save transaction history and changed files, allowing undo/rollback",
             "Advanced",
-            (RCDPrefGetFunc) rcd_prefs_get_repackage, "view",
-            (RCDPrefSetFunc) rcd_prefs_set_repackage, "superuser");
+            (RCDPrefGetFunc) rcd_prefs_get_rollback, "view",
+            (RCDPrefSetFunc) rcd_prefs_set_rollback, "superuser");
     }
 
     /* We handle more fine grained privileges in these pref functions. */
