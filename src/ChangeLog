@@ -1,3 +1,14 @@
+2002-10-24  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-packsys.c (packsys_rollback_dependencies): After we tear
+	down our temporary rollback channel, reset the channel field on
+	all its packages to NULL.
+
+2002-10-23  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-packsys.c (refresh_channels_cb): If the distro isn't
+	supported or deprecated, don't refresh channel data.
+
 2002-10-22  Joe Shaw  <joe@ximian.com>
 
 	* rcd-transaction.c (transaction_step_cb): Update the

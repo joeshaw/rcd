@@ -149,8 +149,19 @@ check_pending_status_cb (gpointer user_data)
 static void
 refresh_channels_cb (gpointer user_data)
 {
+    RCDistroStatus status;
     GSList *id_list;
     GSList **ret_list = user_data;
+
+    /* If we're on an unsupported distro, don't refresh channels. */
+    status = rc_distro_get_status ();
+    if (status != RC_DISTRO_STATUS_SUPPORTED &&
+        status != RC_DISTRO_STATUS_DEPRECATED)
+    {
+        if (ret_list)
+            *ret_list = NULL;
+        return;
+    }
 
     rcd_transaction_lock ();
 
@@ -1652,8 +1663,19 @@ cleanup:
     if (xmlrpc_extra_deps)
         xmlrpc_DECREF (xmlrpc_extra_deps);
 
-    if (rollback_channel)
+    if (rollback_channel) {
         rc_world_remove_channel (world, rollback_channel);
+
+        /*
+         * Removing a channel doesn't remove it from the packages' channel
+         * field, so we need to reset that here.
+         */
+        for (iter = rcd_rollback_get_packages (); iter; iter = iter->next) {
+            RCPackage *package = iter->data;
+            
+            package->channel = NULL;
+        }
+    }
     
     if (env->fault_occurred)
         return NULL;
