@@ -1,3 +1,7 @@
+2003-04-22  Joe Shaw  <joe@ximian.com>
+
+	* configure.in: Bump up to 1.5.0.  Bleeding edge.
+
 2003-04-11  Joe Shaw  <joe@ximian.com>
 
 	* rcd.init.suse.in: Source in /etc/sysconfig/rcd if we have it.

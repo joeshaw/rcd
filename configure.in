@@ -10,7 +10,7 @@ AC_INIT(src/rcd.c)
 AC_PREREQ(2.52)
 
 MAJOR_VERSION=1
-MINOR_VERSION=4
+MINOR_VERSION=5
 MICRO_VERSION=0
 VERSION=$MAJOR_VERSION.$MINOR_VERSION.$MICRO_VERSION
 
@@ -52,7 +52,7 @@ AM_PROG_LIBTOOL
 
 ### get cflags and libs
 
-PKG_CHECK_MODULES(RCD, glib-2.0 gmodule-2.0 gobject-2.0 libxml-2.0 libredcarpet >= 1.4.2)
+PKG_CHECK_MODULES(RCD, glib-2.0 gmodule-2.0 gobject-2.0 libxml-2.0 libredcarpet >= 1.5)
 
 ###
 ### libsoup magic
