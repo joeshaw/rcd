@@ -58,12 +58,12 @@ PKG_CHECK_MODULES(RCD, glib-2.0 gmodule-2.0 gobject-2.0 libxml-2.0 libredcarpet 
 ### libsoup magic
 ###
 if test "x$with_libsoup" != "x"; then
-  AC_MSG_CHECKING(libsoup configuration in $with_libsoup/soup-2.0.pc)
+  AC_MSG_CHECKING(libsoup configuration in $with_libsoup/libsoup-2.2.pc)
 
-  if test -f $with_libsoup/soup-2.0.pc || test -l $with_libsoup/soup-2.0.pc; then 
+  if test -f $with_libsoup/libsoup-2.2.pc || test -l $with_libsoup/libsoup-2.2.pc; then 
     true
   else
-    echo "couldn't find $with_libsoup/soup-2.0.pc"
+    echo "couldn't find $with_libsoup/libsoup-2.2.pc"
     AC_MSG_ERROR($with_libsoup must be the top of a built libsoup tree)
   fi
 
@@ -73,18 +73,18 @@ if test "x$with_libsoup" != "x"; then
 
   export PKG_CONFIG_PATH
 
-  PKG_CHECK_MODULES(LIBSOUP, soup-2.0)
+  PKG_CHECK_MODULES(LIBSOUP, libsoup-2.2)
 
   real_with_libsoup=`cd $with_libsoup && pwd`
 
   CPPFLAGS="${CPPFLAGS:+$CPPFLAGS }-I$real_with_libsoup"
 
   LIBSOUP_LIBS=`echo $LIBSOUP_LIBS | sed 's/-L[[^ ]]* *//g'`
-  LIBSOUP_LIBS=`echo $LIBSOUP_LIBS | sed "s,-lsoup-2.0,$real_with_libsoup/libsoup/.libs/libsoup-2.0.a,g"`
+  LIBSOUP_LIBS=`echo $LIBSOUP_LIBS | sed "s,-lsoup-2.2,$real_with_libsoup/libsoup/.libs/libsoup-2.2.a,g"`
 
   RCD_LIBS=`echo $RCD_LIBS | sed 's/-lsoup//g'`
 else
-  PKG_CHECK_MODULES(LIBSOUP, soup-2.0)
+  PKG_CHECK_MODULES(LIBSOUP, libsoup-2.2)
   RCD_CFLAGS="${RCD_CFLAGS:+$RCD_CFLAGS }$LIBSOUP_CFLAGS"
 fi
 
