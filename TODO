@@ -1,0 +1,15 @@
+
+Daemonize the daemon.
+
+Turn on authentication by default.
+
+Fix cache issue:
+<joe> What I want to do is keep a separate cached copy of the last
+known good XML file in /var/lib
+<joe> So that it's actually separate from the cache and such, and have
+the local files load from those if they can
+<joe> I guess the problem would still remain, but it'd be much less
+likely that people would go around deleting packageinfo.xml files from
+that directory and not the channels.xml.gz
+
+Need docs and a man page.
