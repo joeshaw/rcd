@@ -88,7 +88,7 @@ option_parsing (int argc, const char **argv)
           "Set the verbosity of syslog output.", NULL },
         { "undump", '\0', POPT_ARG_STRING, &dump_file, 0,
           "Initialize daemon from a dump file.", "filename" },
-        POPT_TABLEEND
+        { NULL, '\0', 0, 0, 0, NULL, NULL }
     };
 
     poptContext popt_context;

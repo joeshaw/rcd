@@ -1,3 +1,12 @@
+2002-08-23  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-unix-server.c: Include sys/time.h, which is needed so that
+	we pick up the definition of struct timeval on machines running an
+	older glibc (like RH62).
+
+	* rcd.c (option_parsing): Don't use the POPT_TABLEEND macro, since
+	it isn't in the version of popt that comes with RH62.
+
 2002-08-22  Joe Shaw  <joe@ximian.com>
 
 	* rcd-unix-server.c (SOCKET_PATH): Change from /tmp/rcd to
