@@ -1,3 +1,11 @@
+2002-11-22  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-util.c (rcd_rc_package_from_xmlrpc_package): Always deal
+	with package_data and package_filename fields first, so that we
+	always return a package created with rc_packman_query_file() and
+	not potentially a system package.  This will fix a crash when
+	trying to install packages that are already installed on the system.
+
 2002-11-22  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-transaction.c (fail_transaction): Send the log, even if

@@ -641,11 +641,49 @@ rcd_rc_package_from_xmlrpc_package (xmlrpc_value *value,
                                     xmlrpc_env   *env)
 {
     char *name = NULL;
+    int has_key;
     int installed;
     int channel_id;
     RCWorld *world = rc_get_world ();
     RCPackman *packman = rc_world_get_packman (world);
     RCPackage *package = NULL;
+
+    has_key = xmlrpc_struct_has_key (env, value, "package_data");
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    if (has_key) {
+        xmlrpc_value *package_data = xmlrpc_struct_get_value (
+            env, value, "package_data");
+        XMLRPC_FAIL_IF_FAULT (env);
+        
+        package = rcd_rc_package_from_streamed_package (package_data, env);
+        XMLRPC_FAIL_IF_FAULT (env);
+        
+        return package;
+    }
+    
+    has_key = xmlrpc_struct_has_key (env, value, "package_filename");
+    XMLRPC_FAIL_IF_FAULT (env);
+    
+    if (has_key) {
+        char *filename;
+        
+        RCD_XMLRPC_STRUCT_GET_STRING (env, value, "package_filename",
+                                      filename);
+        XMLRPC_FAIL_IF_FAULT (env);
+        
+        package = rc_packman_query_file (packman, filename);
+        
+        if (package)
+            package->package_filename = g_strdup (filename);
+        else
+            xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PACKAGE_NOT_FOUND,
+                                  "Unable to find package");
+        
+        g_free (filename);
+        
+        return package;
+    }
 
     RCD_XMLRPC_STRUCT_GET_STRING (env, value, "name", name);
     XMLRPC_FAIL_IF_FAULT (env);
@@ -683,45 +721,6 @@ rcd_rc_package_from_xmlrpc_package (xmlrpc_value *value,
         }
     }
     else {
-        int has_key;
-
-        has_key = xmlrpc_struct_has_key (env, value, "package_data");
-        XMLRPC_FAIL_IF_FAULT (env);
-
-        if (has_key) {
-            xmlrpc_value *package_data = xmlrpc_struct_get_value (
-                env, value, "package_data");
-            XMLRPC_FAIL_IF_FAULT (env);
-
-            package = rcd_rc_package_from_streamed_package (package_data, env);
-            XMLRPC_FAIL_IF_FAULT (env);
-
-            goto cleanup;
-        }
-
-        has_key = xmlrpc_struct_has_key (env, value, "package_filename");
-        XMLRPC_FAIL_IF_FAULT (env);
-
-        if (has_key) {
-            char *filename;
-
-            RCD_XMLRPC_STRUCT_GET_STRING (env, value, "package_filename",
-                                          filename);
-            XMLRPC_FAIL_IF_FAULT (env);
-
-            package = rc_packman_query_file (packman, filename);
-
-            if (package)
-                package->package_filename = g_strdup (filename);
-            else
-                xmlrpc_env_set_fault (env, RCD_RPC_FAULT_PACKAGE_NOT_FOUND,
-                                      "Unable to find package");
-
-            g_free (filename);
-
-            goto cleanup;
-        }
-
         package = rc_world_get_package (world, RC_WORLD_SYSTEM_PACKAGES, name);
 
         if (!package) {
