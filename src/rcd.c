@@ -37,7 +37,6 @@
 #include <uuid/uuid.h>
 
 #include "rcd-about.h"
-#include "rcd-fetch.h"
 #include "rcd-heartbeat.h"
 #include "rcd-identity.h"
 #include "rcd-log.h"

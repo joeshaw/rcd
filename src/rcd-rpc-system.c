@@ -28,15 +28,11 @@
 
 #include <unistd.h>
 
-#include <xmlrpc.h>
-
 #include "rcd-about.h"
 #include "rcd-cache.h"
-#include "rcd-fetch.h"
 #include "rcd-module.h"
 #include "rcd-prefs.h"
 #include "rcd-recurring.h"
-#include "rcd-services.h"
 #include "rcd-shutdown.h"
 #include "rcd-rpc.h"
 #include "rcd-rpc-util.h"
@@ -295,34 +291,6 @@ system_restart (xmlrpc_env   *env,
     return xmlrpc_build_value (env, "i", 1);
 }
 
-static xmlrpc_value *
-system_activate (xmlrpc_env   *env,
-                 xmlrpc_value *param_array,
-                 void         *user_data)
-{
-    char *activation_code, *email;
-    char *alias = NULL;
-    int param_count;
-    xmlrpc_value *value = NULL;
-
-    param_count = xmlrpc_array_size (env, param_array);
-    XMLRPC_FAIL_IF_FAULT (env);
-
-    if (param_count == 2)
-        xmlrpc_parse_value (env, param_array, "(ss)", &activation_code, &email);
-    else
-        xmlrpc_parse_value (env, param_array, "(sss)",
-                            &activation_code, &email, &alias);
-    XMLRPC_FAIL_IF_FAULT (env);
-
-    value = rcd_fetch_register (env, activation_code, email, alias);
-    XMLRPC_FAIL_IF_FAULT (env);
-
-cleanup:
-
-    return value;
-}
-
 struct RecurringInfo {
     xmlrpc_env *env;
     xmlrpc_value *array;
@@ -435,9 +403,6 @@ rcd_rpc_system_register_methods(void)
                              "superuser", NULL);
 	rcd_rpc_register_method ("rcd.system.restart",
                              system_restart,
-                             "superuser", NULL);
-    rcd_rpc_register_method ("rcd.system.activate",
-                             system_activate,
                              "superuser", NULL);
     rcd_rpc_register_method ("rcd.system.get_recurring",
                              system_get_recurring,

@@ -30,7 +30,6 @@
 #include <sys/vfs.h>
 #include <sys/statvfs.h>
 
-#include "rcd-fetch.h"
 #include "rcd-log.h"
 #include "rcd-marshal.h"
 #include "rcd-prefs.h"
@@ -903,6 +902,73 @@ transfer_done_cb (RCDTransferPool  *pool,
 }
 
 static void
+package_completed_cb (RCDTransfer *t, RCPackage *package)
+{
+    /* Ew. */
+    if (g_object_get_data (G_OBJECT (t), "is_signature"))
+        package->signature_filename = rcd_transfer_get_local_filename (t);
+    else
+        package->package_filename = rcd_transfer_get_local_filename (t);
+}
+
+static void
+fetch_packages (RCDTransferPool *pool, RCPackageSList *packages)
+{
+    RCPackageSList *iter;
+
+    g_return_if_fail (pool != NULL);
+    g_return_if_fail (packages != NULL);
+
+    for (iter = packages; iter; iter = iter->next) {
+        RCPackage *package = iter->data;
+        RCPackageUpdate *update = rc_package_get_latest_update (package);
+        RCWorldService *service;
+        char *url;
+        RCDCacheEntry *entry;
+        RCDTransfer *t;
+
+        service = RC_WORLD_SERVICE (rc_channel_get_world (package->channel));
+
+        url = rc_maybe_merge_paths (service->url, update->package_url);
+
+        entry = rcd_cache_lookup_by_url (rcd_cache_get_package_cache (),
+                                         url, TRUE);
+        t = rcd_transfer_new (url,
+                              RCD_TRANSFER_FLAGS_FORCE_CACHE |
+                              RCD_TRANSFER_FLAGS_RESUME_PARTIAL,
+                              entry);
+
+        g_signal_connect (t, "file_done",
+                          G_CALLBACK (package_completed_cb), package);
+
+        rcd_transfer_pool_add_transfer (pool, t);
+        g_object_unref (t);
+
+        if (update->signature_url) {
+            url = rc_maybe_merge_paths (service->url, update->signature_url);
+
+            entry = rcd_cache_lookup_by_url (rcd_cache_get_package_cache (),
+                                             url, TRUE);
+        
+            t = rcd_transfer_new (url,
+                                  RCD_TRANSFER_FLAGS_FORCE_CACHE |
+                                  RCD_TRANSFER_FLAGS_RESUME_PARTIAL,
+                                  entry);
+
+            /* Ew. */
+            g_object_set_data (G_OBJECT (t), "is_signature",
+                               GINT_TO_POINTER (TRUE));
+
+            g_signal_connect (t, "file_done",
+                              G_CALLBACK (package_completed_cb), package);
+
+            rcd_transfer_pool_add_transfer (pool, t);
+            g_object_unref (t);
+        }
+    }
+}
+
+static void
 rcd_transaction_download (RCDTransaction *transaction)
 {
     GError *err = NULL;
@@ -929,8 +995,8 @@ rcd_transaction_download (RCDTransaction *transaction)
                              g_object_ref (transaction));
 
         /* Kick off the download */
-        rcd_fetch_packages (transaction->pool,
-                            transaction->packages_to_download);
+        fetch_packages (transaction->pool,
+                        transaction->packages_to_download);
         rcd_transfer_pool_set_expected_size (transaction->pool,
                                              transaction->total_download_size);
         g_signal_connect (transaction->pool, "transfer_done",

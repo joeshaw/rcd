@@ -1,5 +1,27 @@
 2003-09-03  Joe Shaw  <joe@ximian.com>
 
+	* Makefile.am: Kill rcd-fetch.[ch].
+
+	* rcd-rpc-packsys.c: Remove rcd-fetch.h #include.
+
+	* rcd-rpc-service.c (service_activate): Added.  Moved here from
+	rcd-rpc-system.c.  Activations are now done per-service.  Takes
+	different args.
+
+	* rcd-rpc-system.c (system_active): Removed.
+
+	* rcd-transaction.c (fetch_packages): Moved here from rcd-fetch.c.
+
+	* rcd-world-remote.c (rcd_world_remote_activate): Added, formerly
+	in rcd-fetch.c.  Makes an XML-RPC call to the server to do
+	activation.
+	(rcd_world_remote_parse_serviceinfo): Call
+	rcd_world_remote_activate() to register with the server.
+
+	* rcd.c: Remove rcd-fetch.h #include.
+
+2003-09-03  Joe Shaw  <joe@ximian.com>
+
 	* rcd-rpc-packsys.c (packsys_refresh_all_channels,
 	packsys_refresh_all_channels_blocking): Remove dead code.
 	(packsys_transact_blocking, packsys_rollback_blocking): Throw

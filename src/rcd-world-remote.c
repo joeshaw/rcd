@@ -27,15 +27,16 @@
 #include "rcd-world-remote.h"
 
 #include <sys/types.h>
+#include <sys/utsname.h>
 #include <unistd.h>
 
 #include <libredcarpet.h>
 
-#include "rcd-fetch.h"
 #include "rcd-license.h"
 #include "rcd-news.h"
 #include "rcd-prefs.h"
 #include "rcd-transfer-pool.h"
+#include "rcd-xmlrpc.h"
 
 #define RCD_WORLD_REMOTE_FETCH_FAILED ((gpointer) 0xdeadbeef)
 
@@ -447,6 +448,113 @@ rcd_world_remote_fetch_mirrors (RCDWorldRemote *remote, gboolean local)
 
     if (t)
         g_object_unref (t);
+}
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+
+static xmlrpc_value *
+build_register_params (xmlrpc_env *env,
+                       const char *activation_code,
+                       const char *email,
+                       const char *alias)
+{
+    struct utsname uname_buf;
+    const char *hostname;
+    xmlrpc_value *value;
+
+    if (uname (&uname_buf) < 0) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Couldn't get hostname from uname()");
+        hostname = "(unknown)";
+    }
+    else
+        hostname = uname_buf.nodename;
+
+    value = xmlrpc_build_value(env, "()");
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    if (!activation_code) {
+        /*
+          g_assert (rcd_prefs_get_org_id ());
+          RCD_XMLRPC_STRUCT_SET_STRING (env, value,
+          "orgtoken",
+          rcd_prefs_get_org_id ());
+          XMLRPC_FAIL_IF_FAULT (env);
+        */
+    } else {
+        xmlrpc_array_append_item (env, value,
+                                  xmlrpc_build_value(env, "s", activation_code));
+        XMLRPC_FAIL_IF_FAULT (env);
+    }
+ 
+    if (email) {
+        xmlrpc_array_append_item (env, value,
+                                  xmlrpc_build_value(env, "s", email));
+        XMLRPC_FAIL_IF_FAULT (env);
+    }
+
+    xmlrpc_array_append_item(env, value,
+                             xmlrpc_build_value(env, "s", hostname));
+ 
+    if (alias) {
+        xmlrpc_array_append_item (env, value,
+                                  xmlrpc_build_value(env, "s", alias));
+        XMLRPC_FAIL_IF_FAULT (env);
+    }
+ 
+cleanup:
+    if (env->fault_occurred) {
+        xmlrpc_DECREF (value);
+        value = NULL;
+    }
+ 
+    return value;
+}
+
+gboolean
+rcd_world_remote_activate (RCDWorldRemote  *remote,
+                           const char      *activation_code,
+                           const char      *email,
+                           const char      *alias,
+                           char           **err_msg)
+{
+    xmlrpc_env env;
+    xmlrpc_server_info *server;
+    xmlrpc_value *params, *value;
+    gboolean success = TRUE;
+
+    *err_msg = NULL;
+
+    g_return_val_if_fail (RCD_IS_WORLD_REMOTE (remote), FALSE);
+
+    xmlrpc_env_init (&env);
+
+    server = rcd_xmlrpc_get_server (&env, remote->activation_root_url);
+    XMLRPC_FAIL_IF_FAULT (&env);
+
+    params = build_register_params (&env, activation_code, email, alias);
+    XMLRPC_FAIL_IF_FAULT (&env);
+
+    value = xmlrpc_client_call_server_params (&env, server,
+                                              "rcserver.activate",
+                                              params);
+    /* FIXME: Should we ignore return value here? */
+
+cleanup:
+    if (env.fault_occurred) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING, "Unable to activate with '%s': %s",
+                  remote->activation_root_url, env.fault_string);
+
+        *err_msg = g_strdup (env.fault_string);
+        success = FALSE;
+    } else
+        xmlrpc_DECREF (value);
+
+    xmlrpc_server_info_free (server);
+    xmlrpc_env_clean (&env);
+
+    return success;
 }
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
@@ -922,7 +1030,7 @@ rcd_world_remote_parse_serviceinfo (RCDWorldRemote *remote,
     }
 
     if (remote->premium_service && rcd_prefs_get_org_id ()) {
-        rcd_fetch_register (NULL, NULL, NULL, NULL);
+        rcd_world_remote_activate (remote, NULL, NULL, NULL, NULL);
     }
 
     if (remote->distributions_url)

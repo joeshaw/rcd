@@ -118,5 +118,12 @@ void rcd_world_remote_foreach_news (RCDWorldRemote              *remote,
                                     RCDWorldRemoteForeachNewsFn  fn,
                                     gpointer                     user_data);
 
+/*** News ***/
+gboolean rcd_world_remote_activate (RCDWorldRemote  *remote,
+                                    const char      *activation_code,
+                                    const char      *email,
+                                    const char      *alias,
+                                    char           **err_msg);
+
 #endif /* __RCD_WORLD_REMOTE_H__ */
 

@@ -335,69 +335,6 @@ cleanup:
 }
 
 static xmlrpc_value *
-service_refresh_blocking (xmlrpc_env   *env,
-                          xmlrpc_value *param_array,
-                          void         *user_data)
-{
-    int size;
-    RCWorld *world;
-    RCPending *pending;
-    GSList *pending_list;
-    char *err_msg = NULL;
-
-    if (rcd_transaction_is_locked ()) {
-        xmlrpc_env_set_fault (env, RCD_RPC_FAULT_LOCKED,
-                              "Transaction lock in place");
-        return NULL;
-    }
-
-    size = xmlrpc_array_size (env, param_array);
-    XMLRPC_FAIL_IF_FAULT (env);
-
-    if (size > 0) {
-        char *service_identifier;
-
-        xmlrpc_parse_value (env, param_array, "(s)", &service_identifier);
-        XMLRPC_FAIL_IF_FAULT (env);
-
-        world = RC_WORLD (service_lookup (service_identifier));
-
-        if (!world) {
-            xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_INVALID_SERVICE,
-                                            "Unable to find service '%s'",
-                                            service_identifier);
-            goto cleanup;
-        }
-    } else {
-        world = rc_get_world ();
-    }
-
-    /* FIXME: err_msg ? */
-    pending = rc_world_refresh (world);
-
-    if (err_msg) {
-        xmlrpc_env_set_fault_formatted (
-            env, RCD_RPC_FAULT_CANT_REFRESH,
-            "Unable to download channel data: %s", err_msg);
-        goto cleanup;
-    }
-    
-    pending_list = g_slist_prepend (NULL, pending);
-    rcd_rpc_block_on_pending_list (env, pending_list, FALSE,
-                                   RCD_RPC_FAULT_CANT_REFRESH);
-    g_slist_free (pending_list);
-    
-cleanup:
-    if (err_msg)
-        g_free (err_msg);
-
-    if (env->fault_occurred)
-        return NULL;
-
-    return xmlrpc_build_value (env, "i", 0);
-}
-
-static xmlrpc_value *
 service_refresh (xmlrpc_env   *env,
                  xmlrpc_value *param_array,
                  void         *user_data)
@@ -461,6 +398,153 @@ service_refresh (xmlrpc_env   *env,
     return value;
 }
 
+static xmlrpc_value *
+service_refresh_blocking (xmlrpc_env   *env,
+                          xmlrpc_value *param_array,
+                          void         *user_data)
+{
+    int size;
+    RCWorld *world;
+    RCPending *pending;
+    GSList *pending_list;
+    char *err_msg = NULL;
+
+    if (rcd_transaction_is_locked ()) {
+        xmlrpc_env_set_fault (env, RCD_RPC_FAULT_LOCKED,
+                              "Transaction lock in place");
+        return NULL;
+    }
+
+    size = xmlrpc_array_size (env, param_array);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    if (size > 0) {
+        char *service_identifier;
+
+        xmlrpc_parse_value (env, param_array, "(s)", &service_identifier);
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        world = RC_WORLD (service_lookup (service_identifier));
+
+        if (!world) {
+            xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_INVALID_SERVICE,
+                                            "Unable to find service '%s'",
+                                            service_identifier);
+            goto cleanup;
+        }
+    } else {
+        world = rc_get_world ();
+    }
+
+    /* FIXME: err_msg ? */
+    pending = rc_world_refresh (world);
+
+    if (err_msg) {
+        xmlrpc_env_set_fault_formatted (
+            env, RCD_RPC_FAULT_CANT_REFRESH,
+            "Unable to download channel data: %s", err_msg);
+        goto cleanup;
+    }
+    
+    pending_list = g_slist_prepend (NULL, pending);
+    rcd_rpc_block_on_pending_list (env, pending_list, FALSE,
+                                   RCD_RPC_FAULT_CANT_REFRESH);
+    g_slist_free (pending_list);
+    
+cleanup:
+    if (err_msg)
+        g_free (err_msg);
+
+    if (env->fault_occurred)
+        return NULL;
+
+    return xmlrpc_build_value (env, "i", 0);
+}
+
+static gboolean
+get_singleton_remote_cb (RCWorld *world, gpointer user_data)
+{
+    RCDWorldRemote **remote = user_data;
+
+    /* There's more than one remote */
+    if (*remote != NULL)
+        return FALSE;
+
+    *remote = RCD_WORLD_REMOTE (world);
+
+    return TRUE;
+}
+
+static xmlrpc_value *
+service_activate (xmlrpc_env   *env,
+                  xmlrpc_value *param_array,
+                  void         *user_data)
+{
+    xmlrpc_value *activation_info;
+    char *activation_code, *email;
+    char *service_identifier = NULL, *alias = NULL;
+    RCWorldService *service;
+    char *err_msg;
+
+    xmlrpc_parse_value (env, param_array, "(V)", &activation_info);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    RCD_XMLRPC_STRUCT_GET_STRING (env, activation_info,
+                                  "activation_code", activation_code);
+
+    RCD_XMLRPC_STRUCT_GET_STRING (env, activation_info,
+                                  "email", email);
+
+    if (xmlrpc_struct_has_key (env, activation_info, "alias")) {
+        RCD_XMLRPC_STRUCT_GET_STRING (env, activation_info,
+                                      "alias", alias);
+    }
+
+    if (xmlrpc_struct_has_key (env, activation_info, "service")) {
+        RCD_XMLRPC_STRUCT_GET_STRING (env, activation_info,
+                                      "service", service_identifier);
+
+        service = service_lookup (service_identifier);
+
+        if (!service || !g_type_is_a (G_TYPE_FROM_INSTANCE (service),
+                                      RCD_TYPE_WORLD_REMOTE))
+        {
+            xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_INVALID_SERVICE,
+                                            "Unable to find service '%s'",
+                                            service_identifier);
+            goto cleanup;
+        }
+    } else {
+        service = NULL;
+
+        if (rc_world_multi_foreach_subworld_by_type (
+                RC_WORLD_MULTI (rc_get_world ()),
+                RCD_TYPE_WORLD_REMOTE,
+                get_singleton_remote_cb,
+                &service) < 0)
+        {
+            xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_INVALID_SERVICE,
+                                            "You must specify a specific service");
+            goto cleanup;
+        }
+    }
+    
+    if (!rcd_world_remote_activate (RCD_WORLD_REMOTE (service),
+                                    activation_code, email, alias, &err_msg))
+    {
+        xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_CANT_ACTIVATE,
+                                        "%s", err_msg);
+        g_free (err_msg);
+        goto cleanup;
+    }
+
+cleanup:
+    if (env->fault_occurred)
+        return NULL;
+
+    return xmlrpc_build_value (env, "i", 0);
+}
+
 void
 rcd_rpc_service_register_methods (void)
 {
@@ -485,4 +569,7 @@ rcd_rpc_service_register_methods (void)
     rcd_rpc_register_method ("rcd.service.refresh_blocking",
                              service_refresh_blocking,
                              "view", NULL);
+    rcd_rpc_register_method ("rcd.service.activate",
+                             service_activate,
+                             "superuser", NULL);
 }
