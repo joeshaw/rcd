@@ -1,3 +1,7 @@
+2004-04-09  James Willcox  <james@ximian.com>
+
+	* configure.in: 2.2.0
+
 2004-03-16  Frank Belew  <fbelew@novell.com>
 
 	* configure.in: add support for LSB init script
