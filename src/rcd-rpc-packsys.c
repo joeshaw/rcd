@@ -471,23 +471,28 @@ transact_step_cb(RCPackman *packman,
 
     switch (step) {
     case RC_PACKMAN_STEP_UNKNOWN:
-        action = "Transmogrifying";
-        break;
-    case RC_PACKMAN_STEP_CONFIGURE:
-        action = "Configuring";
+    case RC_PACKMAN_STEP_PREPARE:
+        action = "prepare";
         break;
     case RC_PACKMAN_STEP_INSTALL:
-        action = "Installing";
+        action = "install";
         break;
     case RC_PACKMAN_STEP_REMOVE:
-        action = "Removing";
+        action = "remove";
+        break;
+    case RC_PACKMAN_STEP_CONFIGURE:
+        action = "configure";
         break;
     default:
         g_assert_not_reached ();
         break;
     }
 
-    msg = g_strdup_printf ("%s %s", action, name ? name : "packages");
+    if (name)
+        msg = g_strconcat (action, ":", name, NULL);
+    else
+        msg = g_strdup (action);
+
     rcd_pending_add_message (status->pending, msg);
     g_free (msg);
 } /* transact_step_cb */
@@ -508,7 +513,7 @@ transact_done_cb(RCPackman *packman,
 {
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Transaction done");
 
-    rcd_pending_add_message (status->pending, "Transaction done");
+    rcd_pending_add_message (status->pending, "finish");
     rcd_pending_finished (status->pending, 0);
 } /* transact_done_cb */
 
@@ -531,7 +536,9 @@ run_transaction(gpointer user_data)
 {
     RCDTransactionStatus *status = user_data;
 
-    rcd_pending_add_message (status->pending, "Beginning transaction");
+#if 0
+    rcd_pending_add_message (status->pending, "transaction:beginning");
+#endif
 
     g_signal_connect (
         G_OBJECT (status->packman), "transact_start",
@@ -570,7 +577,7 @@ run_transaction(gpointer user_data)
                   "packman error: %s",
                   rc_packman_get_reason (status->packman));
 
-        msg = g_strdup_printf("Transaction failed: %s",
+        msg = g_strdup_printf("failed:%s",
                               rc_packman_get_reason (status->packman));
         rcd_pending_add_message (status->pending, msg);
         g_free (msg);
@@ -631,7 +638,7 @@ download_packages (RCPackageSList *packages, RCDTransactionStatus *status)
     if (!status->packages_to_download)
         return FALSE;
 
-    rcd_pending_add_message (status->pending, "Downloading packages");
+    rcd_pending_add_message (status->pending, "download");
     rcd_pending_update (status->pending, 0.0);
 
     status->packages_to_download =
@@ -776,7 +783,7 @@ packsys_transact(xmlrpc_env   *env,
      * schedule the transaction
      */
     if (!download_packages (status->install_packages, status))
-        g_idle_add(run_transaction, status);
+        g_idle_add (run_transaction, status);
 
     result = xmlrpc_build_value (env, "i",
                                  rcd_pending_get_id (status->pending));

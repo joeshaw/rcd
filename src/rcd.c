@@ -113,6 +113,7 @@ main (int argc, char *argv[])
     g_type_init ();
 
     initialize_logging ();
+    initialize_rc_world ();
 
     if (rcd_fetch_channel_list_local ()) {
         rcd_subscriptions_load ();
@@ -128,7 +129,6 @@ main (int argc, char *argv[])
     rcd_heartbeat_start ();
 
     rcd_module_init ();
-    initialize_rc_world ();
 
     main_loop = g_main_loop_new (NULL, TRUE);
     g_main_run (main_loop);

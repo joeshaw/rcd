@@ -1,5 +1,15 @@
 2002-06-14  Joe Shaw  <joe@ximian.com>
 
+	* rcd-rpc-packsys.c: When adding messages to an RCDPending, use
+	strings that will be parsed by the client instead of user-visible
+	strings, to keep localization issues out of the daemon and in the
+	client where they belong.
+
+	* rcd-transfer-file.c (file_get_local_filename): Return the full
+	path to the file instead of just the filename.
+
+2002-06-14  Joe Shaw  <joe@ximian.com>
+
 	* rcd-fetch.c: Added _local functions which read channel data from
 	only the cache and return success.
 

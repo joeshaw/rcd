@@ -110,7 +110,8 @@ file_open (RCDTransfer *t)
 char *
 file_get_local_filename (RCDTransfer *t)
 {
-    return g_strdup (t->filename);
+    /* Skip past the "file://" */
+    return g_strdup (t->url + 7);
 } /* file_get_local_filename */
 
 RCDTransferProtocol *
