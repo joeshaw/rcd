@@ -31,6 +31,7 @@
 #include "rcd-about.h"
 #include "rcd-module.h"
 #include "rcd-pending.h"
+#include "rcd-prefs.h"
 #include "rcd-shutdown.h"
 #include "rcd-rpc.h"
 #include "rcd-rpc-util.h"

@@ -107,6 +107,7 @@ packsys_refresh_channel (xmlrpc_env   *env,
     channel = rc_world_get_channel_by_id (world, channel_id);
     if (channel) {
         pending_id = rcd_fetch_channel (channel);
+        rcd_fetch_channel_icon (channel);
     }
 
     value = xmlrpc_build_value (env, "i", pending_id);
@@ -159,6 +160,7 @@ refresh_channels_cb (gpointer user_data)
 
     rcd_subscriptions_load ();
 
+    rcd_fetch_all_channel_icons (TRUE);
     id_list = rcd_fetch_all_channels ();
 
     if (ret_list == NULL) {
@@ -215,6 +217,61 @@ packsys_refresh_all_channels (xmlrpc_env   *env,
 
     return value;
 } /* packsys_refresh_all_channels */
+
+static xmlrpc_value *
+packsys_get_channel_icon (xmlrpc_env   *env,
+                          xmlrpc_value *param_array,
+                          void         *user_data)
+{
+    RCWorld *world = user_data;
+    int channel_id;
+    RCChannel *channel;
+    char *local_file;
+    RCBuffer *buf;
+    xmlrpc_value *value = NULL;
+
+    xmlrpc_parse_value (env, param_array, "(i)", &channel_id);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    channel = rc_world_get_channel_by_id (world, channel_id);
+    if (!channel) {
+        xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_INVALID_CHANNEL,
+                                        "Unable to find channel %d",
+                                        channel_id);
+        goto cleanup;
+    }
+
+    local_file = rcd_cache_get_local_filename (
+        rcd_cache_get_icon_cache (channel_id),
+        rc_channel_get_icon_file (channel));
+
+    if (!local_file) {
+        xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_NO_ICON,
+                                        "Can't get icon for channel '%s' (%d)",
+                                        rc_channel_get_name (channel),
+                                        channel_id);
+        goto cleanup;
+    }
+
+    buf = rc_buffer_map_file (local_file);
+    if (!buf) {
+        xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_NO_ICON,
+                                        "Unable to open icon for channel "
+                                        "'%s' (%d)",
+                                        rc_channel_get_name (channel),
+                                        channel_id);
+        goto cleanup;
+    }
+
+    value = xmlrpc_build_value (env, "6", buf->data, buf->size);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+cleanup:
+    if (env->fault_occurred)
+        return NULL;
+
+    return value;
+} /* packsys_get_channel_icon */
 
 static xmlrpc_value *
 packsys_subscribe (xmlrpc_env   *env,
@@ -1752,6 +1809,11 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
 
     rcd_rpc_register_method("rcd.packsys.refresh_all_channels",
                             packsys_refresh_all_channels,
+                            "view",
+                            world);
+
+    rcd_rpc_register_method("rcd.packsys.get_channel_icon",
+                            packsys_get_channel_icon,
                             "view",
                             world);
 

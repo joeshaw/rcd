@@ -50,9 +50,6 @@ void        rcd_cache_entry_set_entity_tag        (RCDCacheEntry *entry,
 char *rcd_cache_entry_get_local_filename (RCDCacheEntry *entry);
 char *rcd_cache_get_local_filename       (RCDCache *cache, const char *url);
 
-RCDCache *rcd_cache_get_normal_cache  (void);
-RCDCache *rcd_cache_get_package_cache (void);
-
 void rcd_cache_expire (RCDCache *cache,
                        double    max_age_in_days,
                        double    max_size_in_mb);
@@ -61,5 +58,9 @@ void rcd_cache_expire (RCDCache *cache,
   A convenience function that (possibly) calls rcd_cache_expire on the
   package cache using parameters pulled in from rcd-prefs */
 void rcd_cache_expire_package_cache (void);
+
+RCDCache *rcd_cache_get_normal_cache  (void);
+RCDCache *rcd_cache_get_package_cache (void);
+RCDCache *rcd_cache_get_icon_cache    (int channel_id);
 
 #endif /* __RCD_CACHE_H__ */

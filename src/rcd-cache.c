@@ -48,6 +48,8 @@ struct _RCDCache {
     GHashTable *entries;
 
     RCDCacheFilenameFunc filename_func;
+
+    gpointer user_data;
 };
 
 struct _RCDCacheEntry {
@@ -292,6 +294,20 @@ package_cache_filename_func (RCDCache *cache, const char *url)
     return full_path;
 } /* package_cache_filename_func */
 
+static char *
+icon_cache_filename_func (RCDCache *cache, const char *url)
+{
+    int channel_id = GPOINTER_TO_INT (cache->user_data);
+    const char *extension;
+    char *path;
+
+    extension = strrchr (url, '.');
+    path = g_strdup_printf ("icons/channel-%d%s", 
+                            channel_id, extension ? extension : "");
+
+    return path;
+} /* icon_cache_filename_func */
+
 RCDCache *
 rcd_cache_get_normal_cache (void)
 {
@@ -324,6 +340,20 @@ rcd_cache_get_package_cache (void)
 
     return cache;
 } /* rcd_cache_get_package_cache */
+
+RCDCache *
+rcd_cache_get_icon_cache (int channel_id)
+{
+    static RCDCache *cache = NULL;
+
+    if (cache == NULL) {
+        cache = rcd_cache_new (icon_cache_filename_func);
+    }
+
+    cache->user_data = GINT_TO_POINTER (channel_id);
+
+    return cache;
+} /* rcd_cache_get_icon_cache */
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 

@@ -1,3 +1,30 @@
+2002-08-23  Joe Shaw  <joe@ximian.com>
+
+	* rcd-cache.c (RCDCache): Add a user_data field.
+	(icon_cache_filename_func): Added.  Munges an icon filename.
+	(rcd_cache_get_icon_cache): Added.  Gets the icon cache and sets
+	the channel_id as the cache's user_data.
+
+	* rcd-fetch.c (rcd_fetch_channel): Fix a leak when downloading
+	channel data fails.
+	(rcd_fetch_channel_icon): Fetches the channel icon.
+	(rcd_fetch_all_channel_icons): Fetches all of the channel icons,
+	or only the ones that need to be fetched.
+
+	* rcd-rpc-packsys.c (packsys_refresh_channel): Also refresh the
+	channel's icon.
+	(refresh_channels_cb): Refresh all of the channel icons.
+	(packsys_get_channel_icon): Added.  Sends the channel icon down
+	the wire.
+	(rcd_rpc_packsys_register_methods): Register get_channel_icon().
+
+	* rcd-rpc-system.c: Add an #include to avoid a warning.
+
+	* rcd-rpc-util.h: Add RCD_RPC_FAULT_NO_ICON fault.
+
+	* rcd.c (initialize_data): Download the channel icons that we
+	don't already have on disk.
+
 2002-08-23  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-unix-server.c: Include sys/time.h, which is needed so that

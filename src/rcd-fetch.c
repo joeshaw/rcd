@@ -417,6 +417,11 @@ rcd_fetch_channel (RCChannel *channel)
                   "Attempt to download channel data for '%s' (%d) failed: %s",
                   rc_channel_get_name (channel), rc_channel_get_id (channel),
                   rcd_transfer_get_error_string (t));
+
+        rc_channel_unref (closure->channel);
+        g_byte_array_free (closure->data, FALSE);
+        g_free (closure);
+
         return RCD_INVALID_PENDING_ID;
     }
 
@@ -479,6 +484,84 @@ rcd_fetch_channel_local (RCChannel *channel)
 
     return TRUE;
 }
+
+static void
+process_icon_cb (RCDTransfer *t, gpointer user_data)
+{
+    RCChannel *channel = user_data;
+
+    rc_channel_unref (channel);
+} /* process_icon_cb */
+
+int
+rcd_fetch_channel_icon (RCChannel *channel)
+{
+    RCDTransfer *t;
+    char *url, *desc;
+    RCDPending *pending;
+
+    g_return_val_if_fail (channel != NULL, RCD_INVALID_PENDING_ID);
+
+    url = merge_paths (rcd_prefs_get_host (),
+                       rc_channel_get_icon_file (channel));
+
+    t = rcd_transfer_new (
+        url, 0, rcd_cache_get_icon_cache (rc_channel_get_id (channel)));
+
+    g_free (url);
+
+    rc_channel_ref (channel);
+
+    g_signal_connect (t, "file_done", G_CALLBACK (process_icon_cb), channel);
+
+    rcd_transfer_begin (t);
+
+    if (rcd_transfer_get_error (t)) {
+        rc_debug (RC_DEBUG_LEVEL_ERROR,
+                  "Attempt to download channel icon for '%s' (%d) failed: %s",
+                  rc_channel_get_name (channel), rc_channel_get_id (channel),
+                  rcd_transfer_get_error_string (t));
+        rc_channel_unref (channel);
+        return RCD_INVALID_PENDING_ID;
+    }
+
+    /* Attach a more meaningful description to our pending object. */
+    pending = rcd_transfer_get_pending (t);
+    desc = g_strdup_printf ("Downloading '%s' channel icon",
+                            rc_channel_get_name (channel));
+    rcd_pending_set_description (pending, desc);
+    g_free (desc);
+
+    return rcd_pending_get_id (pending);
+} /* rcd_fetch_channel_icon */
+
+static void
+fetch_icon_cb (RCChannel *channel, gpointer user_data)
+{
+    gboolean refetch = GPOINTER_TO_INT (user_data);
+
+    if (!refetch) {
+        char *local_file;
+
+        local_file = rcd_cache_get_local_filename (
+            rcd_cache_get_icon_cache (rc_channel_get_id (channel)),
+            rc_channel_get_icon_file (channel));
+
+        if (g_file_test (local_file, G_FILE_TEST_EXISTS)) {
+            /* We have the icon, don't bother to fetch it. */
+            return;
+        }
+    }
+
+    rcd_fetch_channel_icon (channel);
+} /* fetch_icon_cb */
+
+void
+rcd_fetch_all_channel_icons (gboolean refetch)
+{
+    rc_world_foreach_channel (rc_get_world (), fetch_icon_cb,
+                              GINT_TO_POINTER (refetch));
+} /* rcd_fetch_all_channel_icons */
 
 struct FetchAllInfo {
     gboolean local;

@@ -388,6 +388,8 @@ initialize_data (void)
     /* This will fall back and download from the net if necessary */
     rcd_fetch_all_channels_local ();
 
+    rcd_fetch_all_channel_icons (FALSE);
+
     if (!rcd_fetch_news_local ())
         rcd_fetch_news ();
 } /* initialize_data */
