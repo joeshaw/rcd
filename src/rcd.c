@@ -380,12 +380,9 @@ initialize_data (void)
      *
      *    - We are in premium mode.
      *    - We have an organization ID set in our config file.
-     *    - We have not previously registered, or we're forcing
-     *      re-registration.
      */
     if (rcd_prefs_get_premium () &&
-        rcd_prefs_get_org_id () &&
-        (!rcd_prefs_get_registered () || getenv ("RCX_FORCE_REGISTRATION")))
+        rcd_prefs_get_org_id ())
         rcd_fetch_register ();
 
     /* This will fall back and download from the net if necessary */
@@ -416,12 +413,17 @@ signal_handler (int sig_num)
 static void
 crash_handler (int sig_num)
 {
+    struct sigaction sig_action;
     char cmd[128];
 
+    sig_action.sa_handler = SIG_DFL;
+    sigemptyset (&sig_action.sa_mask);
+    sig_action.sa_flags = 0;
+
     /* Restore the default signal handlers. */
-    sigaction (SIGSEGV, SIG_DFL, NULL);
-    sigaction (SIGFPE, SIG_DFL, NULL);
-    sigaction (SIGBUS, SIG_DFL, NULL);
+    sigaction (SIGSEGV, &sig_action, NULL);
+    sigaction (SIGFPE, &sig_action, NULL);
+    sigaction (SIGBUS, &sig_action, NULL);
 
     write (2, "Crash!\n", 7);
     

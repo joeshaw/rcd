@@ -120,20 +120,6 @@ rcd_prefs_get_premium (void)
     }
 } /* rcd_prefs_get_premium */
 
-gboolean
-rcd_prefs_get_registered (void)
-{
-    return gnome_config_get_bool (CONFIG_PATH "/Network/registered=FALSE");
-} /* rcd_prefs_get_registered */
-
-void
-rcd_prefs_set_registered (gboolean registered)
-{
-    gnome_config_set_bool (CONFIG_PATH "/Network/registered", registered);
-
-    SYNC_CONFIG;
-} /* rcd_prefs_set_registered */
-
 const char *
 rcd_prefs_get_org_id (void)
 {

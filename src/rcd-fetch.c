@@ -80,8 +80,19 @@ rcd_fetch_register (void)
 
     status = rcd_transfer_protocol_http_get_response_header (protocol,
                                                              "X-RC-Status");
-    if (status && atoi (status) == 1)
-        rcd_prefs_set_registered (TRUE);
+    if (!status || atoi (status) != 1) {
+        const char *msg;
+
+        if (rcd_transfer_get_error (t))
+            msg = rcd_transfer_get_error_string (t);
+        else
+            msg = rcd_transfer_protocol_http_get_response_body (protocol);
+
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Unable to register with server: %s", msg);
+    }
+    else
+        rc_debug (RC_DEBUG_LEVEL_INFO, "System registered successfully");
 
     g_object_unref (t);
 } /* rcd_fetch_register */

@@ -41,9 +41,6 @@ void         rcd_prefs_set_cache_enabled      (gboolean);
 const gchar *rcd_prefs_get_host               (void);
 const gchar *rcd_prefs_get_proxy              (void);
 
-gboolean     rcd_prefs_get_registered         (void);
-void         rcd_prefs_set_registered         (gboolean);
-
 gboolean     rcd_prefs_get_premium            (void);
 const gchar *rcd_prefs_get_org_id             (void);
 

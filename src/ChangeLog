@@ -1,3 +1,21 @@
+2002-08-20  Joe Shaw  <joe@ximian.com>
+
+	* rcd.c (initialize_data): Don't check to see if we've registered
+	previously.  Always try to register.
+	(crash_handler): We can't just set SIG_DFL as the second argument;
+	we have to create a struct sigaction with SIG_DFL as the
+	sa_handler.
+
+	* rcd-fetch.c (rcd_fetch_register): If we couldn't successfully
+	register, send a warning out to the logs with a reason.
+
+	* rcd-prefs.c (rcd_prefs_{get|set}_registered): Removed.
+
+	* rcd-transfer-http.c (http_done): Set the protocol's response
+	body to whatever the server sends back.
+	(http_free): Free the response_body.
+	(rcd_transfer_protocol_http_get_response_body): Added.
+
 2002-08-20  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-rpc-packsys.c: Ugh... there was some deeply broken code in

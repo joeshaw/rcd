@@ -208,6 +208,9 @@ http_done (SoupMessage *message, gpointer user_data)
     soup_message_foreach_header (
         message->response_headers, copy_header_cb, protocol);
 
+    protocol->response_body = g_strndup (message->response.body,
+                                         message->response.length);
+
     if (RCD_SOUP_MESSAGE_IS_ERROR (message) &&
         !message->errorcode != SOUP_ERROR_NOT_MODIFIED)
         map_soup_error_to_rcd_transfer_error (message, t);
@@ -549,6 +552,8 @@ http_free (RCDTransferProtocol *protocol)
     if (http_protocol->response_headers)
         g_hash_table_destroy (http_protocol->response_headers);
 
+    g_free (http_protocol->response_body);
+
     g_free (protocol);
 } /* http_free */
 
@@ -607,6 +612,20 @@ rcd_transfer_protocol_http_get_response_header (RCDTransferProtocolHTTP *protoco
 
     return g_hash_table_lookup (protocol->response_headers, header);
 } /* rcd_transfer_protocol_http_get_response_header */
+
+const char *
+rcd_transfer_protocol_http_get_response_body (RCDTransferProtocolHTTP *protocol)
+{
+    g_return_val_if_fail (protocol, NULL);
+
+    if (!protocol->response_body) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Trying to get a response body before transfer");
+        return NULL;
+    }
+
+    return protocol->response_body;
+} /* rcd_transfer_protocol_http_get_response_body */
 
 RCDTransferProtocol *
 rcd_transfer_protocol_http_new (void)

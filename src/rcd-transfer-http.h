@@ -45,6 +45,8 @@ struct _RCDTransferProtocolHTTP {
 
     GHashTable *request_headers;
     GHashTable *response_headers;
+
+    char *response_body;
 };
 
 RCDTransferProtocol *rcd_transfer_protocol_http_new (void);
@@ -66,6 +68,9 @@ void        rcd_transfer_protocol_http_set_request_header (
 const char *rcd_transfer_protocol_http_get_response_header (
     RCDTransferProtocolHTTP *protocol,
     const char              *header);
+
+const char *rcd_transfer_protocol_http_get_response_body (
+    RCDTransferProtocolHTTP *protocol);
 
 #endif /* __RCD_TRANSFER_HTTP_H__ */
 
