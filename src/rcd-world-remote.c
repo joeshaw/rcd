@@ -115,7 +115,15 @@ rcd_world_remote_assemble (RCWorldService *service, GError **error)
 
         g_free (service->url); 
         service->url = url;
-   }
+    }
+
+    /* Validate the URL */
+    if (strncmp (service->url, "http://", 7)
+        && strncmp (service->url, "https://", 8)) {
+        g_set_error (error, RC_ERROR, RC_ERROR,
+                     "Malformed URL: %s", service->url);
+        return FALSE;
+    }
 
     pending = rcd_world_remote_fetch (RCD_WORLD_REMOTE (service),
                                       local, &tmp_error);

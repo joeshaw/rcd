@@ -1,3 +1,8 @@
+2003-10-14  Joe Shaw  <joe@ximian.com>
+
+	* rcd-world-remote.c (rcd_world_remote_assemble): Validate the URL
+	and set and error and return FALSE if it doesn't.
+
 2003-10-08  Joe Shaw  <joe@ximian.com>
 
 	* rcd.c (daemonize): Remove /var/lock/subsys/rcd on shutdown so
