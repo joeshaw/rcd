@@ -1,5 +1,8 @@
 (Maybe further down the road...) Allow modules to register prefs
 
+Compress the enormous XML spit out by rc_world_dump() before sending it
+over the wire, and decompress it in the rc command-line client.
+
 There should be a get_update_count (or whatever) method that returns
 only the number of pending updates, possibly broken out by importance.
 This way we can make a soothingly-throbbing update-alert panel applet
