@@ -17,8 +17,6 @@ BUILT_SOURCES =			\
 rcd_SOURCES = 			\
 	gnome-config.c		\
 	gnome-config.h		\
-	xmlrpc_soup.c		\
-	xmlrpc_soup.h		\
 	parse-path.cP		\
 	rcd-marshal.c		\
 	rcd-marshal.h		\
@@ -98,6 +96,8 @@ rcd_SOURCES = 			\
 	rcd-transfer-pool.h	\
 	rcd-unix-server.c	\
 	rcd-unix-server.h	\
+	rcd-xmlrpc.c		\
+	rcd-xmlrpc.h		\
 	rcd.c
 
 rcd_LDADD =	\
@@ -125,7 +125,8 @@ rcdinclude_HEADERS = 		\
 	rcd-shutdown.h		\
 	rcd-transfer.h		\
 	rcd-transfer-file.h	\
-	rcd-transfer-http.h
+	rcd-transfer-http.h \
+	rcd-xmlrpc.h
 
 rcd_moduledir = $(libdir)/rcd/modules
 rcd_module_LTLIBRARIES = 	\

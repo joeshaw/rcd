@@ -141,4 +141,7 @@ xmlrpc_client_call_server_asynch_params (xmlrpc_server_info *server,
 					 xmlrpc_value *param_array);
 
 
+xmlrpc_server_info *rcd_xmlrpc_get_server (xmlrpc_env *env);
+
+
 #endif /* _REDCARPET_XMLRPC_SOUP_H_ */

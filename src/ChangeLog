@@ -1,5 +1,16 @@
 2003-07-28  Tambet Ingo  <tambet@ximian.com>
 
+	* rcd-transaction.c (rcd_transaction_send_log): Use the wrapper
+	function to get the "server".
+
+	* rcd-xmlrpc.c (rcd_xmlrpc_get_server): New function.
+
+	* xmlrpc_soup.[ch]: renamed to rcd-xmlrpc.h
+
+	* Makefile.am: Add rcd-xmlrpc.h to rcinclude_HEADERS.
+
+2003-07-28  Tambet Ingo  <tambet@ximian.com>
+
 	* rcd-transaction.c: Use XML-RPC method to send transaction log.
 
 	* Makefile.am (rcd_SOURCES): Add xmlrpc_soup.[ch].

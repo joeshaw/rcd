@@ -40,7 +40,7 @@
 #include "rcd-transfer-http.h"
 #include "rcd-transfer-pool.h"
 #include "rcd-rpc-util.h"
-#include "xmlrpc_soup.h"
+#include "rcd-xmlrpc.h"
 
 static GObjectClass *parent_class;
 
@@ -1347,22 +1347,12 @@ rcd_transaction_send_log (RCDTransaction *transaction,
     xmlrpc_env env;
     xmlrpc_value *xtrans;
     xmlrpc_server_info *server;
-    char *url;
 
     xmlrpc_env_init (&env);
     xtrans = transaction_xml (&env, transaction, successful, message);
     XMLRPC_FAIL_IF_FAULT (&env);
 
-    url = g_strdup_printf ("%s/RPC2/redcarpet-client.php",
-                           rcd_prefs_get_host ());
-
-    server = xmlrpc_server_info_new (&env, url);
-    g_free (url);
-
-    xmlrpc_server_info_set_auth (&env, server,
-                                 rcd_prefs_get_mid (),
-                                 rcd_prefs_get_secret ());
-
+    server = rcd_xmlrpc_get_server (&env);
     xmlrpc_client_call_server_asynch (server, "rcserver.transaction.new",
                                       transaction_sent,
                                       NULL,

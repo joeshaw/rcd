@@ -8,7 +8,8 @@
 #include <libsoup/soup.h>
 
 #define  XMLRPC_WANT_INTERNAL_DECLARATIONS
-#include "xmlrpc_soup.h"
+#include "rcd-xmlrpc.h"
+#include "rcd-prefs.h"
 
 /*=========================================================================
 **  xmlrpc_server_info
@@ -542,4 +543,23 @@ do_soup_request_async (RequestInfo *info)
 	soup_context_unref (ctx);
 
 	soup_message_queue (msg, soup_request_done, info);
+}
+
+xmlrpc_server_info *
+rcd_xmlrpc_get_server (xmlrpc_env *env)
+{
+	xmlrpc_server_info *server;
+	gchar *url;
+
+	url = g_strdup_printf ("%s/RPC2/redcarpet-client.php",
+					   rcd_prefs_get_host ());
+
+	server = xmlrpc_server_info_new (env, url);
+	g_free (url);
+
+	xmlrpc_server_info_set_auth (env, server,
+						    rcd_prefs_get_mid (),
+						    rcd_prefs_get_secret ());
+
+	return server;
 }
