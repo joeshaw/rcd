@@ -58,8 +58,6 @@ rcd_open_log_file (void)
     }
 }
 
-/* Re-open the log file on SIGHUP.  This is done to support
-   log rotation. */
 static void
 sighup_handler (int foo)
 {
@@ -78,10 +76,12 @@ rcd_log_init (const char *log_path)
     rcd_log_path = g_strdup (log_path ? log_path : RCD_DEFAULT_LOG);
     rcd_open_log_file ();
 
+    /* Re-open the log file on SIGHUP.  We do this to support log
+       rotation. */
+    
     sighup_action.sa_handler = sighup_handler;
     sigemptyset (&sighup_action.sa_mask);
     sighup_action.sa_flags = 0;
-
     sigaction (SIGHUP, &sighup_action, NULL);
 }
 
@@ -100,13 +100,14 @@ rcd_log (RCDLogEntry *entry)
         rc_debug (RC_DEBUG_LEVEL_WARNING, 
                   "Log not open, can't write log message \"%s\"",
                   str);
-        return;
+        goto cleanup;
     }
 
     /* FIXME should check that these writes succeed */
     write (rcd_log_fd, str, strlen (str));
     write (rcd_log_fd, "\n", 1);
 
+ cleanup:
     g_free (str);
 }
 
@@ -146,10 +147,10 @@ package_name_match (RCDQueryPart *part,
     RCDLogEntry *entry = data;
 
     if (entry->pkg_initial.name)
-        x1 = rcd_query_match_string (part, entry->pkg_initial.name);
+        x1 = rcd_query_match_string_ci (part, entry->pkg_initial.name);
 
     if (!x1 && entry->pkg_final.name)
-        x2 = rcd_query_match_string (part, entry->pkg_final.name);
+        x2 = rcd_query_match_string_ci (part, entry->pkg_final.name);
 
     return x1 || x2;
 }
@@ -159,7 +160,7 @@ host_match (RCDQueryPart *part,
             gpointer      data)
 {
     RCDLogEntry *entry = data;
-    return rcd_query_match_string (part, entry->host);
+    return rcd_query_match_string_ci (part, entry->host);
 }
 
 static gboolean
@@ -167,7 +168,7 @@ user_match (RCDQueryPart *part,
             gpointer      data)
 {
     RCDLogEntry *entry = data;
-    return rcd_query_match_string (part, entry->user);
+    return rcd_query_match_string_ci (part, entry->user);
 }
 
 static gboolean
@@ -175,7 +176,7 @@ action_match (RCDQueryPart *part,
               gpointer      data)
 {
     RCDLogEntry *entry = data;
-    return rcd_query_match_string (part, entry->action);
+    return rcd_query_match_string_ci (part, entry->action);
 }
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */

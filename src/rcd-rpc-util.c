@@ -92,7 +92,9 @@ rcd_rc_package_to_xmlrpc (RCPackage *package, xmlrpc_env *env)
             RC_WORLD_SYSTEM_PACKAGES,
             RC_PACKAGE_SPEC(package)->name);
 
-        installed = (sys_pkg != NULL);
+        installed = (sys_pkg != NULL
+                     && rc_package_spec_equal (RC_PACKAGE_SPEC(package),
+                                               RC_PACKAGE_SPEC(sys_pkg)));
     }
     RCD_XMLRPC_STRUCT_SET_INT(env, value, "installed", installed);
         

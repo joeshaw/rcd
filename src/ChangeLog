@@ -1,3 +1,14 @@
+2002-07-01  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-log.c (package_name_match): Make string matches
+	case-insensitive.
+	(host_match): Make string matches case-insensitive.
+	(user_match): Make string matches case-insensitive.
+	(action_match): Make string matches case-insensitive.
+
+	* rcd-rpc-util.c (rcd_rc_package_to_xmlrpc): Fixed the check
+	for whether or not the package was installed.
+
 2002-07-01  Joe Shaw  <joe@ximian.com>
 
 	* rcd-fetch.c: Make all the channel metadata functions reference
