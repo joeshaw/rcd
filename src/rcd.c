@@ -61,6 +61,8 @@ static gboolean non_daemon_flag = FALSE;
 static gboolean non_root_flag = FALSE;
 static int debug_level = RC_DEBUG_LEVEL_INFO;
 
+static char *dump_file = NULL;
+
 static void
 option_parsing (int argc, const char **argv)
 {
@@ -72,6 +74,8 @@ option_parsing (int argc, const char **argv)
           "Allow the daemon to be run as a user other than root.", NULL },
         { "debug", 'd', POPT_ARG_INT, &debug_level, 0,
           "Set the verbosity of debugging output.", NULL },
+        { "undump", '\0', POPT_ARG_STRING, &dump_file, 0,
+          "Initialize daemon from a dump file.", "filename" },
         POPT_TABLEEND
     };
 
@@ -93,6 +97,10 @@ option_parsing (int argc, const char **argv)
 static void
 root_check (void)
 {
+    /* Not being root is fine when we initialize from a dump file. */
+    if (dump_file != NULL)
+        return;
+
     if (getuid () == 0)
         return;
 
@@ -116,6 +124,10 @@ daemonize (void)
     int fork_rv;
     int i;
     int log_fd;
+
+    /* We never daemonize when we initialize from a dump file. */
+    if (dump_file != NULL)
+        return;
 
     if (non_daemon_flag)
         return;
@@ -211,7 +223,32 @@ initialize_rc_world (void)
 
     world = rc_get_world ();
     rc_world_register_packman (world, packman);
-    rc_world_get_system_packages (world);
+
+    if (dump_file != NULL) {
+        char *dump_file_contents;
+
+        rc_debug (RC_DEBUG_LEVEL_INFO,
+                  "Loading dump file '%s'",
+                  dump_file);
+        
+        if (! g_file_get_contents (dump_file,
+                                   &dump_file_contents,
+                                   NULL, NULL)) {
+            rc_debug (RC_DEBUG_LEVEL_ERROR,
+                      "Unable to load dump file '%s'",
+                      dump_file);
+
+            exit (-1);
+        }
+
+        rc_world_undump (world, dump_file_contents);
+
+
+    } else {
+
+        rc_world_get_system_packages (world);
+        
+    }
     
     
 } /* initialize_rc_world */
@@ -229,6 +266,11 @@ initialize_rpc (void)
 static void
 initialize_data (void)
 {
+    /* If we have loaded a dump file, we don't want to initialize
+       any of this stuff. */
+    if (dump_file != NULL)
+        return;
+
     if (!rcd_fetch_channel_list_local ())
         rcd_fetch_channel_list ();
     
@@ -296,7 +338,10 @@ main (int argc, const char **argv)
     rcd_module_init ();
 
     rcd_rpc_server_start ();
-    rcd_heartbeat_start ();
+
+    /* No heartbeat if we have initialized from a dump file. */
+    if (dump_file == NULL)
+        rcd_heartbeat_start ();
 
     g_main_run (main_loop);
 

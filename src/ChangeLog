@@ -1,3 +1,15 @@
+2002-07-25  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd.c (option_parsing): Added the --undump command line option.
+	(root_check): Allow non-root without complaining if we have
+	undumped.
+	(daemonize): Don't daemonize if we have undumped.
+	(initialize_rc_world): If we have undumped, initialize the RCWorld
+	from the dump file instead of from the machine's package db.
+	(initialize_data): Don't download any channel info or
+	subscriptions when we have undumped.
+	(main): Don't start the heartbeat if we have undumped.
+
 2002-07-24  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc.c (run_server_thread): Set the Soup SSL certificate and
