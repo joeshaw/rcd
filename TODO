@@ -6,6 +6,10 @@ privileges.  Right now a bad password results in the "You do not have
 permissions to perform the requested action." error message in the
 cmd-line client, which is confusing.
 
+We are leaking all of the RCDPending objects that get created -- we
+should have a mechanism for cleaning them up after task-completion
+when a certain amount of time has passed
+
 Need to be able to add users, remove users, set passwords, etc. via
 the daemon.
 
