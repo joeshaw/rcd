@@ -1,5 +1,21 @@
 2002-08-22  Joe Shaw  <joe@ximian.com>
 
+	* Makefile.am: Remove rcd-transact-log.[ch].
+
+	* rcd-transaction.c: Fold in the transaction logging into here,
+	where it belongs.  Greatly simplify so it only makes one trip to
+	the server instead of two.  Will depend on new logging code on the
+	servers, though.  Make RCDTransactionStatus refcounted.
+
+	* rcd-transact-log.[ch]: Removed.
+
+	* rcd-autopull.c (rcd_autopull_resolve_and_transact): If we have
+	failed dependencies, log it to the server.
+
+	* rcd-fetch.c (rcd_fetch_register): Plug a leak.
+
+2002-08-22  Joe Shaw  <joe@ximian.com>
+
 	* rcd-rpc-system.c (system_ping): Set server_url and
 	server_premium.
 

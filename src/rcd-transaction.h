@@ -53,4 +53,19 @@ void     rcd_transaction_lock      (void);
 void     rcd_transaction_unlock    (void);
 gboolean rcd_transaction_is_locked (void);
 
+/*
+ * rcd_transaction_log_to_server() should only be used by modules like
+ * autopull, which may need to log something like a dependency failure
+ * to the server before rcd_transaction_begin() can ever be called.
+ *
+ * Most of the time this is handled internally by rcd_transaction_begin().
+ */
+
+void rcd_transaction_log_to_server (RCPackageSList *install_packages,
+                                    RCPackageSList *remove_packages,
+                                    const char     *client_id,
+                                    const char     *client_version,
+                                    gboolean        successful,
+                                    const char     *message);
+
 #endif /* __RCD_TRANSACTION_H__ */

@@ -37,11 +37,14 @@
 #include "rcd-pending.h"
 #include "rcd-prefs.h"
 #include "rcd-shutdown.h"
-#include "rcd-transact-log.h"
+#include "rcd-transfer.h"
+#include "rcd-transfer-http.h"
 
 typedef struct _RCDTransactionStatus RCDTransactionStatus;
 
 struct _RCDTransactionStatus {
+    int refs;
+
     RCWorld *world;
     RCPackman *packman;
 
@@ -66,10 +69,273 @@ struct _RCDTransactionStatus {
     char *client_host;
     char *client_user;
 
-    char **log_tid;
+    time_t start_time;
 };
 
 static gboolean transaction_lock = FALSE;
+
+static RCDTransactionStatus *
+rcd_transaction_status_ref (RCDTransactionStatus *status)
+{
+    g_return_val_if_fail (status, NULL);
+
+    status->refs++;
+
+    return status;
+}
+
+static void
+rcd_transaction_status_unref (RCDTransactionStatus *status)
+{
+    g_return_if_fail (status);
+
+    status->refs--;
+
+    if (status->refs == 0) {
+        rc_package_slist_unref (status->install_packages);
+        rc_package_slist_unref (status->remove_packages);
+        rc_package_slist_unref (status->packages_to_download);
+        g_object_unref (status->pending);
+        g_free (status->client_id);
+        g_free (status->client_version);
+        g_free (status->client_host);
+        g_free (status->client_user);
+    
+        g_free (status);
+    }
+} /* rcd_transaction_status_unref */
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+static xmlNode *
+manifest_xml_node(RCPackage  *new_pkg,
+                  RCPackage  *old_pkg,
+                  const char *action)
+{
+    xmlNode *node, *pkgnode;
+    char *tmp = NULL;
+    RCPackageUpdate *update;
+
+    node = xmlNewNode (NULL, "manifest");
+
+    tmp = g_strdup_printf (
+        "%d", new_pkg->channel ? rc_channel_get_id (new_pkg->channel) : 0);
+    xmlNewTextChild (node, NULL, "cid", tmp);
+    g_free (tmp);
+
+    xmlNewTextChild (node, NULL, "action", action);
+
+    pkgnode = xmlNewChild (node, NULL, "package", NULL);
+
+    xmlNewTextChild (pkgnode, NULL, "name",
+                     g_quark_to_string (new_pkg->spec.nameq));
+
+    tmp = g_strdup_printf ("%d", new_pkg->spec.epoch);
+    xmlNewTextChild (pkgnode, NULL, "epoch", tmp);
+    g_free (tmp);
+
+    xmlNewTextChild(pkgnode, NULL, "version", new_pkg->spec.version);
+    xmlNewTextChild(pkgnode, NULL, "release", new_pkg->spec.release);
+
+    update = rc_package_get_latest_update (new_pkg);
+    if (update) {
+        tmp = g_strdup_printf ("%d", update->package_size);
+        xmlNewTextChild (pkgnode, NULL, "size", tmp);
+        g_free (tmp);
+
+        tmp = g_strdup_printf ("%d", update->hid);
+        xmlNewTextChild (pkgnode, NULL, "hid", tmp);
+        g_free (tmp);
+
+        if (new_pkg->channel) {
+            tmp = g_strdup_printf ("%d", rc_channel_get_id (new_pkg->channel));
+            xmlNewTextChild (pkgnode, NULL, "channel_id", tmp);
+            g_free (tmp);
+        }
+
+        if (update->package_url)
+            xmlNewTextChild (pkgnode, NULL, "url", update->package_url);
+    }
+
+    if (old_pkg) {
+        pkgnode = xmlNewChild (node, NULL, "oldpackage", NULL);
+
+        xmlNewTextChild (pkgnode, NULL, "name",
+                         g_quark_to_string (new_pkg->spec.nameq));
+
+        tmp = g_strdup_printf ("%d", old_pkg->spec.epoch);
+        xmlNewTextChild (pkgnode, NULL, "epoch", tmp);
+        g_free (tmp);
+
+        xmlNewTextChild (pkgnode, NULL, "version", old_pkg->spec.version);
+        xmlNewTextChild (pkgnode, NULL, "release", old_pkg->spec.release);
+    }
+
+    return node;
+} /* manifest_xml_node */
+
+static xmlChar *
+transaction_xml (RCDTransactionStatus *status,
+                 gboolean              successful,
+                 const char           *message,
+                 int                  *bytes)
+{
+    xmlDoc *doc;
+    xmlNode *root;
+    char *tmp;
+    RCPackageSList *iter;
+    xmlChar *xml_string;
+
+    doc = xmlNewDoc ("1.0");
+    root = xmlNewNode (NULL, "transaction");
+    xmlDocSetRootElement (doc, root);
+
+    xmlNewTextChild (root, NULL, "client_id", status->client_id);
+    xmlNewTextChild (root, NULL, "client_version", status->client_version);
+    xmlNewTextChild (root, NULL, "mid", rcd_prefs_get_mid ());
+    xmlNewTextChild (root, NULL, "distro", rc_distro_get_target ());
+    
+    tmp = g_strdup_printf ("%ld", status->start_time);
+    xmlNewTextChild (root, NULL, "start_time", tmp);
+    g_free (tmp);
+
+    tmp = g_strdup_printf ("%ld", time (NULL));
+    xmlNewTextChild (root, NULL, "end_time", tmp);
+    g_free (tmp);
+
+    xmlNewTextChild (root, NULL, "successful", successful ? "1" : "0");
+    if (message)
+        xmlNewTextChild (root, NULL, "message", message);
+
+    for (iter = status->install_packages; iter; iter = iter->next) {
+        RCPackage *p = iter->data;
+        RCPackage *sys_pkg;
+        const char *action;
+        xmlNode *n;
+
+        sys_pkg = rc_world_find_installed_version (rc_get_world (), p);
+
+        if (sys_pkg)
+            action = "update";
+        else
+            action = "install";
+
+        n = manifest_xml_node (p, sys_pkg, action);
+
+        xmlAddChild(root, n);
+    }
+
+    for (iter = status->remove_packages; iter; iter = iter->next) {
+        RCPackage *p = iter->data;
+        xmlNode *n;
+
+        n = manifest_xml_node (p, NULL, "remove");
+
+        xmlAddChild(root, n);
+    }
+
+    xmlDocDumpMemory(doc, &xml_string, bytes);
+            
+    return xml_string;
+} /* transaction_xml */
+
+static void
+transaction_sent (RCDTransfer *t, gpointer user_data)
+{
+    RCDTransactionStatus *status = user_data;
+    RCDTransferProtocolHTTP *protocol;
+
+    if (rcd_transfer_get_error (t))
+        goto cleanup;
+
+    g_assert (strcmp (t->protocol->name, "http") == 0);
+
+    protocol = (RCDTransferProtocolHTTP *) t->protocol;
+
+    /* Not a g_free() because this is an xmlChar * */
+    free (protocol->request_body);
+
+cleanup:
+    rcd_transaction_status_unref (status);
+
+    g_object_unref (t);
+} /* transaction_sent */
+
+static void
+rcd_transaction_send_log (RCDTransactionStatus *status,
+                          gboolean              successful,
+                          const char           *message)
+{
+    xmlChar *xml_string;
+    int bytes;
+    char *url;
+    RCDTransfer *t;
+    RCDTransferProtocolHTTP *protocol;
+
+    /*
+     * Send logversion=2 since we're using a new logging format which
+     * requires only one trip to the server instead of two.
+     */
+    url = g_strdup_printf ("%s/log.php?logversion=2", rcd_prefs_get_host ());
+
+    t = rcd_transfer_new (url, 0, NULL);
+
+    g_free (url);
+
+    if (!t->protocol || strcmp (t->protocol->name, "http") != 0) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING, "Invalid log URL: %s", url);
+        g_object_unref (t);
+        return;
+    }
+
+    protocol = (RCDTransferProtocolHTTP *) t->protocol;
+
+    rcd_transfer_protocol_http_set_method (protocol, SOUP_METHOD_POST);
+
+    xml_string = transaction_xml (status, successful, message, &bytes);
+
+    rcd_transfer_protocol_http_set_request_body (
+        protocol, xml_string, bytes);
+
+    g_signal_connect (t, "file_done", 
+                      G_CALLBACK (transaction_sent),
+                      rcd_transaction_status_ref (status));
+
+    rcd_transfer_begin (t);
+} /* rcd_transaction_send_log */
+    
+/*
+ * This function is rather evil, but we need it to fake an
+ * RCDTransactionStatus for things like dependency failures in autopull,
+ * where we don't have one of these structures.
+ */
+void
+rcd_transaction_log_to_server (RCPackageSList *install_packages,
+                               RCPackageSList *remove_packages,
+                               const char     *client_id,
+                               const char     *client_version,
+                               gboolean        successful,
+                               const char     *message)
+{
+    RCDTransactionStatus *status;
+
+    if (!rcd_prefs_get_premium ())
+        return;
+
+    status = g_new0 (RCDTransactionStatus, 1);
+    status->refs = 1;
+    status->install_packages = rc_package_slist_ref (install_packages);
+    status->remove_packages = rc_package_slist_ref (remove_packages);
+    status->client_id = g_strdup (client_id);
+    status->client_version = g_strdup (client_version);
+    status->start_time = time (NULL);
+
+    rcd_transaction_send_log (status, successful, message);
+
+    rcd_transaction_status_unref (status);
+} /* rcd_transaction_log_to_server */
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 static void
 transact_start_cb(RCPackman *packman,
@@ -171,17 +437,8 @@ cleanup_after_transaction (RCDTransactionStatus *status)
     if (!rcd_prefs_get_cache_enabled ())
         cleanup_temp_package_files (status->packages_to_download);
 
-    rc_package_slist_unref (status->install_packages);
-    rc_package_slist_unref (status->remove_packages);
-    rc_package_slist_unref (status->packages_to_download);
-    g_object_unref (status->pending);
-    g_free (status->client_id);
-    g_free (status->client_version);
-    g_free (status->client_host);
-    g_free (status->client_user);
-    
-    g_free (status);
-        
+    rcd_transaction_status_unref (status);
+
     /* Allow shutdowns again. */
     rcd_shutdown_allow ();
 } /* cleanup_after_transaction */    
@@ -237,8 +494,8 @@ fail_transaction (RCDTransactionStatus *status, const char *msg)
 
     rcd_pending_fail (status->pending, -1, msg);
 
-    if (!status->dry_run && status->log_tid) 
-        rcd_transact_log_send_success (status->log_tid, FALSE, msg);
+    if (!status->dry_run && rcd_prefs_get_premium ())
+        rcd_transaction_send_log (status, FALSE, msg);
 } /* fail_transaction */
 
 static gboolean
@@ -292,9 +549,9 @@ run_transaction(gpointer user_data)
     else {
         if (!status->dry_run) {
             update_log (status);
-            
-            if (status->log_tid)
-                rcd_transact_log_send_success (status->log_tid, TRUE, NULL);
+
+            if (rcd_prefs_get_premium ())
+                rcd_transaction_send_log (status, TRUE, NULL);
         }
     }
 
@@ -351,11 +608,11 @@ verify_packages (RCDTransactionStatus *status)
             rcd_pending_fail (status->pending, -1, msg);
             g_free (msg);
 
-            if (!status->dry_run && status->log_tid) {
+            if (!status->dry_run && rcd_prefs_get_premium ()) {
                 msg = g_strdup_printf (
                     "Verification of '%s' failed",
                     g_quark_to_string (package->spec.nameq));
-                rcd_transact_log_send_success (status->log_tid, FALSE, msg);
+                rcd_transaction_send_log (status, FALSE, msg);
                 g_free (msg);
             }
 
@@ -375,12 +632,11 @@ verify_packages (RCDTransactionStatus *status)
                 rcd_pending_fail (status->pending, -1, msg);
                 g_free (msg);
 
-                if (!status->dry_run && status->log_tid) {
+                if (!status->dry_run && rcd_prefs_get_premium ()) {
                     msg = g_strdup_printf (
                         "Verification of '%s' failed",
                         g_quark_to_string (package->spec.nameq));
-                    rcd_transact_log_send_success (
-                        status->log_tid, FALSE, msg);
+                    rcd_transaction_send_log (status, FALSE, msg);
                     g_free (msg);
                 }
 
@@ -418,9 +674,9 @@ download_completed (gboolean    successful,
         g_free (msg);
     }
 
-    if (!status->dry_run && status->log_tid) {
+    if (!status->dry_run && rcd_prefs_get_premium ()) {
         msg = g_strdup_printf ("Download failed - %s", error_message);
-        rcd_transact_log_send_success (status->log_tid, FALSE, msg);
+        rcd_transaction_send_log (status, FALSE, msg);
         g_free (msg);
     }
 
@@ -557,6 +813,7 @@ rcd_transaction_begin (RCWorld        *world,
     RCDTransactionStatus *status;
 
     status = g_new0 (RCDTransactionStatus, 1);
+    status->refs = 1;
     status->world = world;
     status->packman = rc_world_get_packman (world);
     status->install_packages = rc_package_slist_ref (install_packages);
@@ -566,6 +823,7 @@ rcd_transaction_begin (RCWorld        *world,
     status->client_version = g_strdup (client_version);
     status->client_host = g_strdup (client_host);
     status->client_user = g_strdup (client_user);
+    status->start_time = time (NULL);
 
     status->pending = rcd_pending_new ("Package Transaction");
     g_object_set_data (G_OBJECT (status->pending), "status", status);
@@ -576,14 +834,6 @@ rcd_transaction_begin (RCWorld        *world,
      * in the middle of a transaction.
      */
     rcd_shutdown_block ();
-
-    /* If we're in premium mode, send a log of the transaction to the server */
-    if (rcd_prefs_get_premium ()) {
-        status->log_tid = rcd_transact_log_send_transaction (
-            status->install_packages,
-            status->remove_packages,
-            status->client_id, status->client_version);
-    }
 
     /*
      * If we have to download files, start the download.  Otherwise,
@@ -647,6 +897,8 @@ rcd_transaction_get_package_download_id (int transaction_id)
 
     return status->package_download_id;
 } /* rcd_transaction_get_package_download_id */
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 void
 rcd_transaction_lock (void)

@@ -189,7 +189,18 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
 
     if (resolver->best_context == NULL) {
         rc_debug (RC_DEBUG_LEVEL_WARNING, "Resolution failed!");
-        /* FIXME: do something clever here */
+        /*
+         * FIXME: Stringify the resolution failure and send it instead
+         * of "Resolution failed"
+         */
+
+        rcd_transaction_log_to_server (pull->all_to_add,
+                                       pull->all_to_subtract,
+                                       rcd_module->description,
+                                       VERSION,
+                                       FALSE,
+                                       "Resolution failed");
+                                       
         goto cleanup;
     }
 

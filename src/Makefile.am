@@ -72,8 +72,6 @@ rcd_SOURCES = 			\
 	rcd-shutdown.h		\
 	rcd-subscriptions.c	\
 	rcd-subscriptions.h	\
-	rcd-transact-log.c	\
-	rcd-transact-log.h	\
 	rcd-transaction.c	\
 	rcd-transaction.h	\
 	rcd-transfer.c		\

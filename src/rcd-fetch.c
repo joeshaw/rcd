@@ -47,6 +47,7 @@ rcd_fetch_register (void)
     RCDTransfer *t;
     RCDTransferProtocolHTTP *protocol;
     const char *status;
+    GByteArray *data;
 
     if (uname (&uname_buf) < 0) {
         rc_debug (RC_DEBUG_LEVEL_WARNING,
@@ -76,7 +77,8 @@ rcd_fetch_register (void)
     rcd_transfer_protocol_http_set_request_header (
         protocol, "X-RC-Secret", rcd_prefs_get_secret ());
 
-    rcd_transfer_begin_blocking (t);
+    data = rcd_transfer_begin_blocking (t);
+    g_byte_array_free (data);
 
     status = rcd_transfer_protocol_http_get_response_header (protocol,
                                                              "X-RC-Status");
