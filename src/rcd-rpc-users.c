@@ -173,9 +173,7 @@ users_update (xmlrpc_env   *env,
     if (strcmp (privileges, "-*-unchanged-*-"))
         id->privileges = rcd_privileges_from_string (privileges);
     else
-        id->privileges = 0;
-
-
+        id->privileges = -1;
 
     success = rcd_identity_update_password_file (id);
 
