@@ -16,7 +16,6 @@ pkgconfig_DATA = rcd.pc
 man_MANS = rcd.8 rcd.conf.5
 
 EXTRA_DIST = rcd.passwd rcd.init.redhat rcd.init.suse rcd.init.debian    \
-             rcd.console.in rcd.pam.rh7 rcd.pam.rh8 rcd-wrapper          \
              rcd.logrotate rcd.pc.in $(cert_DATA) $(gpg_DATA) $(man_MANS)
 
 if INIT_REDHAT
@@ -29,21 +28,6 @@ endif
 
 if INIT_DEBIAN
 init_file = rcd.init.debian
-endif
-
-if USERMODE
-consoledir = $(sysconfdir)/security/console.apps
-console_file = rcd.console
-
-pamdir = $(sysconfdir)/pam.d
-
-if USERMODE_REDHAT7
-pam_file = rcd.pam.rh7
-endif
-
-if USERMODE_REDHAT8
-pam_file = rcd.pam.rh8
-endif
 endif
 
 install-data-hook:
@@ -74,43 +58,9 @@ install-data-hook:
 		chmod 0755 $(DESTDIR)$(logrotatedir); \
 	fi
 
-	$(INSTALL_DATA) -m 0755 $(srcdir)/rcd.logrotate $(DESTDIR)$(logrotatedir)/rcd
-
-if USERMODE
-
-	if test '!' -d $(DESTDIR)$(pamdir); then \
-		$(mkinstalldirs) $(DESTDIR)$(pamdir); \
-		chmod 0755 $(DESTDIR)$(pamdir); \
-	fi
-
-	$(INSTALL_DATA) $(srcdir)/$(pam_file) $(DESTDIR)$(pamdir)/rcd-wrapper
-
-	if test '!' -d $(DESTDIR)$(consoledir); then \
-		$(mkinstalldirs) $(DESTDIR)$(consoledir); \
-		chmod 0755 $(DESTDIR)$(consoledir); \
-	fi
-
-	$(INSTALL_DATA) $(srcdir)/$(console_file) $(DESTDIR)$(consoledir)/rcd-wrapper
-
-	if test '!' -d $(DESTDIR)$(bindir); then \
-		$(mkinstalldirs) $(DESTDIR)$(bindir); \
-		chmod 0755 $(DESTDIR)$(bindir); \
-	fi
-
-	ln -sf /usr/bin/consolehelper $(DESTDIR)$(bindir)/rcd-wrapper
-
-	$(INSTALL_DATA) $(srcdir)/rcd-wrapper $(DESTDIR)$(sbindir)/rcd-wrapper
-	chmod 0755 $(DESTDIR)$(sbindir)/rcd-wrapper
-endif
+	$(INSTALL_DATA) -m 0755 $(srcdir)/rcd.logrotate $(DESTDIR)$(logrotatedir)/rcd;
 
 uninstall-hook:
 	rm -f $(DESTDIR)$(passwddir)/rcd.passwd.default
 	rm -f $(DESTDIR)$(initdir)/rcd
 	rm -f $(DESTDIR)$(logrotatedir)/rcd
-
-if USERMODE
-	rm -f $(DESTDIR)$(pamdir)/rcd-wrapper
-	rm -f $(DESTDIR)$(consoledir)/rcd-wrapper
-	rm -f $(DESTDIR)$(bindir)/rcd-wrapper
-	rm -f $(DESTDIR)$(sbindir)/rcd-wrapper
-endif
