@@ -1,3 +1,8 @@
+2003-10-03  Joe Shaw  <joe@ximian.com>
+
+	* rcd-package-locks.c (rcd_package_locks_load): Don't pass the
+	world into rc_package_match_from_xml_node() anymore.
+
 2003-10-02  Joe Shaw  <joe@ximian.com>
 
 	* rcd-recurring.c (rcd_recurring_execute): Wrap the recurring's

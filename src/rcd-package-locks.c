@@ -61,7 +61,7 @@ rcd_package_locks_load (RCWorld *world)
   }
 
   for (iter = root->xmlChildrenNode; iter != NULL; iter = iter->next) {
-    RCPackageMatch *match = rc_package_match_from_xml_node (iter, world);
+    RCPackageMatch *match = rc_package_match_from_xml_node (iter);
     if (match)
       rc_world_add_lock (world, match);
   }
