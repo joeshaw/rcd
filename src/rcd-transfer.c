@@ -358,16 +358,12 @@ rcd_transfer_begin (RCDTransfer *t)
 
     rc_debug(RC_DEBUG_LEVEL_DEBUG, "Transfer URL: %s\n", t->url);
 
-    /*
-     * Add a ref so that people can safely unref it after beginning
-     * the transfer if they don't care about it afterward.  This ref
-     * is cleaned up in rcd_transfer_file_done().  It's important that
-     * we do this ref before the protocol's open_func is called, since
-     * it's possible (at least with the HTTP backend) to synchonously
-     * call the rcd_transfer_file_done() function from within it.  If
-     * open_func returns -1, however, we'll clean up the ref.
-     */
-    g_object_ref (t);
+    if (t->protocol->open_func (t)) {
+        /* An error occurred in the open call. It's the open call's
+           responsibility to rcd_transfer_set_error() the appropriate
+           error. */
+        return -1;
+    }
 
     /* Create associated RCPending object */
     if (!t->pending && ! (t->flags & RCD_TRANSFER_FLAGS_NO_PENDING)) {
@@ -390,14 +386,12 @@ rcd_transfer_begin (RCDTransfer *t)
         t->data = g_byte_array_new ();
     }
 
-
-    if (t->protocol->open_func (t)) {
-        /* An error occurred in the open call. It's the open call's
-           responsibility to rcd_transfer_set_error() the appropriate
-           error. */
-        g_object_unref (t);
-        return -1;
-    }
+    /*
+     * Add a ref so that people can safely unref it after beginning
+     * the transfer if they don't care about it afterward.  This ref
+     * is cleaned up in rcd_transfer_file_done().
+     */
+    g_object_ref (t);
 
     return t->pending ? rc_pending_get_id (t->pending) : 0;
 } /* rcd_transfer_begin */

@@ -190,28 +190,12 @@ copy_header_cb (gpointer name, gpointer value, gpointer user_data)
                          g_strdup (header_value));
 } /* copy_header_cb */
 
-static void
-http_done (SoupMessage *message, gpointer user_data)
+static gboolean
+http_done_real (gpointer user_data)
 {
     RCDTransfer *t = user_data;
     RCDTransferProtocolHTTP *protocol =
         (RCDTransferProtocolHTTP *) t->protocol;
-
-    /*
-     * Soup will free the response headers after we leave this function,
-     * so we have to copy them.  Ew.
-     */
-    if (protocol->response_headers)
-        g_hash_table_destroy (protocol->response_headers);
-    
-    protocol->response_headers = g_hash_table_new_full (
-        g_str_hash, g_str_equal, g_free, g_free);
-    soup_message_foreach_header (
-        message->response_headers, copy_header_cb, protocol);
-
-    if (RCD_SOUP_MESSAGE_IS_ERROR (message) &&
-        !message->status_code != SOUP_STATUS_NOT_MODIFIED)
-        map_soup_error_to_rcd_transfer_error (message, t);
 
     if (!rcd_transfer_get_error (t)) {
         if (protocol->cache_hit) {
@@ -231,17 +215,21 @@ http_done (SoupMessage *message, gpointer user_data)
             t->url = g_strdup (local_url);
             t->filename = g_path_get_basename (t->url);
             g_free (local_url);
-            
-            rcd_transfer_begin (t);
 
-            /*
-             * rcd_transfer_begin() takes a ref which is normally released
-             * in rcd_transfer_file_done(), but since we're doing some
-             * evil here, we'll have to manage the ref manually.
-             */
-            g_object_unref (t);
+            if (rcd_transfer_begin (t) < 0) {
+                /* Opening the file failed for some reason */
+                rcd_transfer_emit_done (t);
+            } else {           
+                /*
+                 * rcd_transfer_begin() takes a ref which is normally
+                 * released in rcd_transfer_file_done(), but since
+                 * we're doing some evil here, we'll have to manage
+                 * the ref manually.
+                 */
+                g_object_unref (t);
+            }
             
-            return;
+            return FALSE;
         }
 
         if (t->cache_entry && rcd_cache_entry_is_open (t->cache_entry))
@@ -253,7 +241,43 @@ http_done (SoupMessage *message, gpointer user_data)
     }
 
     rcd_transfer_emit_done (t);
-} /* http_done */
+
+    return FALSE;
+}
+
+static void
+http_done (SoupMessage *message, gpointer user_data)
+{
+    RCDTransfer *t = user_data;
+    RCDTransferProtocolHTTP *protocol =
+        (RCDTransferProtocolHTTP *) t->protocol;
+
+    /*
+     * libsoup will free the response headers after we leave this function,
+     * so we have to copy them.  Ew.
+     */
+    if (protocol->response_headers)
+        g_hash_table_destroy (protocol->response_headers);
+    
+    protocol->response_headers = g_hash_table_new_full (g_str_hash,
+                                                        g_str_equal,
+                                                        g_free, g_free);
+
+    soup_message_foreach_header (message->response_headers,
+                                 copy_header_cb, protocol);
+
+    if (RCD_SOUP_MESSAGE_IS_ERROR (message) &&
+        !message->status_code != SOUP_STATUS_NOT_MODIFIED)
+        map_soup_error_to_rcd_transfer_error (message, t);
+
+    /*
+     * It's possible that this gets called from the transfer's open
+     * function.  Since we don't want to call rcd_transfer_file_done()
+     * before that happens, we defer as much processing as possible
+     * until the next time we hit the main loop.
+     */
+    g_idle_add (http_done_real, user_data);
+}
 
 static void
 http_content_length(SoupMessage *message, gpointer data)

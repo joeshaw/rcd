@@ -94,11 +94,18 @@ file_abort(RCDTransfer *t)
 static int
 file_open (RCDTransfer *t)
 {
-    SoupUri *uri = soup_uri_new (t->url);
+    SoupUri *uri;
     struct stat fdstat;
     int fd;
     GIOChannel *iochannel;
     RCDTransferProtocolFile *protocol;
+
+    uri = soup_uri_new (t->url);
+
+    if (!uri) {
+        rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_INVALID_URI, NULL);
+        return -1;
+    }
 
     if (stat (uri->path, &fdstat)) {
         rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_FILE_NOT_FOUND, NULL);

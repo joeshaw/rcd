@@ -1,3 +1,22 @@
+2004-01-20  Joe Shaw  <joe@ximian.com>
+
+	* rcd-transfer-file.c (file_open): If we get an invalid URI, set
+	that error and return -1.
+
+	* rcd-transfer-http.c (http_done): Defer as much processing as we
+	can to an idle function that runs the next time we hit the main
+	loop, since this could get called from inside
+	rcd_transfer_begin().
+	(http_done_real): Move the work here.  Also check to make sure
+	that rcd_transfer_begin() doesn't return -1, or else we know that
+	trying to load from the cache failed.
+
+	* rcd-transfer.c (rcd_transfer_begin): Undo the nastiness of
+	handling the possibility of rcd_transfer_file_done() being called
+	from the protocol's open function, since it causes lots more
+	problems than just a missed ref.  It's handled in the HTTP backend
+	now by deferring to an idle handler.
+
 2004-01-13  Joe Shaw  <joe@ximian.com>
 
 	* rcd-prefs.c (rcd_prefs_get_proxy): Nuke this function, it's not
