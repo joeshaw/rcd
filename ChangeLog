@@ -1,3 +1,7 @@
+2002-07-11  Joe Shaw  <joe@ximian.com>
+
+	* configure.in: Remove gettext junk
+
 2002-07-07  Joe Shaw  <joe@ximian.com>
 
 	* rc-passwd: Added; the default rc-passwd file that the daemon
