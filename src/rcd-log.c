@@ -33,7 +33,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#define RCD_DEFAULT_LOG "/tmp/rcdlog"
+#define RCD_DEFAULT_LOG_DIR  "/var/log/rcd"
+#define RCD_DEFAULT_LOG_FILE RCD_DEFAULT_LOG_DIR "/rcd-package-history"
 
 static char *rcd_log_path = NULL;
 static int   rcd_log_fd   = -1;
@@ -47,6 +48,21 @@ rcd_open_log_file (void)
         close (rcd_log_fd);
 
     rc_debug (RC_DEBUG_LEVEL_INFO, "Opening logfile '%s'", rcd_log_path);
+
+    /* Yes, we always try to create the default log dir -- even
+       though, in theory, the log path could be set to something
+       totally different than the default.  This really doesn't bother
+       me that much. */
+    if (! g_file_test (RCD_DEFAULT_LOG_DIR, G_FILE_TEST_EXISTS)) {
+        if (mkdir (RCD_DEFAULT_LOG_DIR,
+                   S_IRUSR | S_IWUSR | S_IXUSR |
+                   S_IRGRP | S_IXGRP |
+                   S_IROTH | S_IXOTH) != 0) {
+            rc_debug (RC_DEBUG_LEVEL_WARNING,
+                      "Can't create directory '%s'",
+                      RCD_DEFAULT_LOG_DIR);
+        }
+    }
 
     rcd_log_fd = open (rcd_log_path,
                        O_WRONLY | O_CREAT | O_APPEND,
@@ -71,7 +87,7 @@ rcd_log_init (const char *log_path)
         rc_debug (RC_DEBUG_LEVEL_WARNING, "Can't re-initialize logging.");
     }
 
-    rcd_log_path = g_strdup (log_path ? log_path : RCD_DEFAULT_LOG);
+    rcd_log_path = g_strdup (log_path ? log_path : RCD_DEFAULT_LOG_FILE);
     rcd_open_log_file ();
 
     /* Re-open the log file on SIGHUP.  We do this to support log

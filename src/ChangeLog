@@ -1,3 +1,13 @@
+2002-08-06  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd.c (daemonize): Reopen stdout and stderr to
+	/var/log/rcd/rcd-messages.  If /var/log/rcd doesn't exist, create
+	it.
+
+	* rcd-log.c: Changed default logfile to
+	/var/log/rcd/rcd-package-history.
+	(rcd_open_log_file): If /var/log/rcd doesn't exist, create it.
+
 2002-08-06  Joe Shaw  <joe@ximian.com>
 
 	* rcd-fetch.c: Split out a bunch of the transfer queuing and
@@ -28,6 +38,7 @@
 	/tmp/rcd-messages file isn't hundreds and hundreds of megs by
 	default.
 
+>>>>>>> 1.141
 2002-08-05  Joe Shaw  <joe@ximian.com>
 
 	* rcd-recurring.[ch]: Fix the license.

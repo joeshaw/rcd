@@ -228,9 +228,19 @@ daemonize (void)
 
     open ("/dev/null", O_RDWR); /* open /dev/null as stdin */
 
+    if (! g_file_test ("/var/log/rcd", G_FILE_TEST_EXISTS)) {
+        if (mkdir ("/var/log/rcd",
+                   S_IRUSR | S_IWUSR | S_IXUSR |
+                   S_IRGRP | S_IXGRP |
+                   S_IROTH | S_IXOTH) != 0) {
+            rc_debug (RC_DEBUG_LEVEL_WARNING,
+                      "Can't create directory '/var/log/rcd'");
+        }
+    }
+    
     /* Open a new file for our logging file descriptor.  This
        will be the fd 1, stdout. */
-    log_fd = open ("/tmp/rcd-messages",
+    log_fd = open ("/var/log/rcd/rcd-messages",
                    O_WRONLY | O_CREAT | O_APPEND,
                    S_IRUSR | S_IWUSR);
     
