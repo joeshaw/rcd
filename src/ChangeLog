@@ -1,3 +1,14 @@
+2003-11-20  Tambet Ingo  <tambet@ximian.com>
+
+	* rcd-services.c (rcd_services_load): Don't load services when
+	running with '--no-services'.
+	(rcd_services_save): Don't save services when running with
+	'--no-services'.
+
+	* rcd-options.c (rcd_options_parse): Add '--no-services' flag...
+	(rcd_options_get_no_services_flag): ... and make it available for
+	others.
+
 2003-11-14  Joe Shaw  <joe@ximian.com>
 
 	* rcd-transaction.c (format_size): Cast the file size to long to

@@ -29,6 +29,7 @@
 #include <libredcarpet.h>
 
 #include "rcd-prefs.h"
+#include "rcd-options.h"
 
 #define SERVICES_PATH "/var/lib/rcd"
 #define SERVICES_FILE SERVICES_PATH "/services.xml"
@@ -46,6 +47,11 @@ rcd_services_load (RCWorldMulti *multi)
     xmlDoc *doc;
     xmlNode *node;
     GError *err = NULL;
+
+    if (rcd_options_get_no_services_flag ()) {
+        rc_debug (RC_DEBUG_LEVEL_DEBUG, "Not loading services");
+        return;
+    }
 
     if (loaded) {
         rc_debug (RC_DEBUG_LEVEL_ERROR, "Cannot load services more than once");
@@ -149,6 +155,11 @@ rcd_services_save (void)
 {
     xmlDoc *doc;
     xmlNode *root;
+
+    if (rcd_options_get_no_services_flag ()) {
+        rc_debug (RC_DEBUG_LEVEL_DEBUG, "Not saving services");
+        return;
+    }
 
     if (!g_file_test (SERVICES_PATH, G_FILE_TEST_EXISTS)) {
         if (rc_mkdir (SERVICES_PATH, 0755)) {

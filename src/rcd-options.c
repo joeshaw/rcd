@@ -45,6 +45,7 @@ static gboolean late_background = FALSE;
 static gboolean non_root_flag = FALSE;
 static gboolean no_network_flag = FALSE;
 static gboolean no_modules_flag = FALSE;
+static gboolean no_services_flag = FALSE;
 static char *bind_ipaddress = NULL;
 static gboolean remote_disable_flag = FALSE;
 static int server_port = 0;
@@ -83,6 +84,9 @@ rcd_options_parse (int argc, const char **argv)
 
         { "no-modules", 'm', POPT_ARG_NONE, &no_modules_flag, 0,
           "Do not load any plugin modules.", NULL },
+
+        { "no-services", '\0', POPT_ARG_NONE, &no_services_flag, 0,
+          "Do not load or save services.", NULL },
 
         { "ipaddress", 'i', POPT_ARG_STRING, &bind_ipaddress, 0,
           "Bind the remote server only to this IP address.", "ip address" },
@@ -188,6 +192,12 @@ gboolean
 rcd_options_get_no_modules_flag (void)
 {
     return no_modules_flag;
+}
+
+gboolean
+rcd_options_get_no_services_flag (void)
+{
+    return no_services_flag;
 }
 
 const char *

@@ -39,6 +39,7 @@ gboolean     rcd_options_get_late_background      (void);
 gboolean     rcd_options_get_non_root_flag        (void);
 gboolean     rcd_options_get_no_network_flag      (void);
 gboolean     rcd_options_get_no_modules_flag      (void);
+gboolean     rcd_options_get_no_services_flag     (void);
 const char  *rcd_options_get_bind_ipaddress       (void);
 gboolean     rcd_options_get_remote_disable_flag  (void);
 int          rcd_options_get_server_port          (void);
