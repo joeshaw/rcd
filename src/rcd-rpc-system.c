@@ -144,6 +144,9 @@ system_poll_pending(xmlrpc_env   *env,
 
         RCD_XMLRPC_STRUCT_SET_STRING (env, value, "status",
                                       rcd_pending_status_to_string (rcd_pending_get_status (pending)));
+        
+        RCD_XMLRPC_STRUCT_SET_INT (env, value, "is_active",
+                                   rcd_pending_is_active (pending) ? 1 : 0);
 
         if (rcd_pending_get_elapsed_secs (pending) >= 0) {
             RCD_XMLRPC_STRUCT_SET_INT (env, value, "elapsed_sec",
@@ -187,6 +190,47 @@ system_poll_pending(xmlrpc_env   *env,
 
     return value;
 }
+
+static xmlrpc_value *
+system_get_all_pending (xmlrpc_env   *env,
+                        xmlrpc_value *param_array,
+                        void         *user_data)
+{
+    xmlrpc_value *value;
+    GSList *id_list, *iter;
+
+    id_list = rcd_pending_get_all_active_ids ();
+
+    value = xmlrpc_build_value (env, "()");
+    if (env->fault_occurred)
+        goto cleanup;
+
+    for (iter = id_list; iter != NULL; iter = iter->next) {
+        gint id;
+        xmlrpc_value *id_value;
+
+        id = GPOINTER_TO_INT (iter->data);
+
+        id_value = xmlrpc_build_value (env, "i", id);
+        if (env->fault_occurred)
+            goto cleanup;
+
+        xmlrpc_array_append_item (env, value, id_value);
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        xmlrpc_DECREF (id_value);
+    }
+
+ cleanup:
+    g_slist_free (id_list);
+
+    if (env->fault_occurred) {
+        xmlrpc_DECREF (value);
+        return NULL;
+    }
+
+    return value;
+}
 	
 void
 rcd_rpc_system_register_methods(void)
@@ -197,5 +241,7 @@ rcd_rpc_system_register_methods(void)
         "rcd.system.query_module", system_query_module, NULL, NULL);
 	rcd_rpc_register_method(
         "rcd.system.poll_pending", system_poll_pending, NULL, NULL);
+	rcd_rpc_register_method(
+        "rcd.system.get_all_pending", system_get_all_pending, NULL, NULL);
 } /* rcd_rpc_system_register_methods */
 

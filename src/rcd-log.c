@@ -245,6 +245,7 @@ rcd_log_scan (const char   *filename,
     struct ScanInfo info;
     FILE *in;
     char buffer[1024];
+    gboolean empty_file = TRUE;
 
     g_return_val_if_fail (filename && *filename, FALSE);
 
@@ -261,12 +262,16 @@ rcd_log_scan (const char   *filename,
     g_return_val_if_fail (in != NULL, FALSE);
 
     while (fgets (buffer, 1024, in)) {
+        empty_file = FALSE;
         rcd_log_entry_parse (buffer, log_scan_cb, &info);
     }
 
     fclose (in);
 
-    return info.cutoff_hit;
+    /* We return TRUE if the log file is empty, since chronologically
+       valid entries could be in earlier log files --- something pathological
+       could have happened with log rotation. */
+    return info.cutoff_hit || empty_file;
 }
 
 void

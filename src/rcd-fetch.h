@@ -53,8 +53,10 @@ gboolean rcd_fetch_channel_local (RCChannel *channel);
 
 /*
   Download channel package data for all channels.
+  Returns a list of the ids of the RCPendings; the caller
+  is responsible for freeing the list.
 */
-void rcd_fetch_all_channels       (void);
+GSList *rcd_fetch_all_channels    (void);
 void rcd_fetch_all_channels_local (void);
 
 /*

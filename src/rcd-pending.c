@@ -217,6 +217,32 @@ rcd_pending_lookup_by_id (gint id)
     return pending;
 }
 
+static void
+get_all_ids_cb (gpointer key, gpointer val, gpointer user_data)
+{
+    GSList **id_list = user_data;
+    RCDPending *pending = val;
+    RCDPendingStatus status = rcd_pending_get_status (pending);
+    
+    if (status == RCD_PENDING_STATUS_PRE_BEGIN
+        || status == RCD_PENDING_STATUS_RUNNING
+        || status == RCD_PENDING_STATUS_BLOCKING) {
+
+        *id_list = g_slist_prepend (*id_list,
+                                    GINT_TO_POINTER (rcd_pending_get_id (pending)));
+    }
+}
+
+GSList *
+rcd_pending_get_all_active_ids (void)
+{
+    GSList *id_list = NULL;
+
+    g_hash_table_foreach (id_hash, get_all_ids_cb, &id_list);
+
+    return id_list;
+}
+
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 static void
@@ -297,6 +323,16 @@ rcd_pending_fail (RCDPending *pending,
     pending->error_msg = g_strdup (error_msg);
 
     g_signal_emit (pending, signals[COMPLETE], 0);
+}
+
+gboolean
+rcd_pending_is_active (RCDPending *pending)
+{
+    g_return_val_if_fail (RCD_IS_PENDING (pending), FALSE);
+
+    return pending->status != RCD_PENDING_STATUS_FINISHED
+        && pending->status != RCD_PENDING_STATUS_ABORTED
+        && pending->status != RCD_PENDING_STATUS_FAILED;
 }
 
 const char *

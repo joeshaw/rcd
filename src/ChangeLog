@@ -1,3 +1,30 @@
+2002-06-24  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-rpc-packsys.c (packsys_subscribe): Return zero and undo the
+	change if we couldn't save the subscriptions file to disk
+	(packsys_unsubscribe): Return zero and undo the change if we
+	couldn't save the subscriptions file to disk.
+
+	* rcd-subscriptions.c (rcd_subscriptions_load): Changed to return
+	a bool indicating whether the operation succeeded or failed.
+	(rcd_subscriptions_save): Changed to return a bool indicating
+	whether the operation succeeded or failed.
+
+	* rcd-log.c (rcd_log_scan): Do the right thing if we encounter
+	a zero-length log file.
+
+	* rcd-fetch.c (rcd_fetch_all_channels): Return a list of
+	pending ids for our channel downloads.
+
+	* rcd-rpc-system.c (system_poll_pending): Send some more info
+	about our pending object.
+	(system_get_all_pending): Added.
+	(rcd_rpc_system_register_methods): Register the get_all_pending
+	method.
+
+	* rcd-pending.c (rcd_pending_get_all_active_ids): Added.
+	(rcd_pending_is_active): Added.
+
 2002-06-19  Joe Shaw  <joe@ximian.com>
 
 	* rcd-pending.c (rcd_pending_get_latest_message): Added.

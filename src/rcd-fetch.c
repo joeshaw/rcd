@@ -286,31 +286,53 @@ rcd_fetch_channel_local (RCChannel *channel)
     return TRUE;
 }
 
+struct FetchAllInfo {
+    gboolean local;
+    GSList *id_list;
+};
+
 static void
 all_channels_cb (RCChannel *channel, gpointer user_data)
 {
-    gboolean local = GPOINTER_TO_INT (user_data);
+    struct FetchAllInfo *info = user_data;
 
-    if (local)
+
+    if (info->local)
         rcd_fetch_channel_local (channel);
-    else
-        rcd_fetch_channel (channel);
+    else {
+        gint id = rcd_fetch_channel (channel);
+        if (id != RCD_INVALID_PENDING_ID)
+            info->id_list = g_slist_prepend (info->id_list,
+                                             GINT_TO_POINTER (id));
+    }
 }
 
-void
+GSList *
 rcd_fetch_all_channels (void)
 {
+    struct FetchAllInfo info;
+
+    info.local = FALSE;
+    info.id_list = NULL;
+    
     rc_world_foreach_channel (rc_get_world (),
                               all_channels_cb,
-                              GINT_TO_POINTER (FALSE));
+                              &info);
+
+    return info.id_list;
 }
 
 void
 rcd_fetch_all_channels_local (void)
 {
+    struct FetchAllInfo info;
+    
+    info.local = TRUE;
+    info.id_list = NULL;
+
     rc_world_foreach_channel (rc_get_world (),
                               all_channels_cb,
-                              GINT_TO_POINTER (TRUE));
+                              &info);
 }
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */

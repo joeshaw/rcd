@@ -88,8 +88,9 @@ struct _RCDPendingClass {
 
 GType rcd_pending_get_type (void);
 
-RCDPending *rcd_pending_new          (const char *description);
-RCDPending *rcd_pending_lookup_by_id (gint id);
+RCDPending *rcd_pending_new                (const char *description);
+RCDPending *rcd_pending_lookup_by_id       (gint id);
+GSList     *rcd_pending_get_all_active_ids (void);
 
 void rcd_pending_begin    (RCDPending *);
 
@@ -98,6 +99,8 @@ void rcd_pending_update   (RCDPending *, double percent_complete);
 void rcd_pending_finished (RCDPending *, gint retval);
 void rcd_pending_abort    (RCDPending *, gint retval);
 void rcd_pending_fail     (RCDPending *, gint retval, const char *error_msg);
+
+gboolean rcd_pending_is_active (RCDPending *);
 
 const char      *rcd_pending_get_description      (RCDPending *);
 void             rcd_pending_set_description      (RCDPending *, const char *desc);

@@ -124,6 +124,9 @@ remove_channel_cb (RCChannel *channel, gpointer user_data)
 static void
 refresh_channels_cb (gpointer user_data)
 {
+    GSList *id_list;
+    GSList **ret_list = user_data;
+
     if (packsys_lock) {
         rc_debug (RC_DEBUG_LEVEL_MESSAGE, 
                   "Can't refresh channel data while transaction is running");
@@ -134,7 +137,13 @@ refresh_channels_cb (gpointer user_data)
 
     rcd_fetch_channel_list ();
     rcd_subscriptions_load ();
-    rcd_fetch_all_channels ();
+
+    id_list = rcd_fetch_all_channels ();
+
+    if (ret_list == NULL)
+        g_slist_free (id_list);
+    else
+        *ret_list = id_list;
 } /* refresh_channels_cb */
 
 static xmlrpc_value *
@@ -143,10 +152,30 @@ packsys_refresh_all_channels (xmlrpc_env   *env,
                               void         *user_data)
 {
     xmlrpc_value *value;
+    GSList *ret_list = NULL, *iter;
 
-    refresh_channels_cb (NULL);
+    refresh_channels_cb (&ret_list);
 
-    value = xmlrpc_build_value (env, "i", 0);
+    value = xmlrpc_build_value (env, "()");
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    for (iter = ret_list; iter != NULL; iter = iter->next) {
+        int id = GPOINTER_TO_INT (iter->data);
+        xmlrpc_value *idval;
+
+        idval = xmlrpc_build_value (env, "i", id);
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        xmlrpc_array_append_item (env, value, idval);
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        xmlrpc_DECREF (idval);
+    }
+    
+ cleanup:
+    g_slist_free (ret_list);
+    if (env->fault_occurred)
+        return NULL;
 
     return value;
 } /* packsys_refresh_all_channels */
@@ -160,17 +189,31 @@ packsys_subscribe (xmlrpc_env   *env,
     RCChannel *channel = NULL;
     xmlrpc_value *value = NULL;
     gint channel_id = -1;
+    gboolean success = FALSE;
 
     xmlrpc_parse_value (env, param_array, "(i)", &channel_id);
     XMLRPC_FAIL_IF_FAULT (env);
 
     channel = rc_world_get_channel_by_id (world, channel_id);
-    if (channel != NULL && ! rc_channel_subscribed (channel)) {
-        rc_channel_set_subscription (channel, TRUE);
-        rcd_subscriptions_save ();
+    if (channel != NULL) {
+
+        if (! rc_channel_subscribed (channel)) {
+            rc_channel_set_subscription (channel, TRUE);
+            success = rcd_subscriptions_save ();
+
+            /* If we couldn't save our subscription file, undo the change.
+               This keeps us in sync with the xml file on disk, and it
+               keeps us from showing the channel as being subed even
+               though we (hopefully!) reported an error to the user. */
+            if (! success)
+                rc_channel_set_subscription (channel, FALSE);
+        } else {
+            /* channel is already subscribed */
+            success = TRUE;
+        }
     }
 
-    value = xmlrpc_build_value (env, "i", channel ? 1 : 0);
+    value = xmlrpc_build_value (env, "i", success ? 1 : 0);
 
  cleanup:
     if (env->fault_occurred)
@@ -188,17 +231,31 @@ packsys_unsubscribe (xmlrpc_env   *env,
     RCChannel *channel = NULL;
     xmlrpc_value *value = NULL;
     gint channel_id = -1;
+    gboolean success = FALSE;
 
     xmlrpc_parse_value (env, param_array, "(i)", &channel_id);
     XMLRPC_FAIL_IF_FAULT (env);
 
     channel = rc_world_get_channel_by_id (world, channel_id);
-    if (channel != NULL && rc_channel_subscribed (channel)) {
-        rc_channel_set_subscription (channel, FALSE);
-        rcd_subscriptions_save ();
+    if (channel != NULL) {
+
+        if (rc_channel_subscribed (channel)) {
+            rc_channel_set_subscription (channel, FALSE);
+            success = rcd_subscriptions_save ();
+
+            /* If we couldn't save our subscription file, undo the change.
+               This keeps us in sync with the xml file on disk, and it
+               keeps us from showing the channel as being unsubed even
+               though we (hopefully!) reported an error to the user. */
+            if (! success)
+                rc_channel_set_subscription (channel, TRUE);
+        } else {
+            /* channel is already unsubscribed */
+            success = TRUE;
+        }
     }
 
-    value = xmlrpc_build_value (env, "i", channel ? 1 : 0);
+    value = xmlrpc_build_value (env, "i", success ? 1 : 0);
 
  cleanup:
     if (env->fault_occurred)

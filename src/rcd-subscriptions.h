@@ -24,8 +24,10 @@
 
 #include <libredcarpet.h>
 
-void rcd_subscriptions_load (void);
+/* These return TRUE if the operation succeeded. */
 
-void rcd_subscriptions_save (void);
+gboolean rcd_subscriptions_load (void);
+
+gboolean rcd_subscriptions_save (void);
 
 #endif /* __RCD_SUBSCRIPTIONS_H */
