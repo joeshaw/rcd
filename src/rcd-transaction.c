@@ -547,7 +547,7 @@ add_rollback_packages (RCDTransactionStatus *status)
 {
     RCPackageSList *packages = NULL;
     GDir *dir;
-    GError *error;
+    GError *error = NULL;
     const char *filename;
     char *repackage_dir;
     gboolean dirty = FALSE;
@@ -572,6 +572,7 @@ add_rollback_packages (RCDTransactionStatus *status)
             rc_debug (RC_DEBUG_LEVEL_WARNING,
                       "Invalid package file in repack dir: %s", fn);
             g_free (fn);
+            dirty = TRUE;
             continue;
         }
 
