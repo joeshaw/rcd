@@ -27,6 +27,8 @@
 
 #include <glib.h>
 
+#define RCD_PRIVILEGES_UNCHANGED (~(guint64)1)
+
 typedef guint64 RCDPrivileges;
 typedef void (*RCDPrivilegesFn) (RCDPrivileges priv,
                                  const char   *priv_name,

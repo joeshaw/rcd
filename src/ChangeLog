@@ -1,3 +1,18 @@
+2003-01-23  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-identity.c (write_identity): Oops!  -1 (aka
+	(gint64)~(guint64)0) is already used internally by the
+	RCDPrivileges code to represent superuser privileges.  So that
+	means that due to the last change, it is no longer possible to
+	make anyone a superuser.  Fixed by replacing -1 with a magic
+	symbol, RCD_PRIVILEGES_UNCHANGED.
+	
+	* rcd-rpc-users.c (users_update): Set id->privileges to
+	RCD_PRIVILEGES_UNCHANGED.
+
+	* rcd-privileges.h: #define RCD_PRIVILEGES_UNCHANGED to be
+	a something safe (i.e. != -1).
+
 2003-01-22  Joe Shaw  <joe@ximian.com>
 
 	* rcd-identity.c (write_identity): Make -1, not 0, mean "no

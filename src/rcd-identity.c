@@ -319,7 +319,7 @@ write_identity (RCDIdentity *old_id,
         if (new_id->password == NULL)
             new_id->password = g_strdup (old_id->password);
 
-        if (new_id->privileges == -1)
+        if (new_id->privileges == RCD_PRIVILEGES_UNCHANGED)
             new_id->privileges = old_id->privileges;
     }
 
