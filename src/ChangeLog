@@ -1,5 +1,26 @@
 2002-07-19  Jon Trowbridge  <trow@ximian.com>
 
+	* rcd-rpc.c (unix_rpc_callback): Only use the rc-passwd file
+	if it is secure.
+	(soup_rpc_callback): Cause authentication to fail if the
+	rc-passwd file isn't secure.
+
+	* rcd.c (main): Check our rc-passwd permissions/ownership right
+	when we start up, so that any yelling occurs right away.
+
+	* rcd-identity.c (rcd_identity_password_file_is_secure): Added.
+	Check that the permissions/ownership of our rc-passwd aren't such
+	that something bad could happen.  If we don't like what we see,
+	yell.
+
+	* rcd-rpc-users.c (users_update): Check usernames and
+	passwords that are passed in as arguments to our method.
+
+	* rcd-identity.c (rcd_identity_well_formed_username): Added.  Anal
+	checking of usernames.
+	(rcd_identity_well_formed_password): Added.  Anal checking of
+	passwords.
+
 	* rcd-rpc-packsys.c (packsys_package_dependency_info): Added.  A
 	new method that returns provides, requires, conflicts and
 	obsoletes information.

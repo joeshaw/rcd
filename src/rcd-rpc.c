@@ -148,7 +148,7 @@ unix_rpc_callback (RCDUnixServerHandle *handle)
     xmlrpc_env env;
     xmlrpc_mem_block *output;
     GByteArray *out_data;
-    RCDIdentity *identity;
+    RCDIdentity *identity = NULL;
     RCDRPCMethodData *method_data;
 
     xmlrpc_env_init(&env);
@@ -163,7 +163,8 @@ unix_rpc_callback (RCDUnixServerHandle *handle)
             identity = NULL;
         }
         else {
-            identity = rcd_identity_from_password_file (pw->pw_name);
+            if (rcd_identity_password_file_is_secure ())
+                identity = rcd_identity_from_password_file (pw->pw_name);
 
             if (!identity) {
                 identity = rcd_identity_new ();
@@ -227,8 +228,10 @@ soup_rpc_callback (SoupServerContext *context, SoupMessage *msg, gpointer data)
     username = soup_server_auth_get_user (context->auth);
     identity = rcd_identity_from_password_file (username);
 
-    if (!identity || !soup_server_auth_check_passwd (context->auth,
-                                                     identity->password)) {
+    if (! rcd_identity_password_file_is_secure ()
+        || !identity
+        || !soup_server_auth_check_passwd (context->auth,
+                                           identity->password)) {
         rc_debug (RC_DEBUG_LEVEL_MESSAGE,
                   "Couldn't authenticate %s", username);
         

@@ -118,15 +118,20 @@ users_update (xmlrpc_env   *env,
               xmlrpc_value *param_array,
               void         *user_data)
 {
-    RCDIdentity *id;
+    RCDIdentity *id = NULL;
     char *username, *password, *privileges;
-    gboolean success;
+    gboolean success = FALSE;
     xmlrpc_value *ret_value = NULL;
 
-    id = rcd_identity_new ();
     xmlrpc_parse_value (env, param_array, "(sss)",
                         &username, &password, &privileges);
     XMLRPC_FAIL_IF_FAULT (env);
+
+    if (! (rcd_identity_well_formed_username (username)
+           && rcd_identity_well_formed_password (password)))
+        goto cleanup;
+
+    id = rcd_identity_new ();
 
     id->username   = g_strdup (username);
     
@@ -140,12 +145,17 @@ users_update (xmlrpc_env   *env,
     else
         id->privileges = 0;
 
+
+
     success = rcd_identity_update_password_file (id);
 
-    ret_value = xmlrpc_build_value (env, "i", success ? 1 : 0);
-    XMLRPC_FAIL_IF_FAULT (env);
-
  cleanup:
+    if (! env->fault_occurred) {
+        ret_value = xmlrpc_build_value (env, "i", success ? 1 : 0);
+        if (env->fault_occurred)
+            ret_value = NULL;
+    }
+    
     rcd_identity_free (id);
 
     return ret_value;
@@ -156,6 +166,8 @@ users_remove (xmlrpc_env   *env,
               xmlrpc_value *param_array,
               void         *user_data)
 {
+    /* FIXME! */
+
     return NULL;
 }
 

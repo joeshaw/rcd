@@ -49,6 +49,12 @@ void         rcd_identity_free (RCDIdentity *id);
 gboolean     rcd_identity_approve_action (RCDIdentity  *id,
                                           RCDPrivileges required_priv);
 
+gboolean     rcd_identity_well_formed_username (const char *str);
+
+gboolean     rcd_identity_well_formed_password (const char *str);
+
+gboolean     rcd_identity_password_file_is_secure (void);
+
 void         rcd_identity_foreach_from_password_file (RCDIdentityFn fn,
                                                       gpointer user_data);
 

@@ -39,6 +39,7 @@
 #include "rcd-about.h"
 #include "rcd-fetch.h"
 #include "rcd-heartbeat.h"
+#include "rcd-identity.h"
 #include "rcd-log.h"
 #include "rcd-module.h"
 #include "rcd-privileges.h"
@@ -252,6 +253,11 @@ main (int argc, const char **argv)
     rcd_privileges_init ();
 
     initialize_logging ();
+
+    /* Check to see if the password file is secure.
+       If it isn't, a big warning will go out to the log file. */
+    rcd_identity_password_file_is_secure ();
+    
     initialize_rc_world ();
     initialize_rpc ();
     initialize_data ();

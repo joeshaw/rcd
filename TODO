@@ -13,11 +13,6 @@ when a certain amount of time has passed
 Need to be able to add users, remove users, set passwords, etc. via
 the daemon.
 
-We need to check the permissions on rc-passwd and loudly complain (and
-refuse to honor the file) if it can be read or written by anyone but
-root.  We should check once at start-up, and then again every time we
-are about to read the file.
-
 Need docs and a man page.
 
 Need to check through all the source files and check to make sure

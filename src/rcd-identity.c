@@ -26,6 +26,9 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include <ctype.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include <libredcarpet.h>
 
@@ -77,6 +80,102 @@ rcd_identity_approve_action (RCDIdentity *id,
     g_return_val_if_fail (id != NULL, FALSE);
 
     return (id->privileges & required_priv) == required_priv;
+}
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+gboolean
+rcd_identity_well_formed_username (const char *str)
+{
+    const char *c;
+
+    if (! (str && *str))
+        return FALSE;
+
+    for (c = str; *c; ++c) {
+        if (!(isalnum(*c) || *c == '_'))
+            return FALSE;
+    }
+
+    return TRUE;
+}
+
+gboolean
+rcd_identity_well_formed_password (const char *str)
+{
+    const char *c;
+    
+    if (! (str && *str))
+        return FALSE;
+
+    for (c = str; *c; ++c) {
+        if (! isxdigit (*c))
+            return FALSE;
+    }
+
+    return TRUE;
+}
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+gboolean
+rcd_identity_password_file_is_secure (void)
+{
+    static gboolean first_insecure = TRUE;
+
+    struct stat statbuf;
+    gboolean bad_owner, bad_permissions;
+
+    /* If it doesn't exist, that is fine. */
+    if (stat (PASSWORD_FILE, &statbuf) != 0)
+        return TRUE;
+
+    /* Don't complain about the ownership of the file if we aren't
+       running as root.  If we aren't, then we must have been run with
+       --allow-non-root and so the user must not really care. */
+    bad_owner = getuid () == 0 && statbuf.st_uid != 0;
+    bad_permissions = statbuf.st_mode & 0077;
+
+    if (bad_owner || bad_permissions) {
+        if (first_insecure) { 
+            int i;
+            const char *message[] = {
+                "***** WARNING ***** WARNING ***** WARNING ***** WARNING *****",
+                "",
+                "The rcd password file:",
+                "",
+                "     " PASSWORD_FILE,
+                "",
+                "is not secure.",
+                "",
+                "Password-based authentication will be disabled until this is fixed.",
+                ""
+                "To properly secure the file, execute the following as root:",
+                "",
+                NULL };
+
+            for (i = 0; message[i]; ++i)
+                rc_debug (RC_DEBUG_LEVEL_CRITICAL, message[i]);
+
+            if (bad_owner)
+                rc_debug (RC_DEBUG_LEVEL_CRITICAL, "  # chown root " PASSWORD_FILE);
+            if (bad_permissions)
+                rc_debug (RC_DEBUG_LEVEL_CRITICAL, "  # chmod 600 " PASSWORD_FILE);
+            
+            rc_debug (RC_DEBUG_LEVEL_CRITICAL, "");
+            rc_debug (RC_DEBUG_LEVEL_CRITICAL, message[0]); /* more WARNING yelling */
+
+            first_insecure = FALSE;
+        }
+
+        return FALSE;
+    }
+
+    /* We want to repeat the warning if we ever find the file to insecure
+       after we have seen it to be secure. */
+    first_insecure = TRUE;
+
+    return TRUE;
 }
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
