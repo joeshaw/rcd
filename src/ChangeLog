@@ -1,5 +1,8 @@
 2002-07-22  Jon Trowbridge  <trow@ximian.com>
 
+	* rcd-pending.c (rcd_pending_cleanup): Re-enabled pending
+	cleanup... the problem was not with this code.
+
 	* rcd-fetch.c (rcd_fetch_channel): The ChannelFetchClosure needs
 	to hold a reference to the channel.  This fixes a bug which was
 	causing us to segfault when repeatedly refreshing the channel

@@ -214,9 +214,6 @@ pending_cleanup_cb (gpointer key,
 static void
 rcd_pending_cleanup (void)
 {
-    /* FIXME: disabled for now */
-    return;
-
     if (id_hash) {
         static time_t last_cleanup = (time_t)0;
         time_t now;
