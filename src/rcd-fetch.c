@@ -28,6 +28,8 @@
 #include <config.h>
 #include "rcd-fetch.h"
 
+#include <stdlib.h>
+
 #include <libredcarpet.h>
 #include "rcd-transfer.h"
 #include "rcd-cache.h"

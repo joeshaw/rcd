@@ -1,3 +1,43 @@
+2002-06-27  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-unix-server.c: Added license.
+
+	* rcd-unix-server.h: Added license.
+
+	* rcd-transfer-http.c: Fixed compiler warning and added license.
+	
+	* rcd-transfer-file.c: Added license.
+
+	* rcd-rpc.h: Added license.
+
+	* rcd-rpc-util.h: Added license.
+
+	* rcd-rpc-util.c: Added license.
+
+	* rcd-rpc-system.h: Added license.
+
+	* rcd-rpc-sample.h: Added license.
+
+	* rcd-rpc-sample.c: Fixed compiler warning and added license.
+
+	* rcd-rpc-packsys.h: Added license.
+
+	* rcd-rpc-packsys.c: Fixed compiler warning and added license.
+
+	* rcd-query-packages.c: Fixed compiler warning.
+
+	* rcd-news.h: Include time.h
+
+	* rcd-news.c: Fixed compiler warning.
+
+	* rcd-log.c: Fixed compiler warning.
+
+	* rcd-log-entry.c: Fixed compiler warning.
+
+	* rcd-fetch.c: Fixed compiler warning.
+
+	* rcd-auth.c: Fixed compiler warning.
+
 2002-06-26  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-transfer.c (pending_file_data_cb): Update using

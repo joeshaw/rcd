@@ -28,6 +28,8 @@
 #include <config.h>
 #include "rcd-news.h"
 
+#include <stdlib.h>
+
 #include <xml-util.h>
 
 RCDNews *

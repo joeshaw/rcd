@@ -28,6 +28,7 @@
 #include <config.h>
 #include "rcd-log-entry.h"
 
+#include <stdlib.h>
 #include <ctype.h>
 
 RCDLogEntry *
@@ -260,13 +261,14 @@ rcd_log_entry_parse (char         *buffer,
 {
     RCDLogEntry entry;
     char *bufv[32];
-    int i, N;
+    int N;
     
     if (fn == NULL)
         return;
     g_return_if_fail (buffer != NULL);
 
     N = split_on_vbar (buffer, bufv, 32);
+    /* FIXME: we should check that N for the right # of elts */
 
     /* We build up our RCDLogEntry item out of the parsed chunks of
        the buffer.  This way we don't need to alloc or free any memory

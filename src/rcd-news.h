@@ -31,6 +31,8 @@
 #include <glib.h>
 #include <libxml/tree.h>
 
+#include <time.h>
+
 typedef struct _RCDNews RCDNews;
 
 typedef void (*RCDNewsFn) (RCDNews *, gpointer user_data);

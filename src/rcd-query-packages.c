@@ -28,6 +28,8 @@
 #include <config.h>
 #include "rcd-query-packages.h"
 
+#include <stdlib.h>
+
 static gboolean
 name_match (RCDQueryPart *part,
             gpointer      data)
