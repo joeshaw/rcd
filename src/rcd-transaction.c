@@ -536,6 +536,8 @@ rcd_transaction_transaction (RCDTransaction *transaction)
     g_signal_connect (packman, "transact_done",
                       G_CALLBACK (transact_done_cb), transaction);
 
+    rc_packman_set_rollback_enabled (packman, rcd_prefs_get_rollback ());
+
     if (transaction->flags == RCD_TRANSACTION_FLAGS_DRY_RUN)
         flags |= RC_TRANSACT_FLAG_NO_ACT;
 

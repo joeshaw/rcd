@@ -1,5 +1,8 @@
 2003-08-25  Joe Shaw  <joe@ximian.com>
 
+	* rcd-transaction.c (rcd_transaction_transaction): Set the
+	rollback status before running the transaction.
+
 	* rcd-rpc-util.c (rcd_rc_package_to_xmlrpc): Don't send along the
 	channel if it's a hidden channel.
 
