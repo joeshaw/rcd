@@ -57,6 +57,7 @@
 #include "rcd-transfer.h"
 
 /* global variables related to option parsing */
+/* If it isn't declared "static", then it's used "extern" somewhere.  Ew. */
 
 static gboolean non_daemon_flag = FALSE;
 static gboolean late_background = FALSE;
@@ -64,6 +65,7 @@ static gboolean non_root_flag = FALSE;
 static int remote_port = 0;
 static gboolean remote_disable = FALSE;
 static char *dump_file = NULL;
+char *config_file = NULL;
 
 static void
 option_parsing (int argc, const char **argv)
@@ -72,10 +74,13 @@ option_parsing (int argc, const char **argv)
 
     const struct poptOption command_line_options[] = {
         POPT_AUTOHELP
+        { "config", 'f', POPT_ARG_STRING, &config_file, 0,
+          "Specify an alternate config file to read.", NULL },
         { "non-daemon", 'n', POPT_ARG_NONE, &non_daemon_flag, 0,
           "Don't run the daemon in the background.", NULL },
         { "late-background", '\0', POPT_ARG_NONE, &late_background, 0,
-          "Run the daemon in the background, but not until it is ready to accept connections.", NULL },
+          "Run the daemon in the background, but not until it is ready "
+          "to accept connections.", NULL },
         { "allow-non-root", '\0', POPT_ARG_NONE, &non_root_flag, 0,
           "Allow the daemon to be run as a user other than root.", NULL },
         { "port", 'p', POPT_ARG_INT, &remote_port, 0,
@@ -562,6 +567,13 @@ main (int argc, const char **argv)
                               main_loop);
 
     option_parsing (argc, argv);
+
+    if (config_file && !g_file_test (config_file, G_FILE_TEST_EXISTS)) {
+        g_printerr ("Unable to find config file '%s'\n", config_file);
+        g_printerr ("rcd aborting\n");
+
+        exit (-1);
+    }
 
     root_check ();
     if (! late_background)

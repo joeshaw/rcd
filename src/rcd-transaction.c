@@ -51,8 +51,7 @@ struct _RCDTransactionStatus {
     RCPackageSList *install_packages;
     RCPackageSList *remove_packages;
 
-    /* Don't actually transact, just go through the motions */
-    gboolean dry_run;
+    RCDTransactionFlags flags;
 
     RCPackageSList *packages_to_download;
 
@@ -98,14 +97,19 @@ rcd_transaction_status_unref (RCDTransactionStatus *status)
         rc_package_slist_unref (status->install_packages);
         rc_package_slist_unref (status->remove_packages);
         rc_package_slist_unref (status->packages_to_download);
-        if (status->download_pending)
-            g_object_unref (status->download_pending);
-        g_object_unref (status->transaction_pending);
-        g_object_unref (status->transaction_step_pending);
         g_free (status->client_id);
         g_free (status->client_version);
         g_free (status->client_host);
         rcd_identity_free (status->identity);
+
+        if (status->download_pending)
+            g_object_unref (status->download_pending);
+
+        if (status->transaction_pending)
+            g_object_unref (status->transaction_pending);
+
+        if (status->transaction_step_pending)
+            g_object_unref (status->transaction_step_pending);
     
         g_free (status);
     }
@@ -453,7 +457,8 @@ cleanup_after_transaction (RCDTransactionStatus *status)
      * If caching is turned off, we don't want to keep around the package
      * files on disk.
      */
-    if (!rcd_prefs_get_cache_enabled ())
+    if (!rcd_prefs_get_cache_enabled () &&
+        status->flags != RCD_TRANSACTION_FLAGS_DOWNLOAD_ONLY)
         cleanup_temp_package_files (status->packages_to_download);
 
     rcd_transaction_status_unref (status);
@@ -509,7 +514,8 @@ fail_transaction (RCDTransactionStatus *status,
 
     rcd_pending_fail (pending, -1, msg);
 
-    if (!status->dry_run && rcd_prefs_get_premium ())
+    if (status->flags == RCD_TRANSACTION_FLAGS_NONE &&
+        rcd_prefs_get_premium ())
         rcd_transaction_send_log (status, FALSE, msg);
 } /* fail_transaction */
 
@@ -542,7 +548,7 @@ run_transaction(gpointer user_data)
     rc_packman_transact (status->packman,
                          status->install_packages,
                          status->remove_packages,
-                         ! status->dry_run);
+                         status->flags != RCD_TRANSACTION_FLAGS_DRY_RUN);
 
     g_signal_handlers_disconnect_by_func (
         G_OBJECT (status->packman),
@@ -563,7 +569,7 @@ run_transaction(gpointer user_data)
         goto unlock_and_cleanup;
     }
     else {
-        if (!status->dry_run) {
+        if (status->flags != RCD_TRANSACTION_FLAGS_DRY_RUN) {
             update_log (status);
 
             if (rcd_prefs_get_premium ())
@@ -572,7 +578,7 @@ run_transaction(gpointer user_data)
     }
 
     /* Update the list of system packages */
-    if (! status->dry_run)
+    if (status->flags != RCD_TRANSACTION_FLAGS_DRY_RUN)
         rc_world_get_system_packages (rc_get_world ());
 
 unlock_and_cleanup:
@@ -626,7 +632,9 @@ verify_packages (RCDTransactionStatus *status)
             rcd_pending_fail (status->transaction_pending, -1, msg);
             g_free (msg);
 
-            if (!status->dry_run && rcd_prefs_get_premium ()) {
+            if (status->flags != RCD_TRANSACTION_FLAGS_DRY_RUN &&
+                rcd_prefs_get_premium ())
+            {
                 msg = g_strdup_printf (
                     "Verification of '%s' failed",
                     g_quark_to_string (package->spec.nameq));
@@ -653,7 +661,9 @@ verify_packages (RCDTransactionStatus *status)
                 rcd_pending_fail (status->transaction_pending, -1, msg);
                 g_free (msg);
 
-                if (!status->dry_run && rcd_prefs_get_premium ()) {
+                if (status->flags != RCD_TRANSACTION_FLAGS_DRY_RUN &&
+                    rcd_prefs_get_premium ())
+                {
                     msg = g_strdup_printf (
                         "Verification of '%s' failed",
                         g_quark_to_string (package->spec.nameq));
@@ -680,7 +690,11 @@ download_completed (gboolean    successful,
 
     if (successful) {
         rcd_pending_finished (status->download_pending, 0);
-        verify_packages (user_data);
+        if (status->flags != RCD_TRANSACTION_FLAGS_DOWNLOAD_ONLY)
+            verify_packages (user_data);
+        else
+            cleanup_after_transaction (status);
+
         return;
     }
 
@@ -695,7 +709,9 @@ download_completed (gboolean    successful,
         g_free (msg);
     }
 
-    if (!status->dry_run && rcd_prefs_get_premium ()) {
+    if (status->flags == RCD_TRANSACTION_FLAGS_NONE &&
+        rcd_prefs_get_premium ())
+    {
         msg = g_strdup_printf ("Download failed - %s", error_message);
         rcd_transaction_send_log (status, FALSE, msg);
         g_free (msg);
@@ -878,17 +894,17 @@ download_packages (RCPackageSList *packages, RCDTransactionStatus *status)
 } /* download_packages */
 
 void
-rcd_transaction_begin (RCWorld        *world,
-                       RCPackageSList *install_packages,
-                       RCPackageSList *remove_packages,
-                       gboolean        dry_run,
-                       const char     *client_id,
-                       const char     *client_version,
-                       const char     *client_host,
-                       RCDIdentity    *identity,
-                       int            *download_pending_id,
-                       int            *transaction_pending_id,
-                       int            *step_pending_id)
+rcd_transaction_begin (RCWorld             *world,
+                       RCPackageSList      *install_packages,
+                       RCPackageSList      *remove_packages,
+                       RCDTransactionFlags  flags,
+                       const char          *client_id,
+                       const char          *client_version,
+                       const char          *client_host,
+                       RCDIdentity         *identity,
+                       int                 *download_pending_id,
+                       int                 *transaction_pending_id,
+                       int                 *step_pending_id)
 {
     RCDTransactionStatus *status;
     int download_count;
@@ -899,7 +915,7 @@ rcd_transaction_begin (RCWorld        *world,
     status->packman = rc_world_get_packman (world);
     status->install_packages = rc_package_slist_ref (install_packages);
     status->remove_packages = rc_package_slist_ref (remove_packages);
-    status->dry_run = dry_run;
+    status->flags = flags;
     status->client_id = g_strdup (client_id);
     status->client_version = g_strdup (client_version);
     status->client_host = g_strdup (client_host);
@@ -912,9 +928,11 @@ rcd_transaction_begin (RCWorld        *world,
      */
     rcd_shutdown_block ();
 
-    status->transaction_pending = rcd_pending_new ("Package transaction");
-    status->transaction_step_pending =
-        rcd_pending_new ("Package transaction step");
+    if (status->flags != RCD_TRANSACTION_FLAGS_DOWNLOAD_ONLY) {
+        status->transaction_pending = rcd_pending_new ("Package transaction");
+        status->transaction_step_pending =
+            rcd_pending_new ("Package transaction step");
+    }
 
     /*
      * If we have to download files, start the download.  Otherwise,
@@ -936,16 +954,25 @@ rcd_transaction_begin (RCWorld        *world,
     }
 
     if (transaction_pending_id) {
-        *transaction_pending_id =
-            rcd_pending_get_id (status->transaction_pending);
+        if (status->transaction_pending) {
+            *transaction_pending_id =
+                rcd_pending_get_id (status->transaction_pending);
+        }
+        else
+            *transaction_pending_id = -1;
     }
 
     if (step_pending_id) {
-        *step_pending_id =
-            rcd_pending_get_id (status->transaction_step_pending);
+        if (status->transaction_step_pending) {
+            *step_pending_id =
+                rcd_pending_get_id (status->transaction_step_pending);
+        }
+        else
+            *step_pending_id = -1;
     }
 
-    if (!download_count)
+    if (!download_count &&
+        status->flags != RCD_TRANSACTION_FLAGS_DOWNLOAD_ONLY)
         verify_packages (status);
 } /* rcd_transaction_begin */
 

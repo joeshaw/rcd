@@ -30,17 +30,23 @@
 
 #include "rcd-identity.h"
 
-void rcd_transaction_begin (RCWorld        *world,
-                            RCPackageSList *install_packages,
-                            RCPackageSList *remove_packages,
-                            gboolean        dry_run,
-                            const char     *client_id,
-                            const char     *client_version,
-                            const char     *client_host,
-                            RCDIdentity    *client_identity,
-                            int            *download_pending_id,
-                            int            *transaction_pending_id,
-                            int            *transaction_step_pending_id);
+typedef enum {
+    RCD_TRANSACTION_FLAGS_NONE          = 0,
+    RCD_TRANSACTION_FLAGS_DRY_RUN       = 1,
+    RCD_TRANSACTION_FLAGS_DOWNLOAD_ONLY = 2
+} RCDTransactionFlags;
+
+void rcd_transaction_begin (RCWorld             *world,
+                            RCPackageSList      *install_packages,
+                            RCPackageSList      *remove_packages,
+                            RCDTransactionFlags  flags,
+                            const char          *client_id,
+                            const char          *client_version,
+                            const char          *client_host,
+                            RCDIdentity         *client_identity,
+                            int                 *download_pending_id,
+                            int                 *transaction_pending_id,
+                            int                 *transaction_step_pending_id);
 
 int rcd_transaction_abort (int download_id, RCDIdentity *identity);
 

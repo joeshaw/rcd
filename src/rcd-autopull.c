@@ -283,7 +283,7 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
         rcd_transaction_begin (rc_get_world (),
                                to_install,
                                to_remove,
-                               FALSE,
+                               RCD_TRANSACTION_FLAGS_NONE,
                                rcd_module->description,
                                VERSION,
                                "localhost",

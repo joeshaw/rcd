@@ -151,7 +151,7 @@ rcd_cache_entry_close (RCDCacheEntry *entry)
     entry->tmp_file = NULL;
 
     g_hash_table_insert (entry->cache->entries,
-                         g_strdup (entry->local_file), entry);
+                         entry->local_file, entry);
 } /* rcd_cache_entry_close */
 
 void
@@ -226,7 +226,7 @@ rcd_cache_entry_invalidate (RCDCacheEntry *entry)
 {
     g_return_if_fail (entry);
 
-    g_hash_table_remove (entry->cache->entries, entry);
+    g_hash_table_remove (entry->cache->entries, entry->local_file);
     rcd_cache_entry_free (entry);
 } /* rcd_cache_entry_invalidate */
 
@@ -247,8 +247,7 @@ rcd_cache_lookup (RCDCache *cache, const char *url)
         return NULL;
 
     if (!g_file_test (entry->local_file, G_FILE_TEST_EXISTS)) {
-        g_hash_table_remove (cache->entries, entry);
-        rcd_cache_entry_free (entry);
+        rcd_cache_entry_invalidate (entry);
         return NULL;
     }
 
@@ -261,8 +260,7 @@ rcd_cache_new (RCDCacheFilenameFunc filename_func)
     RCDCache *cache;
 
     cache = g_new0 (RCDCache, 1);
-    cache->entries = g_hash_table_new_full (g_str_hash, g_str_equal,
-                                            g_free, NULL);
+    cache->entries = g_hash_table_new (g_str_hash, g_str_equal);
     cache->filename_func = filename_func;
 
     return cache;
