@@ -34,6 +34,8 @@ rcd_SOURCES = 			\
 	rcd-log-entry.h		\
 	rcd-module.c		\
 	rcd-module.h		\
+	rcd-news.c		\
+	rcd-news.h		\
 	rcd-pending.c		\
 	rcd-pending.h		\
 	rcd-prefs.c		\
@@ -46,6 +48,8 @@ rcd_SOURCES = 			\
 	rcd-rpc.h		\
 	rcd-rpc-log.c		\
 	rcd-rpc-log.h		\
+	rcd-rpc-news.c		\
+	rcd-rpc-news.h		\
 	rcd-rpc-packsys.c	\
 	rcd-rpc-packsys.h	\
 	rcd-rpc-system.c	\

@@ -38,6 +38,7 @@
 #include "rcd-rpc.h"
 #include "rcd-rpc-packsys.h"
 #include "rcd-rpc-log.h"
+#include "rcd-rpc-news.h"
 #include "rcd-transfer.h"
 #include "rcd-subscriptions.h"
 #include "rcd-fetch.h"
@@ -94,7 +95,10 @@ main (int argc, char *argv[])
     initialize_logging ();
     initialize_rc_world ();
 
+    rcd_fetch_news ();
+
     rcd_rpc_log_register_methods ();
+    rcd_rpc_news_register_methods ();
 
     if (rcd_fetch_channel_list_local ()) {
         rcd_subscriptions_load ();

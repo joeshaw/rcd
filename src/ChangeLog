@@ -1,3 +1,19 @@
+2002-06-18  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-log.c: Added some comments describing our cutoff
+	logic in more detail.
+
+	* rcd.c (main): Fetch the news when we start up.
+
+	* rcd-fetch.c (rcd_fetch_news): Added.  Download our RDF news.
+	(rcd_fetch_news_local): Get the news from our local cache.
+
+	* rcd-rpc-news.c: Added.  XML-RPC glue for news.
+
+	* rcd-news.c: Added.  A simple structure to carry around
+	news information, and code for maintaining a global news
+	list.
+
 2002-06-18  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-packsys.c (prepend_pkg): Don't add a package to be

@@ -48,14 +48,20 @@ gboolean rcd_fetch_channel_list_local (void);
    storing the packages in our RCWorld.  Returns the id
    of the RCDPending.
 */
-gint     rcd_fetch_channel     (RCChannel *channel);
-gboolean rcd_fet_channel_local (RCChannel *channel);
+gint     rcd_fetch_channel       (RCChannel *channel);
+gboolean rcd_fetch_channel_local (RCChannel *channel);
 
 /*
   Download channel package data for all channels.
 */
 void rcd_fetch_all_channels       (void);
 void rcd_fetch_all_channels_local (void);
+
+/*
+  Download news
+*/
+void     rcd_fetch_news       (void);
+gboolean rcd_fetch_news_local (void);
 
 /*
  * Download a list of packages and call the specified callback when they

@@ -31,6 +31,7 @@
 #include <libredcarpet.h>
 #include "rcd-transfer.h"
 #include "rcd-cache.h"
+#include "rcd-news.h"
 #include "rcd-prefs.h"
 
 static char *
@@ -310,6 +311,112 @@ rcd_fetch_all_channels_local (void)
     rc_world_foreach_channel (rc_get_world (),
                               all_channels_cb,
                               GINT_TO_POINTER (TRUE));
+}
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+static gchar *
+get_news_url (void)
+{
+    return g_strdup_printf ("%s/red-carpet.rdf",
+                            rcd_prefs_get_host ());
+}
+
+static void
+parse_news_xml (xmlDoc *doc)
+{
+    xmlNode *node;
+
+    g_return_if_fail (doc != NULL);
+
+    node = xmlDocGetRootElement (doc);
+    g_return_if_fail (node != NULL);
+
+    node = node->xmlChildrenNode;
+    while (node != NULL) {
+        if (! g_strcasecmp (node->name, "item")) {
+            RCDNews *news = rcd_news_parse (node);
+            rcd_news_add (news);
+        }
+        node = node->next;
+    }
+}
+
+void
+rcd_fetch_news (void)
+{
+    RCDTransfer *t;
+    gchar *url;
+    GByteArray *data;
+    xmlDoc *doc;
+
+    url = get_news_url ();
+
+    t = rcd_transfer_new (0, rcd_cache_get_normal_cache ());
+    data = rcd_transfer_begin_blocking (t, url);
+    g_free (url);
+
+    g_assert (data != NULL); /* FIXME? */
+
+    if (rcd_transfer_get_error (t)) {
+        g_assert_not_reached (); /* FIXME! */
+    }
+
+    g_object_unref (t);
+
+    {
+        /* FIXME!  A silly hack to get around the fact that the
+           current RDF file isn't valid utf-8 */
+
+        int i;
+        for (i = 0; i < data->len; ++i) {
+            if (data->data[i] >= 0x80)
+                data->data[i] = '_';
+        }
+    }
+
+    doc = xmlParseMemory (data->data, data->len);
+    g_byte_array_free (data, TRUE);
+    g_assert (doc != NULL); /* FIXME */
+
+    parse_news_xml (doc);
+
+    xmlFreeDoc (doc);
+}
+
+gboolean
+rcd_fetch_news_local (void)
+{
+    gchar *url, *local_file;
+    RCBuffer *buf;
+    xmlDoc *doc;
+
+    url = get_news_url ();
+    local_file = rcd_cache_get_local_filename (rcd_cache_get_normal_cache (),
+                                               url);
+    g_free (url);
+
+    if (! g_file_test (local_file, G_FILE_TEST_EXISTS))
+        return FALSE;
+    
+    buf = rc_buffer_map_file (local_file);
+    g_free (local_file);
+
+    if (! buf)
+        return FALSE;
+
+    doc = xmlParseMemory (buf->data, buf->size);
+    
+    rc_buffer_unmap_file (buf);
+
+    if (! doc)
+        return FALSE;
+
+    parse_news_xml (doc);
+
+    xmlFreeDoc (doc);
+
+    return TRUE;
 }
 
 typedef struct {

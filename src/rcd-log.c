@@ -154,6 +154,22 @@ package_name_match (RCDQueryPart *part,
 }
 
 static gboolean
+host_match (RCDQueryPart *part,
+            gpointer      data)
+{
+    RCDLogEntry *entry = data;
+    return rcd_query_match_string (part, entry->host);
+}
+
+static gboolean
+user_match (RCDQueryPart *part,
+            gpointer      data)
+{
+    RCDLogEntry *entry = data;
+    return rcd_query_match_string (part, entry->user);
+}
+
+static gboolean
 action_match (RCDQueryPart *part,
               gpointer      data)
 {
@@ -171,6 +187,14 @@ static RCDQueryEngine query_log_engine[] = {
     { "name",
       NULL, NULL, NULL,
       package_name_match },
+
+    { "host",
+      NULL, NULL, NULL,
+      host_match },
+
+    { "user",
+      NULL, NULL, NULL,
+      user_match },
 
     { "action",
       NULL, NULL, NULL,
@@ -191,7 +215,6 @@ static void
 log_scan_cb (RCDLogEntry *entry, gpointer user_data)
 {
     struct ScanInfo *info = user_data;
-    gboolean cutoff_check;
 
     if (info->cutoff == 0 || difftime (info->cutoff, entry->timestamp) <= 0) {
 
@@ -202,6 +225,15 @@ log_scan_cb (RCDLogEntry *entry, gpointer user_data)
         }
     }
 }
+
+/*
+  Scan the specified file for matching log entries.  We return
+  FALSE either if the file does not exist, or if all of the log
+  entries in the file preceed our cutoff time.
+
+  (This is how we try to avoid walking over all of our (rotated)
+  logs for every log query.)
+*/
 
 static gboolean
 rcd_log_scan (const char   *filename,
@@ -234,10 +266,6 @@ rcd_log_scan (const char   *filename,
 
     fclose (in);
 
-    /* If nothing in the file is without our cutoff range, 
-       return FALSE: this means we should stop walking backwards
-       through the rotated log files. */
-
     return info.cutoff_hit;
 }
 
@@ -258,12 +286,17 @@ rcd_log_query (RCDQueryPart *query_parts,
         return;
     }
 
-    /*** Compute our cutoff ***/
+    /*
+      Look at our query parts and check for any cutoff_time > or >=.
+      If we find any, extract them (by setting the 'processed' flag
+      as TRUE) and use them for the fixed cutoff that tells us when
+      we can stop walking back across rotated log files.
+    */
 
     cutoff = 0;
 
     /* check for other cutoffs in the query */
-    for (i = 0; cutoff == 0 && query_parts[i].type != RCD_QUERY_LAST; ++i) {
+    for (i = 0; query_parts[i].type != RCD_QUERY_LAST; ++i) {
         if (query_parts[i].key
             && ! g_strcasecmp (query_parts[i].key, "cutoff_time")
             && (query_parts[i].type == RCD_QUERY_GT || query_parts[i].type == RCD_QUERY_GT_EQ)) {
@@ -276,18 +309,26 @@ rcd_log_query (RCDQueryPart *query_parts,
         }
     }
 
+    /*
+      If there is no appropriate cutoff_time parts, we use a default cutoff
+      of 30 days.
+    */
+
     if (cutoff == 0) {
-        /* default cutoff == 30 days ago */
         time (&cutoff);
         cutoff -= 60*60*24*30;
     }
 
-    /* scan our log file */
+    /* 
+       Now we scan the main log file, followed by the older rotated logs.
+       We keep going until either we can't find any more log files to scan
+       or when we determine that all of the log entries in a given file
+       are from before our specified cutoff.
+    */
     if (rcd_log_scan (rcd_log_path, cutoff, query_parts, entry_fn, user_data)) {
         int rot_num = 1;
         char *rot_path = NULL;
 
-        /* scan through our rotated log files, as long as they return TRUE */
         do {
             g_free (rot_path);
             rot_path = g_strdup_printf ("%s.%d", rcd_log_path, rot_num);
