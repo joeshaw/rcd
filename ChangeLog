@@ -1,3 +1,10 @@
+2003-08-22  Joe Shaw  <joe@ximian.com>
+
+	* README: Add some info about the licenses covering rcd.
+
+	* COPYING.XMLRPC-C: Added.  Contains the license covering
+	src/rcd-xmlrpc.c.
+
 2003-08-13  Tambet Ingo  <tambet@ximian.com>
 
 	* HACKING: Add description to add yet another patch for

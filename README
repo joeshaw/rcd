@@ -22,6 +22,14 @@ are verified by the kernel in the case of a connection over unix domain
 sockets, and using a password in a root-owned, read-only file over
 HTTPS.
 
+LICENSE
+-------
+rcd is licensed under the GNU General Public License (GPL), version 2 only.
+See the COPYING file for more information.
+
+The src/rcd-xmlrpc.c file is derived from the xmlrpc-c library.  See
+the COPYING.XMLRPC-C file for more information.
+
 DOCUMENTATION
 -------------
 A man page is included with the package.  At some point, developer
