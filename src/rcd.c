@@ -440,6 +440,7 @@ main (int argc, const char **argv)
 {
     GMainLoop *main_loop;
     struct sigaction sig_action;
+    char *python_path;
 
     g_type_init ();
 
@@ -468,13 +469,15 @@ main (int argc, const char **argv)
     
     /* If it looks like rcd-buddy is in the right place, set up
        handlers for crashes */
-    if (g_file_test (SHAREDIR "/rcd-buddy", G_FILE_TEST_EXISTS)
-        && g_find_program_in_path ("python")) {
+    python_path = g_find_program_in_path ("python");
+    if (python_path != NULL
+        && g_file_test (SHAREDIR "/rcd-buddy", G_FILE_TEST_EXISTS)) {
         sig_action.sa_handler = crash_handler;
         sigaction (SIGSEGV, &sig_action, NULL);
         sigaction (SIGFPE,  &sig_action, NULL);
         sigaction (SIGBUS,  &sig_action, NULL);
     }
+    g_free (python_path);
 
     rcd_privileges_init ();
 
