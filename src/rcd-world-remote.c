@@ -979,7 +979,7 @@ rcd_world_remote_fetch_channels (RCDWorldRemote *remote, gboolean local,
      * old cached entries.
      */
     if (saved_target_differs (remote)) {
-        rc_debug (RC_DEBUG_LEVEL_MESSAGE,
+        rc_debug (RC_DEBUG_LEVEL_INFO,
                   "Distro target differs from last run on service '%s' [%s].  "
                   "Flushing channel data cache",
                   RC_WORLD_SERVICE (remote)->name,
