@@ -105,27 +105,44 @@ assemble_spec (xmlrpc_value  *value,
 {
     gboolean success = FALSE;
     int has_epoch, epoch;
-    char *name = NULL, *version = NULL, *release = NULL;
+    char *name = NULL, *version = NULL, *release = NULL, *version_str = NULL;
 
     if (! xmlrpc_struct_has_key (env, value, "name"))
         goto cleanup;
     RCD_XMLRPC_STRUCT_GET_STRING (env, value, "name", name);
 
-    if (! xmlrpc_struct_has_key (env, value, "has_epoch"))
-        goto cleanup;
-    RCD_XMLRPC_STRUCT_GET_INT (env, value, "has_epoch", has_epoch);
-    
-    if (! xmlrpc_struct_has_key (env, value, "epoch"))
-        goto cleanup;
-    RCD_XMLRPC_STRUCT_GET_INT (env, value, "epoch", epoch);
+    if (xmlrpc_struct_has_key (env, value, "version_str")) {
 
-    if (! xmlrpc_struct_has_key (env, value, "version"))
-        goto cleanup;
-    RCD_XMLRPC_STRUCT_GET_STRING (env, value, "version", version);
+        RCWorld *world = rc_get_world ();
+        RCPackman *packman = rc_world_get_packman (world);
 
-    if (! xmlrpc_struct_has_key (env, value, "release"))
-        goto cleanup;
-    RCD_XMLRPC_STRUCT_GET_STRING (env, value, "release", release);
+        RCD_XMLRPC_STRUCT_GET_STRING (env, value, "version_str", version_str);
+
+        if (! rc_packman_parse_version (packman, version_str,
+                                        &has_epoch,
+                                        &epoch,
+                                        &version,
+                                        &release))
+            goto cleanup;
+
+    } else {
+
+        if (! xmlrpc_struct_has_key (env, value, "has_epoch"))
+            goto cleanup;
+        RCD_XMLRPC_STRUCT_GET_INT (env, value, "has_epoch", has_epoch);
+        
+        if (! xmlrpc_struct_has_key (env, value, "epoch"))
+            goto cleanup;
+        RCD_XMLRPC_STRUCT_GET_INT (env, value, "epoch", epoch);
+
+        if (! xmlrpc_struct_has_key (env, value, "version"))
+            goto cleanup;
+        RCD_XMLRPC_STRUCT_GET_STRING (env, value, "version", version);
+
+        if (! xmlrpc_struct_has_key (env, value, "release"))
+            goto cleanup;
+        RCD_XMLRPC_STRUCT_GET_STRING (env, value, "release", release);
+    }
 
     rc_package_spec_init (spec, name, has_epoch, epoch, version, release);
 
@@ -135,6 +152,7 @@ assemble_spec (xmlrpc_value  *value,
     g_free (name);
     g_free (version);
     g_free (release);
+    g_free (version_str);
 
     return success;
 }

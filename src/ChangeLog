@@ -1,3 +1,10 @@
+2002-10-22  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-rpc-util.c (assemble_spec): When processing an xmlrpc struct
+	into a RCPackageSpec, check for a "version_str" field.  If it is
+	found, use rc_packman_parse_version to extract the EVR from that
+	string.
+
 2002-10-18  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-rpc-packsys.c (packsys_search_by_package_match): Initialize
