@@ -56,9 +56,8 @@ rcd_prefs_get_cache_dir (void)
 
     g_free (cache_dir);
 
-    /* FIXME: /var/cache/redcarpet as the default instead */
     cache_dir = gnome_config_get_string (
-        CONFIG_PATH "/Cache/directory=/tmp/rcd-cache");
+        CONFIG_PATH "/Cache/directory=/var/cache/redcarpet");
 
     return cache_dir;
 }

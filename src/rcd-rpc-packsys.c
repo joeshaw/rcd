@@ -151,6 +151,8 @@ refresh_channels_cb (gpointer user_data)
     GSList *id_list;
     GSList **ret_list = user_data;
 
+    rcd_transaction_lock ();
+
     rc_world_foreach_channel (rc_get_world (), remove_channel_cb, NULL);
 
     rcd_fetch_channel_list ();
@@ -180,8 +182,6 @@ packsys_refresh_all_channels (xmlrpc_env   *env,
                               "Transaction lock in place");
         return NULL;
     }
-
-    rcd_transaction_lock ();
 
     refresh_channels_cb (&ret_list);
 
