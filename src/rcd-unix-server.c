@@ -282,17 +282,14 @@ rcd_unix_server_run_async(RCDUnixServerCallback callback)
      * around this, we have to put the socket into a 0700 directory.
      * Sigh.
      */
-    if (rc_mkdir (SOCKET_PATH,
-#ifdef HAVE_SO_PEERCRED
-                   0777
-#else
-                   0700
-#endif
-                  ) < 0)
-    {
+    if (rc_mkdir (SOCKET_PATH, 0700) < 0) {
         rc_debug (RC_DEBUG_LEVEL_WARNING, "Unable to create %s", SOCKET_PATH);
         return -1;
     }
+
+#ifdef HAVE_SO_PEERCRED
+    chmod (SOCKET_PATH, 0755);
+#endif
 
     bzero(&servaddr, sizeof(servaddr));
     servaddr.sun_family = AF_UNIX;

@@ -1,3 +1,9 @@
+2003-10-06  Joe Shaw  <joe@ximian.com>
+
+	* rcd-unix-server.c (rcd_unix_server_run_async): When we mkdir()
+	the socket directory, our permissions can get umasked off, so we
+	need to explicitly chmod it after the fact.
+
 2003-10-03  Joe Shaw  <joe@ximian.com>
 
 	* rcd-transaction.c (rcd_transaction_begin): Move the call to
