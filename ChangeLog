@@ -1,0 +1,6 @@
+2002-05-24  Joe Shaw  <joe@ximian.com>
+
+	* configure.in: Added pkg-config checks for glib-2.0, gthread-2.0,
+	gmodule-2.0 and soup.  Added a check for the xmlrpc-c library.
+
+	* HACKING: How in God's name do we build this thing.

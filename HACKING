@@ -1,0 +1,28 @@
+To build this bad boy, you'll need glib2, a glib2-based soup, and the
+xmlrpc-c library with a libxml2-backend patch applied to it.  Whee!
+
+* Soup
+
+  Check out the soup-0-7 branch of soup from GNOME CVS.  Configure
+  with the --enable-glib2 option and install it in some funky prefix.
+  It cannot (yet) be installed in the same prefix as a glib 1.2-based
+  build.  I'll have to fix this, and it will probably result in all of
+  the libraries being renamed.  Sigh.
+
+* xmlrpc-c
+
+  Get the xmlrpc-c 0.9.10 tarball from /nfs/users/joe/xmlrpc-c and
+  untar it.  Apply the patch also in /nfs/users/joe/xmlrpc-c, and do
+  the following:
+
+      libtoolize --force --copy
+      aclocal
+      autoheader
+      automake --gnu
+      autoconf
+      ./configure --prefix=/opt/rcd --enable-libxml2-backend \
+         --disable-abyss-server --disable-cgi-server \
+	 --disable-cplusplus --disable-libwww-client
+
+And now you're ready to build RCD.  Yes, this will get fixed in the
+future, if even just by having packages for this stuff.
