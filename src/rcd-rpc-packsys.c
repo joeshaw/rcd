@@ -26,51 +26,18 @@
 #include <config.h>
 #include "rcd-rpc-packsys.h"
 
-#include <stdlib.h>
-#include <unistd.h>
 #include <sys/utsname.h>
 
 #include <xmlrpc.h>
 
-#include "rcd-log.h"
-
 #include "rcd-fetch.h"
 #include "rcd-heartbeat.h"
 #include "rcd-pending.h"
-#include "rcd-prefs.h"
 #include "rcd-query-packages.h"
 #include "rcd-rpc.h"
 #include "rcd-rpc-util.h"
-#include "rcd-shutdown.h"
 #include "rcd-subscriptions.h"
-#include "rcd-transact-log.h"
-
-static gboolean packsys_lock = FALSE;
-
-typedef struct {
-    RCPackman *packman;
-
-    RCPackageSList *install_packages;
-    RCPackageSList *remove_packages;
-
-    /* Don't actually transact, just go through the motions */
-    gboolean dry_run;
-
-    RCPackageSList *packages_to_download;
-
-    RCDPending *pending;
-    int package_download_id;
-
-    gsize total_download_size;
-    gsize current_download_size;
-
-    int total_transaction_steps;
-
-    char *client_host;
-    char *client_user;
-
-    char *log_tid;
-} RCDTransactionStatus;
+#include "rcd-transaction.h"
 
 static void
 add_channel_cb (RCChannel *channel, gpointer user_data)
@@ -173,7 +140,7 @@ check_pending_status_cb (gpointer user_data)
 
     g_slist_free (id_list);
 
-    packsys_lock = FALSE;
+    rcd_transaction_unlock ();
 
     return FALSE;
 } /* check_pending_status_cb */
@@ -208,13 +175,13 @@ packsys_refresh_all_channels (xmlrpc_env   *env,
     xmlrpc_value *value;
     GSList *ret_list = NULL, *iter;
 
-    if (packsys_lock) {
+    if (rcd_transaction_is_locked ()) {
         xmlrpc_env_set_fault (env, RCD_RPC_FAULT_LOCKED,
                               "Transaction lock in place");
         return NULL;
     }
 
-    packsys_lock = TRUE;
+    rcd_transaction_lock ();
 
     refresh_channels_cb (&ret_list);
 
@@ -815,416 +782,6 @@ packsys_package_dependency_info (xmlrpc_env   *env,
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 static void
-transact_start_cb(RCPackman *packman,
-                  int total_steps,
-                  RCDTransactionStatus *status)
-{
-    rc_debug (RC_DEBUG_LEVEL_MESSAGE,
-              "Transaction starting.  %d steps", total_steps);
-
-    status->total_transaction_steps = total_steps;
-} /* transact_start_cb */
-
-static void
-transact_step_cb(RCPackman *packman,
-                 int seqno,
-                 RCPackmanStep step,
-                 char *name,
-                 RCDTransactionStatus *status)
-{
-    char *action = NULL;
-    char *msg;
-    const char *last;
-
-    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Transaction step.  seqno %d", seqno);
-
-    switch (step) {
-    case RC_PACKMAN_STEP_UNKNOWN:
-    case RC_PACKMAN_STEP_PREPARE:
-        action = "prepare";
-        break;
-    case RC_PACKMAN_STEP_INSTALL:
-        action = "install";
-        break;
-    case RC_PACKMAN_STEP_REMOVE:
-        action = "remove";
-        break;
-    case RC_PACKMAN_STEP_CONFIGURE:
-        action = "configure";
-        break;
-    default:
-        g_assert_not_reached ();
-        break;
-    }
-
-    if (name)
-        msg = g_strconcat (action, ":", name, NULL);
-    else
-        msg = g_strdup (action);
-
-    /* We don't want to push the same message multiple times */
-    last = rcd_pending_get_latest_message (status->pending);
-    if (!last || strcmp (msg, last) != 0)
-        rcd_pending_add_message (status->pending, msg);
-
-    g_free (msg);
-} /* transact_step_cb */
-
-static void
-transact_progress_cb(RCPackman *packman,
-                     int amount,
-                     int total,
-                     RCDTransactionStatus *status)
-{
-    rc_debug (RC_DEBUG_LEVEL_MESSAGE,
-              "Transaction progress.  %d of %d", amount, total);
-} /* transact_progress_cb */
-
-static void
-transact_done_cb(RCPackman *packman,
-                 RCDTransactionStatus *status)
-{
-    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Transaction done");
-
-    rcd_pending_add_message (status->pending, "finish");
-    rcd_pending_finished (status->pending, 0);
-} /* transact_done_cb */
-
-static void
-cleanup_temp_package_files (RCPackageSList *packages)
-{
-    RCPackageSList *iter;
-
-    for (iter = packages; iter; iter = iter->next) {
-        RCPackage *p = iter->data;
-
-        unlink (p->package_filename);
-        g_free (p->package_filename);
-        p->package_filename = NULL;
-    }
-} /* cleanup_temp_package_files */
-
-static void
-cleanup_after_transaction (RCDTransactionStatus *status)
-{
-    /*
-     * If caching is turned off, we don't want to keep around the package
-     * files on disk.
-     */
-    if (!rcd_prefs_get_cache_enabled ())
-        cleanup_temp_package_files (status->packages_to_download);
-
-    rc_package_slist_unref (status->install_packages);
-    rc_package_slist_unref (status->remove_packages);
-    rc_package_slist_unref (status->packages_to_download);
-    g_object_unref (status->pending);
-    g_free (status->client_host);
-    g_free (status->client_user);
-
-    g_free (status);
-
-    /* Allow shutdowns again. */
-    rcd_shutdown_allow ();
-} /* cleanup_after_transaction */    
-
-static void
-update_log (RCDTransactionStatus *status)
-{
-    RCPackageSList *iter;
-
-    for (iter = status->install_packages; iter; iter = iter->next) {
-        RCPackage *new_p = iter->data;
-        RCPackage *old_p;
-        RCDLogEntry *log_entry;
-
-        log_entry = rcd_log_entry_new (status->client_host,
-                                       status->client_user);
-
-        old_p = rc_world_get_package (rc_get_world (),
-                                      RC_WORLD_SYSTEM_PACKAGES,
-                                      g_quark_to_string (new_p->spec.nameq));
-
-        if (old_p)
-            rcd_log_entry_set_upgrade (log_entry, old_p, new_p);
-        else
-            rcd_log_entry_set_install (log_entry, new_p);
-
-        rcd_log (log_entry);
-        rcd_log_entry_free (log_entry);
-    }
-
-    for (iter = status->remove_packages; iter; iter = iter->next) {
-        RCPackage *p = iter->data;
-        RCDLogEntry *log_entry;
-
-        log_entry = rcd_log_entry_new (status->client_host,
-                                       status->client_user);
-        rcd_log_entry_set_remove (log_entry, p);
-        rcd_log (log_entry);
-        rcd_log_entry_free (log_entry);
-    }
-} /* update_log */
-
-static void
-fail_transaction (RCDTransactionStatus *status, const char *msg)
-{
-    char *pending_msg;
-
-    rc_debug (RC_DEBUG_LEVEL_WARNING, "Transaction failed: %s", msg);
-
-    pending_msg = g_strdup_printf ("failed:%s", msg);
-    rcd_pending_add_message (status->pending, pending_msg);
-    g_free (pending_msg);
-
-    rcd_pending_fail (status->pending, -1, msg);
-
-    if (!status->dry_run && status->log_tid) 
-        rcd_transact_log_send_success (status->log_tid, FALSE, msg);
-} /* fail_transaction */
-
-static gboolean
-run_transaction(gpointer user_data)
-{
-    RCDTransactionStatus *status = user_data;
-
-    if (packsys_lock) {
-        fail_transaction (status,
-                          "Another transaction is already in progress");
-        goto cleanup;
-    }
-
-    packsys_lock = TRUE;
-
-    g_signal_connect (
-        G_OBJECT (status->packman), "transact_start",
-        G_CALLBACK (transact_start_cb), status);
-    g_signal_connect (
-        G_OBJECT (status->packman), "transact_step",
-        G_CALLBACK (transact_step_cb), status);
-    g_signal_connect (
-        G_OBJECT (status->packman), "transact_progress",
-        G_CALLBACK (transact_progress_cb), status);
-    g_signal_connect (
-        G_OBJECT (status->packman), "transact_done",
-        G_CALLBACK (transact_done_cb), status);
-
-    rc_packman_transact (status->packman,
-                         status->install_packages,
-                         status->remove_packages,
-                         ! status->dry_run);
-
-    g_signal_handlers_disconnect_by_func (
-        G_OBJECT (status->packman),
-        G_CALLBACK (transact_done_cb), status);
-    g_signal_handlers_disconnect_by_func (
-        G_OBJECT (status->packman),
-        G_CALLBACK (transact_start_cb), status);
-    g_signal_handlers_disconnect_by_func (
-        G_OBJECT (status->packman),
-        G_CALLBACK (transact_step_cb), status);
-    g_signal_handlers_disconnect_by_func (
-        G_OBJECT (status->packman),
-        G_CALLBACK (transact_progress_cb), status);
-
-    if (rc_packman_get_error (status->packman)) {
-        fail_transaction (status, rc_packman_get_reason (status->packman));
-        goto unlock_and_cleanup;
-    }
-    else {
-        if (!status->dry_run) {
-            update_log (status);
-            
-            if (status->log_tid)
-                rcd_transact_log_send_success (status->log_tid, TRUE, NULL);
-        }
-    }
-
-    /* Update the list of system packages */
-    if (! status->dry_run)
-        rc_world_get_system_packages (rc_get_world ());
-
-unlock_and_cleanup:
-    packsys_lock = FALSE;
-
-cleanup:
-    cleanup_after_transaction (status);
-
-    return FALSE;
-} /* run_transaction */
-
-static void
-verify_packages (RCDTransactionStatus *status)
-{
-    RCPackageSList *iter;
-
-    rc_verification_set_keyring (SHAREDIR "/rcd.gpg");
-
-    for (iter = status->install_packages; iter; iter = iter->next) {
-        RCPackage *package = iter->data;
-        char *msg;
-        RCVerificationSList *vers;
-        RCVerificationStatus worst_status = RC_VERIFICATION_STATUS_PASS;
-        GSList *v;
-
-        msg = g_strconcat ("verify:",
-                           g_quark_to_string (package->spec.nameq), NULL);
-        rcd_pending_add_message (status->pending, msg);
-        g_free (msg);
-
-        vers = rc_packman_verify (
-            status->packman, package, RC_VERIFICATION_TYPE_ALL);
-        for (v = vers; v; v = v->next) {
-            RCVerification *ver = v->data;
-
-            if (worst_status > ver->status)
-                worst_status = ver->status;
-        }
-
-        rc_verification_slist_free (vers);
-
-        if (worst_status == RC_VERIFICATION_STATUS_FAIL) {
-            rc_debug (RC_DEBUG_LEVEL_MESSAGE,
-                      "Verification of '%s' failed",
-                      g_quark_to_string (package->spec.nameq));
-            msg = g_strdup_printf ("failed:Verification of '%s' failed",
-                                   g_quark_to_string (package->spec.nameq));
-            rcd_pending_add_message (status->pending, msg);
-            rcd_pending_fail (status->pending, -1, msg);
-            g_free (msg);
-
-            if (!status->dry_run && status->log_tid) {
-                msg = g_strdup_printf (
-                    "Verification of '%s' failed",
-                    g_quark_to_string (package->spec.nameq));
-                rcd_transact_log_send_success (status->log_tid, FALSE, msg);
-                g_free (msg);
-            }
-
-            cleanup_after_transaction (status);
-            return;
-        }
-        else if (worst_status == RC_VERIFICATION_STATUS_UNDEF) {
-            rc_debug (RC_DEBUG_LEVEL_MESSAGE,
-                      "Verification of '%s' was inconclusive",
-                      g_quark_to_string (package->spec.nameq));
-
-            if (rcd_prefs_get_require_verified_packages ()) {
-                msg = g_strdup_printf (
-                    "failed:Verification of '%s' was inconclusive",
-                    g_quark_to_string (package->spec.nameq));
-                rcd_pending_add_message (status->pending, msg);
-                rcd_pending_fail (status->pending, -1, msg);
-                g_free (msg);
-
-                if (!status->dry_run && status->log_tid) {
-                    msg = g_strdup_printf (
-                        "Verification of '%s' failed",
-                        g_quark_to_string (package->spec.nameq));
-                    rcd_transact_log_send_success (
-                        status->log_tid, FALSE, msg);
-                    g_free (msg);
-                }
-
-                cleanup_after_transaction (status);
-                return;
-            }
-        }
-    }
-
-    g_idle_add (run_transaction, status);
-} /* verify_packages */
-
-static void
-download_completed (gboolean    successful,
-                    const char *error_message,
-                    gpointer    user_data)
-{
-    RCDTransactionStatus *status = user_data;
-    char *msg;
-
-    if (successful) {
-        verify_packages (user_data);
-        return;
-    }
-
-    /* A NULL error message indicates that it was cancelled, not a failure */
-    if (!error_message) {
-        rcd_pending_abort (status->pending, -1);
-        error_message = "Cancelled by user";
-    }
-    else {
-        msg = g_strdup_printf ("failed:Download failed - %s", error_message);
-        rcd_pending_add_message (status->pending, msg);
-        rcd_pending_fail (status->pending, -1, msg);
-        g_free (msg);
-    }
-
-    if (!status->dry_run && status->log_tid) {
-        msg = g_strdup_printf ("Download failed - %s", error_message);
-        rcd_transact_log_send_success (status->log_tid, FALSE, msg);
-        g_free (msg);
-    }
-
-    cleanup_after_transaction (status);
-} /* download_completed */
-
-static void
-update_download_progress (gsize size, gpointer user_data)
-{
-    RCDTransactionStatus *status = user_data;
-
-    status->current_download_size += size;
-
-    rcd_pending_update_by_size (status->pending,
-                                status->current_download_size,
-                                status->total_download_size);    
-} /* update_download_progress */
-
-static gboolean
-download_packages (RCPackageSList *packages, RCDTransactionStatus *status)
-{
-    RCPackageSList *iter;
-
-    status->total_download_size = 0;
-    status->packages_to_download = NULL;
-
-    for (iter = packages; iter; iter = iter->next) {
-        RCPackage *package = iter->data;
-
-        if (package->package_filename) {
-            if (!g_file_test (package->package_filename, G_FILE_TEST_EXISTS)) {
-                g_free (package->package_filename);
-                package->package_filename = NULL;
-            }
-        }
-
-        if (!package->package_filename) {
-            status->packages_to_download = g_slist_prepend (
-                status->packages_to_download, rc_package_ref (package));
-            status->total_download_size +=
-                rc_package_get_latest_update (package)->package_size;
-        }
-    }
-
-    if (!status->packages_to_download)
-        return FALSE;
-
-    rcd_pending_add_message (status->pending, "download");
-    rcd_pending_update (status->pending, 0.0);
-
-    status->packages_to_download =
-        g_slist_reverse (status->packages_to_download);
-
-    status->package_download_id = rcd_fetch_packages (
-        status->packages_to_download, 
-        update_download_progress,
-        download_completed,
-        status);
-
-    return TRUE;
-} /* download_packages */
-
-static void
 check_install_package_auth (xmlrpc_env     *env,
                             RCWorld        *world,
                             RCPackageSList *packages, 
@@ -1303,11 +860,11 @@ packsys_transact(xmlrpc_env   *env,
     RCWorld *world = (RCWorld *) user_data;
     xmlrpc_value *xmlrpc_install_packages;
     xmlrpc_value *xmlrpc_remove_packages;
-    xmlrpc_bool *dry_run;
+    xmlrpc_bool dry_run;
     RCPackageSList *install_packages = NULL;
     RCPackageSList *remove_packages = NULL;
     RCDRPCMethodData *method_data;
-    RCDTransactionStatus *status;
+    int transaction_id;
     xmlrpc_value *result = NULL;
 
     xmlrpc_parse_value(
@@ -1337,44 +894,14 @@ packsys_transact(xmlrpc_env   *env,
         env, remove_packages, method_data->identity);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    /* Track our transaction */
-    status = g_new0(RCDTransactionStatus, 1);
-    status->packman = rc_world_get_packman (world);
-    status->install_packages = install_packages;
-    status->remove_packages = remove_packages;
-    status->dry_run = (gboolean) dry_run;
-    status->pending = rcd_pending_new ("Package Download");
-    status->client_host = g_strdup (method_data->host);
-    status->client_user = g_strdup (method_data->identity->username);
+    transaction_id = rcd_transaction_begin (world,
+                                            install_packages,
+                                            remove_packages,
+                                            dry_run,
+                                            method_data->host,
+                                            method_data->identity->username);
 
-    g_object_set_data (G_OBJECT (status->pending), "status", status);
-    rcd_pending_begin (status->pending);
-
-    rc_package_slist_ref(status->install_packages);
-    rc_package_slist_ref(status->remove_packages);
-
-    /*
-     * We don't want to allow the shutting down of the daemon while we're
-     * in the middle of a transaction.
-     */
-    rcd_shutdown_block ();
-
-    /* If we're in premium mode, send a log of the transaction to the server */
-    if (rcd_prefs_get_premium ()) {
-        rcd_transact_log_send_transaction (status->install_packages,
-                                           status->remove_packages,
-                                           &status->log_tid);
-    }
-
-    /*
-     * If we have to download files, start the download.  Otherwise,
-     * schedule the transaction
-     */
-    if (!download_packages (status->install_packages, status))
-        g_idle_add (run_transaction, status);
-
-    result = xmlrpc_build_value (env, "i",
-                                 rcd_pending_get_id (status->pending));
+    result = xmlrpc_build_value (env, "i", transaction_id);
     XMLRPC_FAIL_IF_FAULT(env);
 
 cleanup:
@@ -1399,28 +926,21 @@ packsys_abort_download(xmlrpc_env   *env,
 {
     RCWorld *world = (RCWorld *) user_data;
     int transaction_id;
-    RCDPending *pending;
-    RCDTransactionStatus *status;
+    RCPackageSList *install_packages;
     xmlrpc_value *result = NULL;
     RCDRPCMethodData *method_data;
 
     xmlrpc_parse_value (env, param_array, "(i)", &transaction_id);
-    pending = rcd_pending_lookup_by_id (transaction_id);
 
-    if (!pending) {
+    if (!rcd_transaction_is_valid (transaction_id)) {
         xmlrpc_env_set_fault (env, RCD_RPC_FAULT_INVALID_TRANSACTION_ID,
                               "Cannot find transaction for that id");
         return NULL;
     }
 
-    status = g_object_get_data (G_OBJECT (pending), "status");
-    if (!status) {
-        xmlrpc_env_set_fault (env, RCD_RPC_FAULT_INVALID_TRANSACTION_ID,
-                              "Cannot find transaction for that id");
-        return NULL;
-    }
+    install_packages = rcd_transaction_get_install_packages (transaction_id);
 
-    if (!status->install_packages || packsys_lock) {
+    if (!install_packages || rcd_transaction_is_locked ()) {
         /*
          * We can only abort downloads, so if we're not installing anything,
          * or we are in the middle of a transaction, we cannot abort it.
@@ -1432,10 +952,11 @@ packsys_abort_download(xmlrpc_env   *env,
     /* Check our permissions to abort this download */
     method_data = rcd_rpc_get_method_data ();
     check_install_package_auth (
-        env, world, status->install_packages, method_data->identity);
+        env, world, install_packages, method_data->identity);
     XMLRPC_FAIL_IF_FAULT (env);
 
-    rcd_fetch_packages_abort (status->package_download_id);
+    rcd_fetch_packages_abort (
+        rcd_transaction_get_package_download_id (transaction_id));
 
     result = xmlrpc_build_value (env, "i", 1);
 

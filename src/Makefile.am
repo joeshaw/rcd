@@ -64,20 +64,22 @@ rcd_SOURCES = 			\
 	rcd-rpc-system.h	\
 	rcd-rpc-users.c		\
 	rcd-rpc-users.h		\
+	rcd-rpc-util.c		\
+	rcd-rpc-util.h		\
 	rcd-shutdown.c		\
 	rcd-shutdown.h		\
 	rcd-subscriptions.c	\
 	rcd-subscriptions.h	\
 	rcd-transact-log.c	\
 	rcd-transact-log.h	\
+	rcd-transaction.c	\
+	rcd-transaction.h	\
 	rcd-transfer.c		\
 	rcd-transfer.h		\
 	rcd-transfer-file.c	\
 	rcd-transfer-file.h	\
 	rcd-transfer-http.c	\
 	rcd-transfer-http.h	\
-	rcd-rpc-util.c		\
-	rcd-rpc-util.h		\
 	rcd-unix-server.c	\
 	rcd-unix-server.h	\
 	rcd.c
