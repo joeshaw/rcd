@@ -1,3 +1,7 @@
+2002-08-05  Ian Peters  <itp@ximian.com>
+
+	* Makefile.am: get rid of the rcd-marshal.[ch] stamp stuff
+
 2002-08-05  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd.c (main): Only set up the crash handlers if it looks

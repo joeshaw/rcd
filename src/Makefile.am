@@ -126,21 +126,17 @@ install-exec-hook:
 ### Deal with auto-generating the signal marshallers
 ###
 
-rcd-marshal.h: stamp-rcd-marshal.h
-	@true   
-
-rcd-marshal.c: stamp-rcd-marshal.c
-	@true
-
-stamp-rcd-marshal.h: rcd-marshal.list
+rcd-marshal.h: rcd-marshal.list
 	cd $(srcdir) \
 	&& glib-genmarshal --prefix=rcd_marshal rcd-marshal.list --header >> xgen-gmh \
 	&& (cmp -s xgen-gmh rcd-marshal.h || cp xgen-gmh rcd-marshal.h) \
 	&& rm -f xgen-gmh xgen-gmh~
 
-stamp-rcd-marshal.c: rcd-marshal.list
+rcd-marshal.c: rcd-marshal.list
 	cd $(srcdir) \
 	&& glib-genmarshal --prefix=rcd_marshal rcd-marshal.list --body >> xgen-gmc \
 	&& (cmp -s xgen-gmc rcd-marshal.c || cp xgen-gmc rcd-marshal.c) \
 	&& rm -f xgen-gmc xgen-gmc~
 
+clean-local:
+	rm -f rcd-marshal.c rcd-marshal.h
