@@ -447,7 +447,7 @@ transact_progress_cb(RCPackman *packman,
             rcd_pending_update (status->transaction_step_pending, 0);
     }
 
-    if (amount > status->transaction_size) {
+    if (total && amount > status->transaction_size) {
         rcd_pending_update_by_size (status->transaction_step_pending,
                                     amount, total);
     }
