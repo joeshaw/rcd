@@ -1,5 +1,12 @@
-Last updated: Tue Sep  2 14:59:00 EDT 2003
+Last updated: Tue Sep  2 17:47:10 EDT 2003
 Written by: Joe Shaw <joe@ximian.com>
+
+TODO
+----
+Fix the FIXMEs.
+Add a section on privileges
+Add the privileges for each command to its definition
+Add a section about sequence numbers.
 
 General notes
 -------------
@@ -9,9 +16,10 @@ rcd methods are namespaced, with the convention
 If an argument or struct member is optional or conditional, it is
 suffixed with the [optional] tag.
 
-Return values are generally specified by their type.  Some commands,
-however, always return a certain value (usually 0 or 1), and in those
-cases the value itself is mentioned.
+For the majority of methods, the return type is specified.  (See more
+about types below)  Certain methods, however, always return a single
+value (usually 0 or 1).  For those methods, we'll just say the value
+that's returned instead of the type.
 
 Each method below has a "Faults" listing.  While some are listed as
 "none", every method can return a couple of faults.  If the arguments
@@ -25,6 +33,74 @@ have privileges to execute the command, a permission_denied fault
 A full list of faults is below.
 
 All arguments that are absolute times are in UNIX time format.
+
+rcd also supports the standard XML-RPC method introspection and
+multicall APIs.  Look at www.xmlrpc.com for more info.
+
+Types
+-----
+Most of the types used in this document are the primitive XML-RPC
+types.  They include int, bool, string, and double.
+
+In addition, there are compound types for arrays and structs.
+
+An array will be specified in one of two ways:
+
+   array [type]
+
+will indicate a variable-length array which has members of all the
+same type.
+
+   (string a1, string a2, int a3)
+
+will indicate a fixed-length array, or an array which has members of
+different types.
+
+A struct is just a dictionary; a key-value mapping.  They're specified
+as such:
+
+   struct { foo : string, bar : int }
+
+where "foo" and "bar" are the names of the elements.
+
+If a method takes a variable type argument, or the member of an array
+or struct is a variable type, we'll use "variable type" as the type
+argument.
+
+The only "special" type we'll use is for a package.  A package is
+actually a struct, but it's such a large struct and used so
+frequently that we'll just define it once here and use it later on for
+things such as "array [package]".
+
+package = struct {
+	name : string,
+	has_epoch : int,
+	epoch : int,
+	version : string,
+	release : string,
+	channel : string,
+	importance_num : int [optional],
+	importance_str : string [optional],
+	license : string [optional],
+	package_set : int,
+	file_size : int,
+	installed_size : int,
+	section_str : string,
+	section_user_str : string,
+	section_num : int,
+	channel_guess : string [optional],
+	installed : int,
+	name_installed : int,
+	locked : int }
+
+"channel" is a channel ID.
+"license" is a license name.
+"package_set" indicates whether this package is a package set.
+"channel_guess" is the channel which rcd thinks this package comes
+from.  This is for installed packages.
+"installed" indicates whether this package is installed.
+"name_installed" indicates whether another package with this name is installed.
+"locked" indicates whether this package is locked.
 
 List of faults
 --------------
@@ -119,6 +195,49 @@ cant_set_preference    = -616
 invalid_service        = -617
 
 	The specified service is invalid.
+
+Query syntax
+------------
+rcd has a general query syntax that is used when searching for
+packages and transaction logs.  The syntax is:
+
+	 (string key, string type, string query)
+
+where "key" is the token you're matching against, "type" is the type
+of match you're doing, and "query" is the data you're matching.
+
+"key" differs depending on what you're searching, so those will be
+listed in the individual commands which employ this scheme.  "query"
+is the user-specified data.
+
+Below are the different "types":
+"is", "eq", "==", "=" (equality)
+"is not", "ne", "!="  (not equal)
+"contains"	      (substring searches)
+"contains_word"	      (word searches)
+"!contains"	      (doesn't contain)
+"!contains_word"      (doesn't contain word)
+">", "gt"	      (greater than)
+"<", "lt"	      (less than)
+">=", "gteq"	      (greater than or equal to)
+"<=", "lteq"	      (less than or equal to)
+
+"begin-or"	      (beginning of an "or" block)
+"end-or"	      (end of an "or" block)
+
+Some examples:
+[("name", "contains", "foo")]
+would match "foo", "foobar", "football"
+
+[("name", "contains_word", "foo")]
+would match "foo", but not "foobar" or "football"
+
+[("name", "contains", "foo"), ("name", "contains", "bar")]
+would match "foobar", but not "foo" or "football"
+
+[("begin-or", "", ""), ("name", "contains", "bar"),
+ ("name", "contains", "ball"), ("end-or", "", "")]
+would match "foobar" and "football", but not "foo".
 
 System methods
 --------------
@@ -228,7 +347,7 @@ rcd.system.activate(string activation_code, string email,
 		    string alias [optional])
 
 	Returns: 0 on success.
-	Faults: cant_activate (on failure)
+	Faults: cant_activate
 
 	Activates the daemon against Red Carpet Enterprise servers.
 
@@ -267,3 +386,370 @@ rcd.system.flush_cache()
 	Faults: none
 
 	Flushes the package cache.
+
+Preference methods
+------------------
+These methods manipulate settings in the daemon.  Here is the list of
+default preferences.  Note that not all preferences are available to
+all users and that modules can register their own preferences, so the
+actual set may be different from this:
+
+Type		Name				Description
+string		proxy-url			HTTP proxy URL
+string		proxy-username			HTTP proxy username	
+string		proxy-password			HTTP proxy password
+bool		http-1.0			Use HTTP 1.0 (instead of 1.1)
+bool		require-verified-certificates	Verify server SSL certs
+bool		cache-enabled			Cache packages and metadata
+string		cache-directory			Directory to store cache
+bool		cache-cleanup-enabled		Automatically cleanup cache
+int		cache-max-age-in-days		Max age for packages in cache
+int             cache-max-size-in-mb		Max size for package cache
+bool		require-signatures		Require signed packages
+int		heartbeat-interval		Seconds between refreshes
+int		max-downloads			Max umber of concurrent DLs
+int		debug-level			Debug level (0-6)
+int		syslog-level			Syslog level (0-6)
+bool		remote-enabled			Allow remote clients
+int		remote-port			Port to listen on
+string		bind-ip				IP address to bind server to
+bool		rollback			Enable package rollback
+
+rcd.prefs.list_prefs()
+
+	Returns: array [struct {
+		 name : string,
+		 description : string,
+		 category : string [optional],
+		 value : variable type }]
+	Faults: none
+
+	This method returns the list of preferences that the user has
+	permissions to view.  "value" is the value of the preference
+	and can have any of the following types: string, bool, or int.
+
+rcd.prefs.get_pref(string name)
+
+	Returns: variable type
+	Faults: none
+
+	Returns the value for the given preference name.  The type is
+	one of string, bool, or int.
+
+rcd.prefs_set_pref(string name, variable type value)
+
+	Returns: 0 on success
+	Faults: type_mismatch, cant_set_preference, invalid_preference
+
+	Sets the preference specified by "name" to "value".  "value"
+	may have one of the following types: string, bool, or int.  If
+	the type of "value" does not match the expected type, a
+	type_mismatch fault is thrown.  If there is no preference
+	named "name", an invalid_preference fault is thrown.  And if
+	the preference cannot be set due to an invalid value, a
+	cant_set_preference fault is thrown.
+
+Service methods
+---------------
+A "service" is a description of a server that the daemon contacts to
+get channel and package data.
+
+rcd.service.list()
+
+	Returns: array [struct {
+		 url : string,
+		 name : string,
+		 id : string,
+		 is_sticky : int,
+		 is_invisible : int,
+		 is_singleton : int }]
+	Faults: none
+
+	Returns a list of the current services on the daemon.
+
+rcd.service.add(string url)
+
+	Returns: 0 on success
+	Faults: invalid_service
+
+	Mounts a service based on the URL passed in.  If this fails,
+	it will throw an invalid_service fault.  Otherwise the service
+	is added and saved to disk.
+
+rcd.service.remove(string identifier)
+
+	Returns: 0 on success
+	Faults: invalid_service
+
+	Removes a service based on "identifier".  "identifier" can be
+	either the service URL or the service's unique ID.  If this
+	fails, it will throw an invalid_service fault.  Otherwise the
+	service is removed and saved to disk.
+
+rcd.service.get_mirrors(string identifier)
+
+	Returns: array [struct {
+		 name : string,
+		 location : string,
+		 url : string,
+		 ftp : string [optional],
+		 contact : string [optional] }]
+	Faults: invalid_service
+
+	Lists the mirrors for the given service.  "identifier" can be
+	either the service URL or the service's unique ID.  The
+	service must be a valid remote service (one that supports
+	mirrors), or else an invalid_service fault will be thrown.
+
+	"ftp" is an alternate FTP URL to the data.  Note that rcd does
+	not support downloading via FTP currently.  "contact" is an
+	email address for the mirror administrator contact.
+
+rcd.service.set_url(string identifier, string new_url)
+
+	Returns: 0 on success
+	Faults: invalid_service
+
+	Changes the URL for the given service.  "identifier" can be
+	either the service URL or the service's unique ID.  This is
+	usually used in tandem with the get_mirrors() method above.
+	When the user chooses a new mirror, this method is usually
+	called with the mirror's URL.  It will cause the daemon to
+	refresh this service.  If the refresh succeeds, the new URL is
+	saved to disk and the command returns.  Otherwise, it throws
+	an invalid_service fault.
+
+rcd.service.refresh(string identifier [optional])
+
+	Returns: array [int]
+	Faults: locked, invalid_service, cant_refresh
+
+	If the optional "identifier" is specified, the channels for
+	just that service are refreshed.  Otherwise, all channels for
+	all services are refreshed.  If a transaction lock is in
+	place, this command will throw the locked fault.  If the
+	service specified does not match an existing service, the
+	invalid_service fault is thrown.  If the refresh is not
+	successful, the cant_refresh fault is thrown.  Otherwise a
+	zero or one element array is returned with the pending ID for
+	the refresh.  If the array is empty, it means that the refresh
+	has already completed.  Otherwise, you must poll on the
+	returned ID to see when the refresh finishes.
+
+rcd.service.refresh_blocking(string identifier [optional])
+
+	Returns: 0 on success
+	Faults: locked, invalid_service, cant_refresh
+
+	This is a synchronous version of the refresh() method.  The
+	difference between the two is that this method will wait until
+	the entire refresh is finished and will return 0 unless a
+	fault occurs.  See the rcd.service.refresh() method for more
+	information.
+
+Packaging system methods
+------------------------
+rcd.packsys.search()
+
+rcd.packsys.search_by_package_match()
+
+rcd.packsys.find_package_for_file()
+
+rcd.packsys.query_file()
+
+rcd.packsys.find_latest_version()
+
+rcd.packsys.package_info()
+
+rcd.packsys.package_dependency_info()
+
+rcd.packsys.file_list()
+
+rcd.packsys.get_updates()
+
+rcd.packsys.update_summary()
+
+rcd.packsys.resolve_dependencies()
+
+rcd.packsys.verify_dependencies()
+
+rcd.packsys.get_rollback_actions()
+
+rcd.packsys.rollback()
+
+rcd.packsys.rollback_blocking()
+
+rcd.packsys.transact()
+
+rcd.packsys.transact_blocking()
+
+rcd.packsys.abort_download()
+
+rcd.packsys.what_provides()
+
+rcd.packsys.what_requires()
+
+rcd.packsys.what_conflicts()
+
+rcd.packsys.get_locks()
+
+rcd.packsys.add_lock()
+
+rcd.packsys.remote_lock()
+
+rcd.packsys.dump()
+
+rcd.packsys.get_channels()
+
+rcd.packsys.get_channel_icon()
+
+rcd.packsys.subscribe()
+
+rcd.packsys.unsubscribe()
+
+rcd.packsys.mount_directory()
+
+rcd.packsys.unmount_directory()
+
+rcd.packsys.world_sequence_numbers()
+
+rcd.packsys.find_dangling_requires()
+
+Licences methods
+----------------
+rcd.license.lookup_from_packages(array [package] packages)
+
+	Returns: array [string]
+	Faults: package_not_found, invalid_package_file,
+	        invalid_stream_type
+
+	Returns an array of license texts associated with the array of
+	packages passed in.
+
+News methods
+------------
+rcd.news.get_all()
+
+	Returns: array [struct {
+		 service_name : string,
+		 title : string,
+		 url : string,
+		 icon_url : string,
+		 summary : string,
+		 channel_name : string,
+		 timestamp : int,
+		 time_str : string }]
+	Faults: none
+
+	Returns a list of news items.  "service_name" is the name of
+	the service from which this news item comes.  "url" is a URL
+	where the user can get more information about this news item.
+	"icon_url" is a URL to an icon to display for this news item.
+	"summary" is the text of the news item.  "channel_name" is the
+	name of the channel most related to this news item.
+	"timestamp" is a UNIX time and "time_str" is in cdate()
+	format.
+
+Log methods
+-----------
+These commands access the rcd transaction history logs.
+
+rcd.log.query_log(array [(string key, string type, string query)])
+
+	Returns: array [struct {
+		 host : string,
+		 user : string,
+		 action : string,
+		 time_str : string,
+		 timestamp : int,
+		 pkg_initial : struct {
+		         name : string,
+			 has_epoch : int,
+			 epoch : int,
+			 version : string,
+			 release : string } [optional],
+		 pkg_final : struct {
+			 name : string,
+			 has_epoch : int,
+			 epoch : int,
+			 version : string,
+			 release : string } [optional] }]
+	Faults: none
+
+	Queries the package transaction log for the query pass in as
+	the arguments.  See the section on query syntax for more
+	info.  "host" is the hostname that performed that action.  
+	"user" is the username that performed that action.  "action"
+	is the name of the action, one of "install", "remove", or
+	"upgrade".  "timestamp" is a UNIX time and "time_str" is in
+	ctime() format.  "pkg_initial" is old package (for upgrades
+	and removals) and "pkg_final" is the new package (for upgrades
+	and installs).
+
+	Valid query keys:
+	"cutoff_time" - the time, going back, at which to stop
+	returning matches.
+
+	"name" - the name of the package to match
+
+	"host" - the hostname to match
+
+	"user" - the username to match
+
+	"action" - the action to match
+
+User methods
+------------
+
+rcd.users.get_valid_privileges()
+
+	Returns: array [string]
+	Faults: none
+
+	This methods returns all of the privileges that the daemon
+	knows about.
+
+rcd.users.has_privilege(string privilege)
+
+	Returns: int
+	Faults: none
+
+	Returns whether the current user has the specified privilege.
+
+rcd.users.get_all()
+
+	Returns: array [(string username, string privileges)]
+	Faults: none
+
+	Returns all of the users and their privileges.  "privileges"
+	is a comma-separated list of privileges.
+
+rcd.users.get_current_user()
+
+	Returns: string
+	Faults: none
+
+	Returns the name of the current user
+
+rcd.users.update(string username, string password, string privileges)
+
+	Returns: 1 on success, 0 on failure.
+	Faults: none
+
+	Creates a new user or changes an existing user.  "password"
+	and "privileges" may be the special string "-*-unchanged-*-"
+	to indicate no change to that attribute.
+
+rcd.users.remove(string username)
+
+	Returns: 1 on success, 0 on failure
+	Faults: none
+
+	Removes this user
+
+rcd.users.sequence_number()
+
+	Returns: int
+	Faults: none
+
+	Returns the current user sequence number.
