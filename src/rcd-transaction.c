@@ -1061,6 +1061,16 @@ ERROR:
     g_error_free (err);
 }
 
+static gboolean
+begin_transaction_cb (gpointer user_data)
+{
+    RCDTransaction *transaction = user_data;
+
+    rcd_transaction_download (transaction);
+
+    return FALSE;
+}
+
 void
 rcd_transaction_begin (RCDTransaction *transaction)
 {
@@ -1073,7 +1083,7 @@ rcd_transaction_begin (RCDTransaction *transaction)
         return;
     }
 
-    rcd_transaction_download (transaction);
+    g_idle_add (begin_transaction_cb, transaction);
 }
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
