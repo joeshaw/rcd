@@ -64,6 +64,15 @@ void         rcd_prefs_set_debug_level        (gint);
 gint         rcd_prefs_get_syslog_level       (void);
 void         rcd_prefs_set_syslog_level       (gint);
 
+gboolean     rcd_prefs_get_cache_cleanup_enabled (void);
+void         rcd_prefs_set_cache_cleanup_enabled (gboolean);
+
+gint         rcd_prefs_get_cache_max_age_in_days (void);
+void         rcd_prefs_set_cache_max_age_in_days (gint);
+
+gint         rcd_prefs_get_cache_max_size_in_mb (void);
+void         rcd_prefs_set_cache_max_size_in_mb (gint);
+
 /* These aren't really prefs, but there here for lack of a better place */
 const gchar *rcd_prefs_get_mid                (void);
 const gchar *rcd_prefs_get_secret             (void);

@@ -301,6 +301,21 @@ rcd_rpc_prefs_register_methods(void)
         (RCDPrefSetFunc) rcd_prefs_set_cache_enabled);
 
     rcd_rpc_prefs_register_pref (
+        "cache-cleanup-enabled", RCD_PREF_BOOLEAN,
+        (RCDPrefGetFunc) rcd_prefs_get_cache_cleanup_enabled,
+        (RCDPrefSetFunc) rcd_prefs_set_cache_cleanup_enabled);
+
+    rcd_rpc_prefs_register_pref (
+        "cache-max-age-in-days", RCD_PREF_INT,
+        (RCDPrefGetFunc) rcd_prefs_get_cache_max_age_in_days,
+        (RCDPrefSetFunc) rcd_prefs_set_cache_max_age_in_days);
+
+    rcd_rpc_prefs_register_pref (
+        "cache-max-size-in-mb", RCD_PREF_INT,
+        (RCDPrefGetFunc) rcd_prefs_get_cache_max_size_in_mb,
+        (RCDPrefSetFunc) rcd_prefs_set_cache_max_size_in_mb);
+
+    rcd_rpc_prefs_register_pref (
         "http-1.0", RCD_PREF_BOOLEAN,
         (RCDPrefGetFunc) rcd_prefs_get_http10_enabled,
         (RCDPrefSetFunc) rcd_prefs_set_http10_enabled);

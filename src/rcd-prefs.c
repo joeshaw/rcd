@@ -282,6 +282,60 @@ rcd_prefs_set_syslog_level (gint level)
     SYNC_CONFIG;
 } /* rcd_prefs_set_syslog_level */
 
+gboolean
+rcd_prefs_get_cache_cleanup_enabled (void)
+{
+    return gnome_config_get_bool (CONFIG_PATH
+                                  "/System/cache-cleanup=TRUE");
+}
+
+void
+rcd_prefs_set_cache_cleanup_enabled (gboolean enabled)
+{
+    gnome_config_set_bool (CONFIG_PATH
+                           "/System/cache-cleanup",
+                           enabled);
+    SYNC_CONFIG;
+}
+
+gint
+rcd_prefs_get_cache_max_age_in_days (void)
+{
+    return gnome_config_get_int (CONFIG_PATH
+                                 "/System/cache-age-in-days=30");
+}
+
+void
+rcd_prefs_set_cache_max_age_in_days (gint days)
+{
+    if (days < 0)
+        days = 0;
+
+    gnome_config_set_int (CONFIG_PATH
+                          "/System/cache-age-in-days",
+                          days);
+    SYNC_CONFIG;
+}
+
+gint
+rcd_prefs_get_cache_max_size_in_mb (void)
+{
+    return gnome_config_get_int (CONFIG_PATH
+                                 "/System/cache-size-in-mb=300");
+}
+
+void
+rcd_prefs_set_cache_max_size_in_mb (gint size)
+{
+    if (size < 0)
+        size = 0;
+
+    gnome_config_set_int (CONFIG_PATH
+                          "/System/cache-size-in-mb",
+                          size);
+    SYNC_CONFIG;
+}
+
 const char *
 rcd_prefs_get_mid (void)
 {

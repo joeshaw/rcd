@@ -312,3 +312,35 @@ rcd_cache_get_package_cache (void)
 
     return cache;
 } /* rcd_cache_get_package_cache */
+
+void
+rcd_cache_expire (RCDCache *cache,
+                  double    max_age_in_days,
+                  double    max_size_in_mb)
+{
+    char *fake_path;
+    char *cache_dirname;
+
+    g_return_if_fail (cache != NULL);
+
+    fake_path = rcd_cache_get_local_filename (cache, "foo");
+    cache_dirname = g_path_get_dirname (fake_path);
+
+    if (max_age_in_days > 0) {
+        rcd_expire_by_age (cache_dirname,
+                           NULL,
+                           FALSE,
+                           max_age_in_days);
+    }
+
+    if (max_size_in_mb > 0) {
+        rcd_expire_by_size (cache_dirname,
+                            NULL,
+                            FALSE,
+                            max_size_in_mb,
+                            1.0); /* min age */
+    }
+
+    g_free (fake_path);
+    g_free (cache_dirname);
+}

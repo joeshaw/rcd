@@ -53,4 +53,8 @@ char *rcd_cache_get_local_filename       (RCDCache *cache, const char *url);
 RCDCache *rcd_cache_get_normal_cache  (void);
 RCDCache *rcd_cache_get_package_cache (void);
 
+void rcd_cache_expire (RCDCache *cache,
+                       double    max_age_in_days,
+                       double    max_size_in_mb);
+
 #endif /* __RCD_CACHE_H__ */

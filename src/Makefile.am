@@ -24,6 +24,8 @@ rcd_SOURCES = 			\
 	rcd-about.h		\
 	rcd-cache.c		\
 	rcd-cache.h		\
+	rcd-expire.c		\
+	rcd-expire.h		\
 	rcd-fetch.c		\
 	rcd-fetch.h		\
 	rcd-heartbeat.c		\
