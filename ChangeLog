@@ -1,3 +1,7 @@
+2003-09-15  Joe Shaw  <joe@ximian.com>
+
+	* rcd.init.suse.in: Fix up the SuSE init script.
+
 2003-09-05  Tambet Ingo  <tambet@ximian.com>
 
 	* doc/rpc-docs.txt: Update activation method.
@@ -21,7 +25,8 @@
 	
 2003-07-01  Aaron Weber  <aaron@ximian.com>
 
-	* rcd.init.redhat.in (ARGS): update the description in RH and SuSE versions of this file. Not changing others.
+	* rcd.init.redhat.in (ARGS): update the description in RH and SuSE
+	versions of this file. Not changing others.
 	* rcd.init.suse.in: see above.
 
 2003-06-23  Aaron Weber <aaron@ximian.com>

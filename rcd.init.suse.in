@@ -1,4 +1,5 @@
 #! /bin/sh
+### BEGIN INIT INFO
 # Default-Start:  3 4 5
 # Default-Stop:   0 1 2 6
 # Description: RCD, the Red Carpet Daemon, allows users to manage software \
@@ -8,11 +9,7 @@
 # $Id$
 
 # Source SuSE config
-if [ -f /etc/rc.config ]; then
-  . /etc/rc.config
-else
-  PATH=/sbin:/bin:/usr/sbin:/usr/bin
-fi
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
 		
 . /etc/rc.status
 
