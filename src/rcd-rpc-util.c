@@ -1056,14 +1056,11 @@ cleanup:
 xmlrpc_value *
 rcd_xmlrpc_package_file_list (RCPackage *package, xmlrpc_env *env)
 {
-    RCWorld *world;
     RCPackman *packman;
     RCPackageFileSList *files, *iter;
     xmlrpc_value *file_array;
 
-    world = rc_get_world ();
     packman = rc_packman_get_global ();
-
     files = rc_packman_file_list (packman, package);
     
     file_array = xmlrpc_build_value (env, "()");
@@ -1075,6 +1072,8 @@ rcd_xmlrpc_package_file_list (RCPackage *package, xmlrpc_env *env)
         xmlrpc_array_append_item (env, file_array, file_value);
         xmlrpc_DECREF (file_value);
     }
+
+    rc_package_file_slist_free (files);
 
     return file_array;
 }
