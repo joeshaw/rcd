@@ -1,3 +1,8 @@
+2002-09-04  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-rpc-util.c (rcd_rc_channel_to_xmlrpc): Add the channel's
+	description to the xml-rpc struct.
+
 2002-09-03  Joe Shaw  <joe@ximian.com>
 
 	* rcd-prefs.c: The config file is now rcd.conf, to be more
