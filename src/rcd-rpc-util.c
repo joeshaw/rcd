@@ -176,12 +176,21 @@ rcd_xmlrpc_to_rc_package_dep (xmlrpc_value *value,
                               xmlrpc_env   *env)
 {
     RCPackageSpec spec;
+    char *name;
+    gboolean is_or;
     RCPackageDep *dep = NULL;
     char *relation_str = NULL;
     RCPackageRelation relation;
 
     if (! assemble_spec (value, env, &spec))
         return NULL;
+
+    /* Check to see if this is an or dep */
+    name = g_quark_to_string (spec.nameq);
+    if (strncmp (name, "(||", 3) == 0)
+        is_or = TRUE;
+    else
+        is_or = FALSE;
 
     if (! xmlrpc_struct_has_key (env, value, "relation"))
         goto cleanup;
@@ -191,7 +200,7 @@ rcd_xmlrpc_to_rc_package_dep (xmlrpc_value *value,
     if (relation == RC_RELATION_INVALID)
         goto cleanup;
     
-    dep = rc_package_dep_new_from_spec (&spec, relation, FALSE, FALSE);
+    dep = rc_package_dep_new_from_spec (&spec, relation, FALSE, is_or);
 
  cleanup:
     rc_package_spec_free_members (&spec);

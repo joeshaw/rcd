@@ -1,3 +1,8 @@
+2002-11-14  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-util.c (rcd_xmlrpc_to_rc_package_dep): Sniff out debian
+	or-deps and pass them to rc_package_dep_new_from_spec().
+
 2002-11-13  Joe Shaw  <joe@ximian.com>
 
 	* rcd-cache.c (rcd_cache_entry_close, rcd_cache_entry_cancel):
