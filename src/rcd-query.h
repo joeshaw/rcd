@@ -26,7 +26,7 @@
 #ifndef __RCD_QUERY_H__
 #define __RCD_QUERY_H__
 
-#include "libredcarpet.h"
+#include <glib.h>
 
 typedef enum {
     RCD_QUERY_EQUAL,

@@ -95,6 +95,23 @@ rcd$(EXEEXT): $(rcd_OBJECTS) $(rcd_DEPENDENCIES)
 	@rm -f rcd$(EXEEXT)
 	$(CCLD) $(AM_CFLAGS) $(CFLAGS) $(LDFLAGS) -o $@ $(rcd_LDFLAGS) $(rcd_OBJECTS) $(rcd_LDADD) $(LIBS)
 
+rcdincludedir = $(includedir)/rcd
+rcdinclude_HEADERS = 		\
+	rcd-about.h		\
+	rcd-cache.h		\
+	rcd-heartbeat.h		\
+	rcd-module.h 		\
+	rcd-pending.h		\
+	rcd-prefs.h		\
+	rcd-privileges.h	\
+	rcd-query.h		\
+	rcd-recurring.h		\
+	rcd-rpc.h		\
+	rcd-rpc-prefs.h		\
+	rcd-shutdown.h		\
+	rcd-transfer.h		\
+	rcd-transfer-file.h	\
+	rcd-transfer-http.h
 
 rcd_moduledir = $(libdir)/rcd/modules
 rcd_module_LTLIBRARIES = 	\

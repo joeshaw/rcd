@@ -139,3 +139,24 @@ rcd_module_query (const char *name, int required_major, int required_minor)
 
     return FALSE;
 } /* rcd_module_query */
+
+void
+rcd_module_debug (RCDDebugLevel  level,
+                  RCDModule     *module,
+                  const char    *format,
+                  ...)
+{
+    va_list args;
+    char *vp, *str;
+
+    va_start (args, format);
+    vp = g_strdup_vprintf (format, args);
+    va_end (args);
+
+    str = g_strdup_printf ("[%s] %s", module->name, vp);
+    g_free (vp);
+
+    rc_debug (level, str);
+
+    g_free (str);
+}

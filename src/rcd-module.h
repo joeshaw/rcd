@@ -62,4 +62,22 @@ gboolean rcd_module_query (const char *name,
                            int         required_major,
                            int         required_minor);
 
+/* FIXME: Wish this weren't basically a cut-and-paste from libredcarpet. */
+typedef enum {
+    RCD_DEBUG_LEVEL_ALWAYS   = -1,
+    RCD_DEBUG_LEVEL_NONE     = 0,
+    RCD_DEBUG_LEVEL_ERROR    = 1,
+    RCD_DEBUG_LEVEL_CRITICAL = 2,
+    RCD_DEBUG_LEVEL_WARNING  = 3,
+    RCD_DEBUG_LEVEL_MESSAGE  = 4,
+    RCD_DEBUG_LEVEL_INFO     = 5,
+    RCD_DEBUG_LEVEL_DEBUG    = 6,
+} RCDDebugLevel;
+
+/* Syslog/debug output */
+void rcd_module_debug (RCDDebugLevel  level,
+                       RCDModule     *module,
+                       const char    *format,
+                       ...);
+
 #endif /* __RCD_MODULE_H__ */

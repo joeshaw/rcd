@@ -27,12 +27,6 @@
 #define __RCD_RPC_PREFS_H__
 
 #include <glib.h>
-#include <xmlrpc.h>
-
-typedef xmlrpc_value *(*RCDPrefGetConversionFunc) (xmlrpc_env   *,
-                                                   gpointer);
-typedef gpointer      (*RCDPrefSetConversionFunc) (xmlrpc_env   *,
-                                                   xmlrpc_value *);
 
 typedef gpointer      (*RCDPrefGetFunc) (void);
 typedef void          (*RCDPrefSetFunc) (gpointer);
@@ -52,15 +46,6 @@ void rcd_rpc_prefs_register_pref (const char     *pref_name,
                                   const char     *get_privileges_str,
                                   RCDPrefSetFunc  set_pref_func,
                                   const char     *set_privileges_str);
-
-void rcd_rpc_prefs_register_pref_full (const char               *pref_name,
-                                       const char               *description,
-                                       RCDPrefGetConversionFunc  get_conv_func,
-                                       RCDPrefGetFunc            get_pref_func,
-                                       const char               *get_privs_str,
-                                       RCDPrefSetConversionFunc  set_conv_func,
-                                       RCDPrefSetFunc            set_pref_func,
-                                       const char               *set_privs_str);
 
 void rcd_rpc_prefs_register_methods(void);
 

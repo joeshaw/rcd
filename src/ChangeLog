@@ -1,3 +1,22 @@
+2002-12-02  Joe Shaw  <joe@ximian.com>
+
+	* Makefile.am: Install a bunch of headers that might be useful to
+	modules.
+
+	* rcd-module.c (rcd_module_debug): Added.  Thin wrapper around
+	rc_debug() so modules don't need to pull in libredcarpet.
+
+	* rcd-prefs.c (rcd_prefs_{get|set}_{string|int|boolean}): Added.
+	Generic functions for modules to use rcd.conf.
+
+	* rcd-query.h: Include <glib.h>, not "libredcarpet.h"
+
+	* rcd-rpc-prefs.h: Kill the _full function for registering prefs;
+	they don't seem all that useful and it keeps modules from needing
+	to link against xmlrpc-c.
+
+	* rcd.c (main): Initialize modules before initializing the data.
+
 2002-11-22  Joe Shaw  <joe@ximian.com>
 
 	* rcd-transaction.c (add_rollback_packages): Initialize the GError

@@ -30,6 +30,11 @@
 #include "rcd-rpc.h"
 #include "rcd-rpc-util.h"
 
+typedef xmlrpc_value *(*RCDPrefGetConversionFunc) (xmlrpc_env   *,
+                                                   gpointer);
+typedef gpointer      (*RCDPrefSetConversionFunc) (xmlrpc_env   *,
+                                                   xmlrpc_value *);
+
 static xmlrpc_value *get_string_func  (xmlrpc_env *env, gpointer value);
 static xmlrpc_value *get_boolean_func (xmlrpc_env *env, gpointer value);
 static xmlrpc_value *get_int_func     (xmlrpc_env *env, gpointer value);
@@ -286,7 +291,7 @@ cleanup:
     return result;
 } /* prefs_list_prefs */
 
-void
+static void
 rcd_rpc_prefs_register_pref_full (const char               *pref_name,
                                   const char               *description,
                                   RCDPrefGetConversionFunc  get_conv_func,

@@ -93,5 +93,15 @@ gboolean     rcd_prefs_get_repackage (void);
 const gchar *rcd_prefs_get_mid                (void);
 const gchar *rcd_prefs_get_secret             (void);
 
+/* Generic get/set functions for modules */
+const char *rcd_prefs_get_string  (const char *path);
+void        rcd_prefs_set_string  (const char *path, const char *str);
+
+int         rcd_prefs_get_int     (const char *path);
+void        rcd_prefs_set_int     (const char *path, int val);
+
+gboolean    rcd_prefs_get_boolean (const char *path);
+void        rcd_prefs_set_boolean (const char *path, gboolean val);
+
 #endif /* __RCD_PREFS_H__ */
 

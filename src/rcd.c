@@ -685,6 +685,9 @@ main (int argc, const char **argv)
 
     initialize_rc_world ();
     initialize_rpc ();
+
+    rcd_module_init ();
+
     initialize_data ();
     
     /* We can't daemonize any later than this, so hopefully module
@@ -701,8 +704,6 @@ main (int argc, const char **argv)
         /* Say hello again, so it gets stored in the log file. */
         hello ();
     }
-
-    rcd_module_init ();
 
     if (remote_disable)
         remote_port = -1;

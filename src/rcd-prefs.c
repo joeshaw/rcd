@@ -58,6 +58,51 @@ get_config_path (const char *path)
     return config_path;
 } /* get_config_file */
 
+const char *
+rcd_prefs_get_string (const char *path)
+{
+    static char *str = NULL;
+
+    g_free (str);
+
+    str = gnome_config_get_string (get_config_path (path));
+
+    return str;
+} /* rcd_prefs_get_string */
+
+void
+rcd_prefs_set_string (const char *path, const char *str)
+{
+    gnome_config_set_string (get_config_path (path), str);
+    SYNC_CONFIG;
+}
+
+int
+rcd_prefs_get_int (const char *path)
+{
+    return gnome_config_get_int (get_config_path (path));
+}
+
+void
+rcd_prefs_set_int (const char *path, int val)
+{
+    gnome_config_set_int (get_config_path (path), val);
+    SYNC_CONFIG;
+}
+
+gboolean
+rcd_prefs_get_boolean (const char *path)
+{
+    return gnome_config_get_bool (get_config_path (path));
+}
+
+void
+rcd_prefs_set_boolean (const char *path, gboolean val)
+{
+    gnome_config_set_bool (get_config_path (path), val);
+    SYNC_CONFIG;
+}
+
 gboolean
 rcd_prefs_get_remote_server_enabled (void)
 {
