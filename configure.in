@@ -183,7 +183,7 @@ case "$HOST_OS" in
     FORCE_SHLIBS="dl resolv rt nsl pthread rt"
   ;;
   Linux)
-    FORCE_SHLIBS="dl pthread rt"
+    FORCE_SHLIBS="dl pthread rt m"
     RCD_LIBS="$RCD_LIBS -lutil"
   ;;
   *)
