@@ -1,5 +1,9 @@
 2002-07-21  Jon Trowbridge  <trow@ximian.com>
 
+	* rcd-pending.c (rcd_pending_cleanup): There seems to be some
+	problem with the cleanup function (memory corruption), so I'm
+	disabling it for now.
+
 	* rcd-unix-server.c (rcd_unix_server_run_async): If our
 	attempt to unlink the old socket path fails when we start up,
 	the permission are probably wrong and our attempt to start
