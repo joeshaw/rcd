@@ -75,17 +75,38 @@ rc_you_kind_to_rc_importance (PMYouPatch::Kind kind)
 static gboolean
 rc_you_solvable_to_rc_package_spec (RCPackageSpec *spec, PMSolvablePtr solvable)
 {
-    PkgEdition edition;
+    gchar *name;
 
-    edition = solvable->edition ();
+    name = rc_you_string_to_char (solvable->name ());
+    spec->nameq = g_quark_from_string (name);
 
-    spec->nameq = g_quark_from_string (rc_you_string_to_char (solvable->name ()));
-    spec->version = g_strdup (rc_you_string_to_char (edition.version ()));
-    spec->release = g_strdup (rc_you_string_to_char (edition.release ()));
+    /* When the patch name starts with "patch-", then yasty
+       doesn't parse it's name and version. For example:
+       'patch-9250' has name 'patch-9250' and version '0'.
 
-    if (edition.has_epoch ()) {
-        spec->has_epoch = 1;
-        spec->epoch = edition.epoch ();
+       There's only one thing left to say: *sigh* */
+
+    if (g_str_has_prefix (name, "patch-")) {
+        gchar **pieces = g_strsplit (name, "-", 0);
+
+        /* Find the last piece */
+        for (i = 0; pieces[i + 1]; i++)
+            ;
+
+        spec->version = g_strdup (pieces[i]);
+        spec->release = g_strdup ("");
+
+        g_strfreev (pieces);
+    } else {
+        PkgEdition edition = solvable->edition ();
+
+        spec->version = g_strdup (rc_you_string_to_char (edition.version ()));
+        spec->release = g_strdup (rc_you_string_to_char (edition.release ()));
+
+        if (edition.has_epoch ()) {
+            spec->has_epoch = 1;
+            spec->epoch = edition.epoch ();
+        }
     }
 
     return TRUE;

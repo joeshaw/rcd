@@ -1,3 +1,14 @@
+2004-09-11  Tambet Ingo  <tambet@ximian.com>
+
+	* you-util.c (write_directory_files): Use patch' file name in
+	directory.3 file instead of it's name. This fixes the name-munging
+	we do with unamed patches.
+
+	* wrapper.cc (rc_you_solvable_to_rc_package_spec): Special case
+	patches with name "patch-*". Yast does not parse version correctly
+	for these, so for example, 'patch-9250' will have name 'patch-9250'
+	and version '0'. Why? Why? Why?
+
 2004-09-07  Peter Teichman  <peter@ximian.com>
 
 	* rc-you-transaction.c (rc_you_transaction_set_patches): Allow
