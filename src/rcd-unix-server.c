@@ -65,23 +65,19 @@ read_cred (GIOChannel *channel, RCDUnixServerHandle *handle)
 
     sockfd = g_io_channel_unix_get_fd (channel);
 
-    errno = 0;
+    size = sizeof (cred);
     rc = getsockopt (sockfd, SOL_SOCKET, SO_PEERCRED, &cred, &size);
-    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "##### post getsockopt() errno: %d (%s)",
-              errno, strerror(errno));
 
-    if (rc < 0) {
+    if (size != sizeof (cred)) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING, "### Size of the cred was bad; expected %d, got %d", sizeof (cred), size);
+    }
+
+    if (rc < 0 || size != sizeof (cred)) {
         handle->cred_available = FALSE;
 
         rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Couldn't get credentials");
     }
     else {
-        if (!size) {
-            rc_debug (RC_DEBUG_LEVEL_MESSAGE, "@@@@@@@@@ getsockopt() returned okay, but size is 0.  errno: %d (%s)", errno, strerror(errno));
-            handle->cred_available = FALSE;
-            return;
-        }
-
         handle->cred_available = TRUE;
         handle->pid = cred.pid;
         handle->uid = cred.uid;

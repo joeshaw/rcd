@@ -1,3 +1,9 @@
+2002-07-22  Joe Shaw  <joe@ximian.com>
+
+	* rcd-unix-server.c (read_cred): Set the size of the length before
+	calling getsockopt().  This should fix the occassional
+	authentication problems on unix sockets.
+
 2002-07-22  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-pending.c (rcd_pending_cleanup): Re-enabled pending
