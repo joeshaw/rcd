@@ -1,0 +1,141 @@
+#!/usr/bin/python
+
+###
+### Copyright 2002 Ximian, Inc.
+###
+### This program is free software; you can redistribute it and/or modify
+### it under the terms of the GNU General Public License as published by
+### the Free Software Foundation, version 2 of the License.
+###
+### This program is distributed in the hope that it will be useful,
+### but WITHOUT ANY WARRANTY; without even the implied warranty of
+### MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+### GNU General Public License for more details.
+###
+### You should have received a copy of the GNU General Public License
+### along with this program; if not, write to the Free Software
+### Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+###
+
+### Right now, this is hardly more than the minimum necessary
+### framework for running the tests.
+
+import sys
+import string
+import os
+import re
+import time
+import ximian_xmlrpclib
+import burntest
+
+
+## Make contact with the daemon.
+## We assume local access only
+url = "/tmp/rcd"
+username = None
+password = None
+
+transport_debug = os.environ.has_key("RC_TRANSPORT_DEBUG")
+
+try:
+    server = ximian_xmlrpclib.Server(url,
+                                     auth_username=username,
+                                     auth_password=password,
+                                     verbose=transport_debug)
+except:
+    sys.stderr.write("Unable to connect to the daemon.\n")
+    sys.exit(1)
+
+
+###
+### Load anything in 'path' that looks like a test module
+###
+
+def load_modules_from(path):
+    files = os.listdir(path)
+    files = filter(lambda x:re.match(".*test.py$", x) and x != "burntest.py",
+                   files)
+    for f in files:
+        filename = os.path.join(path, f)
+        fh = None
+        try:
+            fh = open(filename, "r")
+        except:
+            sys.stderr.write("Couldn't open module '%s'\n" % filename)
+
+        if fh:
+            exec(fh)
+            sys.stderr.write("Loaded module '%s'\n" % filename)
+
+
+# Actually load the modules
+
+# Our initial behavior is to just load everything that looks like a test
+# module from the subdirectory 'tests'.
+load_modules_from("tests")
+
+
+###
+### Iterate over all of the tests, running each one and keeping track
+### of the outcome.
+###
+
+print "\n--- Running Tests ---\n"
+
+summary = []
+
+for test in burntest.get_all():
+
+    name = test.name()
+    errors = test.run_test(sys.stdout, server)
+
+    # FIXME: We should try to ping the server after every test
+    # to make sure that it hasn't crashed or gotten wedged.
+
+    if test.short_circuit:
+        print "Short-circuiting!"
+        errors.append("Short-circuit")
+
+    summary.append([name, errors])
+
+    if test.short_circuit:
+        continue
+
+
+###
+### Print a summary
+###
+        
+name_len = apply(max, map(lambda x:len(x[0]), summary) + [0,0])
+total = 0
+success = 0
+failure = 0
+
+print
+print "--- SUMMARY ---"
+for name, errors in summary:
+
+    total = total + 1
+    print " " * (name_len - len(name)) + name + ":",
+    if errors:
+        print errors.pop(0)
+        for x in errors:
+            print " " * name_len + "  " + x
+        failure = failure + 1
+    else:
+        print "ok"
+        success = success + 1
+
+print
+
+print "%d test%s run; %d test%s succeeded and %d test%s failed." % (
+    total, (total == 1 and " was") or "s were",
+    success, (success == 1 and "") or "s",
+    failure, (failure == 1 and "") or "s")
+
+    
+
+
+
+
+                                 
