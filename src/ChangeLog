@@ -1,5 +1,13 @@
 2002-08-04  Jon Trowbridge  <trow@ximian.com>
 
+	* rcd-identity.c (create_password_file): Added.  Breaks out our
+	fopen/chmod on PASSWORD_FILE.
+	(identity_update_cb): Changed to use create_password_file.
+	(rcd_identity_update_password_file): If our password file doesn't
+	already exist, create it and then go ahead and do the right thing.
+	(rcd_identity_remove_from_password_file): Use
+	create_password_file.
+
 	* rcd-rpc-util.c (rcd_xmlrpc_to_rc_package_dep): Memory leak.
 	(rcd_rc_package_from_xmlrpc_package): Memory leak.
 

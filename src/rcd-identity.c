@@ -276,6 +276,24 @@ rcd_identity_from_password_file (const char *username)
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
+static FILE *
+create_password_file (void)
+{
+    FILE *out;
+
+    out = fopen (PASSWORD_FILE, "w");
+    if (out) {
+        chmod (PASSWORD_FILE, S_IRUSR | S_IWUSR);
+    } else {
+        rc_debug (RC_DEBUG_LEVEL_CRITICAL,
+                  "Couldn't re-open password file '" PASSWORD_FILE "'");
+    }
+
+    return out;
+}
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
 struct IdentityUpdateInfo {
     gboolean failed;
     FILE *out;
@@ -328,16 +346,9 @@ identity_update_cb (RCDIdentity *old_id,
         if (unlink (PASSWORD_FILE) != 0) {
             info->failed = TRUE;
         } else {
-            info->out = fopen (PASSWORD_FILE, "w");
-            
+            info->out = create_password_file ();
             if (info->out == NULL)
                 info->failed = TRUE;
-            else {
-                
-                /* Since we are re-opening the password file,
-                   we have to re-set the permissions. */
-                chmod (PASSWORD_FILE, S_IRUSR | S_IWUSR);
-            }
         }
     }
 
@@ -361,8 +372,20 @@ rcd_identity_update_password_file (RCDIdentity *id)
     info.out = NULL;
     info.new_id = id;
 
-    rcd_identity_foreach_from_password_file (identity_update_cb,
-                                             &info);
+    if (g_file_test (PASSWORD_FILE, G_FILE_TEST_EXISTS)) {
+
+        rcd_identity_foreach_from_password_file (identity_update_cb,
+                                                 &info);
+
+    } else {
+
+        /* If the password file doesn't exist, the identity_update_cb
+           callback will never get called, so we have to create the
+           password file manually in order for our final call to
+           write_identity to have a place to put the information. */
+
+        info.out = create_password_file ();
+    }
 
     if (info.new_id != NULL && ! info.failed)
         write_identity (NULL, info.new_id, info.out);
@@ -389,8 +412,10 @@ rcd_identity_remove_from_password_file (const char *username)
         return FALSE;
     }
 
-    out = fopen (PASSWORD_FILE, "w");
-    chmod (PASSWORD_FILE, S_IRUSR | S_IWUSR);
+    /* FIXME: If re-opening the password file fails, we will drop all
+       of the user information.  Which is bad.  (Actually, this is a
+       problem with several of these functions!) */
+    out = create_password_file ();
 
     id_len = strlen (username);
 
