@@ -64,6 +64,7 @@ struct _RCDPending {
 
     time_t start_time;
     time_t last_time;
+    time_t poll_time;
 
     gint retval;
     char *error_msg;

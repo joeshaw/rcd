@@ -1,3 +1,22 @@
+2002-07-21  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-unix-server.c (rcd_unix_server_run_async): If our
+	attempt to unlink the old socket path fails when we start up,
+	the permission are probably wrong and our attempt to start
+	rcd will most likely fail... so print a warning message that
+	says so.
+
+	* rcd-rpc.c (run_server_thread): Turn a g_error into
+	an rc_debug and an exit.
+
+	* rcd-pending.c (rcd_pending_cleanup): Added.  A static
+	function that cleans up old RCDPending objects.
+	(rcd_pending_new): Call rcd_pending_cleanup.
+	(rcd_pending_lookup_by_id): Call rcd_pending_cleanup.  Mark
+	the poll time.
+	(get_all_ids_cb): Mark the poll time.
+	(rcd_pending_get_all_active_ids): Call rcd_pending_cleanup.
+
 2002-07-20  Joe Shaw  <joe@ximian.com>
 
 	* rcd-transfer-http.c (http_done): Use my

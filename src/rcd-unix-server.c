@@ -237,6 +237,26 @@ rcd_unix_server_run_async(RCDUnixServerCallback callback)
     }
 
     unlink(SOCKET_PATH);
+
+    /* If the socket is still around after we've tried to unlink it,
+       it must be owned by someone else.  This means we won't be able
+       to bind to it. */
+
+    if (g_file_test (SOCKET_PATH, G_FILE_TEST_EXISTS)) {
+        const char *message[] = {
+            "",
+            "The socket path " SOCKET_PATH " cannot be unlinked, which",
+            "will almost certainly lead to rcd being unable to start up properly.",
+            "To fix this, please delete " SOCKET_PATH " and re-start rcd.",
+            "",
+            NULL };
+        int i;
+        
+        for (i = 0; message[i] != NULL; ++i)
+            rc_debug (RC_DEBUG_LEVEL_WARNING, message[i]);
+    }
+
+
     bzero(&servaddr, sizeof(servaddr));
     servaddr.sun_family = AF_UNIX;
     strcpy(servaddr.sun_path, SOCKET_PATH);

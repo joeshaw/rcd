@@ -175,6 +175,64 @@ rcd_pending_get_type (void)
 
 static GHashTable *id_hash = NULL;
 
+/* Wait three minutes before cleaning up any old pending items. */
+#define CLEANUP_TIME (3*60)
+
+/* Only do clean-up one per minute. */
+#define CLEANUP_DELAY 60
+
+static gboolean
+pending_cleanup_cb (gpointer key,
+                    gpointer value,
+                    gpointer user_data)
+{
+    gint id = GPOINTER_TO_INT (key);
+    RCDPending *pending = value;
+    time_t *now = user_data;
+
+    /* We will only clean up an RCDPending if:
+       + It is no longer active.
+       + It became in active more that CLEANUP_TIME seconds ago.
+       + It hasn't been polled in the last CLEANUP_TIME seconds.
+       
+       Hopefully this will be sufficient to keep RCDPendings that
+       are actually important from getting cleaned out from under us.
+    */
+    if (pending
+        && ! rcd_pending_is_active (pending)
+        && difftime (*now, pending->last_time) > CLEANUP_TIME
+        && (pending->poll_time == 0
+            || difftime (*now, pending->poll_time) > CLEANUP_TIME)) {
+
+        g_object_unref (pending);
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+static void
+rcd_pending_cleanup (void)
+{
+    if (id_hash) {
+        static time_t last_cleanup = (time_t)0;
+        time_t now;
+        
+        time (&now);
+
+        if (last_cleanup == (time_t)0
+            || difftime (now, last_cleanup) > CLEANUP_DELAY) {
+
+            g_hash_table_foreach_remove (id_hash,
+                                         pending_cleanup_cb,
+                                         &now);
+
+            last_cleanup = now;
+        }
+    }
+}
+
+
 RCDPending *
 rcd_pending_new (const char *description)
 {
@@ -184,6 +242,8 @@ rcd_pending_new (const char *description)
 
     pending->description = g_strdup (description);
     pending->id = next_id;
+
+    rcd_pending_cleanup ();
     
     if (id_hash == NULL) {
         id_hash = g_hash_table_new (NULL, NULL);
@@ -197,6 +257,7 @@ rcd_pending_new (const char *description)
     
     return pending;
 }
+
 
 RCDPending *
 rcd_pending_lookup_by_id (gint id)
@@ -212,7 +273,13 @@ rcd_pending_lookup_by_id (gint id)
 
     if (pending) {
         g_return_val_if_fail (pending->id == id, NULL);
+        
+        time (&pending->poll_time);
     }
+
+    /* We never have to worry about cleaning up the RCDPending that
+       we just looked up, since the poll time will be too recent. */
+    rcd_pending_cleanup ();
 
     return pending;
 }
@@ -228,6 +295,8 @@ get_all_ids_cb (gpointer key, gpointer val, gpointer user_data)
         || status == RCD_PENDING_STATUS_RUNNING
         || status == RCD_PENDING_STATUS_BLOCKING) {
 
+        time (&pending->poll_time);
+
         *id_list = g_slist_prepend (*id_list,
                                     GINT_TO_POINTER (rcd_pending_get_id (pending)));
     }
@@ -237,6 +306,8 @@ GSList *
 rcd_pending_get_all_active_ids (void)
 {
     GSList *id_list = NULL;
+
+    rcd_pending_cleanup ();
 
     g_hash_table_foreach (id_hash, get_all_ids_cb, &id_list);
 
