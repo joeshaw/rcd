@@ -201,18 +201,18 @@ rcd_query_match_string_ci (RCDQueryPart *part,
     str_folded = g_utf8_casefold (str, -1);
 
     if (part->type == RCD_QUERY_CONTAINS) {
-        return strstr (str_folded, part->query_str_folded) != NULL;
+        rv =  strstr (str_folded, part->query_str_folded) != NULL;
     } else if (part->type == RCD_QUERY_NOT_CONTAINS) {
-        return strstr (str_folded, part->query_str_folded) == NULL;
+        rv = strstr (str_folded, part->query_str_folded) == NULL;
     } if (part->type == RCD_QUERY_CONTAINS_WORD) {
-        return strstr_word (str_folded, part->query_str_folded) != NULL;
+        rv = strstr_word (str_folded, part->query_str_folded) != NULL;
     } else if (part->type == RCD_QUERY_NOT_CONTAINS_WORD) {
-        return strstr_word (str_folded, part->query_str_folded) == NULL;
+        rv = strstr_word (str_folded, part->query_str_folded) == NULL;
+    } else {
+        rv = rcd_query_type_int_compare (part->type,
+                                         strcmp (part->query_str_folded, str_folded),
+                                         0);
     }
-
-    rv = rcd_query_type_int_compare (part->type,
-                                     strcmp (part->query_str_folded, str_folded),
-                                     0);
 
     g_free (str_folded);
 

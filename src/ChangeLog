@@ -1,5 +1,7 @@
 2002-07-03  Jon Trowbridge  <trow@ximian.com>
-	
+
+	* rcd-query.c (rcd_query_match_string_ci): Fixed memory leak.
+
 	* rcd-log.c (cutoff_time_init, cutoff_time_match, rcd_log_query):
 	Make the argument to the cutoff_time query part be a number of
 	seconds in the past, instead of an absolute time.  Then we use
