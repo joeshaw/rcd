@@ -21,130 +21,124 @@ nor
 should be enclosed in double quotes.
 .SH "SUPPORTED SECTIONS AND ENTRIES"
 .LP 
-Additional rcd clients or Red Carpet Enterprise modules can add their own sections and entry/value pairs. The basic list of sections and entries is as follows:
-.LP 
+Additional rcd clients or Red Carpet Enterprise modules can add their own sections and entry/value pairs. The basic list of sections and entries is as follows. Note that the lines in the file do not always correspond exactly to the names of tokens set with the \fBrug set\fR command. For example, \fBrug set proxy\-url\fR is used to set the token "proxy" in the [Network] section. Use \fBrug get\fR to see the names of tokens you can set. 
+
+.TP 
 \fB[Cache]\fR
-.TP 
-This section contains settings related to rcd's download caches.
+This section contains settings related to rcd download caches.
 
-.TP 
+.IP 
 \fBenabled=[true | false]\fR
-Specifies whether rcd should cache downloaded data.  This defaults to true.  This token can be set with "rug set" or other rcd client settings tools.
+.br 
+Specifies whether rcd should cache downloaded data.  This defaults to true.
 
-.TP 
-\fBdirectory=<directory>\fR
+\fBdirectory=[directory]\fR
 Specifies the parent directory where rcd should store cached downloaded data.  This defaults to /var/cache/redcarpet.  This token can be set through rcd's preferences mechanism.
 
-.LP 
-\fB[MagicProxy]\fR
 .TP 
+\fB[MagicProxy]\fR
 This section holds the settings for the dispatcher ("middleman" or "magic proxy") tool used to work within complex and restrictive firewall situations. It has one token/value pair:
 
-.TP 
-\fBmiddleman\-host=host\fR
-The host value should be the hostname of the system acting as the middleman. If you are configuring the middleman system itself, then this value should be the host name of the local system.
+.IP 
+\fBmiddleman\-host=[host]\fR
+.br 
+The host value should be the hostname of the system acting as the middleman. If you are configuring the middleman system itself, then this value should be the host name of the local system. This is a bare hostname, not a URL, and does not begin with a protocol.
 
-.LP 
+.TP 
+\fB[ModuleServerPoll]\fR
+This section is used only with Red Carpet Enterprise and the rcd\-modules package. It sets the interval at which the daemon checks the server\-side queue for recurring transactions or requested updates. It has a single token/value pair:
+
+.IP 
+\fBinterval=[seconds]\fR
+.br 
+The interval, in seconds, between updates of the transaction queue. Use the command \fBrug get server\-poll\-interval\fR to change this value, and \fBrug get server\-poll\-interval\fR to display it.
+
+.TP 
 \fB[Network]\fR
-
-.TP 
 This section contains settings for rcd's network options, including what server to connect to, what proxy to use, and how many concurrent downloads are permitted.
 
-.TP 
-\fBhost=<url>\fR
+.IP 
+\fBhost=[url]\fR
+.br 
 Deprecated in rcd 1.5 and later. This value is read in only once, for upgrade purposes, and only if the file /var/lib/rcd/services.xml does not exist. All servers are now stored in that file, and if it exists, changes to this value do nothing. Instead of changing this value, use the command \fBrug service\-add\fR or \fBrug service\-delete\fR.
 
-.TP 
-\fBenable\-premium=[true | false]\fR
-This token specifies whether the server is an enhanced server.  Set this to true when connecting to a Red Carpet Express or Red Carpet Corporate Connect server.  This defaults to false.  This token can be set through rcd's preferences mechanism.
-
-.TP 
-\fBorg\-id=<organization id>\fR
-When using an enhanced server, set this to the organization id so that the daemon can register the machine with the server.  This is unset and ignored by default; this token has no effect if \fBenable\-premium\fR is not true.
-
-.TP 
-\fBproxy=<url>\fR
-The URL for a proxy.  This should always begin with the protocol https://, http://, socks4://, or socks5://, and end with a colon and port number. For example, if you're running squid on your local machine, you'll want to set this to http://localhost:3128.  This is unset and ignored by default. Note that rug set proxy\-url is used to set this value, but that the value itself is "proxy" rather than "proxy\-url."
-
-.TP 
-\fBproxy\-user=<username>\fR
-For proxies requiring authentication, this is the username used. This is unset and ignored by default; this token has no effect if \fBproxy\fR is not set.  This token can be set with "rug set" or other rcd client settings tools.
-
-.TP 
-\fBproxy\-password=<password>\fR
-For proxies requiring authentication, this is the password used. This is unset and ignored by default; this token has no effect if \fBproxy\fR is not set.  This token can be set with "rug set" or other rcd client settings tools.
-.TP 
-
-.TP 
-\fBhttp10=[true | false]\fR
-This option determines whether or not rcd uses HTTP 1.0 or 1.1 to connect to servers.  This setting may be helpful with some uncooperative proxies.  This defaults to false.  This token can be set with "rug set" or other rcd client settings tools.
-
-.TP 
-\fBmax\-downloads=<number>\fR
-This option specifies how many concurrent package downloads rcd may start.  Users on slower connections will want to decrease this, whereas users with high bandwidth connections may want to increase this.  If set to 0, there is no limit and rcd will make as many connections as needed.  This defaults to 5.  This token can be set through rcd's preferences mechanism.
-
-.LP 
-\fB[Server]\fR
-.TP 
-This section contains settings related to rcd's server.
+\fBorg\-id=[organization id]\fR
 .br 
+When using a Red Carpet Enterprise server, this value can be used to register the machine with the server, instead of using an activation key. This is unset and ignored by default.
+
+\fBproxy=[url]\fR
+.br 
+The URL for a proxy.  This should always begin with the protocol https://, http://, socks4://, or socks5://, and end with a colon and port number. For example, if you're running squid on your local machine, you'll want to set this to http://localhost:3128.  This is unset and ignored by default. 
+
+\fBproxy\-user=[username]\fR
+.br 
+For proxies requiring authentication, this is the username used. This is unset and ignored by default; this token has no effect if \fBproxy\fR is not set. 
+
+\fBproxy\-password=[password]\fR
+.br 
+For proxies requiring authentication, this is the password used. This is unset and ignored by default; this token has no effect if \fBproxy\fR is not set.
+
+\fBhttp10=[true | false]\fR
+.br 
+This option determines whether or not rcd uses HTTP 1.0 or 1.1 to connect to servers.  This setting may be helpful with some uncooperative proxies.  This defaults to false. 
+
+\fBmax\-downloads=[number]\fR
+.br 
+This option specifies how many concurrent package downloads rcd may start.  Users on slower connections will want to decrease this, whereas users with high bandwidth connections may want to increase this.  If set to 0, there is no limit and rcd will make as many connections as needed.  This defaults to 5.
+
 .TP 
+\fB[Server]\fR
+This section contains settings related to rcd's server.
+.IP 
 \fBremote\-enabled=[true | false]\fR
+.br 
 Specifies whether rcd should listen to remote (TCP) connections.  This defaults to true.
 
-.TP 
-\fBport=<number>\fR
+\fBport=[number]\fR
+.br 
 Specifies the port rcd should listen on for remote (TCP) connections. This defaults to 505.
 
-.TP 
-\fBbind\-ip=ip\fR
+\fBbind\-ip=[ip\-address]\fR
+.br 
 Applicable only to systems which can be addressed by more than one IP address. If this value is not set, rcd will bind to all IP addresses served by the system. If you wish to have rcd available on only one IP (in addition to localhost, where it is always available), set this token to that address. 
 
 .TP 
 \fB[System]
 This section contains settings related to rcd behavior.
 
-.TP 
-\fBcache\-age\-in\-days=<number>\fR
-Specifies the number of days a package may be in the cache before it is removed.  This defaults to 30.  It has no effect if \fBcache\-cleanup\fR is not set.  This can be set with "rug set" or other rcd client settings tools.
+.IP 
+\fBcache\-age\-in\-days=[number]\fR
+.br 
+Specifies the number of days a package may be in the cache before it is removed.  This defaults to 30.  It has no effect if \fBcache\-cleanup\fR is not set.
 
-
-.TP 
 \fBcache\-cleanup=[true | false]\fR
-Specifies whether the package cache should be cleaned up.  If this is off and caching is enabled, packages will accumulate in the cache directory until it is cleared manually.  This defaults to true.  This can be set through rcd's preferences mechanism. 
+.br 
+Specifies whether the package cache should be cleaned up.  If this is off and caching is enabled, packages will accumulate in the cache directory until it is cleared manually.  This defaults to true. 
 
-.TP 
-\fBcache\-size\-in\-mb=<number>\fR
+\fBcache\-size\-in\-mb=[number]\fR
+.br 
 Specifies the total size in megabytes that the package cache may be before it is cleaned up.  This defaults to 300.  It has no effect if \fBcache\-cleanup\fR is not set.  
 
-.TP 
-\fBdebug\-level=<number>\fR
-The level at which to log to standard error.  This can range from 0 to 6, where 6 is extremely verbose.  This setting defaults to 4 and can be set through rcd's preferences mechanism.
+\fBdebug\-level=[number]\fR
+.br 
+The level at which to log to standard error.  This can range from 0 to 6, where 6 is extremely verbose.  This setting defaults to 4.
 
-.TP 
-\fBheartbeat=<number>\fR
-Specifies the interval at which rcd downloads new channel and package metadata.  This defaults to 21600 (6 hours) and can be set through rcd's preferences mechanism.  If the heartbeat is set to 0, the daemon will not refresh unless told to do so with the "rug refresh" command.
+\fBheartbeat=[number]\fR
+.br 
+Specifies the interval at which rcd downloads new channel and package metadata.  This defaults to 21600 (6 hours). If the heartbeat is set to 0, the daemon will not refresh unless told to do so with the "rug refresh" command.
 
-.TP 
 \fBrepackage=[true | false]\fR
+.br 
 Specifies whether to turn repackage and store the currently installed version of software as a backup, so that the "rug rollback" software reversion command can work (see rug(1) for more information). This option will cause a noticeable slowdown in upgrade and removal transactions, use a significant amount of disk space, and only works for RPM versions 4.0.4 and greater.
 
-.TP 
 \fBrequire\-signatures=[true | false]\fR
-Specifies whether packages being installed must pass a GPG signature
-check.  Packages which are inconclusive for whatever reason (gpg not
-installed, public key unavailable, etc.) are not installed.
-.I Note that rcd will never install packages in which a gpg signature
-explicitly fails.
-This defaults to false.  This token can be set through rcd's preferences
-mechanism.
+.br 
+Specifies whether packages being installed must pass a GPG signature check.  Packages which are inconclusive for whatever reason (gpg not installed, public key unavailable, etc.) are not installed. Note that rcd will never install packages in which a gpg signature explicitly fails. This defaults to false. 
 
-.TP 
-\fBsyslog\-level=<number>
+\fBsyslog\-level=[number]\fR
+.br 
 The level at which to log to syslog.  This can range from 0 to 6,
-where 6 is extremely verbose.  This defaults to 4.  This can be set
-through rcd's preferences mechanism.
-
+where 6 is extremely verbose.  This defaults to 4. 
 
 .SH "AUTHORS"
 .LP 
