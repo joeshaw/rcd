@@ -1375,6 +1375,28 @@ resolve_deps (xmlrpc_env         *env,
             *packages_to_remove, env,
             RCD_PACKAGE_FROM_NAME | RCD_PACKAGE_FROM_XMLRPC_PACKAGE);
         XMLRPC_FAIL_IF_FAULT (env);
+
+        /* If we ask to remove an uninstalled package, make sure that
+           we haven't handed the dep resolver the "channel" version of
+           the package.  If we did, replace it with the "system"
+           version of the package.  Otherwise the dep resolver will
+           filter out the request, on the theory that it is being
+           asked to remove a package that isn't actually installed.
+           This is bad. */
+        for (iter = remove_packages; iter != NULL; iter = iter->next) {
+            RCPackage *package, *installed_package;
+
+            package = iter->data;
+            if (! rc_package_is_installed (package)) {
+                installed_package = \
+                    rc_world_find_installed_version (world, package);
+            
+                if (rc_package_spec_equal (package, installed_package)) {
+                    iter->data = rc_package_ref (installed_package);
+                    rc_package_unref (package);
+                }
+            }
+        }
     }
 
     resolver = rc_resolver_new ();

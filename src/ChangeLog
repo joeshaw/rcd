@@ -1,3 +1,12 @@
+2003-03-07  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-rpc-packsys.c (resolve_deps): Walk across the list of
+	packages to remove and make sure that the RCPackage structs
+	correspond to the "system" package, not the "channel" package.  If
+	not, we replace the "channel" package with the "system" package;
+	otherwise it is easy to construct examples where dependency
+	resolution will go very, very wrong.
+
 2003-03-05  Tambet Ingo  <tambet@ximian.com>
 
 	* rcd-rpc-packsys.c (refresh_channels_cb): Refresh news as well.
