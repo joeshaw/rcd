@@ -223,6 +223,7 @@ daemonize (void)
     int fork_rv;
     int i;
     int fd;
+    char *pid;
     
     /* We never daemonize when we initialize from a dump file. */
     if (dump_file != NULL)
@@ -276,6 +277,15 @@ daemonize (void)
     
     fd = dup (fd); /* dup fd to stderr */
     g_assert (fd == STDERR_FILENO);
+
+    /* Open /var/run/rcd.pid and write out our PID */
+    fd = open ("/var/run/rcd.pid", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    pid = g_strdup_printf ("%d", getpid ());
+    rc_write (fd, pid, strlen (pid));
+    g_free (pid);
+    close (fd);
+
+    rcd_shutdown_add_handler ((RCDHeartbeatFunc) unlink, "/var/run/rcd.pid");
 }
 
 static void

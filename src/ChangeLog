@@ -1,3 +1,8 @@
+2002-12-06  Joe Shaw  <joe@ximian.com>
+
+	* rcd.c (daemonize): Write out the pidfile to /var/run/rcd.pid and
+	set up a shutdown handler to remove it when we quit.
+
 2002-12-05  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-rpc-packsys.c (refresh_channels_cb): I've changed the order
