@@ -674,10 +674,10 @@ rcd.packsys.search_by_package_match(package_match match)
 
 rcd.packsys.find_package_for_file(string filename)
 
-	Returns: package
+	Returns: array [package]
 	Faults: package_not_found
 
-	Returns the package which contains "filename".  If no package
+	Returns the packages which contain "filename".  If no package
 	is found, a package_not_found fault is thrown.
 
 rcd.packsys.query_file(variable type package_info)
