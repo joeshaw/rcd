@@ -509,6 +509,16 @@ ap_rec_destroy (RCDRecurring *rec)
     rcd_autopull_unref (pull);
 }
 
+static gchar *
+ap_rec_label (RCDRecurring *rec)
+{
+    RCDAutopull *pull = (RCDAutopull *) rec;
+    if (pull->name)
+        return g_strdup_printf ("autopull '%s'", pull->name);
+    else
+        return g_strdup ("autopull (unnamed)");
+}
+
 /* This gets executed after we finish refreshing the channel
    data for this pull. */
 static void
@@ -591,6 +601,7 @@ rcd_autopull_new (time_t first_pull, guint interval, const char *name)
     pull->recurring.tag = g_quark_from_static_string ("autopull");
     
     pull->recurring.destroy = ap_rec_destroy;
+    pull->recurring.label   = ap_rec_label;
     pull->recurring.execute = ap_rec_execute;
     pull->recurring.first   = ap_rec_first;
     pull->recurring.next    = ap_rec_next;
@@ -1126,6 +1137,7 @@ static void
 recurring_autopull_xml_fetch_init (void)
 {
     autopull_xml_fetch.tag     = g_quark_from_static_string ("autopull-xml");
+    autopull_xml_fetch.label   = NULL;
     autopull_xml_fetch.destroy = NULL;
     autopull_xml_fetch.execute = xml_fetch_execute;
     autopull_xml_fetch.first   = xml_fetch_first;

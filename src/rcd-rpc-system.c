@@ -33,6 +33,7 @@
 #include "rcd-module.h"
 #include "rcd-pending.h"
 #include "rcd-prefs.h"
+#include "rcd-recurring.h"
 #include "rcd-shutdown.h"
 #include "rcd-rpc.h"
 #include "rcd-rpc-util.h"
@@ -305,6 +306,75 @@ cleanup:
 
     return xmlrpc_build_value (env, "i", success);
 }
+
+struct RecurringInfo {
+    xmlrpc_env *env;
+    xmlrpc_value *array;
+};
+
+static void
+get_recurring_cb (RCDRecurring *rec,
+                  gpointer      user_data)
+{
+    struct RecurringInfo *info = user_data;
+    char *label_str;
+    xmlrpc_value *item;
+    time_t now;
+    char buf[128];
+
+    item = xmlrpc_struct_new (info->env);
+
+    time (&now);
+
+    label_str = rcd_recurring_get_label (rec);
+    RCD_XMLRPC_STRUCT_SET_STRING (info->env, item, "label", label_str);
+    g_free (label_str);
+
+    RCD_XMLRPC_STRUCT_SET_INT (info->env, item, "when", rec->when);
+    if (rec->when) {
+        struct tm *t = localtime (&rec->when);
+        strftime (buf, 128, "%b %d, %R", t);
+        RCD_XMLRPC_STRUCT_SET_STRING (info->env, item, "when_str", buf);
+        RCD_XMLRPC_STRUCT_SET_INT (info->env, item,
+                                   "when_delta", 
+                                   (int) difftime (rec->when, now));
+    } else {
+        RCD_XMLRPC_STRUCT_SET_STRING (info->env, item, "when_str", "now");
+    }
+
+    if (rec->prev) {
+        struct tm *t = localtime (&rec->prev);
+        strftime (buf, 128, "%b %d, %R", t);
+        RCD_XMLRPC_STRUCT_SET_INT (info->env, item, "prev", rec->prev);
+        RCD_XMLRPC_STRUCT_SET_STRING (info->env, item, "prev_str", buf);
+        RCD_XMLRPC_STRUCT_SET_INT (info->env, item,
+                                   "prev_delta",
+                                   (int) difftime (now, rec->prev));
+    }
+
+    RCD_XMLRPC_STRUCT_SET_INT (info->env, item, "count", rec->count);
+
+    xmlrpc_array_append_item (info->env, info->array, item);
+
+ cleanup:
+}
+
+static xmlrpc_value *
+system_get_recurring (xmlrpc_env   *env,
+                      xmlrpc_value *param_array,
+                      void         *user_data)
+{
+    struct RecurringInfo info;
+
+    info.env = env;
+    info.array = xmlrpc_build_value (env, "()");
+
+    /* FIXME: we need error checking here */
+
+    rcd_recurring_foreach (0, get_recurring_cb, &info);
+
+    return info.array;
+}
 	
 void
 rcd_rpc_system_register_methods(void)
@@ -321,6 +391,8 @@ rcd_rpc_system_register_methods(void)
         "rcd.system.shutdown", system_shutdown, "superuser", NULL);
     rcd_rpc_register_method(
         "rcd.system.activate", system_activate, "superuser", NULL);
+    rcd_rpc_register_method(
+        "rcd.system.get_recurring", system_get_recurring, NULL, NULL);
 
 } /* rcd_rpc_system_register_methods */
 

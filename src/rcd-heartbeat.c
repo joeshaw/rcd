@@ -85,6 +85,7 @@ rcd_heartbeat_start (void)
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Starting heartbeat");
 
     recurring_heartbeat.tag     = g_quark_from_static_string ("heartbeat");
+    recurring_heartbeat.label   = NULL;
     recurring_heartbeat.execute = heartbeat_execute;
     recurring_heartbeat.first   = heartbeat_first;
     recurring_heartbeat.next    = heartbeat_next;

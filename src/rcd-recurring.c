@@ -42,6 +42,9 @@ rcd_recurring_execute (RCDRecurring *recurring)
     if (recurring->execute)
         recurring->execute (recurring);
 
+    ++recurring->count;
+    recurring->prev = recurring->when;
+
     next = 0;
     if (recurring->next)
         recurring->when = recurring->next (recurring, recurring->when);
@@ -151,6 +154,17 @@ rcd_recurring_setup_timeout (void)
 }
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+gchar *
+rcd_recurring_get_label (RCDRecurring *recurring)
+{
+    g_return_val_if_fail (recurring != NULL, NULL);
+
+    if (recurring->label)
+        return recurring->label (recurring);
+
+    return g_strdup (g_quark_to_string (recurring->tag));
+}
 
 void
 rcd_recurring_add (RCDRecurring *recurring)

@@ -1,3 +1,21 @@
+2002-11-01  Jon Trowbridge  <trow@ximian.com>
+ 
+ 	* rcd-rpc-system.c (system_get_recurring): Added.  An xml-rpc
+ 	function that returns a list of all of the pending recurring
+ 	actions.
+ 	(rcd_rpc_system_register_methods): Register our new method.
+ 
+ 	* rcd-heartbeat.c (rcd_heartbeat_start): Set the recurring's label
+ 	function to NULL.
+ 
+ 	* rcd-autopull.c (rcd_autopull_new): Set the recurring's label
+ 	function to NULL.
+ 	(recurring_autopull_xml_fetch_init): Ditto.
+ 
+ 	* rcd-recurring.c (rcd_recurring_get_label): Added.
+ 	(rcd_recurring_execute): Store last execution time and increment
+	execution counter.
+
 2002-11-01  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-prefs.c: Fix up some sucky descriptions

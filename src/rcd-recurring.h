@@ -37,6 +37,8 @@ struct _RCDRecurring {
 
     GQuark tag;
 
+    gchar *(*label)   (RCDRecurring *);
+
     void   (*destroy) (RCDRecurring *);
     void   (*execute) (RCDRecurring *);
     
@@ -50,8 +52,12 @@ struct _RCDRecurring {
 
     /* private */
     time_t   when;
+    time_t   prev;
     gboolean removed;
+    gint     count;
 };
+
+gchar *rcd_recurring_get_label (RCDRecurring *recurring);
 
 /* If we rcd_recurring_add a RCDRecurring that has already been added,
    it gets "rescheduled": the first method is called again, and the
