@@ -787,14 +787,12 @@ static void
 update_download_progress (gsize size, gpointer user_data)
 {
     RCDTransactionStatus *status = user_data;
-    double percent;
 
     status->current_download_size += size;
 
-    percent = (double) ((double) status->current_download_size /
-                        (double) status->total_download_size) * 100.0;
-
-    rcd_pending_update (status->pending, percent);
+    rcd_pending_update_by_size (status->pending,
+                                status->current_download_size,
+                                status->total_download_size);
 } /* update_download_progress */
 
 static gboolean

@@ -1,3 +1,30 @@
+2002-06-26  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-transfer.c (pending_file_data_cb): Update using
+	rcd_pending_update_by_size.
+
+	* rcd-rpc-system.c (system_poll_pending): Add the completed
+	size and total size to our XML-RPC struct.
+
+	* rcd-rpc-packsys.c (update_download_progress): Update our pending
+	object with rcd_pending_update_by_size.
+
+	* rcd-query-packages.c (text_match): Added.  An RCDQueryPart
+	callback for matching a string against a package's name,
+	summary or description.
+
+	* rcd-pending.c (rcd_pending_init): Initialize completed_size and
+	total_size to -1.
+	(rcd_pending_update): Set completed_size and total_size to -1,
+	invalidating them if they had been previously set by a call to
+	rcd_pending_update_by_size.
+	(rcd_pending_update_by_size): Added.  Updates an RCDPending by
+	specifying the total size of the task and the amount of the task
+	that has been completed.  The percentage complete is automatically
+	calculated from those two quantities.
+	(rcd_pending_get_completed_size): Added.  An accessor.
+	(rcd_pending_get_total_size): Added.  An accessor.
+
 2002-06-25  Joe Shaw  <joe@ximian.com>
 
 	* rcd-cache.c (rcd_cache_entry_cancel): Added.  Closes the cache

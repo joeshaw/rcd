@@ -143,7 +143,9 @@ rcd_pending_class_init (RCDPendingClass *klass)
 static void
 rcd_pending_init (RCDPending *pending)
 {
-    pending->status = RCD_PENDING_STATUS_PRE_BEGIN;
+    pending->status         = RCD_PENDING_STATUS_PRE_BEGIN;
+    pending->completed_size = -1;
+    pending->total_size     = -1;
 }
 
 GType
@@ -273,7 +275,31 @@ rcd_pending_update (RCDPending *pending,
 
     rcd_pending_timestamp (pending);
 
+    pending->completed_size   = -1;
+    pending->total_size       = -1;
     pending->percent_complete = percent_complete;
+
+    g_signal_emit (pending, signals[UPDATE], 0);
+}
+
+void
+rcd_pending_update_by_size (RCDPending *pending,
+                            int         completed_size,
+                            int         total_size)
+{
+    g_return_if_fail (RCD_IS_PENDING (pending));
+    g_return_if_fail (pending->status == RCD_PENDING_STATUS_RUNNING);
+    g_return_if_fail (0 <= completed_size && completed_size <= total_size);
+
+    rcd_pending_timestamp (pending);
+
+    pending->completed_size   = completed_size;
+    pending->total_size       = total_size;
+
+    if (total_size > 0)
+        pending->percent_complete = 100 * (completed_size / (double) total_size);
+    else
+        pending->percent_complete = 100; /* I guess 0/0 = 1 after all :-) */
 
     g_signal_emit (pending, signals[UPDATE], 0);
 }
@@ -375,6 +401,22 @@ rcd_pending_get_percent_complete (RCDPending *pending)
     g_return_val_if_fail (RCD_IS_PENDING (pending), -1);
 
     return pending->percent_complete;
+}
+
+int
+rcd_pending_get_completed_size (RCDPending *pending)
+{
+    g_return_val_if_fail (RCD_IS_PENDING (pending), -1);
+    
+    return pending->completed_size;
+}
+
+int
+rcd_pending_get_total_size (RCDPending *pending)
+{
+    g_return_val_if_fail (RCD_IS_PENDING (pending), -1);
+
+    return pending->total_size;
 }
 
 time_t

@@ -299,14 +299,8 @@ pending_file_data_cb (RCDTransfer *t,
                       gpointer     user_data)
 {
     RCDPending *pending = user_data;
-    double perc;
 
-    if (t->file_size > 0)
-        perc = 100.0 * (t->bytes_transferred / (double) t->file_size);
-    else
-        perc = 50.0; /* FIXME! */
-
-    rcd_pending_update (pending, perc);
+    rcd_pending_update_by_size (pending, t->bytes_transferred, t->file_size);
 } /* pending_file_data_cb */
 
 static void

@@ -60,6 +60,10 @@ struct _RCDPending {
     RCDPendingStatus status;
 
     double percent_complete;
+
+    int completed_size;
+    int total_size;
+
     time_t start_time;
     time_t last_time;
 
@@ -94,7 +98,8 @@ GSList     *rcd_pending_get_all_active_ids (void);
 
 void rcd_pending_begin    (RCDPending *);
 
-void rcd_pending_update   (RCDPending *, double percent_complete);
+void rcd_pending_update         (RCDPending *, double percent_complete);
+void rcd_pending_update_by_size (RCDPending *, int size, int total_size);
 
 void rcd_pending_finished (RCDPending *, gint retval);
 void rcd_pending_abort    (RCDPending *, gint retval);
@@ -107,6 +112,8 @@ void             rcd_pending_set_description      (RCDPending *, const char *des
 gint             rcd_pending_get_id               (RCDPending *);
 RCDPendingStatus rcd_pending_get_status           (RCDPending *);
 double           rcd_pending_get_percent_complete (RCDPending *);
+int              rcd_pending_get_completed_size   (RCDPending *);
+int              rcd_pending_get_total_size       (RCDPending *);
 time_t           rcd_pending_get_start_time       (RCDPending *);
 time_t           rcd_pending_get_last_time        (RCDPending *);
 

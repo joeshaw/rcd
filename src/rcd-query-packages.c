@@ -52,6 +52,17 @@ description_match (RCDQueryPart *part,
     return rcd_query_match_string (part, pkg->description);
 }
 
+static gboolean
+text_match (RCDQueryPart *part,
+            gpointer      data)
+{
+    RCPackage *pkg = data;
+
+    return rcd_query_match_string (part, pkg->spec.name)
+        || rcd_query_match_string (part, pkg->summary)
+        || rcd_query_match_string (part, pkg->description);
+}
+
 #define SYSTEM_HACK (guint)(~0)
 
 static void
@@ -160,6 +171,10 @@ static RCDQueryEngine query_packages_engine[] = {
     { "description",
       NULL, NULL, NULL, 
       description_match },
+
+    { "text", /* name or summary or description */
+      NULL, NULL, NULL,
+      text_match },
 
     { "channel",
       NULL, channel_init, NULL,

@@ -142,6 +142,16 @@ system_poll_pending(xmlrpc_env   *env,
         RCD_XMLRPC_STRUCT_SET_DOUBLE (env, value, "percent_complete",
                                       rcd_pending_get_percent_complete (pending));
 
+        if (rcd_pending_get_completed_size (pending) >= 0) {
+            RCD_XMLRPC_STRUCT_SET_INT (env, value, "completed_size",
+                                       rcd_pending_get_completed_size (pending));
+        }
+
+        if (rcd_pending_get_total_size (pending) >= 0) {
+            RCD_XMLRPC_STRUCT_SET_INT (env, value, "total_size",
+                                       rcd_pending_get_total_size (pending));
+        }
+
         RCD_XMLRPC_STRUCT_SET_STRING (env, value, "status",
                                       rcd_pending_status_to_string (rcd_pending_get_status (pending)));
         
@@ -152,11 +162,12 @@ system_poll_pending(xmlrpc_env   *env,
             RCD_XMLRPC_STRUCT_SET_INT (env, value, "elapsed_sec",
                                        rcd_pending_get_elapsed_secs (pending));
         }
-        
+     
         if (rcd_pending_get_remaining_secs (pending) >= 0) {
             RCD_XMLRPC_STRUCT_SET_INT (env, value, "remaining_sec",
                                        rcd_pending_get_remaining_secs (pending));
         }
+
 
         if (rcd_pending_get_expected_secs (pending) >= 0) {
             RCD_XMLRPC_STRUCT_SET_INT (env, value, "expected_sec",
