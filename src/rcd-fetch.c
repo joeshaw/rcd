@@ -683,8 +683,8 @@ rcd_fetch_all_channel_icons (gboolean refetch)
 } /* rcd_fetch_all_channel_icons */
 
 struct FetchAllInfo {
-    gboolean local;
     GSList *id_list;
+    RCDFetchChannelFlags flags;
 };
 
 static void
@@ -692,8 +692,18 @@ all_channels_cb (RCChannel *channel, gpointer user_data)
 {
     struct FetchAllInfo *info = user_data;
     int id;
+    RCDFetchChannelFlags ch_flags = 0;
+    
+    if (rc_channel_get_transient (channel)) {
+        ch_flags |= RCD_FETCH_TRANSIENT;
+    } else {
+        ch_flags |= RCD_FETCH_PERSISTENT;
+    }
 
-    if (info->local) {
+    if (! (info->flags & ch_flags))
+        return;
+
+    if (info->flags & RCD_FETCH_LOCAL) {
         if (!rcd_fetch_channel_local (channel)) {
             id = rcd_fetch_channel (channel);
             if (id != RCD_INVALID_PENDING_ID)
@@ -712,29 +722,39 @@ all_channels_cb (RCChannel *channel, gpointer user_data)
 GSList *
 rcd_fetch_all_channels (void)
 {
-    struct FetchAllInfo info;
-
-    info.local = FALSE;
-    info.id_list = NULL;
+    GSList *ids;
     
-    rc_world_foreach_channel (rc_get_world (),
-                              all_channels_cb,
-                              &info);
-
-    return info.id_list;
+    ids = rcd_fetch_some_channels (RCD_FETCH_TRANSIENT |
+                                   RCD_FETCH_PERSISTENT);
+    return ids;
 }
 
 void
 rcd_fetch_all_channels_local (void)
 {
-    struct FetchAllInfo info;
+    GSList *ids;
     
-    info.local = TRUE;
+    ids = rcd_fetch_some_channels (RCD_FETCH_LOCAL |
+                                   RCD_FETCH_TRANSIENT |
+                                   RCD_FETCH_PERSISTENT);
+
+    /* ids should just be NULL, but we free it just in case. */
+    g_slist_free (ids);
+}
+
+GSList *
+rcd_fetch_some_channels (RCDFetchChannelFlags flags)
+{
+    struct FetchAllInfo info;
+
     info.id_list = NULL;
+    info.flags = flags;
 
     rc_world_foreach_channel (rc_get_world (),
                               all_channels_cb,
                               &info);
+
+    return info.id_list;
 }
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */

@@ -77,13 +77,22 @@ gboolean rcd_fetch_channel_local (RCChannel *channel);
   Returns a list of the ids of the RCPendings; the caller
   is responsible for freeing the list.
 */
+
+typedef enum {
+    RCD_FETCH_LOCAL      = 1<<0,
+    RCD_FETCH_TRANSIENT  = 1<<1,
+    RCD_FETCH_PERSISTENT = 1<<2,
+} RCDFetchChannelFlags;
+
 GSList *rcd_fetch_all_channels       (void);
 void    rcd_fetch_all_channels_local (void);
+GSList *rcd_fetch_some_channels      (RCDFetchChannelFlags flags);
 
 /*
  * Download channel icons.  If they're already on the system, they won't
  * be downloaded again unless the refetch argument is set
  */
+
 int  rcd_fetch_channel_icon      (RCChannel *channel);
 void rcd_fetch_all_channel_icons (gboolean refretch);
 

@@ -1,3 +1,18 @@
+2002-12-05  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-rpc-packsys.c (refresh_channels_cb): I've changed the order
+	that things happen.  First we refresh the transient channels.
+	Next we download the channel list from the server, and the finally
+	we refresh the persistent channels.  This insures that the
+	transient channels (i.e. the mounted channels) get refreshed
+	even if the network is not available.  (Fixes #34702)
+
+	* rcd-fetch.c (rcd_fetch_some_channels): Added.  Allow
+	finer-grained selection of the channels to be fetched.
+	(rcd_fetch_all_channels_local): Changed to just call
+	rcd_fetch_some_channels w/ the appropriate flags.
+	(rcd_fetch_all_channels): Ditto.
+
 2002-12-05  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-packsys.c (packsys_rollback_dependencies): Create the

@@ -165,6 +165,14 @@ refresh_channels_cb (gpointer user_data)
 
     rcd_transaction_lock ();
 
+    /* First we fetch the transient channels -- which practically 
+       means refreshing the mounted channels only.  Otherwise it is
+       not possible to refresh mounted channels if the network is
+       unavailable. */
+    id_list = rcd_fetch_some_channels (RCD_FETCH_TRANSIENT);
+    /* id_list should just be NULL, but we free it just in case */
+    g_slist_free (id_list);
+
     if (!rcd_fetch_channel_list ()) {
         if (ret_list)
             *ret_list = RCD_REFRESH_INVALID;
@@ -175,7 +183,10 @@ refresh_channels_cb (gpointer user_data)
     rcd_subscriptions_load ();
 
     rcd_fetch_all_channel_icons (TRUE);
-    id_list = rcd_fetch_all_channels ();
+
+    /* Now we refresh just the persistent channels (i.e. the
+       non-mounted ones). */
+    id_list = rcd_fetch_some_channels (RCD_FETCH_PERSISTENT);
 
     if (ret_list == NULL) {
         g_slist_free (id_list);
