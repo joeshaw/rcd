@@ -1,3 +1,14 @@
+2002-09-10  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-autopull.c: Added name field to RCDAutopull struct.
+	(rcd_autopull_resolve_and_transact): Log the name of the autpull
+	session we are executing.
+	(ap_rec_destroy): Free the name.
+	(rcd_autopull_new): Add a name argument.  If NULL, set the name to
+	"Unnamed".
+	(autopull_from_session_xml_node): Get the name from the session
+	XML, pass it to rcd_autopull_new.
+
 2002-09-06  Joe Shaw  <joe@ximian.com>
 
 	* rcd-prefs.c (rcd_prefs_set_host): Added.  Sets the server URL.

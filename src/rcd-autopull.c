@@ -38,6 +38,8 @@ typedef struct _RCDAutopull RCDAutopull;
 struct _RCDAutopull {
     RCDRecurring recurring;
 
+    char *name;
+
     time_t first_pull;
     guint interval;
 
@@ -262,7 +264,7 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
         RCDIdentity *dummy_identity;
 
         rc_debug (RC_DEBUG_LEVEL_INFO,
-                  "Beginning Autopull");
+                  "Beginning Autopull '%s'", pull->name);
         for (iter = to_install; iter != NULL; iter = iter->next) {
             rc_debug (RC_DEBUG_LEVEL_INFO,
                       "  Install: %s",
@@ -292,7 +294,8 @@ rcd_autopull_resolve_and_transact (RCDAutopull *pull)
 
     } else {
         rc_debug (RC_DEBUG_LEVEL_INFO,
-                  "Autopull: no action necessary.");
+                  "Autopull '%s': no action necessary.",
+                  pull->name);
     }
 
     /* FIXME: Do we want to use the transaction ID for anything? */
@@ -309,6 +312,8 @@ static void
 ap_rec_destroy (RCDRecurring *rec)
 {
     RCDAutopull *pull = (RCDAutopull *) rec;
+
+    g_free (pull->name);
 
     g_slist_foreach (pull->channels_to_update,
                      (GFunc) rc_channel_unref,
@@ -372,7 +377,7 @@ ap_rec_next (RCDRecurring *rec, time_t previous)
 }
 
 static RCDAutopull *
-rcd_autopull_new (time_t first_pull, guint interval)
+rcd_autopull_new (time_t first_pull, guint interval, const char *name)
 {
     RCDAutopull *pull;
 
@@ -385,6 +390,10 @@ rcd_autopull_new (time_t first_pull, guint interval)
     pull->recurring.first   = ap_rec_first;
     pull->recurring.next    = ap_rec_next;
 
+    if (name == NULL)
+        name = "Unnamed";
+
+    pull->name               = g_strdup (name);
     pull->first_pull         = first_pull;
     pull->interval           = interval;
     pull->channels_to_update = NULL;
@@ -541,6 +550,7 @@ static RCDAutopull *
 autopull_from_session_xml_node (xmlNode *node)
 {
     RCDAutopull *pull = NULL;
+    char *name = NULL;
     char *starttime_str = NULL;
     char *interval_str = NULL;
     
@@ -549,7 +559,12 @@ autopull_from_session_xml_node (xmlNode *node)
 
     for (node = node->xmlChildrenNode; node != NULL; node = node->next) {
 
-        if (! g_strcasecmp (node->name, "starttime")) {
+        if (! g_strcasecmp (node->name, "name")) {
+            
+            g_free (name);
+            name = xml_get_content (node);
+
+        } else if (! g_strcasecmp (node->name, "starttime")) {
 
             if (starttime_str == NULL)
                 starttime_str = xml_get_content (node);
@@ -617,10 +632,11 @@ autopull_from_session_xml_node (xmlNode *node)
             starttime = (time_t) atol (starttime_str);
             interval = atol (interval_str);
 
-            pull = rcd_autopull_new (starttime, interval);
+            pull = rcd_autopull_new (starttime, interval, name);
         }
     }
 
+    g_free (name);
     g_free (starttime_str);
     g_free (interval_str);
 
