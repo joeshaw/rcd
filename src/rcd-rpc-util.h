@@ -29,8 +29,6 @@
 #define RC_STRING_TO_XMLRPC(x) ((x) == NULL ? "" : (x))
 #define XMLRPC_STRING_TO_RC(x) (is_empty_string((x)) ? NULL : (x))
 
-
-/* For RCPackage */
 void          rcd_rc_package_spec_to_xmlrpc(RCPackageSpec *spec,
                                             xmlrpc_value  *value,
                                             xmlrpc_env    *env);
@@ -41,6 +39,9 @@ void          rcd_rc_package_dep_to_xmlrpc(RCPackageDep *dep,
 
 RCPackageDep *rcd_xmlrpc_to_rc_package_dep(xmlrpc_value *value,
                                            xmlrpc_env   *env);
+
+RCPackageDepSList *rcd_xmlrpc_array_to_rc_package_dep_slist(xmlrpc_value *value,
+                                                            xmlrpc_env   *env);
 
 xmlrpc_value *rcd_rc_package_to_xmlrpc(RCPackage  *package, 
                                        xmlrpc_env *env);

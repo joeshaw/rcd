@@ -121,6 +121,40 @@ rcd_xmlrpc_to_rc_package_dep (xmlrpc_value *value,
     return dep;
 }
 
+RCPackageDepSList *
+rcd_xmlrpc_array_to_rc_package_dep_slist (xmlrpc_value *value,
+                                          xmlrpc_env   *env)
+{
+    RCPackageDepSList *dep_list = NULL;
+    int size = 0;
+    int i;
+
+    size = xmlrpc_array_size (env, value);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    for (i = 0; i < size; i++) {
+        xmlrpc_value *v;
+        RCPackageDep *dep;
+
+        v = xmlrpc_array_get_item (env, value, i);
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        dep = rcd_xmlrpc_to_rc_package_dep (v, env);
+        XMLRPC_FAIL_IF_FAULT (env);
+
+        dep_list = g_slist_prepend (dep_list, dep);
+    }
+
+cleanup:
+    if (env->fault_occurred) {
+        rc_package_dep_slist_free (dep_list);
+
+        return NULL;
+    }
+
+    return dep_list;
+} /* rcd_xmlrpc_array_to_rc_package_dep_slist */
+
 xmlrpc_value *
 rcd_rc_package_to_xmlrpc (RCPackage *package, xmlrpc_env *env)
 {

@@ -1,5 +1,18 @@
 2002-07-11  Joe Shaw  <joe@ximian.com>
 
+	* rcd-rpc-packsys.c (resolve_deps): Take an RCPackageDepSList of
+	extra dependencies to add to the resolver.
+	(packsys_solve_dependencies): Given a list of deps, get a
+	resolution which will solve them.
+	(packsys_what_provides, packsys_what_requires,
+	packsys_what_conflicts): Check for a fault after parsing the
+	argument list to prevent a failed assertion if the data passed in
+	is bad.
+
+	* rcd-rpc-util.c (rcd_xmlrpc_array_to_rc_package_dep_slist): Added.
+
+2002-07-11  Joe Shaw  <joe@ximian.com>
+
 	* rcd-rpc.packsys.c (resolve_deps): Instead of returning a list of
 	packages to install or remove, return a list which contains
 	packages, the operation to perform, and details on why it's being
