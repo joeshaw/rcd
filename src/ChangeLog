@@ -1,3 +1,14 @@
+2002-09-24  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-autopull.c (rcd_autopull_fetch_channel_list): Pass along the
+	return value from the call to rcd_fetch_channel_list.
+	(process_xml_cb): Fix the signature of this function so we don't
+	get a type warning.
+	(rcd_autopull_xml_contains_unknown_packages): Scan the autopull
+	XML for unknown packages.
+	(rcd_autopull_process_xml): Check if the XML mentions unknown
+	packages.  If it does, re-fetch all of the package info.
+
 2002-09-23  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-autopull.c (rcd_autopull_fetch_all_channels): We don't use

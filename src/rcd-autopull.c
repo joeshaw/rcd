@@ -437,19 +437,15 @@ rcd_autopull_fetch_all_channels (void (*finished_cb) (gpointer),
     g_timeout_add (500, fetch_channels_cb, frc);
 }
 
-static void
+static gboolean 
 rcd_autopull_fetch_channel_list (void (*finished_cb) (gpointer),
                                  gpointer user_data)
 {
-    /* If we can't download the channel list, fail silently.
-       This is probably not a good thing to do. */
-    if (! rcd_fetch_channel_list ()) {
-        if (finished_cb)
-            finished_cb (user_data);
-        return;
-    }
-
+    if (! rcd_fetch_channel_list ()) 
+        return FALSE;
     rcd_autopull_fetch_all_channels (finished_cb, user_data);
+
+    return TRUE;
 }
 
 
@@ -858,7 +854,8 @@ autopull_from_session_xml_node (xmlNode *node)
     return pull;
 }
 
-/* Walk down through our XML looking for package or channel tags that
+/*
+  Walk down through our XML looking for package or channel tags that
    mention unknown channels.
 */
 static gboolean
@@ -892,9 +889,45 @@ rcd_autopull_xml_contains_unknown_channels (xmlDoc *doc)
     return FALSE;
 }
 
-static void
-process_xml_cb (xmlDoc *doc)
+/*
+  Walks down through our XML looking for package tags that
+   mention unknown packages.
+*/
+
+static gboolean
+rcd_autopull_xml_contains_unknown_packages (xmlDoc *doc)
 {
+    xmlNode *node, *node2;
+
+    g_return_val_if_fail (doc != NULL, FALSE);
+
+    node = xmlDocGetRootElement (doc);
+    g_return_val_if_fail (node != NULL, FALSE);
+
+    for (node = node->xmlChildrenNode; node; node = node->next) {
+
+        if (! g_strcasecmp (node->name, "session")) {
+
+            for (node2 = node->xmlChildrenNode; node2; node2 = node2->next) {
+
+                if (! g_strcasecmp (node2->name, "package")) {
+                    
+                    if (package_from_xml_node (node2) == NULL) {
+                        /* Package?  I've never heard of it! */
+                        return TRUE;
+                    }
+                }
+            }
+        }
+    }
+
+    return FALSE;
+}
+
+static void
+process_xml_cb (gpointer user_data)
+{
+    xmlDoc *doc = user_data;
     xmlNode *node;
 
     g_return_if_fail (doc != NULL);
@@ -945,11 +978,19 @@ process_xml_cb (xmlDoc *doc)
     xmlFreeDoc (doc);
 }
 
+/*
+  If our XML mentions unknown channels, we need to re-load our list of
+  channels & all package data.
+  If our XML mentions unknown packages, we re-load all package data.
+  Otherwise we just process the XML right away.
+*/
 static void
 rcd_autopull_process_xml (xmlDoc *doc)
 {
     if (rcd_autopull_xml_contains_unknown_channels (doc)) {
         rcd_autopull_fetch_channel_list (process_xml_cb, doc);
+    } else if (rcd_autopull_xml_contains_unknown_packages (doc)) {
+        rcd_autopull_fetch_all_channels (process_xml_cb, doc);
     } else {
         process_xml_cb (doc);
     }
