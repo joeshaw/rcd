@@ -132,12 +132,14 @@ rcd_cache_entry_get_entity_tag (RCDCacheEntry *entry)
 void
 rcd_cache_entry_set_modification_time (RCDCacheEntry *entry, const char *modtime)
 {
+    g_free (entry->last_modified);
     entry->last_modified = g_strdup (modtime);
 } /* rcd_cache_entry_set_modification_time */
 
 void
 rcd_cache_entry_set_entity_tag (RCDCacheEntry *entry, const char *etag)
 {
+    g_free (entry->entity_tag);
     entry->entity_tag = g_strdup (etag);
 } /* rcd_cache_entry_set_entity_tag */
 

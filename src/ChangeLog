@@ -1,3 +1,8 @@
+2003-02-04  Joe Shaw  <joe@ximian.com>
+
+	* rcd-cache.c (rcd_cache_entry_set_modification_time,
+	rcd_cache_entry_set_entity_tag): Free the old one, fix a leak.
+
 2003-02-04  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-fetch.c (rcd_fetch_news): Clear the cached news before
