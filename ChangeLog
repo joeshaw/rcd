@@ -1,5 +1,9 @@
 2002-10-01  Joe Shaw  <joe@ximian.com>
 
+	* rcd.conf.5: Add the Server section and keys
+
+2002-10-01  Joe Shaw  <joe@ximian.com>
+
 	* acconfig.h: Add HAVE_SO_PEERCRED
 
 	* configure.in: Add a check for SO_PEERCRED.

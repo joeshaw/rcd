@@ -45,7 +45,8 @@ This key can be set through rcd's preferences mechanism.
 .br
 This key specifies whether the server is an enhanced server.  Set this
 to true when connecting to a Red Carpet Express or Red Carpet
-Corporate Connect server.  This defaults to false.
+Corporate Connect server.  This defaults to false.  This key can be
+set through rcd's preferences mechanism.
 
 .TP
 .B org-id=<organization id>
@@ -99,6 +100,23 @@ whereas users with high bandwidth connections may want to increase
 this.  If set to 0, there is no limit and rcd will make as many
 connections as needed.  This defaults to 5.  This key can be set
 through rcd's preferences mechanism.
+
+.LP
+.B [Server]
+.TP
+This section contains settings related to rcd's server.
+
+.TP
+.B remote-enabled=[true | false]
+.br
+Specifies whether rcd should listen to remote (TCP) connections.  This
+defaults to true.
+
+.TP
+.B port=<number>
+.br
+Specifies the port rcd should listen on for remote (TCP) connections.
+This defaults to 505.
 
 .LP
 .B [Cache]
