@@ -1,3 +1,34 @@
+2002-05-28  Joe Shaw  <joe@ximian.com>
+
+	* rcd-auth.c: Change RCDAuthAction to #defines which can be
+	bitwise ORed.
+	(rcd_auth_action_to_string): No longer const, can output a list of
+	strings
+	(rcd_string_to_auth_action): Parses a list of strings and returns
+	an RCDAuthAction
+	(rcd_auth_approve_action): Ease up on the argument restrictions
+	for now.  If RCD_ENFORCE_AUTH is enabled, actually check
+	privileges.
+
+	* rcd-identity.c (rcd_identity_from_password_file): Added.  Looks
+	for a user in the password file and returns an RCDIdentity with
+	its username, password, and privileges.
+
+	* rcd-rpc.c (rcd_rpc_init): Initialize a hash table for storing
+	method info.
+	(rcd_rpc_register_method): Take an RCDAuthAction parameter
+	specifying the privileges required to call this method.  Add
+	method info to the hash table.
+	(soup_rpc_callback): Authenticate the user from HTTP Basic auth
+	against an RCDIdentity from the password file.  Then look up the
+	method info from the hash table and call rcd_auth_approve_action()
+	to verify the privileges.
+
+	* rcd-rpc-packsys.c (rcd_rpc_packsys_register_methods):
+	* rcd-rpc-sample.c (rcd_module_load):
+	* rcd-rpc-system.c (rcd_rpc_system_register_methods): Pass in
+	privileges required to call these methods.
+
 2002-05-28  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd.c: Added stuff to download channel and package info and to

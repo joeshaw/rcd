@@ -69,8 +69,8 @@ void
 rcd_rpc_system_register_methods(void)
 {
     rcd_rpc_register_method(
-        "rcd.system.ping", system_ping, NULL);
+        "rcd.system.ping", system_ping, RCD_AUTH_NONE, NULL);
 	rcd_rpc_register_method(
-        "rcd.system.query_module", system_query_module, NULL);
+        "rcd.system.query_module", system_query_module, RCD_AUTH_NONE, NULL);
 } /* rcd_rpc_system_register_methods */
 

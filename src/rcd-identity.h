@@ -34,11 +34,16 @@ typedef struct _RCDIdentity RCDIdentity;
 
 struct _RCDIdentity {
     gchar *username;
+    gchar *password;
+
+    int privileges;
 };
 
 RCDIdentity *rcd_identity_new  (void);
 
 void         rcd_identity_free (RCDIdentity *id);
+
+RCDIdentity *rcd_identity_from_password_file (const char *username);
 
 #endif /* __RCD_IDENTITY_H__ */
 

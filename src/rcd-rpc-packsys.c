@@ -420,6 +420,7 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
     rcd_rpc_register_method(
         "rcd.packsys.query",
         packsys_query,
+        RCD_AUTH_VIEW,
         world);
 
 #if 0

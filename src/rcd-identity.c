@@ -26,6 +26,8 @@
  */
 
 #include <config.h>
+#include <libredcarpet.h>
+#include "rcd-auth.h"
 #include "rcd-identity.h"
 
 RCDIdentity *
@@ -34,7 +36,6 @@ rcd_identity_new (void)
     RCDIdentity *id;
 
     id = g_new0 (RCDIdentity, 1);
-    id->username = g_strdup ("rupert");
 
     return id;
 }
@@ -47,3 +48,50 @@ rcd_identity_free (RCDIdentity *id)
         g_free (id);
     }
 }
+
+RCDIdentity *
+rcd_identity_from_password_file (const char *username)
+{
+    RCBuffer *buffer;
+    char **lines;
+    char **l;
+    RCDIdentity *id = NULL;
+
+    g_return_val_if_fail (username, NULL);
+
+    buffer = rc_buffer_map_file ("rc-passwd");
+
+    if (!buffer)
+        return NULL;
+
+    lines = g_strsplit (buffer->data, "\n", 0);
+    for (l = lines; *l; l++) {
+        char **user_info;
+
+        user_info = g_strsplit (*l, ":", 0);
+        if (!user_info[0] || !user_info[1] || !user_info[2] ||
+            strcmp (user_info[0], username) != 0) {
+            g_strfreev (user_info);
+            continue;
+        }
+
+        g_print ("username: %s\n"
+                 "password: %s\n"
+                 "actions: %s\n",
+                 user_info[0], user_info[1], user_info[2]);
+
+        id = rcd_identity_new ();
+        id->username = g_strdup (user_info[0]);
+        id->password = g_strdup (user_info[1]);
+        id->privileges = rcd_string_to_auth_action (user_info[2]);
+
+        g_strfreev (user_info);
+        break;
+    }
+
+    g_strfreev (lines);
+
+    rc_buffer_unmap_file(buffer);
+
+    return id;
+} /* rcd_identity_from_password_file */
