@@ -26,6 +26,8 @@
 #include <config.h>
 
 #include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <syslog.h>
 #include <popt.h>
@@ -107,7 +109,7 @@ daemonize (void)
 {
     int fork_rv;
     int i;
-    int null_fd;
+    int log_fd;
 
     if (non_daemon_flag)
         return;
@@ -129,30 +131,35 @@ daemonize (void)
     for (i = getdtablesize (); i >= 0; --i)
         close (i);
 
-    null_fd = open ("/dev/null", O_RDWR); /* open stdin */
-    dup (null_fd); /* dup to stdout */
-    dup (null_fd); /* dup to stderr */
+    open ("/dev/null", O_RDWR); /* open /dev/null as stdin*/
+
+    /* Open a new file for our logging file descriptor. */
+    log_fd = open ("/tmp/rcd-messages",
+                   O_CREAT | O_APPEND,
+                   S_IRUSR | S_IWUSR);
+
+    dup (log_fd); /* dup log_fd to stdout */
+    dup (log_fd); /* dup log_fd to stderr */
 }
 
 static void
 debug_message_handler (const char *str, gpointer user_data)
 {
     static int pid = 0;
-    static FILE *out = NULL;
+    char *log_msg;
 
     if (pid == 0)
         pid = getpid ();
 
-    if (out == NULL) {
-        if (non_daemon_flag)
-            out = stderr;
-        else {
-            out = fopen ("/tmp/rcd-messages", "a");
-        }
-    }
+    log_msg = g_strdup_printf ("[%d] %s\n", pid, str);
 
-    fprintf (out, "[%d] %s\n", pid, str);
-    fflush (out);
+    /* If we've daemonized, stderr has been redirected to the
+       /tmp/rcd-messages file.  Since stderr might not actually
+       be stderr, we also fsync. */
+    write (STDERR_FILENO, log_msg, strlen (log_msg));
+    fsync (STDERR_FILENO);
+
+    g_free (log_msg);
 }
 
 static void

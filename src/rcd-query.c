@@ -204,7 +204,7 @@ rcd_query_match_string_ci (RCDQueryPart *part,
         rv =  strstr (str_folded, part->query_str_folded) != NULL;
     } else if (part->type == RCD_QUERY_NOT_CONTAINS) {
         rv = strstr (str_folded, part->query_str_folded) == NULL;
-    } if (part->type == RCD_QUERY_CONTAINS_WORD) {
+    } else if (part->type == RCD_QUERY_CONTAINS_WORD) {
         rv = strstr_word (str_folded, part->query_str_folded) != NULL;
     } else if (part->type == RCD_QUERY_NOT_CONTAINS_WORD) {
         rv = strstr_word (str_folded, part->query_str_folded) == NULL;
@@ -213,6 +213,8 @@ rcd_query_match_string_ci (RCDQueryPart *part,
                                          strcmp (part->query_str_folded, str_folded),
                                          0);
     }
+
+    g_print ("(%d) %s vs %s\n", rv, str_folded, part->query_str_folded);
 
     g_free (str_folded);
 

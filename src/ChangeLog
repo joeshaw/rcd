@@ -1,3 +1,13 @@
+2002-07-06  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd.c (daemonize): Open our rcd-messages file here, and redirect
+	stdout and stderr to it.
+	(debug_message_handler): Just write debug messages to stderr.  If
+	we are daemonized, it will already have been redirected to
+	rcd-messages.
+
+	* rcd-query.c (rcd_query_match_string_ci): Fixed stupid typo.
+
 2002-07-05  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd.c (daemonize): Re-open stdin, stdout, stderr to /dev/null.
