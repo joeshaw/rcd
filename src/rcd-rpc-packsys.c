@@ -1644,6 +1644,19 @@ packsys_dump(xmlrpc_env   *env,
     return value;
 } /* packsys_dump */
 
+static xmlrpc_value *
+packsys_world_sequence_number (xmlrpc_env   *env,
+                               xmlrpc_value *param_array,
+                               void         *user_data)
+{
+    RCWorld *world = user_data;
+    xmlrpc_value *value;
+
+    value = xmlrpc_build_value (env, "i", rc_world_sequence_number (world));
+
+    return value;
+}
+
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 void
@@ -1747,6 +1760,11 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
     rcd_rpc_register_method("rcd.packsys.unsubscribe",
                             packsys_unsubscribe,
                             "subscribe",
+                            world);
+
+    rcd_rpc_register_method("rcd.packsys.world_sequence_number",
+                            packsys_world_sequence_number,
+                            "view",
                             world);
 
     rcd_heartbeat_register_func (refresh_channels_cb, NULL);
