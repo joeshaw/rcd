@@ -78,7 +78,7 @@ rcd_fetch_register (void)
         protocol, "X-RC-Secret", rcd_prefs_get_secret ());
 
     data = rcd_transfer_begin_blocking (t);
-    g_byte_array_free (data);
+    g_byte_array_free (data, TRUE);
 
     status = rcd_transfer_protocol_http_get_response_header (protocol,
                                                              "X-RC-Status");
