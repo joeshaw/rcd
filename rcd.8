@@ -15,15 +15,34 @@ This daemon performs the Red Carpet software management functions that are asked
 The daemon is kept apart from the control application so that the control application can be used to administer remote systems. See the rc man page for more information about this process.
 .SH "OPTIONS"
 .LP 
+\fBUSAGE OPTIONS:\fR
 .TP 
 \fB\-allow\-non\-root\fR <\fIdirectory\fP>
 Allows rcd to be run by non\-root users.  This is likely to cause errors when rc users attempt to do anything other than query the package database.
 .TP 
-\fB\-\-help, \-?\fR
-Output help information and exit.
+\fB\-d, \-\-debug=\fI<INT>\fR
+Turn on debugging mode. The number specifies the amount of debugging output.
 .TP 
 \fB\-n, \-\-nodaemon\fR
 Do not run the daemon in the background.
+.TP 
+\fB\-\-late\-background\fR
+Keep the daemon as a foreground process until it is ready to accept connections.
+.TP 
+\fB\-r, \-\-no\-remote\fR
+Do not listen for remote connections. This means that the daemon can only be controlled from the local system.
+.TP 
+\fB\-s, \-\-syslog=\fI<INT>\fR
+Specify the verbosity of logging information.
+.TP 
+\fB\-\-undump=\fI<filename>\fR
+Initialize daemon from a dump file; dump files can be gotten from cur_to_xml or from libredcarpet examples).
+.BR 
+.LP 
+\fBHELP OPTIONS\fR
+.TP 
+\fB\-\-help, \-?\fR
+Output help information and exit.
 .TP 
 \fB\-\-usage\fR
 Output usage message and then exit.
@@ -46,7 +65,7 @@ To run this program the standard way type:
 \fB/etc/init.d/rcd start\fR
 .TP 
 Alternately, run the program directly:
-\fBrcd\fR
+\fB/usr/sbin/rcd\fR
 .SH "AUTHORS"
 .LP 
 Copyright Ximian, Inc. 2002

@@ -1,3 +1,9 @@
+
+2002-08-12  Aaron Weber  <aaron@ximian.com>
+
+	* rcd.8: Update to reflect new options. Should add more about how
+	to use the debug and syslog modes, though.
+	
 2002-08-12  Joe Shaw  <joe@ximian.com>
 
 	* Makefile.am: Don't install rc-passwd automatically.
