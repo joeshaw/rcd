@@ -272,11 +272,7 @@ rcd_transaction_send_log (RCDTransactionStatus *status,
     RCDTransfer *t;
     RCDTransferProtocolHTTP *protocol;
 
-    /*
-     * Send logversion=2 since we're using a new logging format which
-     * requires only one trip to the server instead of two.
-     */
-    url = g_strdup_printf ("%s/log.php?logversion=2", rcd_prefs_get_host ());
+    url = g_strdup_printf ("%s/log.php", rcd_prefs_get_host ());
 
     t = rcd_transfer_new (url, 0, NULL);
 
