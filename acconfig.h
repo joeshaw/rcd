@@ -1,8 +1,0 @@
-
-#undef MAJOR_VERSION
-#undef MINOR_VERSION
-#undef MICRO_VERSION
-
-#undef GETTEXT_PACKAGE
-
-#undef HAVE_SO_PEERCRED
