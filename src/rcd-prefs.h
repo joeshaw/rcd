@@ -39,12 +39,14 @@ gboolean     rcd_prefs_get_cache_enabled      (void);
 void         rcd_prefs_set_cache_enabled      (gboolean);
 
 const gchar *rcd_prefs_get_host               (void);
+const gchar *rcd_prefs_get_registration_host  (void);
 const gchar *rcd_prefs_get_proxy              (void);
+
+gboolean     rcd_prefs_get_premium            (void);
+const gchar *rcd_prefs_get_org_id             (void);
 
 gboolean     rcd_prefs_get_http10_enabled     (void);
 void         rcd_prefs_set_http10_enabled     (gboolean);
-
-gboolean     rcd_prefs_get_premium            (void);
 
 guint32      rcd_prefs_get_heartbeat_interval (void);
 void         rcd_prefs_set_heartbeat_interval (guint32);
@@ -56,6 +58,10 @@ void         rcd_prefs_set_debug_level        (gint);
 
 gint         rcd_prefs_get_syslog_level       (void);
 void         rcd_prefs_set_syslog_level       (gint);
+
+/* These aren't really prefs, but there here for lack of a better place */
+const gchar *rcd_prefs_get_mid                (void);
+const gchar *rcd_prefs_get_secret             (void);
 
 #endif /* __RCD_PREFS_H__ */
 

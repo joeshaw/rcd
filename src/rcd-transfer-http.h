@@ -37,9 +37,34 @@ struct _RCDTransferProtocolHTTP {
     SoupMessage *message;
 
     gboolean cache_hit;
+
+    const char *method;
+
+    char *request_body;
+    gsize request_length;
+
+    GHashTable *request_headers;
 };
 
 RCDTransferProtocol *rcd_transfer_protocol_http_new (void);
+
+void        rcd_transfer_protocol_http_set_method (
+    RCDTransferProtocolHTTP *protocol,
+    const char              *method);
+
+void        rcd_transfer_protocol_http_set_request_body (
+    RCDTransferProtocolHTTP *protocol,
+    char                    *body,
+    gsize                    length);
+
+void        rcd_transfer_protocol_http_set_request_header (
+    RCDTransferProtocolHTTP *protocol,
+    const char              *header,
+    const char              *value);
+
+const char *rcd_transfer_protocol_http_get_response_header (
+    RCDTransferProtocolHTTP *protocol,
+    const char              *header);
 
 #endif /* __RCD_TRANSFER_HTTP_H__ */
 

@@ -1,5 +1,46 @@
 2002-08-01  Joe Shaw  <joe@ximian.com>
 
+	* rcd-fetch.c (rcd_fetch_register): Added, first cut at
+	registration.
+
+	* rcd-prefs.c (rcd_prefs_get_registration_host): Added.
+	(rcd_prefs_get_org_id): Added.
+	(rcd_prefs_get_mid): Added.
+	(rcd_prefs_get_secret): Added.
+
+	* rcd-transact-log.c (get_mid, get_secret, get_premium_uri):
+	Removed.
+	(rcd_transact_log_send_transaction): Change to use RCDTransfer
+	instead of using Soup directly.  Use neat RCDTransferProtocolHTTP
+	functions to set headers and do HTTP POST.
+	(rcd_transact_log_send_success): Ditto.
+	(transaction_sent, success_sent): Changed to be callbacks from the
+	file_done signal on a RCDTransfer
+
+	* rcd-transfer-http.c (get_mid, get_secret): Removed.
+	(http_open): Set the HTTP method to the method set on the
+	protocol, instead of always SOUP_METHOD_GET.  If we don't have a
+	cache associated with this transfer, don't try to cache it
+	anywhere.  Call add_header_cb() for every header we have.
+	(add_header_cb): Added.  Adds the headers from the
+	RCDTransferProtocolHTTP to the SoupMessage.
+	(http_get_local_filename): Make this static.
+	(http_free): Added.  Frees the headers.
+	(rcd_transfer_protocol_http_set_method): Added.  Sets the HTTP
+	method to use for a transfer.
+	(rcd_transfer_protocol_http_set_request_body): Added.  Sets the
+	body for a HTTP request.
+	(rcd_transfer_protocol_http_set_request_header): Added.  Sets a
+	header for a HTTP request.
+	(rcd_transfer_protocol_http_get_response_header): Added.  Gets a
+	header from a HTTP response.
+	(rcd_transfer_protocol_http_new): Set the protocol free_func to
+	http_free() and initialize the method to SOUP_METHOD_GET.
+
+	* rcd.c (initialize_data): Call rcd_fetch_register().
+
+2002-08-01  Joe Shaw  <joe@ximian.com>
+
 	* rcd-transfer.c (rcd_transfer_finalize): Free the protocol.
 	(rcd_transfer_new): Add a URL parameter here and create the
 	RCDTransfereProtocol structure here, and set the URL and filename
@@ -14,7 +55,8 @@
 
 	* rcd-transfer-http.c (http_done): When pulling from the cache,
 	create a new RCDTransferProtocol structure and set the URL and
-	filename and call rcd_transfer_begin().
+	filename and call rcd_transfer_begin().g1
+	
 	(http_info): Get the X-RC-Auth header, if it's there, and store it
 	in the static variable.
 	(http_open): Send the X-RC-Auth header, if present, with any

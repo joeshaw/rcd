@@ -28,7 +28,7 @@
 
 #include <stdlib.h>
 
-#include <rc-debug.h>
+#include <libredcarpet.h>
 #include <libsoup/soup-uri.h>
 
 #include "gnome-config.h"
@@ -120,6 +120,33 @@ rcd_prefs_get_premium (void)
             CONFIG_PATH "/Network/enable-premium=FALSE");
     }
 } /* rcd_prefs_get_premium */
+
+const char *
+rcd_prefs_get_registration_host (void)
+{
+    static char *reg_host = NULL;
+
+    g_free (reg_host);
+    reg_host = NULL;
+
+    reg_host = gnome_config_get_string (
+        CONFIG_PATH "/Network/registration_host=http://activation.rc.ximian.com");
+    
+    return reg_host;
+} /* rcd_prefs_get_registration_url */
+
+const char *
+rcd_prefs_get_org_id (void)
+{
+    static char *org_id = NULL;
+
+    g_free (org_id);
+    org_id = NULL;
+
+    org_id = gnome_config_get_string (CONFIG_PATH "/Network/org_id");
+
+    return org_id;
+} /* rcd_prefs_get_org_id */
 
 const char *
 rcd_prefs_get_proxy (void)
@@ -230,3 +257,45 @@ rcd_prefs_set_syslog_level (gint level)
         CONFIG_PATH "/System/syslog-level", level);
     SYNC_CONFIG;
 } /* rcd_prefs_set_syslog_level */
+
+const char *
+rcd_prefs_get_mid (void)
+{
+    static char *mid = NULL;
+    RCBuffer *buf;
+
+    g_free (mid);
+    mid = NULL;
+
+    buf = rc_buffer_map_file (SYSCONFDIR "/mcookie");
+    if (!buf)
+        return NULL;
+
+    mid = g_strndup (buf->data, 36);
+    mid[36] = '\0';
+
+    rc_buffer_unmap_file (buf);
+
+    return mid;
+} /* rcd_prefs_get_mid */
+
+const char *
+rcd_prefs_get_secret (void)
+{
+    static char *secret = NULL;
+    RCBuffer *buf;
+
+    g_free (secret);
+    secret = NULL;
+
+    buf = rc_buffer_map_file (SYSCONFDIR "/partnernet");
+    if (!buf)
+        return NULL;
+
+    secret = g_strndup (buf->data, 36);
+    secret[36] = '\0';
+
+    rc_buffer_unmap_file (buf);
+
+    return secret;
+} /* rcd_prefs_get_secret */

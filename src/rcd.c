@@ -323,6 +323,8 @@ initialize_data (void)
     
     rcd_subscriptions_load ();
     
+    rcd_fetch_register ();
+
     /* This will fall back and download from the net if necessary */
     rcd_fetch_all_channels_local ();
 

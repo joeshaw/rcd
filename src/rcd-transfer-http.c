@@ -254,42 +254,6 @@ http_abort (RCDTransfer *t)
         soup_message_cancel (protocol->message);
 } /* http_abort */
 
-static char *
-get_mid (void)
-{
-    RCBuffer *buf;
-    char *mid;
-
-    buf = rc_buffer_map_file (SYSCONFDIR "/mcookie");
-    if (!buf)
-        return NULL;
-
-    mid = g_strndup (buf->data, 36);
-    mid[36] = '\0';
-
-    rc_buffer_unmap_file (buf);
-
-    return mid;
-} /* get_mid */
-
-static char *
-get_secret (void)
-{
-    RCBuffer *buf;
-    char *secret;
-
-    buf = rc_buffer_map_file (SYSCONFDIR "/partnernet");
-    if (!buf)
-        return NULL;
-
-    secret = g_strndup (buf->data, 36);
-    secret[36] = '\0';
-
-    rc_buffer_unmap_file (buf);
-
-    return secret;
-} /* get_secret */
-
 static SoupUri *
 get_premium_uri (const char *url)
 {
@@ -301,11 +265,21 @@ get_premium_uri (const char *url)
     if (!uri)
         return NULL;
 
-    uri->user = get_mid ();
-    uri->passwd = get_secret ();
+    uri->user = g_strdup (rcd_prefs_get_mid ());
+    uri->passwd = g_strdup (rcd_prefs_get_secret ());
 
     return uri;
 } /* get_premium_uri */
+
+static void
+add_header_cb (gpointer key, gpointer value, gpointer user_data)
+{
+    char *header_name = key;
+    char *header_value = value;
+    SoupMessage *message = user_data;
+
+    soup_message_add_header (message->request_headers, header_name, header_value);
+} /* add_header_cb */
 
 static int
 http_open (RCDTransfer *t)
@@ -333,7 +307,7 @@ http_open (RCDTransfer *t)
         return -1;
     }
     
-    protocol->message = message = soup_message_new (context, SOUP_METHOD_GET);
+    protocol->message = message = soup_message_new (context, protocol->method);
 
     /* Set up the proxy */
     proxy_url = rcd_prefs_get_proxy ();
@@ -350,9 +324,9 @@ http_open (RCDTransfer *t)
     /* We want to get the chunks out seperately */
     soup_message_set_flags (message, SOUP_MESSAGE_OVERWRITE_CHUNKS);
 
-    if (t->flags & RCD_TRANSFER_FLAGS_FORCE_CACHE ||
+    if (t->cache && (t->flags & RCD_TRANSFER_FLAGS_FORCE_CACHE ||
         (rcd_prefs_get_cache_enabled () &&
-         !(t->flags & RCD_TRANSFER_FLAGS_DONT_CACHE))) {
+         !(t->flags & RCD_TRANSFER_FLAGS_DONT_CACHE)))) {
         protocol->entry = rcd_cache_lookup (t->cache, t->url);
 
         if (protocol->entry) {
@@ -430,6 +404,9 @@ http_open (RCDTransfer *t)
             message->request_headers, "X-RC-Auth", rc_auth_header);
     }
 
+    if (protocol->request_headers)
+        g_hash_table_foreach (protocol->request_headers, add_header_cb, message);
+
     rc_debug (
         RC_DEBUG_LEVEL_DEBUG, "[%p]: Queuing up new transfer\n",
         message);
@@ -442,7 +419,7 @@ http_open (RCDTransfer *t)
     return 0;
 } /* http_open */
 
-char *
+static char *
 http_get_local_filename (RCDTransfer *t)
 {
     RCDTransferProtocolHTTP *protocol =
@@ -453,6 +430,74 @@ http_get_local_filename (RCDTransfer *t)
     else
         return NULL;
 } /* http_get_filename */
+
+static void
+http_free (RCDTransferProtocol *protocol)
+{
+    RCDTransferProtocolHTTP *http_protocol = 
+        (RCDTransferProtocolHTTP *) protocol;
+
+    if (http_protocol->request_headers)
+        g_hash_table_destroy (http_protocol->request_headers);
+
+    g_free (protocol);
+} /* http_free */
+
+void
+rcd_transfer_protocol_http_set_method (RCDTransferProtocolHTTP *protocol,
+                                       const char              *method)
+{
+    g_return_if_fail (protocol);
+    g_return_if_fail (method);
+
+    protocol->method = method;
+} /* rcd_transfer_protocol_http_set_method */
+
+void
+rcd_transfer_protocol_http_set_request_body (RCDTransferProtocolHTTP *protocol,
+                                             char                    *body,
+                                             gsize                    length)
+{
+    g_return_if_fail (protocol);
+    g_return_if_fail (body);
+    g_return_if_fail (length);
+
+    protocol->request_body = body;
+    protocol->request_length = length;
+}
+
+void
+rcd_transfer_protocol_http_set_request_header (RCDTransferProtocolHTTP *protocol,
+                                               const char              *header,
+                                               const char              *value)
+{
+    g_return_if_fail (protocol);
+    g_return_if_fail (header);
+    g_return_if_fail (value);
+
+    if (!protocol->request_headers) {
+        protocol->request_headers = g_hash_table_new_full (
+            g_str_hash, g_str_equal, g_free, g_free);
+    }
+
+    g_hash_table_insert (protocol->request_headers, g_strdup (header), g_strdup (value));
+}
+
+const char *
+rcd_transfer_protocol_http_get_response_header (RCDTransferProtocolHTTP *protocol,
+                                                const char              *header)
+{
+    g_return_val_if_fail (protocol, NULL);
+    g_return_val_if_fail (header, NULL);
+
+    if (!protocol->message) {
+        g_warning ("Attempted to get response header without a valid SoupMessage");
+        return NULL;
+    }
+
+    return soup_message_get_header (protocol->message->response_headers,
+                                    header);
+} /* rcd_transfer_protocol_http_get_response_header */
 
 RCDTransferProtocol *
 rcd_transfer_protocol_http_new (void)
@@ -468,6 +513,10 @@ rcd_transfer_protocol_http_new (void)
     protocol->get_local_filename_func = http_get_local_filename;
     protocol->open_func = http_open;
     protocol->abort_func = http_abort;
+
+    protocol->free_func = http_free;
+
+    http_protocol->method = SOUP_METHOD_GET;
 
     return protocol;
 } /* rcd_transfer_protocol_http_new */

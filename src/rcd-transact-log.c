@@ -30,59 +30,8 @@
 #include <libxml/tree.h>
 
 #include "rcd-prefs.h"
-
-static char *
-get_mid (void)
-{
-    RCBuffer *buf;
-    char *mid;
-
-    buf = rc_buffer_map_file (SYSCONFDIR "/mcookie");
-    if (!buf)
-        return NULL;
-
-    mid = g_strndup (buf->data, 36);
-    mid[36] = '\0';
-
-    rc_buffer_unmap_file (buf);
-
-    return mid;
-} /* get_mid */
-
-static char *
-get_secret (void)
-{
-    RCBuffer *buf;
-    char *secret;
-
-    buf = rc_buffer_map_file (SYSCONFDIR "/partnernet");
-    if (!buf)
-        return NULL;
-
-    secret = g_strndup (buf->data, 36);
-    secret[36] = '\0';
-
-    rc_buffer_unmap_file (buf);
-
-    return secret;
-} /* get_secret */
-
-static SoupUri *
-get_premium_uri (const char *url)
-{
-    SoupUri *uri;
-
-    uri = soup_uri_new (url);
-
-    /* An invalid URL was passed to us */
-    if (!uri)
-        return NULL;
-
-    uri->user = get_mid ();
-    uri->passwd = get_secret ();
-
-    return uri;
-} /* get_premium_uri */
+#include "rcd-transfer.h"
+#include "rcd-transfer-http.h"
 
 typedef enum {
     MANIFEST_UPDATE,
@@ -176,7 +125,7 @@ transaction_xml (RCPackageSList *install_packages,
 {
     xmlDoc *doc;
     xmlNode *root;
-    char *mid = get_mid ();
+    const char *mid = rcd_prefs_get_mid ();
     time_t curtime = time (NULL);
     RCDistroType *dt = rc_figure_distro ();
     char *tmp;
@@ -238,19 +187,24 @@ transaction_xml (RCPackageSList *install_packages,
 } /* transaction_xml */
 
 static void
-transaction_sent_cb(SoupMessage *message, gpointer data)
+transaction_sent (RCDTransfer *t, gpointer user_data)
 {
-    char **tid = data;
+    char **tid = user_data;
+    RCDTransferProtocolHTTP *protocol;
     const char *tid_string;
 
-    if (SOUP_MESSAGE_IS_ERROR (message)) {
-        g_warning ("An error was returned from the logging server: %d (%s)",
-                   message->errorcode,
-                   soup_error_get_phrase (message->errorcode));
-        goto cleanup;
+    if (rcd_transfer_get_error (t)) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "An error occurred trying to get a TID: %s",
+                  rcd_transfer_get_error_string (t));
+        return;
     }
 
-    tid_string = soup_message_get_header (message->response_headers, "X-TID");
+    g_assert (strcmp (t->protocol->name, "http") == 0);
+
+    protocol = (RCDTransferProtocolHTTP *) t->protocol;
+
+    tid_string = rcd_transfer_protocol_http_get_response_header (protocol, "X-TID");
 
     if (tid_string) {
         *tid = g_strdup (tid_string);
@@ -260,11 +214,11 @@ transaction_sent_cb(SoupMessage *message, gpointer data)
     else
         g_warning("No X-TID response");
 
-cleanup:
     /* Not a g_free() because this is an xmlChar * */
-    if (message->request.body)
-        free (message->request.body);
-} /* transaction_sent_cb */
+    free (protocol->request_body);
+
+    g_object_unref (t);
+} /* transaction_sent */
 
 void
 rcd_transact_log_send_transaction (RCPackageSList  *install_packages,
@@ -274,33 +228,31 @@ rcd_transact_log_send_transaction (RCPackageSList  *install_packages,
     xmlChar *xml_string;
     int bytes;
     char *url;
-    SoupUri *soup_uri;
-    SoupContext *context;
-    SoupMessage *message;
+    RCDTransfer *t;
+    RCDTransferProtocolHTTP *protocol;
     
-    xml_string = transaction_xml (install_packages, remove_packages, &bytes);
     url = g_strdup_printf ("%s/log.php", rcd_prefs_get_host ());
-    soup_uri = get_premium_uri (url);
 
-    if (!soup_uri) {
+    t = rcd_transfer_new (url, 0, NULL);
+
+    if (!t->protocol || strcmp (t->protocol->name, "http") != 0) {
         rc_debug (RC_DEBUG_LEVEL_WARNING, "Invalid log URL: %s", url);
         g_free (url);
         return;
     }
 
-    context = soup_context_from_uri (soup_uri);
-    g_free (url);
+    protocol = (RCDTransferProtocolHTTP *) t->protocol;
 
-    message = soup_message_new_full (
-        context, NULL, SOUP_BUFFER_USER_OWNED, xml_string, bytes);
+    rcd_transfer_protocol_http_set_method (protocol, SOUP_METHOD_POST);
 
-    if (rcd_prefs_get_http10_enabled ())
-        soup_message_set_http_version (message, SOUP_HTTP_1_0);
+    xml_string = transaction_xml (install_packages, remove_packages, &bytes);
+    rcd_transfer_protocol_http_set_request_body (
+        protocol, xml_string, bytes);
 
-    soup_context_unref (context);
-    soup_uri_free (soup_uri);
+    g_signal_connect (t, "file_done", 
+                      G_CALLBACK (transaction_sent), tid);
 
-    soup_message_queue (message, transaction_sent_cb, tid);
+    rcd_transfer_begin (t);
 } /* rcd_transact_log_send_transaction */
 
 static xmlChar *
@@ -314,7 +266,7 @@ success_xml(const char *tid,
     xmlChar *xml_string;
     gchar *tmp;
     time_t curtime = time (NULL);
-    char *mid = get_mid ();
+    const char *mid = rcd_prefs_get_mid ();
 
     doc = xmlNewDoc("1.0");
     root = xmlNewNode (NULL, "transaction_end");
@@ -337,18 +289,32 @@ success_xml(const char *tid,
 } /* success_xml */
 
 static void
-success_sent_cb(SoupMessage *message, gpointer data)
+success_sent (RCDTransfer *t, gpointer user_data)
 {
-    char *tid = data;
+    char *tid = user_data;
+    RCDTransferProtocolHTTP *protocol;
+
+    if (rcd_transfer_get_error (t)) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING, 
+                  "An error occurred trying to send success for TID '%s': %s",
+                  tid, rcd_transfer_get_error_string (t));
+        g_free (tid);
+        return;
+    }
+    
+    g_assert (strcmp (t->protocol->name, "http") == 0);
+
+    protocol = (RCDTransferProtocolHTTP *) t->protocol;
 
     rc_debug (RC_DEBUG_LEVEL_DEBUG, "Sent response for tid %s", tid);
 
     g_free (tid);
 
     /* Not a g_free() because it's an xmlChar * */
-    if (message->request.body)
-        free (message->request.body);
-} /* transaction_sent_cb */
+    free (protocol->request_body);
+
+    g_object_unref (t);
+} /* success_sent */
 
 void
 rcd_transact_log_send_success (char       *tid,
@@ -358,36 +324,34 @@ rcd_transact_log_send_success (char       *tid,
     xmlChar *xml_string;
     int bytes;
     char *url;
-    SoupUri *soup_uri;
-    SoupContext *context;
-    SoupMessage *message;
+    RCDTransfer *t;
+    RCDTransferProtocolHTTP *protocol;
 
     if (!tid) {
         /* There's no tid available, so we can't send a success code */
         return;
     }
 
-    xml_string = success_xml(tid, successful, msg, &bytes);
     url = g_strdup_printf ("%s/log.php", rcd_prefs_get_host ());
-    soup_uri = get_premium_uri (url);
 
-    if (!soup_uri) {
+    t = rcd_transfer_new (url, 0, NULL);
+
+    if (!t->protocol || strcmp (t->protocol->name, "http") != 0) {
         rc_debug (RC_DEBUG_LEVEL_WARNING, "Invalid log URL: %s", url);
         g_free (url);
         return;
     }
 
-    context = soup_context_from_uri (soup_uri);
-    g_free (url);
+    protocol = (RCDTransferProtocolHTTP *) t->protocol;
 
-    message = soup_message_new_full (
-        context, NULL, SOUP_BUFFER_USER_OWNED, xml_string, bytes);
+    rcd_transfer_protocol_http_set_method (protocol, SOUP_METHOD_POST);
 
-    if (rcd_prefs_get_http10_enabled ())
-        soup_message_set_http_version (message, SOUP_HTTP_1_0);
+    xml_string = success_xml (tid, successful, msg, &bytes);
+    rcd_transfer_protocol_http_set_request_body (
+        protocol, xml_string, bytes);
 
-    soup_context_unref (context);
-    soup_uri_free (soup_uri);
+    g_signal_connect (t, "file_done",
+                      G_CALLBACK (success_sent), tid);
 
-    soup_message_queue (message, success_sent_cb, tid);
+    rcd_transfer_begin (t);
 } /* rcd_transact_log_send_success */

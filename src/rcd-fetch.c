@@ -31,10 +31,46 @@
 #include <sys/types.h>
 
 #include <libredcarpet.h>
-#include "rcd-transfer.h"
 #include "rcd-cache.h"
 #include "rcd-news.h"
 #include "rcd-prefs.h"
+#include "rcd-transfer.h"
+#include "rcd-transfer-http.h"
+
+void
+rcd_fetch_register (void)
+{
+    char *url;
+    RCDTransfer *t;
+    RCDTransferProtocolHTTP *protocol;
+
+    /* We only do this in premium mode */
+    if (!rcd_prefs_get_premium () || !rcd_prefs_get_org_id ())
+        return;
+    
+    url = g_strdup_printf ("%s/register.php",
+                           rcd_prefs_get_registration_host ());
+
+    t = rcd_transfer_new (url, 0, NULL);
+    g_free (url);
+
+    /* If the protocol isn't HTTP, forget about it */
+    /* FIXME: Should we send out a warning here? */
+    if (!t->protocol || strcmp (t->protocol->name, "http") != 0)
+        return;
+
+    protocol = (RCDTransferProtocolHTTP *) t->protocol;
+
+    rcd_transfer_protocol_http_set_request_header (
+        protocol, "X-RC-MID", rcd_prefs_get_mid ());
+
+    rcd_transfer_protocol_http_set_request_header (
+        protocol, "X-RC-Secret", rcd_prefs_get_secret ());
+
+    rcd_transfer_begin_blocking (t);
+
+    g_object_unref (t);
+} /* rcd_fetch_register */
 
 static void
 write_file_contents (const char *filename, GByteArray *data)
