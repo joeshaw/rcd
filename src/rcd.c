@@ -359,7 +359,18 @@ initialize_data (void)
     if (!g_file_test (SYSCONFDIR "/partnernet", G_FILE_TEST_EXISTS))
         rcd_create_uuid (SYSCONFDIR "/partnernet");
 
-    rcd_fetch_register ();
+    /*
+     * We only want to do this when:
+     *
+     *    - We are in premium mode.
+     *    - We have an organization ID set in our config file.
+     *    - We have not previously registered, or we're forcing
+     *      re-registration.
+     */
+    if (rcd_prefs_get_premium () &&
+        rcd_prefs_get_org_id () &&
+        (!rcd_prefs_get_registered () || getenv ("RCX_FORCE_REGISTRATION")))
+        rcd_fetch_register ();
 
     /* This will fall back and download from the net if necessary */
     rcd_fetch_all_channels_local ();

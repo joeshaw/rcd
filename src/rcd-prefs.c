@@ -121,19 +121,19 @@ rcd_prefs_get_premium (void)
     }
 } /* rcd_prefs_get_premium */
 
-const char *
-rcd_prefs_get_registration_host (void)
+gboolean
+rcd_prefs_get_registered (void)
 {
-    static char *reg_host = NULL;
+    return gnome_config_get_bool (CONFIG_PATH "/Network/registered=FALSE");
+} /* rcd_prefs_get_registered */
 
-    g_free (reg_host);
-    reg_host = NULL;
+void
+rcd_prefs_set_registered (gboolean registered)
+{
+    gnome_config_set_bool (CONFIG_PATH "/Network/registered", registered);
 
-    reg_host = gnome_config_get_string (
-        CONFIG_PATH "/Network/registration_host=http://activation.rc.ximian.com");
-    
-    return reg_host;
-} /* rcd_prefs_get_registration_url */
+    SYNC_CONFIG;
+} /* rcd_prefs_set_registered */
 
 const char *
 rcd_prefs_get_org_id (void)

@@ -29,6 +29,7 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <sys/types.h>
+#include <sys/utsname.h>
 
 #include <libredcarpet.h>
 #include "rcd-cache.h"
@@ -41,15 +42,23 @@ void
 rcd_fetch_register (void)
 {
     char *url;
+    struct utsname uname_buf;
+    const char *hostname;
     RCDTransfer *t;
     RCDTransferProtocolHTTP *protocol;
+    const char *status;
 
-    /* We only do this in premium mode */
-    if (!rcd_prefs_get_premium () || !rcd_prefs_get_org_id ())
-        return;
-    
-    url = g_strdup_printf ("%s/register.php",
-                           rcd_prefs_get_registration_host ());
+    if (uname (&uname_buf) < 0) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Couldn't get hostname from uname()");
+        hostname = "(unknown)";
+    }
+    else
+        hostname = uname_buf.nodename;
+
+    url = g_strdup_printf ("%s/register.php?orgtoken=%s&hostname=%s",
+                           rcd_prefs_get_host (),
+                           rcd_prefs_get_org_id (), hostname);
 
     t = rcd_transfer_new (url, 0, NULL);
     g_free (url);
@@ -68,6 +77,11 @@ rcd_fetch_register (void)
         protocol, "X-RC-Secret", rcd_prefs_get_secret ());
 
     rcd_transfer_begin_blocking (t);
+
+    status = rcd_transfer_protocol_http_get_response_header (protocol,
+                                                             "X-RC-Status");
+    if (status && atoi (status) == 1)
+        rcd_prefs_set_registered (TRUE);
 
     g_object_unref (t);
 } /* rcd_fetch_register */

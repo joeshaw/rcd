@@ -47,7 +47,83 @@
 #define HTTP_RESPONSE_AUTH_FAILURE(x) ((x) == 401 || (x) == 407)
 #define HTTP_RESPONSE_NOT_MODIFIED(x) ((x) == 304)
 
+#define RCD_SOUP_MESSAGE_IS_ERROR(msg) \
+   msg->errorclass != SOUP_ERROR_CLASS_SUCCESS &&       \
+   msg->errorclass != SOUP_ERROR_CLASS_INFORMATIONAL && \
+   msg->errorclass != SOUP_ERROR_CLASS_REDIRECT
+
 static char *rc_auth_header = NULL;
+
+static void
+print_header (gpointer name, gpointer value, gpointer user_data)
+{
+    rc_debug (RC_DEBUG_LEVEL_DEBUG,
+              "[%p]: %s: %s",
+              user_data, (char *) name, (char *) value);
+} /* print_header */
+
+static void
+http_debug_pre_handler (SoupMessage *message, gpointer user_data)
+{
+    rc_debug (RC_DEBUG_LEVEL_DEBUG,
+              "[%p]: %d %s",
+              message,
+              message->errorcode,
+              message->errorphrase);
+
+    soup_message_foreach_header (message->response_headers,
+                                 print_header, message);
+} /* http_debug_pre_handler */
+
+static void
+http_debug_post_handler (SoupMessage *message, gpointer user_data)
+{
+    if (message->response.length) {
+        rc_debug (RC_DEBUG_LEVEL_DEBUG,
+                  "[%p]: Response body:\n%.*s\n",
+                  message, 
+                  (int) message->response.length,
+                  message->response.body);
+    }
+
+    rc_debug (RC_DEBUG_LEVEL_DEBUG,
+              "[%p]: Transfer finished",
+              message);
+} /* http_debug_post_handler */
+
+static void
+http_debug (SoupMessage *message)
+{
+    const SoupUri *uri = soup_context_get_uri (message->context);
+
+    rc_debug (RC_DEBUG_LEVEL_DEBUG,
+              "[%p]: Queuing up new transfer",
+              message);
+
+    rc_debug (RC_DEBUG_LEVEL_DEBUG,
+              "[%p]: %s %s%s%s HTTP/%s",
+              message,
+              message->method, uri->path,
+              uri->querystring ? "?" : "",
+              uri->querystring ? uri->querystring : "",
+              rcd_prefs_get_http10_enabled () ? "1.0" : "1.1");
+
+    soup_message_foreach_header (message->request_headers,
+                                 print_header, message);
+
+    if (message->request.length) {
+        rc_debug (RC_DEBUG_LEVEL_DEBUG,
+                  "[%p]: Request body:\n%.*s\n",
+                  message, 
+                  (int) message->request.length,
+                  message->request.body);
+    }
+
+    soup_message_add_handler (message, SOUP_HANDLER_PRE_BODY,
+                              http_debug_pre_handler, NULL);
+    soup_message_add_handler (message, SOUP_HANDLER_PRE_BODY,
+                              http_debug_post_handler, NULL);
+} /* http_debug_request */
 
 static void
 map_soup_error_to_rcd_transfer_error (SoupMessage *message, RCDTransfer *t)
@@ -97,16 +173,36 @@ map_soup_error_to_rcd_transfer_error (SoupMessage *message, RCDTransfer *t)
     }
 } /* map_soup_error_to_rcd_transfer_error */
 
-#define RCD_SOUP_MESSAGE_IS_ERROR(msg) \
-   msg->errorclass != SOUP_ERROR_CLASS_SUCCESS &&       \
-   msg->errorclass != SOUP_ERROR_CLASS_INFORMATIONAL && \
-   msg->errorclass != SOUP_ERROR_CLASS_REDIRECT
+static void
+copy_header_cb (gpointer name, gpointer value, gpointer user_data)
+{
+    char *header_name = name;
+    char *header_value = value;
+    RCDTransferProtocolHTTP *protocol = user_data;
+
+    g_hash_table_insert (protocol->response_headers,
+                         g_strdup (header_name),
+                         g_strdup (header_value));
+} /* copy_header_cb */
+
 static void
 http_done (SoupMessage *message, gpointer user_data)
 {
     RCDTransfer *t = user_data;
     RCDTransferProtocolHTTP *protocol =
         (RCDTransferProtocolHTTP *) t->protocol;
+
+    /*
+     * Soup will free the response headers after we leave this function,
+     * so we have to copy them.  Ew.
+     */
+    if (protocol->response_headers)
+        g_hash_table_destroy (protocol->response_headers);
+    
+    protocol->response_headers = g_hash_table_new_full (
+        g_str_hash, g_str_equal, g_free, g_free);
+    soup_message_foreach_header (
+        message->response_headers, copy_header_cb, protocol);
 
     if (RCD_SOUP_MESSAGE_IS_ERROR (message) &&
         !message->errorcode != SOUP_ERROR_NOT_MODIFIED)
@@ -157,7 +253,7 @@ http_content_length(SoupMessage *message, gpointer data)
     t->file_size = atoi (cl);
 
     rc_debug (
-        RC_DEBUG_LEVEL_DEBUG, "[%p]: Got Content-Length: %s\n",
+        RC_DEBUG_LEVEL_DEBUG, "[%p]: Got Content-Length: %s",
         message, cl);
 } /* http_content_length */
 
@@ -171,7 +267,7 @@ http_etag(SoupMessage *message, gpointer data)
     rcd_cache_entry_set_entity_tag (entry, etag);
 
     rc_debug (
-        RC_DEBUG_LEVEL_DEBUG, "[%p]: Got ETag: %s\n",
+        RC_DEBUG_LEVEL_DEBUG, "[%p]: Got ETag: %s",
         message, etag);
 } /* http_etag */
 
@@ -186,7 +282,7 @@ http_last_modified(SoupMessage *message, gpointer data)
     rcd_cache_entry_set_modification_time (entry, last_modified);
 
     rc_debug (
-        RC_DEBUG_LEVEL_DEBUG, "[%p]: Got Last-Modified: %s\n",
+        RC_DEBUG_LEVEL_DEBUG, "[%p]: Got Last-Modified: %s",
         message, last_modified);
 } /* http_last_modified */
 
@@ -404,14 +500,15 @@ http_open (RCDTransfer *t)
             message->request_headers, "X-RC-Auth", rc_auth_header);
     }
 
-    if (protocol->request_headers)
-        g_hash_table_foreach (protocol->request_headers, add_header_cb, message);
-
-    rc_debug (
-        RC_DEBUG_LEVEL_DEBUG, "[%p]: Queuing up new transfer\n",
-        message);
+    if (protocol->request_headers) {
+        g_hash_table_foreach (protocol->request_headers,
+                              add_header_cb, message);
+    }
 
     soup_context_unref (context);
+
+    http_debug (message);
+
     soup_message_queue (message, http_done, t);
 
     soup_uri_free (uri);
@@ -439,6 +536,9 @@ http_free (RCDTransferProtocol *protocol)
 
     if (http_protocol->request_headers)
         g_hash_table_destroy (http_protocol->request_headers);
+
+    if (http_protocol->response_headers)
+        g_hash_table_destroy (http_protocol->response_headers);
 
     g_free (protocol);
 } /* http_free */
@@ -490,13 +590,13 @@ rcd_transfer_protocol_http_get_response_header (RCDTransferProtocolHTTP *protoco
     g_return_val_if_fail (protocol, NULL);
     g_return_val_if_fail (header, NULL);
 
-    if (!protocol->message) {
-        g_warning ("Attempted to get response header without a valid SoupMessage");
+    if (!protocol->response_headers) {
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Trying to get a response header before transfer");
         return NULL;
     }
 
-    return soup_message_get_header (protocol->message->response_headers,
-                                    header);
+    return g_hash_table_lookup (protocol->response_headers, header);
 } /* rcd_transfer_protocol_http_get_response_header */
 
 RCDTransferProtocol *
