@@ -28,7 +28,7 @@
 
 #include <glib.h>
 
-#include <rcd-privileges.h>
+#include "rcd-privileges.h"
 
 typedef struct _RCDIdentity RCDIdentity;
 

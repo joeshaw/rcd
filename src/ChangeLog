@@ -1,5 +1,11 @@
 2003-03-17  Ian Peters  <itp@ximian.com>
 
+	* rcd-query.c: remove two unnecessary includes
+
+	* rcd-identity.h: "rcd-privileges.h", not <rcd-privileges.h>
+
+2003-03-17  Ian Peters  <itp@ximian.com>
+
 	* rcd-transaction.c (transact_step_cb): move the update of the
 	pending object to after the addition of the corresponding message,
 	so that update signal handlers will see the appropriate message.

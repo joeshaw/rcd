@@ -27,9 +27,7 @@
 #include "rcd-query.h"
 
 #include <glib.h>
-#include <xmlrpc.h>
 #include <libredcarpet.h>
-#include "rcd-rpc.h"
 
 static struct QueryTypeStrings {
     RCDQueryType type;
