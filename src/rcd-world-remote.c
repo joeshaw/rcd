@@ -127,7 +127,7 @@ rcd_world_remote_assemble (RCWorldService *service, GError **error)
     }
 
     pending = rcd_world_remote_fetch (RCD_WORLD_REMOTE (service),
-                                      local, &tmp_error);
+                                      FALSE, &tmp_error);
 
     if (tmp_error != NULL) {
         g_propagate_error (error, tmp_error);

@@ -1,3 +1,12 @@
+2005-01-27  James Willcox  <james@ximian.com>
+
+	* rcd-transfer-http.c: (http_open):
+	* rcd-world-remote.c: (rcd_world_remote_assemble):
+
+	Don't use cached data when assembling a remote world.  This is
+	a workaround for a soup bug with auth.  Also, remove the previous
+	hack.  (the entry below)
+
 2005-01-20  James Willcox  <james@ximian.com>
 
 	* rcd-transfer-http.c: (http_open):

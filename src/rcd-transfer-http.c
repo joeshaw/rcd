@@ -478,8 +478,6 @@ http_open (RCDTransfer *t)
     /* Connect to the authenticate signals */
     g_signal_connect (session, "authenticate",
                       G_CALLBACK (http_authenticate), t);
-    g_signal_connect (session, "reauthenticate",
-                      G_CALLBACK (http_authenticate), t);
 
     protocol->message = soup_message_new (protocol->method, t->url);
 
