@@ -92,6 +92,10 @@ map_soup_error_to_rcd_transfer_error (SoupMessage *message, RCDTransfer *t)
     }
 } /* map_soup_error_to_rcd_transfer_error */
 
+#define RCD_SOUP_MESSAGE_IS_ERROR(msg) \
+   msg->errorclass != SOUP_ERROR_CLASS_SUCCESS &&       \
+   msg->errorclass != SOUP_ERROR_CLASS_INFORMATIONAL && \
+   msg->errorclass != SOUP_ERROR_CLASS_REDIRECT
 static void
 http_done (SoupMessage *message, gpointer user_data)
 {
@@ -99,7 +103,8 @@ http_done (SoupMessage *message, gpointer user_data)
     RCDTransferProtocolHTTP *protocol =
         (RCDTransferProtocolHTTP *) t->protocol;
 
-    if (SOUP_MESSAGE_IS_ERROR (message))
+    if (RCD_SOUP_MESSAGE_IS_ERROR (message) &&
+        !message->errorcode != SOUP_ERROR_NOT_MODIFIED)
         map_soup_error_to_rcd_transfer_error (message, t);
 
     if (!rcd_transfer_get_error (t)) {
