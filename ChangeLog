@@ -1,3 +1,7 @@
+2003-04-09  Frank Belew  <frb@ximian.com>
+
+	* configure.in: AC_PREREQ(2.52)
+
 2003-04-08  Joe Shaw  <joe@ximian.com>
 
 	* configure.in: Require libredcarpet >= 1.4.2
