@@ -36,6 +36,8 @@ rcd_SOURCES = 			\
 	rcd-log.h		\
 	rcd-log-entry.c		\
 	rcd-log-entry.h		\
+	rcd-mirror.c		\
+	rcd-mirror.h		\
 	rcd-module.c		\
 	rcd-module.h		\
 	rcd-news.c		\
@@ -60,6 +62,8 @@ rcd_SOURCES = 			\
 	rcd-rpc.h		\
 	rcd-rpc-log.c		\
 	rcd-rpc-log.h		\
+	rcd-rpc-mirror.c	\
+	rcd-rpc-mirror.h	\
 	rcd-rpc-news.c		\
 	rcd-rpc-news.h		\
 	rcd-rpc-packsys.c	\

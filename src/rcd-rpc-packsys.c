@@ -188,7 +188,8 @@ refresh_channels_cb (gpointer user_data)
         return;
     }
 
-    rcd_fetch_news();
+    rcd_fetch_news ();
+    rcd_fetch_mirrors ();
 
     rcd_subscriptions_load ();
 

@@ -1,3 +1,24 @@
+2003-03-31  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-mirror.c: Added.  Basic code for dealing with mirrors.
+
+	* rcd-rpc-mirror.c: Added.  An xml-rpc interface for dealing with
+	mirrors.
+
+	* Makefile.am (rcd_SOURCES): Added rcd-mirror.[ch] and
+	rcd-rpc-mirror.[ch].
+	
+	* rcd.c (initialize_data): Fetch the mirrors list at start-up.
+	(initialize_rpc): Register our mirror-related methods.
+
+	* rcd-fetch.c (rcd_fetch_mirrors): Added.  Downloads & parses
+	the mirrors file.
+	(rcd_fetch_mirrors_local): Added.  Tries to fetch the locally
+	cached version of the mirrors file.
+
+	* rcd-rpc-packsys.c (refresh_channels_cb): Refresh the list of
+	mirrors along with the channels, new, etc.
+
 2003-03-28  Joe Shaw  <joe@ximian.com>
 
 	* rcd-recurring.c: Add a bunch of debugging code so we can see

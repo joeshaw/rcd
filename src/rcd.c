@@ -50,6 +50,7 @@
 #include "rcd-rpc.h"
 #include "rcd-rpc-packsys.h"
 #include "rcd-rpc-log.h"
+#include "rcd-rpc-mirror.h"
 #include "rcd-rpc-news.h"
 #include "rcd-rpc-prefs.h"
 #include "rcd-rpc-users.h"
@@ -389,6 +390,7 @@ initialize_rpc (void)
 {
     rcd_rpc_packsys_register_methods (rc_get_world ());
     rcd_rpc_log_register_methods ();
+    rcd_rpc_mirror_register_methods ();
     rcd_rpc_news_register_methods ();
     rcd_rpc_prefs_register_methods ();
     rcd_rpc_users_register_methods ();
@@ -555,6 +557,10 @@ initialize_data (void)
 
     if (!no_network && !rcd_fetch_news_local ())
         rcd_fetch_news ();
+
+    if (!no_network && !rcd_fetch_mirrors_local ())
+        rcd_fetch_mirrors ();
+
 } /* initialize_data */
 
 static void

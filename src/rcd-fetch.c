@@ -33,6 +33,7 @@
 
 #include <libredcarpet.h>
 #include "rcd-cache.h"
+#include "rcd-mirror.h"
 #include "rcd-news.h"
 #include "rcd-prefs.h"
 #include "rcd-transfer.h"
@@ -899,6 +900,117 @@ rcd_fetch_news_local (void)
 
     return TRUE;
 }
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
+
+static gchar *
+get_mirrors_url (void)
+{
+    return g_strdup ("http://red-carpet.ximian.com/mirrors.xml"); /* FIXME */
+}
+
+static void
+parse_mirrors_xml (xmlDoc *doc)
+{
+    xmlNode *node;
+
+    g_return_if_fail (doc != NULL);
+
+    node = xmlDocGetRootElement (doc);
+    g_return_if_fail (node != NULL);
+
+    node = node->xmlChildrenNode;
+    while (node != NULL) {
+        if (! g_strcasecmp (node->name, "mirror")) {
+            RCDMirror *mirror = rcd_mirror_parse (node);
+            if (mirror)
+                rcd_mirror_add (mirror);
+        }
+        node = node->next;
+    }
+}
+
+void
+rcd_fetch_mirrors (void)
+{
+    RCDTransfer *t;
+    gchar *url = NULL;
+    GByteArray *data = NULL;
+    xmlDoc *doc = NULL;
+
+    url = get_mirrors_url ();
+    t = rcd_transfer_new (url, 0, rcd_cache_get_normal_cache ());
+    data = rcd_transfer_begin_blocking (t);
+
+    g_assert (data);
+
+    if (rcd_transfer_get_error (t)) {
+        
+        rc_debug (RC_DEBUG_LEVEL_CRITICAL,
+                  "Attempt to download mirror list failed: %s",
+                  rcd_transfer_get_error_string (t));
+        goto cleanup;
+    }
+
+    doc = xmlParseMemory (data->data, data->len);
+    if (doc == NULL) {
+        rc_debug (RC_DEBUG_LEVEL_CRITICAL,
+                  "Couldn't parse mirrors XML file.");
+        goto cleanup;
+    }
+
+    rcd_mirror_clear ();
+    parse_mirrors_xml (doc);
+    write_file_contents ("/var/lib/rcd/mirrors.xml", data);
+    
+ cleanup:
+
+    if (url)
+        g_free (url);
+
+    if (t)
+        g_object_unref (t);
+
+    if (data)
+        g_byte_array_free (data, TRUE);
+
+    if (doc)
+        xmlFreeDoc (doc);
+}
+
+gboolean
+rcd_fetch_mirrors_local (void)
+{
+    gchar *local_file;
+    RCBuffer *buf;
+    xmlDoc *doc;
+
+    local_file = "/var/lib/rcd/mirrors.xml";
+
+    if (! g_file_test (local_file, G_FILE_TEST_EXISTS))
+        return FALSE;
+
+    buf = rc_buffer_map_file (local_file);
+
+    if (! buf)
+        return FALSE;
+
+    doc = xmlParseMemory (buf->data, buf->size);
+
+    rc_buffer_unmap_file (buf);
+
+    if (! doc)
+        return FALSE;
+
+    rcd_mirror_clear ();
+    parse_mirrors_xml (doc);
+
+    xmlFreeDoc (doc);
+    
+    return TRUE;
+}
+
+/* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
 
 static GHashTable *package_transfer_table = NULL;
 

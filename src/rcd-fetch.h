@@ -111,6 +111,12 @@ void     rcd_fetch_news       (void);
 gboolean rcd_fetch_news_local (void);
 
 /*
+  Download mirrors
+*/
+void     rcd_fetch_mirrors       (void);
+gboolean rcd_fetch_mirrors_local (void);
+
+/*
  * Download a list of packages and call the specified callback when they
  * all finish.
  */
