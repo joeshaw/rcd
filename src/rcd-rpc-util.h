@@ -32,6 +32,7 @@
 #include "rcd-query.h"
 
 /* Keep these in sync with rcfault.py! */
+#define RCD_RPC_FAULT_TYPE_MISMATCH          -501 /* matches xmlrpc-c */
 #define RCD_RPC_FAULT_INVALID_STREAM_TYPE    -503 /* matches xmlrpc-c */
 #define RCD_RPC_FAULT_PERMISSION_DENIED      -600
 #define RCD_RPC_FAULT_PACKAGE_NOT_FOUND      -601

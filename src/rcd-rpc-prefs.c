@@ -107,19 +107,74 @@ set_string_func (xmlrpc_env *env, xmlrpc_value *value)
 static gpointer
 set_boolean_func (xmlrpc_env *env, xmlrpc_value *value)
 {
-    xmlrpc_bool bool;
+    xmlrpc_type type;
 
-    xmlrpc_parse_value (env, value, "b", &bool);
+    type = xmlrpc_value_type (value);
 
-    return (gpointer) bool;
+    if (type == XMLRPC_TYPE_BOOL) {
+        xmlrpc_bool bool;
+
+        xmlrpc_parse_value (env, value, "b", &bool);
+        return (gpointer) bool;
+    } else if (type == XMLRPC_TYPE_STRING) {
+        char *str;
+
+        xmlrpc_parse_value (env, value, "s", &str);
+        if (env->fault_occurred)
+            return NULL;
+
+        if (str[0] == '1' ||
+            !g_strcasecmp (str, "true") || 
+            !g_strcasecmp (str, "yes") ||
+            !g_strcasecmp (str, "on"))
+        {
+            return (gpointer) (xmlrpc_bool) TRUE;
+        } else if (str[0] == '0' ||
+                   !g_strcasecmp (str, "false") ||
+                   !g_strcasecmp (str, "no") ||
+                   !g_strcasecmp (str, "off"))
+        {
+            return (gpointer) (xmlrpc_bool) FALSE;
+        }
+    }
+
+    xmlrpc_env_set_fault (env, RCD_RPC_FAULT_TYPE_MISMATCH,
+                          "Expected boolean type");
+    return NULL;
 } /* set_boolean_func */
 
 static gpointer
 set_int_func (xmlrpc_env *env, xmlrpc_value *value)
 {
+    xmlrpc_type type;
     xmlrpc_int32 i;
 
-    xmlrpc_parse_value (env, value, "i", &i);
+    type = xmlrpc_value_type (value);
+
+    if (type == XMLRPC_TYPE_INT) {
+        xmlrpc_parse_value (env, value, "i", &i);
+        return (gpointer) i;
+    } else if (type == XMLRPC_TYPE_STRING) {
+        char *str;
+        char *endptr;
+
+        xmlrpc_parse_value (env, value, "s", &str);
+        if (env->fault_occurred)
+            return NULL;
+
+        i = (xmlrpc_int32) strtol (str, &endptr, 10);
+
+        /* Check to see if any part of the string isn't an int */
+        if (*str == '\0' || *endptr != '\0') {
+            xmlrpc_env_set_fault (env, RCD_RPC_FAULT_TYPE_MISMATCH,
+                                  "Expected integer type");
+            return NULL;
+        }
+    } else {
+        xmlrpc_env_set_fault (env, RCD_RPC_FAULT_TYPE_MISMATCH,
+                              "Expected integer type");
+        return NULL;
+    }
     
     return (gpointer) i;
 } /* set_int_func */
