@@ -51,7 +51,7 @@ AM_PROG_LIBTOOL
 
 ### get cflags and libs
 
-PKG_CHECK_MODULES(RCD, glib-2.0 gmodule-2.0 gobject-2.0 libxml-2.0 libredcarpet >= 1.4)
+PKG_CHECK_MODULES(RCD, glib-2.0 gmodule-2.0 gobject-2.0 libxml-2.0 libredcarpet >= 1.4.2)
 
 ###
 ### libsoup magic
