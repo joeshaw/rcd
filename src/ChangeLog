@@ -1,3 +1,19 @@
+2003-02-04  Jon Trowbridge  <trow@ximian.com>
+
+	* rcd-fetch.c (rcd_fetch_news): Clear the cached news before
+	fetching.
+	(rcd_fetch_news_local): Clear the cached news before fetching.
+	(fetch_icon_cb): Don't leak the icon's local filename.
+
+	* rcd-news.c (rcd_news_clear): g_slist_free after the loop
+	finishes, not inside the loop.  This would have been a crasher,
+	but luckily this function was never called.
+
+	* rcd-transaction.c (rcd_transaction_status_ref): Add a paranoid
+	check of status->refs.
+	(rcd_transaction_status_unref): Add a paranoid check of
+	status->refs.
+
 2003-01-31  Joe Shaw  <joe@ximian.com>
 
 	* rcd-transaction.c (rcd_transaction_status_unref): g_slist_free()

@@ -101,8 +101,8 @@ rcd_news_clear (void)
     for (iter = news_slist; iter != NULL; iter = iter->next) {
         RCDNews *news = iter->data;
         rcd_news_free (news);
-        g_slist_free (news_slist);
     }
+    g_slist_free (news_slist);
     news_slist = NULL;
 }
 

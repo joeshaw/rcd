@@ -83,6 +83,7 @@ static RCDTransactionStatus *
 rcd_transaction_status_ref (RCDTransactionStatus *status)
 {
     g_return_val_if_fail (status, NULL);
+    g_return_val_if_fail (status->refs > 0, NULL);
 
     status->refs++;
 
@@ -93,6 +94,7 @@ static void
 rcd_transaction_status_unref (RCDTransactionStatus *status)
 {
     g_return_if_fail (status);
+    g_return_if_fail (status->refs > 0);
 
     status->refs--;
 

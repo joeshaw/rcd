@@ -661,15 +661,19 @@ fetch_icon_cb (RCChannel *channel, gpointer user_data)
 
     if (!refetch) {
         char *local_file;
+        gboolean have_icon;
 
         local_file = rcd_cache_get_local_filename (
             rcd_cache_get_icon_cache (rc_channel_get_id (channel)),
             rc_channel_get_icon_file (channel));
 
-        if (g_file_test (local_file, G_FILE_TEST_EXISTS)) {
-            /* We have the icon, don't bother to fetch it. */
+        have_icon = g_file_test (local_file, G_FILE_TEST_EXISTS);
+
+        g_free (local_file);
+
+        /* We have the icon, don't bother to fetch it. */
+        if (have_icon)
             return;
-        }
     }
 
     rcd_fetch_channel_icon (channel);
@@ -828,6 +832,7 @@ rcd_fetch_news (void)
         goto cleanup;
     }
 
+    rcd_news_clear ();
     parse_news_xml (doc);
     write_file_contents ("/var/lib/rcd/news.rdf", data);
 
@@ -870,6 +875,7 @@ rcd_fetch_news_local (void)
     if (! doc)
         return FALSE;
 
+    rcd_news_clear ();
     parse_news_xml (doc);
 
     xmlFreeDoc (doc);
