@@ -1,3 +1,7 @@
+2002-07-16  Frank Belew  <frb@ximian.com>
+
+	* Makefile.am: added rcd.8 to EXTRA_DIST to fix compiles
+
 2002-07-16 Aaron Weber <aaron@ximian.com>
 	* Makefile.am: added man page
 	* rcd.8: new file. Man page.
