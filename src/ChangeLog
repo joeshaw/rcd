@@ -1,3 +1,11 @@
+2003-08-22  Joe Shaw  <joe@ximian.com>
+
+	* rcd-mirror.c, rcd-rpc-mirror.c, rcd-world-remote.c: Fix up some
+	licensing text.
+
+	* rcd-xmlrpc.c: Add licensing info at the top, reindent the file
+	to follow the existing rcd coding style.
+
 2003-08-21  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc-packsys.c (packsys_refresh_all_channels): If we don't
