@@ -55,7 +55,7 @@ static GHashTable *method_info_hash = NULL;
 static RCDRPCMethodData *current_method_data = NULL;
 
 static xmlrpc_mem_block *
-serialize_permission_fault (void)
+serialize_fault (int fault_code, const char *fault_string)
 {
     xmlrpc_env tmp_env;
     xmlrpc_env fault;
@@ -67,8 +67,7 @@ serialize_permission_fault (void)
     output = xmlrpc_mem_block_new (&tmp_env, 0);
     XMLRPC_FAIL_IF_FAULT (&tmp_env);
 
-    xmlrpc_env_set_fault (&fault, RCD_RPC_FAULT_PERMISSION_DENIED,
-                          "Permission denied");
+    xmlrpc_env_set_fault (&fault, fault_code, fault_string);
 
     xmlrpc_serialize_fault (&tmp_env, output, &fault);
     XMLRPC_FAIL_IF_FAULT (&tmp_env);
@@ -77,7 +76,7 @@ serialize_permission_fault (void)
 
 cleanup:
     return NULL;
-} /* serialize_permission_fault */
+} /* serialize_fault */
 
 static void
 access_control_check (xmlrpc_env   *env,
@@ -180,7 +179,8 @@ unix_rpc_callback (RCDUnixServerHandle *handle)
     }
     
     if (!identity) {
-        output = serialize_permission_fault ();
+        output = serialize_fault (RCD_RPC_FAULT_PERMISSION_DENIED,
+                                  "Permission denied");
         goto finish_request;
     }
 
@@ -236,7 +236,8 @@ soup_rpc_callback (SoupServerContext *context, SoupMessage *msg, gpointer data)
                   "Couldn't authenticate %s", username);
         
         rcd_identity_free (identity);
-        output = serialize_permission_fault ();
+        output = serialize_fault (RCD_RPC_FAULT_CANT_AUTHENTICATE,
+                                  "Couldn't authenticate user");
         
         goto finish_request;
     }

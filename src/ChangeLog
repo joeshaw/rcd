@@ -1,3 +1,12 @@
+2002-07-19  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-util.h: Add RCD_RPC_FAULT_CANT_AUTHENTICATE, which is
+	different from PERMISSION_DENIED.
+
+	* rcd-rpc.c (serialize_fault): Rename from
+	serialize_permission_fault() and take a fault code and string as
+	parameters.
+
 2002-07-19  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-rpc.c (unix_rpc_callback): Only use the rc-passwd file
