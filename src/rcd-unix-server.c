@@ -65,7 +65,10 @@ read_cred (GIOChannel *channel, RCDUnixServerHandle *handle)
 
     sockfd = g_io_channel_unix_get_fd (channel);
 
+    errno = 0;
     rc = getsockopt (sockfd, SOL_SOCKET, SO_PEERCRED, &cred, &size);
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "##### post getsockopt() errno: %d (%s)",
+              errno, strerror(errno));
 
     if (rc < 0) {
         handle->cred_available = FALSE;

@@ -1,3 +1,13 @@
+2002-07-22  Joe Shaw  <joe@ximian.com>
+
+	* rcd-rpc-packsys.c (packsys_transact): Block shutdowns, since we
+	don't want to be quitting in the middle of a transaction.
+	(run_transaction): After the transaction is finished, allow
+	shutdowns again.
+
+	* rcd.c (main): Add a signal handler for SIGTERM and SIGQUIT
+	(signal_handler): Added, shuts down the daemon cleanly.
+
 2002-07-22  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-identity.c (identity_update_cb): Chmod the password file to

@@ -40,6 +40,7 @@
 #include "rcd-query-packages.h"
 #include "rcd-rpc.h"
 #include "rcd-rpc-util.h"
+#include "rcd-shutdown.h"
 #include "rcd-subscriptions.h"
 
 static gboolean packsys_lock = FALSE;
@@ -1002,6 +1003,9 @@ run_transaction(gpointer user_data)
     if (!rcd_prefs_get_cache_enabled ())
         cleanup_temp_package_files (status->packages_to_download);
 
+    /* Allow shutdowns again. */
+    rcd_shutdown_allow ();
+
     /* Update the list of system packages */
     rc_world_get_system_packages (rc_get_world ());
 
@@ -1255,6 +1259,12 @@ packsys_transact(xmlrpc_env   *env,
 
     rc_package_slist_ref(status->install_packages);
     rc_package_slist_ref(status->remove_packages);
+
+    /*
+     * We don't want to allow the shutting down of the daemon while we're
+     * in the middle of a transaction.
+     */
+    rcd_shutdown_block ();
 
     /*
      * If we have to download files, start the download.  Otherwise,

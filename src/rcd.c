@@ -28,9 +28,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <unistd.h>
-#include <syslog.h>
 #include <popt.h>
+#include <signal.h>
+#include <syslog.h>
+#include <unistd.h>
 
 
 #include <glib.h>
@@ -233,11 +234,27 @@ initialize_data (void)
         rcd_fetch_news ();
 } /* initialze_data */
 
+static void
+signal_handler (int sig_num)
+{
+    const char *sig_name = NULL;
+
+    if (sig_num == SIGQUIT)
+        sig_name = "SIGQUIT";
+    else if (sig_num == SIGTERM)
+        sig_name = "SIGTERM";
+    else
+        g_assert_not_reached ();
+
+    rc_debug (RC_DEBUG_LEVEL_INFO, "Received %s... Shutting down.", sig_name);
+    rcd_shutdown ();
+} /* signal_handler */
 
 int
 main (int argc, const char **argv)
 {
     GMainLoop *main_loop;
+    struct sigaction sig_action;
 
     g_type_init ();
 
@@ -249,6 +266,13 @@ main (int argc, const char **argv)
 
     root_check ();
     daemonize ();
+
+    /* Set up SIGTERM and SIGQUIT handlers */
+    sig_action.sa_handler = signal_handler;
+    sigemptyset (&sig_action.sa_mask);
+    sig_action.sa_flags = 0;
+    sigaction (SIGTERM, &sig_action, NULL);
+    sigaction (SIGQUIT, &sig_action, NULL);
 
     rcd_privileges_init ();
 
