@@ -8,9 +8,13 @@ INCLUDES =						\
 
 noinst_PROGRAMS = rcd
 
-rcd_SOURCES = 		\
-	rcd-query.h	\
-	rcd-query.c	\
+rcd_SOURCES = 			\
+	rcd-auth.h		\
+	rcd-auth.c		\
+	rcd-identity.h		\
+	rcd-identity.c		\
+	rcd-query.h		\
+	rcd-query.c		\
 	rcd.c
 
 rcd_LDADD =	\

@@ -406,9 +406,9 @@ rcd_query (RCWorld     *world,
                 goto after_iteration;
             }
 
-            if (part[i].query_str == NULL) {
+            if (parts[i].query_str == NULL) {
                 g_warning ("Skipping part '%s' with NULL query string",
-                           part[i].key);
+                           parts[i].key);
                 goto after_iteration;
             }
 
