@@ -47,10 +47,10 @@
 
 extern "C" {
 
-static gchar *
+static const char *
 rc_you_string_to_char (const std::string str)
 {
-    return g_strdup (str.c_str ());
+    return str.c_str ();
 }
 
 static RCPackageImportance
@@ -75,7 +75,7 @@ rc_you_kind_to_rc_importance (PMYouPatch::Kind kind)
 static gboolean
 rc_you_solvable_to_rc_package_spec (RCPackageSpec *spec, PMSolvablePtr solvable)
 {
-    gchar *name;
+    const char *name;
 
     name = rc_you_string_to_char (solvable->name ());
     spec->nameq = g_quark_from_string (name);
@@ -117,7 +117,7 @@ static RCYouPatch *
 rc_you_patch_from_yast_patch (PMYouPatchPtr source)
 {
     RCYouPatch *patch;
-    const gchar *script;
+    const char *script;
 
     patch = rc_you_patch_new ();
     patch->arch = rc_arch_from_string (rc_you_string_to_char (source->arch ()));
@@ -208,6 +208,9 @@ rc_you_wrapper_install_patches (RCYouPatchSList  *list,
         g_set_error (error, RC_ERROR, RC_ERROR, buf);
         g_free (buf);
     }
+
+    settings = NULL;
+    patch_info = NULL;
 }
 
 static RCYouPatchSList *
@@ -250,6 +253,7 @@ read_installed_patches (PMYouPatchInfoPtr patch_info,
         }
 
         patch = rc_you_patch_from_yast_patch (you_patch);
+        you_patch = NULL;
         if (patch) {
             patch->installed = TRUE;
             patch->channel = rc_channel_ref (channel);
@@ -271,6 +275,9 @@ rc_you_wrapper_get_installed_patches (RCChannel *channel)
 
     list = read_installed_patches (patch_info, channel);
 
+    settings = NULL;
+    patch_info = NULL;
+
     return list;
 }
 
@@ -278,14 +285,11 @@ void
 rc_you_wrapper_products_foreach (SuseProductCallback callback, gpointer user_data)
 {
     PMYouSettingsPtr settings = new PMYouSettings ();
-    PMYouPatchInfoPtr patchInfo = new PMYouPatchInfo( settings );
+    PMYouPatchInfoPtr patchInfo = new PMYouPatchInfo (settings);
 
-    InstYou you( patchInfo, settings );
-    you.initProduct();
+    InstYou you (patchInfo, settings);
+    you.initProduct ();
 
-    /*     g_print ("local dir: %s\n", rc_you_string_to_char (you.settings ()->rootAttachPoint ().asString ())); */
-    /*     g_print ("install dir: %s\n", rc_you_string_to_char (you.settings ()->installDir ().asString ())); */
-    
     std::list<PMYouProductPtr> products = you.settings ()->products();
 
     std::list<PMYouProductPtr>::const_iterator itProd;
@@ -301,6 +305,9 @@ rc_you_wrapper_products_foreach (SuseProductCallback callback, gpointer user_dat
                            user_data))
                 break;
     }
+
+    settings = NULL;
+    patchInfo = NULL;
 }
 
 }

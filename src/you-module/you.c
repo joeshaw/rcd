@@ -39,6 +39,7 @@
 #include <rcd-rpc.h>
 #include <rcd-world-remote.h>
 #include <rcd-transaction.h>
+#include <rcd-shutdown.h>
 
 #include "rc-you-patch.h"
 #include "rc-world-you.h"
@@ -449,6 +450,23 @@ you_abort_download (xmlrpc_env   *env,
 
 void rcd_module_load (RCDModule *);
 
+#ifdef RC_PACKAGE_FIND_LEAKS
+
+static gboolean
+spew_cb (gpointer unused)
+{
+    rc_patch_spew_leaks ();
+
+    return FALSE;
+}
+
+static void
+spew (gpointer unused)
+{
+    g_idle_add (spew_cb, NULL);
+}
+#endif
+
 void
 rcd_module_load (RCDModule *module)
 {
@@ -481,4 +499,9 @@ rcd_module_load (RCDModule *module)
                              "view", NULL);
     rcd_rpc_register_method ("rcd.you.abort_download", you_abort_download,
                              "view", NULL);
+
+#ifdef RC_PACKAGE_FIND_LEAKS
+    rcd_shutdown_add_handler (spew, NULL);
+#endif    
+
 } /* rcd_module_load */

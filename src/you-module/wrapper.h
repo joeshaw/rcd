@@ -33,9 +33,12 @@
 extern "C" {
 #endif /* __cplusplus */
 
-typedef gboolean (*SuseProductCallback) (gchar *name, gchar *version,
-                                         gchar *arch, gboolean business,
-                                         gchar *patch_path, gpointer user_data);
+typedef gboolean (*SuseProductCallback) (const gchar *name,
+                                         const gchar *version,
+                                         const gchar *arch,
+                                         gboolean business,
+                                         const gchar *patch_path,
+                                         gpointer user_data);
 
 RCYouPatchSList *rc_you_wrapper_get_installed_patches (RCChannel *channel);
 void rc_you_wrapper_install_patches (RCYouPatchSList  *list,

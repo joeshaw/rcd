@@ -56,8 +56,8 @@ destroy_product (SuseProduct *product)
 }
 
 static gboolean
-add_product (gchar *name, gchar *version, gchar *arch,
-             gboolean business, gchar *patch_path, gpointer user_data)
+add_product (const gchar *name, const gchar *version, const gchar *arch,
+             gboolean business, const gchar *patch_path, gpointer user_data)
 {
     SuseProduct *p;
     gchar *suse_prefix;

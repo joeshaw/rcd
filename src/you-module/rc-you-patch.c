@@ -25,6 +25,10 @@
 
 #include "rc-you-patch.h"
 
+#ifdef RC_PACKAGE_FIND_LEAKS
+static GHashTable *leaked_patches = NULL;
+#endif
+
 RCYouPatch *
 rc_you_patch_new (void)
 {
@@ -32,6 +36,13 @@ rc_you_patch_new (void)
 
     patch->arch = RC_ARCH_UNKNOWN;
     patch->refs = 1;
+
+#ifdef RC_PACKAGE_FIND_LEAKS
+    if (leaked_patches == NULL)
+        leaked_patches = g_hash_table_new (NULL, NULL);
+
+    g_hash_table_insert (leaked_patches, patch, patch);
+#endif
 
     return patch;
 }
@@ -56,6 +67,11 @@ rc_you_patch_free (RCYouPatch *patch)
     g_slist_free (patch->packages);
 
     rc_channel_unref (patch->channel);
+
+#ifdef RC_PACKAGE_FIND_LEAKS
+    g_assert (leaked_patches);
+    g_hash_table_remove (leaked_patches, patch);
+#endif
 
     g_free (patch);
 }
@@ -115,4 +131,27 @@ rc_you_patch_slist_lookup_licenses (RCYouPatchSList *list)
     }
 
     return licenses;
+}
+
+#ifdef RC_PACKAGE_FIND_LEAKS
+static void
+leaked_pkg_cb (gpointer key, gpointer val, gpointer user_data)
+{
+    RCYouPatch *pkg = key;
+
+    g_print (">!> Leaked %s (refs=%d)\n",
+             rc_package_spec_to_str_static (RC_PACKAGE_SPEC (pkg)),
+             pkg->refs);
+}
+#endif
+
+void
+rc_patch_spew_leaks (void)
+{
+#ifdef RC_PACKAGE_FIND_LEAKS
+    if (leaked_patches) 
+        g_hash_table_foreach (leaked_patches,
+                              leaked_pkg_cb,
+                              NULL);
+#endif
 }

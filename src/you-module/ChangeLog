@@ -1,3 +1,17 @@
+2005-01-13  Tambet Ingo  <tambet@ximian.com>
+
+	* you.c (spew): Add ifdef'ed debug code.
+
+	* wrapper.cc (rc_you_string_to_char): Return a constant. No need to
+	duplicate everything here.
+	Set PMYou* objects to NULL when done.
+
+	* suse-product.c (add_product): Arguments to this are supposed to be
+	constants.
+
+	* rc-you-patch.c: Add some ifdef'ed code to help dealing with
+	refcounting issues.
+
 2004-12-22  Tambet Ingo  <tambet@ximian.com>
 
 	* rc-world-you.c (rc_world_add_patches): Try to download patch list
