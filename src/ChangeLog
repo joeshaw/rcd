@@ -1,5 +1,10 @@
 2002-07-01  Jon Trowbridge  <trow@ximian.com>
 
+	* rcd-rpc-util.c (rcd_rc_package_to_xmlrpc): If the package
+	we are XML-RPCifying is a syatem package, try to guess
+	the channel of origin and put that information in the
+	"channel_guess" field.
+
 	* rcd-log.c (package_name_match): Make string matches
 	case-insensitive.
 	(host_match): Make string matches case-insensitive.

@@ -50,6 +50,7 @@ rcd_rc_package_spec_to_xmlrpc(RCPackageSpec *spec,
 cleanup:
 } /* rcd_rc_package_spec_to_xmlrpc */
 
+
 xmlrpc_value *
 rcd_rc_package_to_xmlrpc (RCPackage *package, xmlrpc_env *env)
 {
@@ -82,9 +83,20 @@ rcd_rc_package_to_xmlrpc (RCPackage *package, xmlrpc_env *env)
     }
 
     /* Extra data useful to a client */
-    if (package->installed)
-        installed = TRUE;
-    else {
+    if (package->installed) {
+        RCChannel *guess;
+
+        installed = TRUE; 
+
+        guess = rc_world_guess_package_channel (rc_get_world (),
+                                                package);
+
+        if (guess != NULL)
+            RCD_XMLRPC_STRUCT_SET_INT(env, value, "channel_guess",
+                                      rc_channel_get_id (guess));
+
+    } else {
+
         RCPackage *sys_pkg;
 
         sys_pkg = rc_world_get_package (
