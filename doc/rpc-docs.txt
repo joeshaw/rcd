@@ -1,0 +1,269 @@
+Last updated: Tue Sep  2 14:59:00 EDT 2003
+Written by: Joe Shaw <joe@ximian.com>
+
+General notes
+-------------
+rcd methods are namespaced, with the convention
+"rcd.<namespace>.<method_name>".
+
+If an argument or struct member is optional or conditional, it is
+suffixed with the [optional] tag.
+
+Return values are generally specified by their type.  Some commands,
+however, always return a certain value (usually 0 or 1), and in those
+cases the value itself is mentioned.
+
+Each method below has a "Faults" listing.  While some are listed as
+"none", every method can return a couple of faults.  If the arguments
+to the command are incorrect, a type_mismatch fault (-501) is thrown.
+If the method does not exist, an undefined_method fault (-506) is
+thrown.  If the calling user cannot be authenticated, a
+cant_authenticate (-610) fault is thrown. If the calling user does not
+have privileges to execute the command, a permission_denied fault
+(-600) is thrown.
+
+A full list of faults is below.
+
+All arguments that are absolute times are in UNIX time format.
+
+List of faults
+--------------
+type_mismatch          = -501
+
+	The type expected does not match the type given.  This is
+	usually thrown when arguments to a method are incorrect.
+
+invalid_stream_type    = -503
+		      
+	FIXME
+
+undefined_method       = -506
+
+	This method does not exist on the daemon.
+
+permission_denied      = -600
+
+	The calling user does not have the privileges to execute this
+	method.
+
+package_not_found      = -601
+
+	The specified package cannot be found.
+
+package_is_newest      = -602
+
+	FIXME
+
+failed_dependencies    = -603
+
+	The dependencies for the packages specified should be
+	successfully resolved.
+
+invalid_search_type    = -604
+
+	The search type specified is invalid.
+
+invalid_package_file   = -605
+
+	The package file specified is invalid.
+
+invalid_channel        = -606
+
+	The channel specified is invalid.
+
+invalid_transaction_id = -607
+
+	The transaction ID specified is invalid.
+
+invalid_preference     = -608
+
+	The preferenced name specified is invalid.
+
+locked                 = -609
+
+	The transaction lock is held by something else and this
+	command could not be executed.  This usually comes up when the
+	user tries to run two transactions at the same time, or tries
+	to refresh while a transaction is running.
+
+cant_authenticate      = -610
+
+	The daemon cannot authenticate this user (usually over HTTP,
+	the username and/or password are incorrect)
+
+cant_refresh           = -611
+
+	The daemon could not successfully refresh the channel data.
+
+no_icon                = -612
+
+	No channel icon is available for this channel (FIXME?)
+
+cant_activate          = -613
+
+	This system could not be activated.
+
+not_supported          = -614
+
+	This feature is not supported by the daemon.
+
+license_not_found      = -615
+
+	The license could not be found.
+
+cant_set_preference    = -616
+
+	The preference could not be set, usually due to an invalid
+	value.
+
+invalid_service        = -617
+
+	The specified service is invalid.
+
+System methods
+--------------
+
+rcd.system.protocol_version()
+
+	Returns: int
+	Faults: none
+
+ 	Instructs clients which protocol version the daemon supports.
+        This method was added for rcd 1.4.5, so clients should be
+	prepared to handle this if it doesn't exist.  If it doesn't
+	exist, the protocol version should be assumed to be 1.  rcd
+	1.x uses protocol version 1, and rcd 2.0 uses protocol version
+	2.
+
+rcd.system.ping()
+
+	Returns: struct {
+		 name : string,
+		 copyright : string,
+		 major_version : int,
+		 minor_version : int,
+		 micro_version : int,
+		 current_time : int }
+	Faults: none
+
+	This method returns information about the running daemon,
+	including the name, copyright string, version information,
+	and current time.
+
+rcd.system.query_module(string module_name, int required_major,
+			int required_minor)
+
+	Returns: bool
+	Faults: none
+
+	This method queries the daemon to see if a module by the name
+	of "module_name" is installed.  It also checks to see if
+	the module's major version is equal to "required_major" and if
+	the module's minor version is greater than or equal to
+	"required_minor".  When writing modules, generally the major
+	number is incremented whenever an incompatible interface
+	changes happens (either methods are changed or remoted), and
+	the minor number is incremented whenever a forward-compatible
+	interface is added (for example, new methods).
+
+rcd.system.poll_pending(int pending_id)
+			    
+	Returns: struct {
+		 id : int,
+		 description : string,
+		 percent_complete : double,
+		 completed_size : int [optional],
+		 total_size : int [optional],
+		 status : string,
+		 is_active : int,
+		 elapsed_sec : int [optional],
+		 remaining_sec : int [optional],
+		 expected_sec : int [optional],
+		 start_time : int [optional],
+		 last_time : int [optional],
+		 error_msg : string [optional],
+		 messages : array (string) }
+	Faults: none
+
+	Provides information on "pending_id".  A pending ID is
+	returned by a few different commands, most notably channel
+	refreshing and package transacting, for asynchronous
+	operations which can take some time to complete.  "status" is
+	one of "pre-begin", "running", "aborted", "failed", or
+	"finished".  "is_active" indicates whether the pending is
+	still running.  Inactive pendings are cleaned up from time to
+	time.  "error_msg" will usually be unset unless the operation
+	either failed or was aborted.  "messages" is a variable-length
+	array containing useful out-of-band messages.  With package
+	transactions, for example, each step ("Downloading foo",
+	"Verifying foo", "Installing foo", etc.) is an entry in the
+	messages.  Messages are sent with every poll, so it's the
+	client's responsibility to keep an index into the array.
+
+	(If "pending_id" isn't a valid pending ID, rcd will return an
+	empty struct instead of throwing a fault.)
+
+rcd.system.get_all_pending()
+
+	Returns: array (int)
+	Faults: none
+
+	Returns all of the currently active pending ids.
+
+rcd.system.shutdown()
+
+	Returns: 1
+	Faults: none
+
+	Shuts down the daemon.
+
+rcd.system.restart()
+
+	Returns: 1
+	Faults: none
+
+	Restarts the daemon.
+
+rcd.system.activate(string activation_code, string email,
+		    string alias [optional])
+
+	Returns: 0 on success.
+	Faults: cant_activate (on failure)
+
+	Activates the daemon against Red Carpet Enterprise servers.
+
+rcd.system.get_recurring()
+
+	Returns: array [struct {
+		 label : string,
+		 when : int,
+		 when_str : string,
+		 when_delta : int [optional],
+		 prev : int [optional],
+		 prev_str : string [optional],
+		 prev_delta : int [optional],
+		 count : int }]
+	Faults: none
+
+	Returns a list of all of the recurring actions in the daemon.
+	"when" is an absolute time indicating when this action will
+	next run.  "when_str" is a string either in the format
+	"Sep 01, 19:25" or "now".  "when_delta" is a relative time
+	between the current time and when the action will next run.
+	The optional "prev" members indicate when the action most
+	recently ran.  "count" is the number of times this action has
+	run.
+
+rcd.system.get_cache_size()
+
+	Returns: int
+	Faults: none
+
+	Returns the current package cache size in bytes.
+
+rcd.system.flush_cache()
+
+	Returns: 0
+	Faults: none
+
+	Flushes the package cache.
