@@ -1,3 +1,29 @@
+2003-05-28  Joe Shaw  <joe@ximian.com>
+
+	* rcd-prefs.c (rcd_prefs_get_heartbeat_interval): Make the
+	heartbeat every 2 hours by default, from 6.
+
+	* rcd-rpc-packsys.c (packsys_get_rollback_actions): Added.  Gets
+	the list of rollback actions from a certain point in time.
+	(packsys_rollback): Make this use the new rollback and transaction
+	stuff.  Get a list of actions from a certain time and set up a
+	transaction with the changes.  Connect a signal to the
+	transaction_finished signal so we can apply the rollback changes
+	(rcd_rpc_packsys_register_methods): Register the rollback method.
+
+	* rcd-rpc-system.c (system_queue_method): Added.  Queues up
+	XML-RPC methods to be called at the heartbeat.
+	(rcd_rpc_system_register_methods): Register the queue_method
+	method.
+
+	* rcd-rpc.c: Add a queue of XML-RPC methods to be executed at
+	heartbeats.
+	(rcd_rpc_queue_is_empty, rcd_rpc_queue_push, rcd_rpc_queue_pop):
+	Added, pretty straightforward.  Currently the code to execute the
+	method is commented out pending an xmlrpc-c patch.
+	(rcd_rpc_init): Add a heartbeat function to flush the queue.
+	(pop_queue_cb): Flush the method queue.
+
 2003-05-27  Joe Shaw  <joe@ximian.com>
 
 	* rcd-rpc.c (rcd_rpc_init): Bump up the XML-RPC size limit from 2

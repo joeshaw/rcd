@@ -434,9 +434,9 @@ rcd_prefs_set_require_verified_certificates (gboolean enabled)
 guint32
 rcd_prefs_get_heartbeat_interval (void)
 {
-    /* 21600 seconds == 6 hours */
+    /* 7200 seconds == 2 hours */
     return (guint32) gnome_config_get_int (
-        get_config_path ("/System/heartbeat=21600"));
+        get_config_path ("/System/heartbeat=7200"));
 } /* rcd_prefs_get_heartbeat_interval */
 
 #define HEARTBEAT_MINIMUM 1800

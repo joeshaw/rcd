@@ -1575,21 +1575,13 @@ synth_package_from_update (RCPackage *real_package, RCPackageUpdate *update)
     return package;
 }
 
-static xmlrpc_value *
-packsys_get_rollback_actions (xmlrpc_env   *env,
-                              xmlrpc_value *param_array,
-                              void         *user_data)
+static void
+rollback_actions_to_packages (RCRollbackActionSList  *actions,
+                              RCPackageSList        **install_packages,
+                              RCPackageSList        **remove_packages)
 {
-    time_t when;
-    RCRollbackActionSList *actions = NULL, *iter;
-    RCPackageSList *install_packages = NULL, *remove_packages = NULL;
-    xmlrpc_value *xinstall = NULL, *xremove = NULL;
-    xmlrpc_value *result = NULL;
+    RCRollbackActionSList *iter;
 
-    xmlrpc_parse_value (env, param_array, "(i)", &when);
-    XMLRPC_FAIL_IF_FAULT (env);
-
-    actions = rc_rollback_get_actions (when);
     for (iter = actions; iter; iter = iter->next) {
         RCRollbackAction *action = iter->data;
         RCPackage *package;
@@ -1601,14 +1593,34 @@ packsys_get_rollback_actions (xmlrpc_env   *env,
 
             package = synth_package_from_update (real_package, update);
 
-            install_packages = g_slist_prepend (install_packages, package);
+            *install_packages = g_slist_prepend (*install_packages, package);
         }
         else {
             package = rc_package_ref (rc_rollback_action_get_package (action));
 
-            remove_packages = g_slist_prepend (remove_packages, package);
+            *remove_packages = g_slist_prepend (*remove_packages, package);
         }
     }
+}
+
+static xmlrpc_value *
+packsys_get_rollback_actions (xmlrpc_env   *env,
+                              xmlrpc_value *param_array,
+                              void         *user_data)
+{
+    time_t when;
+    RCRollbackActionSList *actions = NULL;
+    RCPackageSList *install_packages = NULL, *remove_packages = NULL;
+    xmlrpc_value *xinstall = NULL, *xremove = NULL;
+    xmlrpc_value *result = NULL;
+
+    xmlrpc_parse_value (env, param_array, "(i)", &when);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    actions = rc_rollback_get_actions (when);
+    rollback_actions_to_packages (actions,
+                                  &install_packages,
+                                  &remove_packages);
 
     xinstall = rcd_rc_package_slist_to_xmlrpc_op_array (install_packages,
                                                         RCD_PACKAGE_OP_INSTALL,
@@ -1646,13 +1658,93 @@ cleanup:
     return result;
 }
 
+static void
+rollback_transaction_finished_cb (RCDTransaction *transaction,
+                                  gpointer        user_data)
+{
+    RCRollbackActionSList *actions = user_data;
+
+    rc_debug (RC_DEBUG_LEVEL_ALWAYS, "Restoring saved changed files");
+    rc_rollback_restore_files (actions);
+
+    rc_rollback_action_slist_free (actions);
+}
+
 static xmlrpc_value *
 packsys_rollback (xmlrpc_env   *env,
                   xmlrpc_value *param_array,
                   void         *user_data)
 {
     RCWorld *world = (RCWorld *) user_data;
-    RCRollbackActionSList *actions = NULL, *iter;
+    time_t when;
+    RCDTransactionFlags flags;
+    char *client_id, *client_version;
+    RCRollbackActionSList *actions;
+    RCDTransaction *transaction;
+    RCPackageSList *install_packages = NULL, *remove_packages = NULL;
+    RCDRPCMethodData *method_data;
+    int download_id, transaction_id, step_id;
+    xmlrpc_value *result = NULL;
+
+    xmlrpc_parse_value (env, param_array, "(iiss)",
+                        &when, &flags, &client_id, &client_version);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    actions = rc_rollback_get_actions (when);
+    rollback_actions_to_packages (actions,
+                                  &install_packages,
+                                  &remove_packages);
+
+    method_data = rcd_rpc_get_method_data ();
+    
+    /* Check our permissions to install/upgrade/remove */
+    check_install_package_auth (env, world, install_packages,
+                                method_data->identity);
+    XMLRPC_FAIL_IF_FAULT (env);
+    
+    check_remove_package_auth (env, remove_packages, method_data->identity);
+    XMLRPC_FAIL_IF_FAULT (env);
+
+    transaction = rcd_transaction_new ();
+    rcd_transaction_set_install_packages (transaction, install_packages);
+    rcd_transaction_set_remove_packages (transaction, remove_packages);
+    rcd_transaction_set_flags (transaction, flags);
+    rcd_transaction_set_client_info (transaction,
+                                     client_id, client_version,
+                                     method_data->host,
+                                     method_data->identity);
+
+    g_signal_connect (transaction, "transaction_finished",
+                      G_CALLBACK (rollback_transaction_finished_cb),
+                      actions);
+
+    rcd_transaction_begin (transaction);
+
+    download_id = rcd_transaction_get_download_pending_id (transaction);
+    transaction_id = rcd_transaction_get_transaction_pending_id (transaction);
+    step_id = rcd_transaction_get_step_pending_id (transaction);
+
+    g_object_unref (transaction);
+
+    result = xmlrpc_build_value (env, "(iii)",
+                                 download_id, transaction_id, step_id);
+    XMLRPC_FAIL_IF_FAULT(env);
+
+cleanup:
+    if (install_packages) {
+        rc_package_slist_unref (install_packages);
+        g_slist_free (install_packages);
+    }
+
+    if (remove_packages) {
+        rc_package_slist_unref (remove_packages);
+        g_slist_free (remove_packages);
+    }
+
+    if (env->fault_occurred)
+        return NULL;
+
+    return result;
 }
 
 /* ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** */
@@ -2266,6 +2358,11 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
     rcd_rpc_register_method("rcd.packsys.get_rollback_actions",
                             packsys_get_rollback_actions,
                             "view",
+                            world);
+
+    rcd_rpc_register_method("rcd.packsys.rollback",
+                            packsys_rollback,
+                            "",
                             world);
 
     rcd_rpc_register_method("rcd.packsys.transact",
