@@ -1,5 +1,12 @@
 2002-11-06  Joe Shaw  <joe@ximian.com>
 
+	* rcd.c (debug_message_handler): When logging rcd-messages,
+	prepend a timestamp.  When logging to syslog, add the pid to the
+	name when calling openlog() to be more consistent with other apps,
+	and don't put it in the message itself.
+
+2002-11-06  Joe Shaw  <joe@ximian.com>
+
 	* rcd.c (option_parsing): Move debug_level and syslog_level out of
 	here and make them global options.  Don't call
 	rcd_prefs_set_{debug|syslog}_level() since we don't want the

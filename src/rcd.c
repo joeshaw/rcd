@@ -154,29 +154,39 @@ static int pid_for_messages = 0;
 static void
 debug_message_handler (const char *str, RCDebugLevel level, gpointer user_data)
 {
-    char *log_msg;
-
     if (pid_for_messages == 0)
         pid_for_messages = getpid ();
 
-    log_msg = g_strdup_printf ("[%d] %s\n", pid_for_messages, str);
-
     if (level <= rcd_prefs_get_debug_level ()) {
+        struct tm *tm;
+        time_t now;
+        char timestr[128];
+        char *log_msg;
+
+        time (&now);
+        tm = localtime (&now);
+        strftime (timestr, 128, "%b %e %T", tm);
+
+        log_msg = g_strdup_printf ("%s [%d] %s\n",
+                                   timestr, pid_for_messages, str);
         /* If we've daemonized, stderr has been redirected to the
            /tmp/rcd-messages file.  Since stderr might not actually
            be stderr, we also fsync. */
         write (STDERR_FILENO, log_msg, strlen (log_msg));
         fsync (STDERR_FILENO);
+
+        g_free (log_msg);
     }
 
     /* FIXME: Use RCDebug's display_level instead of hardcoding value here? */
     if (!non_daemon_flag && level <= rcd_prefs_get_syslog_level ()) {
-        openlog ("rcd", 0, LOG_DAEMON);
-        syslog (LOG_INFO, "%s", log_msg);
-        closelog ();
-    }
+        char *log_name = g_strdup_printf ("rcd[%d]", pid_for_messages);
 
-    g_free (log_msg);
+        openlog (log_name, 0, LOG_DAEMON);
+        syslog (LOG_INFO, "%s", str);
+        closelog ();
+        g_free (log_name);
+    }
 }
 
 static void
