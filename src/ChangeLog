@@ -1,5 +1,9 @@
 2002-08-05  Joe Shaw  <joe@ximian.com>
 
+	* rcd-recurring.[ch]: Fix the license.
+
+2002-08-05  Joe Shaw  <joe@ximian.com>
+
 	* rcd-rpc-prefs.c (pref_table): Make this dynamically allocated.
 	(get_pref, prefs_set_pref, prefs_set_pref): Update for the
 	dynamically allocated array.
