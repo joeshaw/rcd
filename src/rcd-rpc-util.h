@@ -19,6 +19,10 @@ xmlrpc_value *rcd_rc_package_to_xmlrpc(RCPackage  *package,
 xmlrpc_value *rcd_rc_package_slist_to_xmlrpc_array(RCPackageSList *rc_packages,
                                                    xmlrpc_env     *env);
 
+RCPackage    *rcd_xmlrpc_streamed_to_rc_package (RCPackman    *packman,
+                                                 xmlrpc_value *value,
+                                                 xmlrpc_env   *env);
+
 xmlrpc_value *rcd_rc_channel_to_xmlrpc(RCChannel  *channel,
                                        xmlrpc_env *env);
 

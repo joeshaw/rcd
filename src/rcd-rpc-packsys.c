@@ -132,22 +132,23 @@ cleanup:
     return xmlrpc_packages;
 } /* packsys_query */
 
-#if 0
 static xmlrpc_value *
-packman_query_file(xmlrpc_env   *env,
-                   xmlrpc_value *param_array,
-                   void         *user_data)
+packsys_query_file (xmlrpc_env   *env,
+                    xmlrpc_value *param_array,
+                    void         *user_data)
 {
     RCWorld *world = (RCWorld *) user_data;
     RCPackman *packman;
     RCPackage *rc_package;
     xmlrpc_value *value;
-    xmlrpc_value *xmlrpc_package;
+    xmlrpc_value *xmlrpc_package = NULL;
+
+    packman = rc_world_get_packman (world);
 
     xmlrpc_parse_value(env, param_array, "(V)", &value);
     XMLRPC_FAIL_IF_FAULT(env);
 
-    rc_package = rcd_xmlrpc_to_rc_package(packman, value, env);
+    rc_package = rcd_xmlrpc_streamed_to_rc_package(packman, value, env);
     XMLRPC_FAIL_IF_FAULT(env);
 
     if (!rc_package) {
@@ -164,8 +165,9 @@ cleanup:
         return NULL;
 
     return xmlrpc_package;
-} /* packman_query_file */
+} /* packsys_query_file */
 
+#if 0
 static void
 transact_start_cb(RCPackman *packman,
                   int total_steps,
@@ -471,16 +473,18 @@ rcd_rpc_packsys_register_methods(RCWorld *world)
         rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
         world);
 
+    rcd_rpc_register_method(
+        "rcd.packsys.query_file",
+        packsys_query_file,
+        rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
+        world);
+
     rcd_rpc_register_method("rcd.packsys.get_channels",
                             packsys_get_channels,
                             rcd_auth_action_list_from_1 (RCD_AUTH_VIEW),
                             world);
 
 #if 0
-    rcd_rpc_register_method(
-        "rcd.packsys.query_file",
-        packman_query_file,
-        packman);
     rcd_rpc_register_method(
         "rcd.packsys.transact",
         packman_transact,

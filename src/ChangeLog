@@ -1,5 +1,20 @@
 2002-05-30  Joe Shaw  <joe@ximian.com>
 
+	* rcd-auth.c (rcd_string_to_auth_action_list): Fix an invalid
+	return type.
+
+	* rcd-rpc-packsys.c (packsys_query_file): Uncomment this and bring
+	it up to snuff, register the call.
+
+	* rcd-rpc-util.c (rcd_xmlrpc_streamed_to_rc_package): Added.
+	Takes either a filename or a streamed package, queries it, and
+	returns an RCPackage instance.
+
+	* rcd-unix-server.c (read_data): Only verify the credentials if
+	they haven't been verified previously.
+
+2002-05-30  Joe Shaw  <joe@ximian.com>
+
 	* rcd-auth.c: Add a new special auth type, "superuser", which
 	grants all rights to any user who has it.
 

@@ -97,6 +97,57 @@ cleanup:
     return package_array;
 } /* rcd_rc_package_slist_to_xmlrpc_array */
 
+RCPackage *
+rcd_xmlrpc_streamed_to_rc_package (RCPackman    *packman,
+                                   xmlrpc_value *value,
+                                   xmlrpc_env   *env)
+{
+    xmlrpc_value *data;
+    char *file_name;
+    RCPackage *package;
+
+    xmlrpc_parse_value(env, value, "V", &data);
+    XMLRPC_FAIL_IF_FAULT(env);
+
+    if (xmlrpc_value_type(data) == XMLRPC_TYPE_STRING) {
+        /* Filename */
+        xmlrpc_parse_value(env, data, "s", &file_name);
+        XMLRPC_FAIL_IF_FAULT(env);
+
+        package = rc_packman_query_file(packman, file_name);
+
+        package->package_filename = g_strdup(file_name);
+    }
+    else if (xmlrpc_value_type(data) == XMLRPC_TYPE_BASE64) {
+        /* Inlined package */
+        char *package_file;
+        size_t package_size;
+        int fd;
+
+        xmlrpc_parse_value(env, data, "6", &package_file, &package_size);
+        XMLRPC_FAIL_IF_FAULT(env);
+
+        fd = g_file_open_tmp("package-XXXXXX", &file_name, NULL);
+        rc_write(fd, package_file, package_size);
+        rc_close(fd);
+
+        package = rc_packman_query_file(packman, file_name);
+
+        /* FIXME: Should do some sort of intelligent caching here */
+
+        package->package_filename = file_name;
+    }
+    else {
+        xmlrpc_env_set_fault(env, -503, "Invalid package stream type");
+    }
+
+cleanup:
+    if (env->fault_occurred)
+        return NULL;
+
+    return package;
+} /* rcd_xmlrpc_streamed_to_rc_package */
+
 xmlrpc_value *
 rcd_rc_channel_to_xmlrpc (RCChannel  *channel,
                           xmlrpc_env *env)

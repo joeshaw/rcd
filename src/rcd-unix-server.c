@@ -66,7 +66,8 @@ read_data(GIOChannel *iochannel,
     int bytes_written;
     int total_written = 0;
 
-    read_cred(iochannel, handle);
+    if (!handle->cred_available)
+        read_cred(iochannel, handle);
 
     err = g_io_channel_read (iochannel,
                              read_buf,
