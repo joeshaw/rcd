@@ -829,6 +829,9 @@ rcd_rc_channel_to_xmlrpc (RCChannel  *channel,
     RCD_XMLRPC_STRUCT_SET_STRING (env, value, "description",
                                   rc_channel_get_description (channel));
 
+    RCD_XMLRPC_STRUCT_SET_INT (env, value, "hidden",
+                               rc_channel_is_hidden (channel) ? 1 : 0);
+
     if (env->fault_occurred) {
         if (value)
             xmlrpc_DECREF (value);
