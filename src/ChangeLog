@@ -1,3 +1,19 @@
+2002-08-08  Joe Shaw  <joe@ximian.com>
+
+	* rcd-cache.c: Fix some cache contention issues
+	(rcd_cache_entry_new): Don't insert the cache entry into the cache
+	immediately.
+	(rcd_cache_entry_open): Instead of saving to package.tmp, use
+	g_mkstemp(), and save the temporary filename in the cache entry.
+	(rcd_cache_entry_close): Rename the file into place and insert it
+	into the cache.
+	(rcd_cache_entry_free): Free the temp filename.
+
+	* rcd-rpc-packsys.c (fail_transaction): Added.  Split out of
+	run_transaction().
+	(run_transaction): If the transaction lock is held, fail out with
+	a locking error.
+
 2002-08-08  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-rpc-packsys.c (resolve_deps): Added an argument for passing

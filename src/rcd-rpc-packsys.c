@@ -965,10 +965,33 @@ update_log (RCDTransactionStatus *status)
     }
 } /* update_log */
 
+static void
+fail_transaction (RCDTransactionStatus *status, const char *msg)
+{
+    char *pending_msg;
+
+    rc_debug (RC_DEBUG_LEVEL_WARNING, "Transaction failed: %s", msg);
+
+    pending_msg = g_strdup_printf ("failed:%s", msg);
+    rcd_pending_add_message (status->pending, pending_msg);
+    g_free (pending_msg);
+
+    rcd_pending_fail (status->pending, -1, msg);
+
+    if (!status->dry_run && status->log_tid) 
+        rcd_transact_log_send_success (status->log_tid, FALSE, msg);
+} /* fail_transaction */
+
 static gboolean
 run_transaction(gpointer user_data)
 {
     RCDTransactionStatus *status = user_data;
+
+    if (packsys_lock) {
+        fail_transaction (status,
+                          "Another transaction is already in progress");
+        goto cleanup;
+    }
 
     packsys_lock = TRUE;
 
@@ -1004,24 +1027,8 @@ run_transaction(gpointer user_data)
         G_CALLBACK (transact_progress_cb), status);
 
     if (rc_packman_get_error (status->packman)) {
-        char *msg;
-
-        rc_debug (RC_DEBUG_LEVEL_MESSAGE,
-                  "packman error: %s",
-                  rc_packman_get_reason (status->packman));
-
-        msg = g_strdup_printf("failed:%s",
-                              rc_packman_get_reason (status->packman));
-        rcd_pending_add_message (status->pending, msg);
-        g_free (msg);
-        rcd_pending_fail (status->pending, -1,
-                          rc_packman_get_reason (status->packman));
-
-        if (!status->dry_run && status->log_tid) {
-            rcd_transact_log_send_success (
-                status->log_tid, FALSE,
-                rc_packman_get_reason (status->packman));
-        }
+        fail_transaction (status, rc_packman_get_reason (status->packman));
+        goto unlock_and_cleanup;
     }
     else {
         if (!status->dry_run) {
@@ -1036,9 +1043,11 @@ run_transaction(gpointer user_data)
     if (! status->dry_run)
         rc_world_get_system_packages (rc_get_world ());
 
-    cleanup_after_transaction (status);
-
+unlock_and_cleanup:
     packsys_lock = FALSE;
+
+cleanup:
+    cleanup_after_transaction (status);
 
     return FALSE;
 } /* run_transaction */

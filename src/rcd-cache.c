@@ -48,10 +48,11 @@ struct _RCDCache {
 };
 
 struct _RCDCacheEntry {
+    RCDCache *cache;
+
     char *url;
     char *local_file;
-
-    gboolean complete;
+    char *tmp_file;
 
     int fd;
 
@@ -64,10 +65,11 @@ rcd_cache_entry_free (RCDCacheEntry *entry)
 {
     g_free (entry->url);
     g_free (entry->local_file);
+    g_free (entry->tmp_file);
     g_free (entry->entity_tag);
     g_free (entry->last_modified);
     g_free (entry);
-} /* rcd_cache_entry_free */
+} /* rcd_cache_entry_ref */
 
 char *
 rcd_cache_get_local_filename (RCDCache *cache, const char *url)
@@ -137,13 +139,13 @@ rcd_cache_entry_set_entity_tag (RCDCacheEntry *entry, const char *etag)
 void
 rcd_cache_entry_close (RCDCacheEntry *entry)
 {
-    char *tmp_fn;
-
     rc_close (entry->fd);
+    rename (entry->tmp_file, entry->local_file);
 
-    tmp_fn = g_strdup_printf("%s.tmp", entry->local_file);
-    rename(tmp_fn, entry->local_file);
-    g_free(tmp_fn);
+    g_free (entry->tmp_file);
+    entry->tmp_file = NULL;
+
+    g_hash_table_insert (entry->cache->entries, entry->url, entry);
 } /* rcd_cache_entry_close */
 
 void
@@ -156,6 +158,8 @@ rcd_cache_entry_cancel (RCDCacheEntry *entry)
 void
 rcd_cache_entry_append (RCDCacheEntry *entry, const char *data, gsize size)
 {
+    g_return_if_fail (entry->fd != -1);
+
     rc_write (entry->fd, data, size);
 } /* rcd_cache_entry_append */
 
@@ -163,7 +167,6 @@ void
 rcd_cache_entry_open (RCDCacheEntry *entry)
 {
     char *cache_dir;
-    char *tmp_fn;
 
     cache_dir = g_path_get_dirname (entry->local_file);
     if (!g_file_test (cache_dir, G_FILE_TEST_EXISTS)) {
@@ -171,18 +174,17 @@ rcd_cache_entry_open (RCDCacheEntry *entry)
     }
     g_free (cache_dir);
 
-    tmp_fn = g_strconcat (entry->local_file, ".tmp", NULL);
-    entry->fd = open (tmp_fn, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    entry->tmp_file = g_strconcat (entry->local_file, ".XXXXXX", NULL);
+    entry->fd = g_mkstemp (entry->tmp_file);
 
     if (entry->fd < 0) {
         rc_debug (RC_DEBUG_LEVEL_WARNING,
-                  "Couldn't open %s for writing", tmp_fn);
-        g_free (tmp_fn);
+                  "Couldn't open %s for writing", entry->tmp_file);
 
         return;
     }
 
-    g_free (tmp_fn);
+    fchmod (entry->fd, 0644);
 } /* rcd_cache_entry_open */
 
 RCDCacheEntry *
@@ -201,11 +203,10 @@ rcd_cache_entry_new (RCDCache *cache, const char *url)
 
     entry = g_new0 (RCDCacheEntry, 1);
     
+    entry->cache = cache;
     entry->url = g_strdup (url);
     entry->local_file = rcd_cache_get_local_filename (cache, url);
     entry->fd = -1;
-
-    g_hash_table_insert (cache->entries, entry->url, entry);
 
     return entry;
 } /* rcd_cache_entry_new */
