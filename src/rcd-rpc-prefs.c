@@ -390,6 +390,12 @@ rcd_rpc_prefs_register_methods (void)
         (RCDPrefSetFunc) rcd_prefs_set_http10_enabled, "superuser");
 
     rcd_rpc_prefs_register_pref (
+        "require-verified-certificates", RCD_PREF_BOOLEAN,
+        "Require server SSL certificates verify against a certificate authority",
+        (RCDPrefGetFunc) rcd_prefs_get_require_verified_certificates, "superuser",
+        (RCDPrefSetFunc) rcd_prefs_set_require_verified_certificates, "superuser");
+
+    rcd_rpc_prefs_register_pref (
         "cache-enabled", RCD_PREF_BOOLEAN,
         "Whether to cache downloaded packages and metadata",
         (RCDPrefGetFunc) rcd_prefs_get_cache_enabled, "view",

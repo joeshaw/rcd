@@ -29,6 +29,7 @@
 #include <stdlib.h>
 
 #include <libredcarpet.h>
+#include <libsoup/soup-misc.h>
 #include <libsoup/soup-uri.h>
 
 #include "gnome-config.h"
@@ -326,6 +327,25 @@ rcd_prefs_set_http10_enabled (gboolean enabled)
     gnome_config_set_bool (get_config_path ("/Network/http10"), enabled);
     rc_debug (RC_DEBUG_LEVEL_MESSAGE, "HTTP 1.0 enabled: %s",
               enabled ? "TRUE" : "FALSE");
+
+    SYNC_CONFIG;
+}
+
+gboolean
+rcd_prefs_get_require_verified_certificates (void)
+{
+    return gnome_config_get_bool (get_config_path ("/Network/require-verified-certificates=TRUE"));
+}
+
+void
+rcd_prefs_set_require_verified_certificates (gboolean enabled)
+{
+    gnome_config_set_bool (get_config_path ("/Network/require-verified-certificates"), enabled);
+
+    soup_set_ssl_ca_dir (enabled ? SHAREDIR "/ca" : NULL);
+
+    rc_debug (RC_DEBUG_LEVEL_MESSAGE, "SSL Certificate verification %s",
+              enabled ? "enabled" : "disabled");
 
     SYNC_CONFIG;
 }

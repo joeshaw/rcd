@@ -38,7 +38,7 @@
 #include "rcd-transfer.h"
 #include "rcd-transfer-http.h"
 
-#define RCX_ACTIVATION_ROOT "http://activation.rc.ximian.com"
+#define RCX_ACTIVATION_ROOT "https://activation.rc.ximian.com"
 
 gboolean
 rcd_fetch_register (const char *activation_code, const char *email)

@@ -426,8 +426,11 @@ http_open (RCDTransfer *t)
     else
         soup_set_proxy (NULL);
 
-    if (rcd_prefs_get_http10_enabled ())
+    if (rcd_prefs_get_http10_enabled ()) {
         soup_message_set_http_version (protocol->message, SOUP_HTTP_1_0);
+        soup_message_add_header (protocol->message->request_headers,
+                                 "Connection", "close");
+    }
 
     /* We want to get the chunks out seperately */
     soup_message_set_flags (message, SOUP_MESSAGE_OVERWRITE_CHUNKS);

@@ -60,6 +60,9 @@ const gchar *rcd_prefs_get_org_id             (void);
 gboolean     rcd_prefs_get_http10_enabled     (void);
 void         rcd_prefs_set_http10_enabled     (gboolean);
 
+gboolean     rcd_prefs_get_require_verified_certificates (void);
+void         rcd_prefs_set_require_verified_certificates (gboolean);
+
 guint32      rcd_prefs_get_heartbeat_interval (void);
 void         rcd_prefs_set_heartbeat_interval (guint32);
 

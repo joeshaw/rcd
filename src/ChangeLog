@@ -1,3 +1,19 @@
+2002-10-16  Joe Shaw  <joe@ximian.com>
+
+	* rcd-fetch.c: RCX_ACTIVATION_ROOT should be https.
+
+	* rcd-prefs.c (rcd_prefs_{set|get}_require_verified_certificates):
+	New preference for whether we need to verify SSL certificates.
+	Defaults to on (obviously).
+
+	* rcd-rpc-prefs.c: Allow the above to be get/set by superuser.
+
+	* rcd-transfer-http.c (http_open): If we're in HTTP 1.0 mode, set
+	Connection: close explicitly.
+
+	* rcd.c (main): If we require verified certificates, set the Soup
+	CA dir.
+
 2002-10-15  Jon Trowbridge  <trow@ximian.com>
 
 	* rcd-rpc-users.c (users_update): Allow the "-*-unchanged-*-"
