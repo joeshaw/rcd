@@ -3,7 +3,7 @@
 /*
  * rcd-transfer-http.c
  *
- * Copyright (C) 2002 Ximian, Inc.
+ * Copyright (C) 2000-2002 Ximian, Inc.
  *
  */
 
@@ -35,10 +35,7 @@
 #include "rcd-prefs.h"
 
 /* 
- * FIXME:
- *   - Proxies: Need to write the code in rcd-prefs.c to get a URL and
- *     uncomment the code.
- *   - RCD: Ditto.
+ * TODO:
  *   - Resuming partial transfers: Need to write
  */
 
@@ -51,29 +48,59 @@
 #define HTTP_RESPONSE_NOT_MODIFIED(x) ((x) == 304)
 
 static void
+map_soup_error_to_rcd_transfer_error (SoupMessage *message, RCDTransfer *t)
+{
+    const char *soup_err;
+    const char *url = NULL;
+    char *err;
+
+    soup_err = soup_error_get_phrase (message->errorcode);
+
+    switch (message->errorcode) {
+    case SOUP_ERROR_CANT_CONNECT:
+        url = t->url;
+    case SOUP_ERROR_CANT_CONNECT_PROXY:
+        if (!url)
+            url = rcd_prefs_get_proxy ();
+
+        err = g_strdup_printf ("%s (%s)", soup_err, url);
+        rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_CANT_CONNECT, err);
+        g_free (err);
+        break;
+
+    case SOUP_ERROR_CANT_AUTHENTICATE:
+        url = t->url;
+    case SOUP_ERROR_CANT_AUTHENTICATE_PROXY:
+        if (!url)
+            url = rcd_prefs_get_proxy ();
+
+        err = g_strdup_printf ("%s (%s)", soup_err, url);
+        rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_CANT_AUTHENTICATE, err);
+        g_free (err);
+        break;
+
+    case SOUP_ERROR_NOT_FOUND:
+        rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_FILE_NOT_FOUND, t->url);
+        break;
+
+    default:
+        err = g_strdup_printf (
+            "Soup error: %s (%d)", soup_err, message->errorcode);
+        rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_IO, err);
+        g_free (err);
+        break;
+    }
+} /* map_soup_error_to_rcd_transfer_error */
+
+static void
 http_done (SoupMessage *message, gpointer user_data)
 {
     RCDTransfer *t = user_data;
     RCDTransferProtocolHTTP *protocol =
         (RCDTransferProtocolHTTP *) t->protocol;
 
-    /* Map Soup errors to RCDTransfer errors. */
-    if (SOUP_MESSAGE_IS_ERROR (message)) {
-        if (message->errorcode == SOUP_ERROR_CANT_AUTHENTICATE)
-            rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_CANT_AUTHENTICATE, NULL);
-        else if (message->errorcode == SOUP_ERROR_CANT_AUTHENTICATE_PROXY)
-            rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_CANT_AUTHENTICATE, NULL);
-        else if (message->errorcode == SOUP_ERROR_NOT_FOUND)
-            rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_FILE_NOT_FOUND, t->url);
-        else {
-            char *err = g_strdup_printf (
-                "Soup error: %s (%d)",
-                soup_error_get_phrase (message->errorcode),
-                message->errorcode);
-            rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_IO, err);
-            g_free (err);
-        }
-    }
+    if (SOUP_MESSAGE_IS_ERROR (message))
+        map_soup_error_to_rcd_transfer_error (message, t);
 
     if (!rcd_transfer_get_error (t)) {
         if (protocol->cache_hit) {
@@ -264,10 +291,8 @@ http_open (RCDTransfer *t)
     SoupUri *uri;
     SoupContext *context;
     SoupMessage *message;
-#if 0
     const char *proxy_url;
     SoupContext *proxy_context;
-#endif
 
     protocol = (RCDTransferProtocolHTTP *) t->protocol;
 
@@ -288,15 +313,12 @@ http_open (RCDTransfer *t)
     protocol->message = message = soup_message_new (context, SOUP_METHOD_GET);
 
     /* Set up the proxy */
-    /* FIXME: Get the proxy pref */
-#if 0
-    proxy_url = rcd_pregs_get_proxy_url ();
+    proxy_url = rcd_prefs_get_proxy ();
     if (proxy_url) {
         proxy_context = soup_context_get (proxy_url);
         soup_set_proxy (proxy_context);
     }
     else
-#endif
         soup_set_proxy (NULL);
 
     if (rcd_prefs_get_http10_enabled ())

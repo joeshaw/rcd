@@ -35,6 +35,7 @@ gboolean     rcd_prefs_get_cache_enabled      (void);
 void         rcd_prefs_set_cache_enabled      (gboolean);
 
 const gchar *rcd_prefs_get_host               (void);
+const gchar *rcd_prefs_get_proxy              (void);
 
 gboolean     rcd_prefs_get_http10_enabled     (void);
 void         rcd_prefs_set_http10_enabled     (gboolean);

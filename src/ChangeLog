@@ -1,3 +1,12 @@
+2002-07-16  Joe Shaw  <joe@ximian.com>
+
+	* rcd-prefs.c (rcd_prefs_get_proxy): Added.
+
+	* rcd-transfer-http.c (http_done): Split out the mapping of Soup
+	errors to RCDTransfer errors into a separate function and flesh it
+	out a little more.
+	(http_open): Get the proxy URL and set it.
+
 2002-07-15  Joe Shaw  <joe@ximian.com>
 
 	* gnome-config.c: Remove an unused function to avoid a compiler

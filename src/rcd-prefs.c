@@ -29,6 +29,7 @@
 #include <stdlib.h>
 
 #include <rc-debug.h>
+#include <libsoup/soup-uri.h>
 
 #include "gnome-config.h"
 
@@ -107,6 +108,38 @@ rcd_prefs_get_premium (void)
             CONFIG_PATH "/Network/enable-premium=FALSE");
     }
 } /* rcd_prefs_get_premium */
+
+const char *
+rcd_prefs_get_proxy (void)
+{
+    static char *proxy_url = NULL;
+    char *proxy;
+    SoupUri *proxy_uri;
+    char *proxy_user;
+    char *proxy_passwd;
+
+    g_free (proxy_url);
+    proxy_url = NULL;
+
+    proxy = gnome_config_get_string (CONFIG_PATH "/Network/proxy");
+    
+    if (!proxy)
+        return NULL;
+
+    proxy_user = gnome_config_get_string (CONFIG_PATH "/Network/proxy-user");
+    proxy_passwd = gnome_config_get_string (
+        CONFIG_PATH "/Network/proxy-password");
+
+    proxy_uri = soup_uri_new (proxy);
+    proxy_uri->user = proxy_user;
+    proxy_uri->passwd = proxy_passwd;
+    g_free (proxy);
+
+    proxy_url = soup_uri_to_string (proxy_uri, TRUE);
+    soup_uri_free (proxy_uri);
+
+    return proxy_url;
+} /* rcd_prefs_get_proxy */
 
 gboolean
 rcd_prefs_get_http10_enabled (void)

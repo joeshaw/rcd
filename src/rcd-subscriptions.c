@@ -3,7 +3,7 @@
 /*
  * rcd-subscriptions.c: Code for managing subscriptions
  *
- * Copyright (c) 2000, 2001 Ximian, Inc.
+ * Copyright (C) 2000-2002 Ximian, Inc.
  *
  */
 

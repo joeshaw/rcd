@@ -3,7 +3,7 @@
 /*
  * rcd-transfer.h
  *
- * Copyright (C) 2002 Ximian, Inc.
+ * Copyright (C) 2000-2002 Ximian, Inc.
  *
  */
 
