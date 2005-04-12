@@ -1,5 +1,12 @@
 2005-04-12  Tambet Ingo  <tambet@ximian.com>
 
+	* rcd-world-remote.c (rcd_world_remote_fetch_channels): Don't connect
+	to world's "complete" signal here. We're going to do blocking
+	downloading later on so the world can get marked as "refresh done"
+	before it's actually done.
+	(rcd_world_remote_parse_serviceinfo): Catch the "complete" signal here,
+	after all blocking downloads.
+
 	* rcd-rpc-packsys.c (resolve_deps): Don't send detailed resolver info
 	to clients. It's a huge amount of data and clients don't use it.
 

@@ -1353,12 +1353,6 @@ rcd_world_remote_fetch_channels (RCDWorldRemote *remote, gboolean local,
         g_object_unref (channel_data.pool);
     }
 
-    if (rc_world_is_refreshing (RC_WORLD (remote)) && pending != NULL) {
-        g_signal_connect (pending, "complete",
-                          (GCallback) pending_complete_cb,
-                          g_object_ref (remote));
-    }
-
 cleanup:
     if (buf)
         rc_buffer_unmap_file (buf);
@@ -1608,6 +1602,15 @@ rcd_world_remote_parse_serviceinfo (RCDWorldRemote  *remote,
 
     if (remote->news_url)
         rcd_world_remote_fetch_news (remote, local);
+
+    if (rc_world_is_refreshing (RC_WORLD (remote)) && pending != NULL) {
+        if (rc_pending_is_active (pending))
+            g_signal_connect (pending, "complete",
+                              (GCallback) pending_complete_cb,
+                              g_object_ref (remote));
+        else
+            pending = NULL;
+    }
 
     return pending;
 }
