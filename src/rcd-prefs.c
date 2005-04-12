@@ -686,6 +686,38 @@ rcd_prefs_set_rollback (gboolean enabled, GError **err)
     return TRUE;
 }
 
+gint
+rcd_prefs_get_max_allowed_memory (void)
+{
+    return gnome_config_get_int
+        (get_config_path ("/System/max-allowed-memory=0"));
+}
+
+#define MINIMUM_ALLOWED_MEMORY 30
+gboolean
+rcd_prefs_set_max_allowed_memory (gint size, GError **err)
+{
+    if (size < 0)
+        size = 0;
+
+    if (size != 0 && size < MINIMUM_ALLOWED_MEMORY) {
+        g_set_error (err, RCD_PREFS_ERROR, RCD_PREFS_ERROR,
+                     "Maximum allowed memory is not allowed to be "
+                     "less than %d megabytes", MINIMUM_ALLOWED_MEMORY);
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Maximum allowed memory is not allowed to be "
+                  "less than %d megabytes.", MINIMUM_ALLOWED_MEMORY);
+        return FALSE;
+    }
+
+    gnome_config_set_int
+        (get_config_path ("/System/max-allowed-memory"), size);
+
+    SYNC_CONFIG;
+
+    return TRUE;
+}
+
 const char *
 rcd_prefs_get_mid (void)
 {

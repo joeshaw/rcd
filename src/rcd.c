@@ -31,6 +31,7 @@
 #include <signal.h>
 #include <syslog.h>
 #include <unistd.h>
+#include <ctype.h>
 
 #include <glib.h>
 #include <libredcarpet.h>
@@ -348,7 +349,7 @@ initialize_data (void)
 
     /* We don't want to read in the locks until after we have fetched the
        list of channels. */
-    rcd_package_locks_load (rc_get_world ());
+    // rcd_package_locks_load (rc_get_world ());
 } /* initialize_data */
 
 static void
@@ -479,6 +480,69 @@ crash_handler (int sig_num)
     exit (1);
 }
 
+/* This function is stolen from beagle */
+
+static int
+get_vmsize (void)
+{
+    static char proc_filename[64] = {'\0'};
+    static char buffer [1024];
+    int fd;
+    int vmsize = -1;
+
+    if (proc_filename[0] == '\0')
+        snprintf (proc_filename, 64, "/proc/%d/status", getpid ());
+
+    fd = open (proc_filename, O_RDONLY);
+    if (fd >= 0) {
+        if (read (fd, buffer, sizeof (buffer)) > 0) {
+            char *pos = strstr (buffer, "VmSize:");
+            char *endpos = NULL;
+            if (pos != NULL && strlen (pos) > 7) {
+                pos += 7;
+                while (*pos && isspace (*pos))
+                    ++pos;
+                if (*pos != '\0') {
+                    vmsize = (int) strtol (pos, &endpos, 10);
+                    if (pos == endpos || *endpos != ' ')
+                        vmsize = -1;
+                }
+            }
+        }
+        close (fd);
+    }
+
+    return vmsize;
+}
+
+static void
+heartbeat_memory_monitor (gpointer user_data)
+{
+    int current_memory;
+    int max_memory;
+
+    max_memory = rcd_prefs_get_max_allowed_memory ();
+
+    /* This feature is disabled */
+    if (max_memory == 0)
+        return;
+
+    current_memory = get_vmsize ();
+    rc_debug (RC_DEBUG_LEVEL_INFO, "Current VmSize: %d", current_memory);
+
+    /* Convert to kilobytes */
+    max_memory *= 1024;
+
+    if (current_memory > max_memory) {
+        rc_debug (RC_DEBUG_LEVEL_MESSAGE, "Memory limit reached, restarting");
+        rcd_restart ();
+
+        /* Wait here until the restart happens */
+        while (g_main_pending ())
+            g_main_iteration (TRUE);
+    }
+}
+
 int
 main (int argc, const char **argv)
 {
@@ -556,7 +620,9 @@ main (int argc, const char **argv)
 
     if (!g_file_test (SYSCONFDIR "/partnernet", G_FILE_TEST_EXISTS))
         rcd_create_uuid (SYSCONFDIR "/partnernet");
-    
+
+    /* Add memory usage watcher */
+    rcd_heartbeat_register_func (heartbeat_memory_monitor, NULL);
 
     initialize_rc_packman ();
     initialize_rc_services ();

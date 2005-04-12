@@ -569,6 +569,13 @@ rcd_rpc_prefs_register_methods (void)
             (RCDPrefSetFunc) rcd_prefs_set_rollback, "superuser");
     }
 
+    rcd_rpc_prefs_register_pref (
+        "max-allowed-memory", RCD_PREF_INT,
+        "Maximum amount of memory rcd is allowed to use (in mb)",
+        "Advanced",
+        (RCDPrefGetFunc) rcd_prefs_get_max_allowed_memory, "view",
+        (RCDPrefSetFunc) rcd_prefs_set_max_allowed_memory, "superuser");
+
     /* We handle more fine grained privileges in these pref functions. */
     rcd_rpc_register_method ("rcd.prefs.get_pref",
                              prefs_get_pref,

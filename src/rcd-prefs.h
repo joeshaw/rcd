@@ -95,6 +95,9 @@ gboolean     rcd_prefs_set_cache_max_size_in_mb (gint, GError **);
 gboolean     rcd_prefs_get_rollback (void);
 gboolean     rcd_prefs_set_rollback (gboolean, GError **);
 
+gint         rcd_prefs_get_max_allowed_memory   (void);
+gboolean     rcd_prefs_set_max_allowed_memory   (gint, GError **);
+
 /* These aren't really prefs, but there here for lack of a better place */
 const gchar *rcd_prefs_get_mid                (void);
 const gchar *rcd_prefs_get_secret             (void);
