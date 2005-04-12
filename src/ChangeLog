@@ -1,3 +1,8 @@
+2005-04-12  Tambet Ingo  <tambet@ximian.com>
+
+	* rcd-rpc-packsys.c (resolve_deps): Don't send detailed resolver info
+	to clients. It's a huge amount of data and clients don't use it.
+
 2005-04-05  James Willcox  <james@ximian.com>
 
 	* rcd-recurring.c: (rcd_recurring_timeout_cb):

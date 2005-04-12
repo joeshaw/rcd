@@ -1369,6 +1369,9 @@ resolve_deps (xmlrpc_env         *env,
     else
         rc_resolver_resolve_dependencies (resolver);
 
+    /* This code is ifdef'ed out for performance reasons: It's a huge
+       amount of data and none of our clients don't use it currently. */
+#if 0
     if (resolution_info) {
         RCResolverContext *info_context = NULL;
 
@@ -1385,6 +1388,9 @@ resolve_deps (xmlrpc_env         *env,
                                                                              env);
         }
     }
+#else
+    *resolution_info = xmlrpc_build_value (env, "()");
+#endif
 
     if (!resolver->best_context) {
         char *dep_failure_info;
