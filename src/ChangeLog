@@ -1,3 +1,12 @@
+2005-04-18  James Willcox  <james@ximian.com>
+
+	* rcd-recurring.c: (rcd_recurring_timeout_cb):
+	* rcd-transaction.c: (rcd_transaction_transaction):
+	* rcd-world-remote.c: (rcd_world_remote_refresh),
+	(pending_complete_cb):
+
+	Block recurring events during refresh and transactions	
+
 2005-04-12  Tambet Ingo  <tambet@ximian.com>
 
 	* rcd.c (get_vmsize): Implement (err, steal it from beagle).

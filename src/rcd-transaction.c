@@ -605,11 +605,15 @@ rcd_transaction_transaction (RCDTransaction *transaction)
     rc_pending_begin (transaction->transaction_pending);
     rc_pending_begin (transaction->transaction_step_pending);
 
+    rcd_recurring_block ();
+    
     success = rc_world_transact (transaction->world,
                                  transaction->install_packages,
                                  transaction->remove_packages,
                                  flags);
 
+    rcd_recurring_allow ();
+    
     g_signal_handlers_disconnect_by_func (packman,
                                           G_CALLBACK (transact_start_cb),
                                           transaction);

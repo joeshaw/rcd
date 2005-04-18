@@ -81,13 +81,16 @@ static RCPending *
 rcd_world_remote_refresh (RCWorld *world)
 {
     RCPending *pending;
-
+    
+    rcd_recurring_block ();
     rc_world_refresh_begin (world);
-
+    
     pending = rcd_world_remote_fetch (RCD_WORLD_REMOTE (world), FALSE, NULL);
 
-    if (pending == NULL)
+    if (pending == NULL) {
         rc_world_refresh_complete (world);
+        rcd_recurring_allow ();
+    }
 
     return pending;
 }
@@ -1174,7 +1177,8 @@ pending_complete_cb (RCPending *pending, gpointer user_data)
     RCWorld *world = RC_WORLD (user_data);
 
     rc_world_refresh_complete (world);
-
+    rcd_recurring_allow ();
+    
     g_object_unref (world);
 }
 

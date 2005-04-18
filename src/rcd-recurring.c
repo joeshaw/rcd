@@ -167,7 +167,10 @@ static void rcd_recurring_setup_timeout (void);
 static gboolean
 rcd_recurring_timeout_cb (gpointer execute_if_null)
 {
-
+    // how this can happen I have no idea, but it does.
+    if (recurring_lock > 0)
+        return FALSE;
+    
     rc_debug (RC_DEBUG_LEVEL_DEBUG, "Recurring timer hit");
 
     rcd_recurring_execute_list ();
