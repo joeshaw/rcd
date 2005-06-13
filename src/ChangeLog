@@ -1,3 +1,14 @@
+2005-06-13  michael wolf  <maw@novell.com>
+
+	* rcd-prefs.h
+	* rcd-prefs.c: (rcd_prefs_get_filesystem_check_timeout),
+	(rcd_prefs_set_filesystem_check_timeout):
+	* rcd-rpc-prefs.c:
+	* rcd-transaction.c:
+
+	Add a configurable timeout to the stale filesystems hack.  Setting
+	to zero disables it.
+
 2005-04-18  James Willcox  <james@ximian.com>
 
 	* rcd-recurring.c: (rcd_recurring_timeout_cb):
