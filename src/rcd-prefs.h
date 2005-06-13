@@ -98,6 +98,9 @@ gboolean     rcd_prefs_set_rollback (gboolean, GError **);
 gint         rcd_prefs_get_max_allowed_memory   (void);
 gboolean     rcd_prefs_set_max_allowed_memory   (gint, GError **);
 
+gint         rcd_prefs_get_filesystem_check_timeout (void);
+gboolean     rcd_prefs_set_filesystem_check_timeout (gint, GError **);
+
 /* These aren't really prefs, but there here for lack of a better place */
 const gchar *rcd_prefs_get_mid                (void);
 const gchar *rcd_prefs_get_secret             (void);

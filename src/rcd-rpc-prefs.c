@@ -576,6 +576,14 @@ rcd_rpc_prefs_register_methods (void)
         (RCDPrefGetFunc) rcd_prefs_get_max_allowed_memory, "view",
         (RCDPrefSetFunc) rcd_prefs_set_max_allowed_memory, "superuser");
 
+    rcd_rpc_prefs_register_pref (
+        "filesystem-check-timeout", RCD_PREF_INT,
+        "Maximum number of seconds rcd will wait when checking filesystem "
+        "availability",
+        "Advanced",
+        (RCDPrefGetFunc) rcd_prefs_get_filesystem_check_timeout, "view",
+        (RCDPrefSetFunc) rcd_prefs_set_filesystem_check_timeout, "superuser");
+    
     /* We handle more fine grained privileges in these pref functions. */
     rcd_rpc_register_method ("rcd.prefs.get_pref",
                              prefs_get_pref,

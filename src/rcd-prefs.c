@@ -194,8 +194,8 @@ rcd_prefs_set_remote_server_port (int new_port, GError **err)
 
     if (new_port != old_port && rcd_prefs_get_remote_server_enabled ()) {
         /* Restart the remote server on the new port */
-        rcd_rpc_remote_server_stop();
-        rcd_rpc_remote_server_start();
+        rcd_rpc_remote_server_stop ();
+        rcd_rpc_remote_server_start ();
     }
 
     return TRUE;
@@ -716,6 +716,82 @@ rcd_prefs_set_max_allowed_memory (gint size, GError **err)
     SYNC_CONFIG;
 
     return TRUE;
+}
+
+#define REAP_TIMEOUT_INTERVAL 30 /* 30 seconds */
+gint
+rcd_prefs_get_filesystem_check_timeout (void)
+{
+    gint retval;
+    gchar *str = g_strdup_printf ("/System/filesystem-check-timeout=%d",
+                                         REAP_TIMEOUT_INTERVAL);
+    retval = gnome_config_get_int (get_config_path (str));
+
+    g_free (str);
+
+    return retval;
+}
+
+gboolean
+rcd_prefs_set_filesystem_check_timeout (gint timeout, GError **err)
+{
+    if (timeout < 0)
+        timeout = 0;
+    
+    if (timeout != 0 && timeout < REAP_TIMEOUT_INTERVAL) {
+        g_set_error (err, RCD_PREFS_ERROR, RCD_PREFS_ERROR,
+                     "Filesystem check timeout is not allowed to be less "
+                     "than %d seconds", REAP_TIMEOUT_INTERVAL);
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Filesystem check timeout is not allowed to be less "
+                  "than %d seconds", REAP_TIMEOUT_INTERVAL);
+        return FALSE;
+    }
+
+    gnome_config_set_int
+        (get_config_path ("/System/filesystem-check-timeout"), timeout);
+
+    SYNC_CONFIG;
+
+    return TRUE;    
+}
+
+#define REAP_TIMEOUT_INTERVAL 30 /* 30 seconds */
+gint
+rcd_prefs_get_filesystem_check_timeout (void)
+{
+    gint retval;
+    gchar *str = g_strdup_printf("/System/filesystem-check-timeout=%d",
+                                         REAP_TIMEOUT_INTERVAL);
+    retval = gnome_config_get_int (get_config_path (str));
+
+    g_free (str);
+
+    return retval;
+}
+
+gboolean
+rcd_prefs_set_filesystem_check_timeout (gint timeout, GError **err)
+{
+    if (timeout < 0)
+        timeout = 0;
+    
+    if (timeout != 0 && timeout < REAP_TIMEOUT_INTERVAL) {
+        g_set_error (err, RCD_PREFS_ERROR, RCD_PREFS_ERROR,
+                     "Filesystem check timeout is not allowed to be less "
+                     "than %d seconds", REAP_TIMEOUT_INTERVAL);
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
+                  "Filesystem check timeout is not allowed to be less "
+                  "than %d seconds", REAP_TIMEOUT_INTERVAL);
+        return FALSE;
+    }
+
+    gnome_config_set_int
+        (get_config_path ("/System/filesystem-check-timeout"), timeout);
+
+    SYNC_CONFIG;
+
+    return TRUE;    
 }
 
 const char *

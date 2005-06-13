@@ -64,7 +64,6 @@ static void rcd_transaction_send_log (RCDTransaction *transaction,
 
 #define HELPER_WAIT 7
 #define HELPER_TIMEOUT_INTERVAL 100
-#define REAP_TIMEOUT_INTERVAL 30 * 1000 /* 30 seconds */
 
 enum {
     RCD_TRANSACTION_ERROR_DOWNLOAD,
@@ -668,6 +667,7 @@ static gboolean
 rcd_transaction_monitor_cb (RCDTransaction *transaction)
 {
     int status = 0;
+    gint timeout = rcd_prefs_get_filesystem_check_timeout ();
 
     if (waitpid ((int) transaction->stat_pid, &status, WNOHANG) != 0) {
 
@@ -678,7 +678,7 @@ rcd_transaction_monitor_cb (RCDTransaction *transaction)
             rcd_transaction_failed (transaction, transaction->transaction_pending,
                                     "Filesystem has stale mounts");
 
-            g_timeout_add (REAP_TIMEOUT_INTERVAL,
+            g_timeout_add (timeout * 1000,
                            (GSourceFunc) rcd_transaction_monitor_reap_cb,
                            GINT_TO_POINTER (transaction->stat_pid));
         }
@@ -688,7 +688,7 @@ rcd_transaction_monitor_cb (RCDTransaction *transaction)
         rcd_transaction_failed (transaction, transaction->transaction_pending,
                                 "Filesystem has stale mounts");
 
-        g_timeout_add (REAP_TIMEOUT_INTERVAL,
+        g_timeout_add (timeout * 1000,
                        (GSourceFunc) rcd_transaction_monitor_reap_cb,
                        GINT_TO_POINTER (transaction->stat_pid));
         return FALSE;
@@ -747,7 +747,7 @@ rcd_transaction_verification (RCDTransaction *transaction)
         RCVerificationStatus worst_status = RC_VERIFICATION_STATUS_PASS;
         gboolean gpg_attempted = FALSE;
         GSList *v;
-
+        
         if (rc_package_is_synthetic (package))
             continue;
 
@@ -853,7 +853,13 @@ rcd_transaction_verification (RCDTransaction *transaction)
         }
     }
 
-    rcd_transaction_check_fs (transaction);
+    if (rcd_prefs_get_filesystem_check_timeout () > 0) {
+        rcd_transaction_check_fs (transaction);
+    } else {
+        /* Skip the filesystem check and run the transaction directly.  */
+        rcd_transaction_transaction (transaction);
+    }
+    
     return;
 
 ERROR:
