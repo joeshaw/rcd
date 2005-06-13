@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <mntent.h>
 #include <sys/statvfs.h>
@@ -12,9 +11,9 @@ main (int argc, char *argv[])
     
     f = setmntent ("/etc/mtab", "r");
 
-    /* if we can't do our thing, assume things are ok */
+    /* if we can't do our thing, assume things are not ok */
     if (f == NULL)
-	return 1;
+        return 1;
 
     while ((ent = getmntent (f)) != NULL) {
 	if (statvfs (ent->mnt_dir, &buf) != 0)
