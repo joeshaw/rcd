@@ -697,6 +697,7 @@ fetch_data (RCDTransferPool *pool, GSList *files)
                               RCD_TRANSFER_FLAGS_FORCE_CACHE |
                               RCD_TRANSFER_FLAGS_RESUME_PARTIAL,
                               entry);
+        rcd_cache_entry_unref (entry);
 
         g_signal_connect (t, "file_done",
                           G_CALLBACK (data_completed_cb), file);

@@ -1,3 +1,9 @@
+2005-08-11  Tambet Ingo  <tambet@ximian.com>
+
+	* rc-world-you.c (fetch_patches): unref cache entry.
+
+	* rc-you-transaction.c (fetch_data): ditto.
+
 2005-08-05  Tambet Ingo  <tambet@ximian.com>
 
 	* wrapper.cc: Implement callbacks to get more information out liby2pm.

@@ -256,7 +256,7 @@ fetch_patches (RCChannel *channel, gpointer user_data)
     gsize buffer_len = 0;
 
     if (rc_channel_get_type (channel) != RC_CHANNEL_TYPE_HELIX)
-        goto cleanup;
+        return TRUE;
 
     entry = rcd_cache_lookup (rcd_cache_get_normal_cache (),
                               "patch_list",
@@ -290,6 +290,7 @@ fetch_patches (RCChannel *channel, gpointer user_data)
                                           fetch_patches_cb,
                                           &(info->patches));
 cleanup:
+    rcd_cache_entry_unref (entry);
     g_free (url);
 
     if (t)
