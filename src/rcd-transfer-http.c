@@ -224,8 +224,11 @@ http_done (SoupMessage *message, gpointer user_data)
                 rcd_cache_entry_get_local_filename (t->cache_entry);
             local_url = g_strconcat ("file://", cache_filename, NULL);
             g_free (cache_filename);
-            
-            g_free (protocol);
+
+            if (t->protocol->free_func)
+                t->protocol->free_func (protocol);
+            else
+                g_free (protocol);
             g_free (t->url);
             g_free (t->filename);
 

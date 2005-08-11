@@ -40,10 +40,62 @@
 #include <y2pm/PMYouProduct.h>
 #include <y2pm/InstYou.h>
 #include <y2pm/InstTarget.h>
+#include <y2pm/YouError.h>
 
 #include "you-util.h"
 
 #define INSTALLED_YOU_PATH "/var/lib/YaST2/you/installed"
+
+class YouCallbacks : public InstYou::Callbacks
+{
+ public:
+    RCPending *pending;
+
+    YouCallbacks () {}
+
+    bool progress (int percent) {
+        return true;
+    }
+
+    bool patchProgress (int percent, const std::string &str) {
+        return true;
+    }
+
+    PMError showError (const std::string &type,
+                       const std::string &text,
+                       const std::string &details) {
+        if (pending) {
+            char *buf;
+
+            buf = g_strdup_printf ("patch:%s", text.c_str ());
+            rc_pending_add_message (pending, buf);
+            g_free (buf);
+        }
+
+        rc_debug (RC_DEBUG_LEVEL_DEBUG,
+                  "showError: type: %s text: %s details: %s",
+                  type.c_str (), text.c_str (), details.c_str ());
+
+        if (type == "skip")
+            return YouError::E_user_skip;
+
+        return PMError::E_ok;
+    }
+
+    PMError showMessage (const std::string &type,
+                         const std::list<PMYouPatchPtr> &patch) {
+        return PMError::E_ok;
+    }
+
+    void log (const std::string &text) {
+        rc_debug (RC_DEBUG_LEVEL_DEBUG,
+                  "log from y2pm: %s", text.c_str ());
+    }
+
+    bool executeYcpScript (const std::string &script) {
+        return false;
+    }
+};
 
 extern "C" {
 
@@ -141,8 +193,11 @@ rc_you_patch_from_yast_patch (PMYouPatchPtr source)
     return patch;
 }
 
+static YouCallbacks *you_callback = NULL;
+
 void
 rc_you_wrapper_install_patches (RCYouPatchSList  *list,
+                                RCPending        *pending,
                                 GError          **error)
 {
     PMManager::PMSelectableVec::const_iterator it;
@@ -200,7 +255,14 @@ rc_you_wrapper_install_patches (RCYouPatchSList  *list,
         rc_you_patch_unref (patch);
     }
 
+    if (you_callback == NULL)
+        you_callback = new YouCallbacks ();
+
+    you_callback->pending = pending;
+    InstYou::setCallbacks (you_callback);
+
     err = you.processPatches ();
+    you_callback->pending = NULL;
     if (err) {
         gchar *buf = g_strdup_printf ("%s (%s)",
                                       rc_you_string_to_char (err.errstr ()),

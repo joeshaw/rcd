@@ -449,7 +449,9 @@ rc_you_transaction_transaction (RCYouTransaction *transaction)
         goto cleanup;
 
     if (transaction->flags != RCD_TRANSACTION_FLAGS_DOWNLOAD_ONLY)
-        rc_you_wrapper_install_patches (transaction->patches, &error);
+        rc_you_wrapper_install_patches (transaction->patches,
+                                        transaction->transaction_pending,
+                                        &error);
     if (error)
         goto cleanup;
 

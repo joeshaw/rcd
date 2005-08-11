@@ -62,6 +62,9 @@ rcd_transfer_finalize (GObject *obj)
     g_free (t->url);
     g_free (t->error_string);
 
+    if (t->cache_entry)
+        rcd_cache_entry_unref (t->cache_entry);
+
     if (t->protocol) {
         if (t->protocol->free_func)
             t->protocol->free_func (t->protocol);
@@ -190,7 +193,7 @@ rcd_transfer_new (const char       *url,
     t = g_object_new (RCD_TYPE_TRANSFER, NULL);
 
     t->flags = flags;
-    t->cache_entry = cache_entry;
+    t->cache_entry = rcd_cache_entry_ref (cache_entry);
 
     t->protocol = rcd_transfer_get_protocol_from_url (url);
 

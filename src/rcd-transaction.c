@@ -35,6 +35,7 @@
 #include "rcd-log.h"
 #include "rcd-marshal.h"
 #include "rcd-prefs.h"
+#include "rcd-recurring.h"
 #include "rcd-rpc-util.h"
 #include "rcd-shutdown.h"
 #include "rcd-transfer.h"
@@ -901,8 +902,10 @@ get_packages_to_download (RCDTransaction *transaction, GError **err)
                                               package->package_filename,
                                               FALSE);
 
-                    if (entry)
+                    if (entry) {
                         rcd_cache_entry_invalidate (entry);
+                        rcd_cache_entry_unref (entry);
+                    }
 
                     /*
                      * We can't download another version of this package
@@ -1096,6 +1099,7 @@ fetch_packages (RCDTransferPool *pool, RCPackageSList *packages)
                               RCD_TRANSFER_FLAGS_FORCE_CACHE |
                               RCD_TRANSFER_FLAGS_RESUME_PARTIAL,
                               entry);
+        rcd_cache_entry_unref (entry);
 
         g_signal_connect (t, "file_done",
                           G_CALLBACK (package_completed_cb), package);
@@ -1113,6 +1117,7 @@ fetch_packages (RCDTransferPool *pool, RCPackageSList *packages)
                                   RCD_TRANSFER_FLAGS_FORCE_CACHE |
                                   RCD_TRANSFER_FLAGS_RESUME_PARTIAL,
                                   entry);
+            rcd_cache_entry_unref (entry);
 
             /* Ew. */
             g_object_set_data (G_OBJECT (t), "is_signature",

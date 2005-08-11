@@ -416,8 +416,13 @@ rehash_data (gpointer data)
     static int timeout_id = -1;
 
     if (!rcd_transaction_is_locked ()) {
+        RCPending *pending;
+
         timeout_id = -1;
-        rc_world_refresh (rc_get_world ());
+
+        pending = rc_world_refresh (rc_get_world ());
+        if (pending)
+            g_object_unref (pending);
     }
     else {
         if (timeout_id == -1)

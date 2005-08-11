@@ -343,6 +343,11 @@ service_set_url (xmlrpc_env   *env,
     old_url = service->url;
     service->url = g_strdup (new_url);
 
+    /* FIXME: This is wrong. rc_world_refresh () returns pending only if
+       refresh has not completed yet. Pending needs to be unref'ed when
+       we're done with it as well.
+       It's not a big deal right now as nothing actually calls this anymore.
+    */
     if (!rc_world_refresh (RC_WORLD (service))) {
         xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_INVALID_SERVICE,
                                         "Unable to change mirrors for '%s'",
@@ -371,7 +376,7 @@ service_refresh (xmlrpc_env   *env,
     int size;
     RCWorld *world;
     xmlrpc_value *value = NULL;
-    RCPending *pending;
+    RCPending *pending = NULL;
     char *err_msg = NULL;
 
     if (rcd_transaction_is_locked ()) {
@@ -418,6 +423,9 @@ service_refresh (xmlrpc_env   *env,
     XMLRPC_FAIL_IF_FAULT (env);
     
  cleanup:
+    if (pending)
+        g_object_unref (pending);
+
     if (err_msg)
         g_free (err_msg);
 
@@ -481,6 +489,9 @@ service_refresh_blocking (xmlrpc_env   *env,
     g_slist_free (pending_list);
     
 cleanup:
+    if (pending)
+        g_object_unref (pending);
+
     if (err_msg)
         g_free (err_msg);
 
@@ -579,7 +590,12 @@ cleanup:
 static void
 heartbeat_refresh_world_cb (gpointer user_data)
 {
-    rc_world_refresh (rc_get_world ());
+    RCPending *pending;
+
+    pending = rc_world_refresh (rc_get_world ());
+
+    if (pending)
+        g_object_unref (pending);
 }
 
 void

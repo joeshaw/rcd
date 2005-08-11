@@ -36,6 +36,7 @@
 #include "rcd-marshal.h"
 #include "rcd-news.h"
 #include "rcd-prefs.h"
+#include "rcd-recurring.h"
 #include "rcd-transfer-pool.h"
 #include "rcd-rpc-util.h"
 #include "rcd-xmlrpc.h"
@@ -50,7 +51,6 @@ enum {
 static guint signals[LAST_SIGNAL] = { 0 };
 
 static RCPending *rcd_world_remote_fetch (RCDWorldRemote  *remote,
-                                          gboolean         local,
                                           GError         **error);
 
 static void
@@ -77,6 +77,58 @@ rcd_world_remote_finalize (GObject *obj)
         G_OBJECT_CLASS (parent_class)->finalize (obj);
 }
 
+typedef struct {
+    RCWorld      *old_world;
+    RCWorldStore *new_world;
+} DupInfo;
+
+static gboolean
+package_dup_fn (RCPackage *package,
+                gpointer user_data)
+{
+    DupInfo *info = user_data;
+    rc_world_store_add_package (info->new_world, package);
+
+    return TRUE;
+}
+
+static gboolean
+channel_dup_fn (RCChannel *channel,
+                gpointer user_data)
+{
+    DupInfo *info = user_data;
+
+    rc_world_store_add_channel (info->new_world, channel);
+    rc_world_foreach_package (info->old_world, channel,
+                              package_dup_fn,
+                              info);
+
+    return TRUE;
+}
+
+static RCWorld *
+rcd_world_remote_dup (RCWorld *old_world)
+{
+    RCWorld *new_world;
+    DupInfo info;
+    GSList *l;
+
+    new_world = RC_WORLD_CLASS (parent_class)->dup_fn (old_world);
+
+    info.old_world = old_world;
+    info.new_world = RC_WORLD_STORE (new_world);
+
+    rc_world_foreach_channel (old_world,
+                              channel_dup_fn,
+                              &info);
+    for (l = RC_WORLD_STORE (old_world)->locks; l; l = l->next) {
+        rc_world_store_add_lock (RC_WORLD_STORE (new_world),
+                                 (RCPackageMatch *)l->data);
+    }
+
+    return new_world;
+}
+
 static RCPending *
 rcd_world_remote_refresh (RCWorld *world)
 {
@@ -85,7 +137,7 @@ rcd_world_remote_refresh (RCWorld *world)
     rcd_recurring_block ();
     rc_world_refresh_begin (world);
     
-    pending = rcd_world_remote_fetch (RCD_WORLD_REMOTE (world), FALSE, NULL);
+    pending = rcd_world_remote_fetch (RCD_WORLD_REMOTE (world), NULL);
 
     if (pending == NULL) {
         rc_world_refresh_complete (world);
@@ -99,24 +151,16 @@ static gboolean
 rcd_world_remote_assemble (RCWorldService *service, GError **error)
 {
     char *query_part;
-    gboolean local = TRUE;
     RCPending *pending;
     GError *tmp_error = NULL;
 
-    /* Find the query part. */
+    /* Remove any query parts. */
     query_part = strchr (service->url, '?');
 
     if (query_part) {
         char *url;
 
         url = g_strndup (service->url, query_part - service->url);
-
-        /* Move past the '?' */
-        query_part++;
-
-        if (g_strncasecmp (query_part, "remote_only=1", 13) == 0)
-            local = FALSE;
-
         g_free (service->url); 
         service->url = url;
     }
@@ -130,7 +174,7 @@ rcd_world_remote_assemble (RCWorldService *service, GError **error)
     }
 
     pending = rcd_world_remote_fetch (RCD_WORLD_REMOTE (service),
-                                      FALSE, &tmp_error);
+                                      &tmp_error);
 
     if (tmp_error != NULL) {
         g_propagate_error (error, tmp_error);
@@ -151,6 +195,7 @@ rcd_world_remote_class_init (RCDWorldRemoteClass *klass)
 
     object_class->finalize = rcd_world_remote_finalize;
 
+    world_class->dup_fn = rcd_world_remote_dup;
     world_class->refresh_fn = rcd_world_remote_refresh;
 
     service_class->assemble_fn = rcd_world_remote_assemble;
@@ -269,6 +314,8 @@ rcd_world_remote_fetch_distributions (RCDWorldRemote *remote, gboolean local)
     }
 
 cleanup:
+    rcd_cache_entry_unref (entry);
+
     if (buf)
         rc_buffer_unmap_file (buf);
 
@@ -325,6 +372,8 @@ rcd_world_remote_fetch_licenses (RCDWorldRemote *remote, gboolean local)
     }        
 
 cleanup:
+    rcd_cache_entry_unref (entry);
+
     if (buf)
         rc_buffer_unmap_file (buf);
     
@@ -403,6 +452,8 @@ rcd_world_remote_fetch_news (RCDWorldRemote *remote, gboolean local)
     xmlFreeDoc (doc);
 
 cleanup:
+    rcd_cache_entry_unref (entry);
+
     if (buf)
         rc_buffer_unmap_file (buf);
 
@@ -481,6 +532,8 @@ rcd_world_remote_fetch_mirrors (RCDWorldRemote *remote, gboolean local)
     xmlFreeDoc (doc);
     
  cleanup:
+    rcd_cache_entry_unref (entry);
+
     if (buf)
         rc_buffer_unmap_file (buf);
 
@@ -594,12 +647,15 @@ cleanup:
         success = FALSE;
     } else {
         if (XMLRPC_STRING_TO_RC (new_url) != NULL) {
+            RCPending *pending;
             RCWorldService *service = RC_WORLD_SERVICE (remote);
 
             g_free (service->url);
             service->url = g_strdup (new_url);
 
-            rc_world_refresh (RC_WORLD (remote));
+            pending = rc_world_refresh (RC_WORLD (remote));
+            if (pending)
+                g_object_unref (pending);
         }
 
         g_signal_emit (remote, signals[ACTIVATED], 0);
@@ -841,6 +897,7 @@ rcd_extract_packages_from_yum_buffer (RCDWorldRemote *world,
         
             transfer = rcd_transfer_new (header_url,
                                          RCD_TRANSFER_FLAGS_NONE, entry);
+            rcd_cache_entry_unref (entry);
 
             header_data = rcd_transfer_begin_blocking (transfer);
 
@@ -1066,8 +1123,10 @@ rcd_world_remote_per_channel_cb (RCChannel *channel,
                                    "channel_data", rc_channel_get_id (channel),
                                    FALSE);
 
-        if (entry)
+        if (entry) {
             rcd_cache_entry_invalidate (entry);
+            rcd_cache_entry_unref (entry);
+        }
     }
 
     entry = rcd_cache_lookup (rcd_cache_get_normal_cache (),
@@ -1128,6 +1187,8 @@ rcd_world_remote_per_channel_cb (RCChannel *channel,
         rcd_transfer_pool_add_transfer (channel_data->pool, t);
         g_object_unref (t);
     }
+
+    rcd_cache_entry_unref (entry);
     
     /* Channel icon */
     if (channel_data->flush) {
@@ -1135,8 +1196,10 @@ rcd_world_remote_per_channel_cb (RCChannel *channel,
                                    "icon", rc_channel_get_id (channel),
                                    FALSE);
 
-        if (entry)
+        if (entry) {
             rcd_cache_entry_invalidate (entry);
+            rcd_cache_entry_unref (entry);
+        }
     }
 
     entry = rcd_cache_lookup (rcd_cache_get_normal_cache (),
@@ -1168,6 +1231,8 @@ rcd_world_remote_per_channel_cb (RCChannel *channel,
         g_object_unref (t);
     }
 
+    rcd_cache_entry_unref (entry);
+
     return TRUE;
 }
 
@@ -1189,6 +1254,7 @@ saved_target_differs (RCDWorldRemote *remote)
     RCDCacheEntry *entry;
     RCBuffer *buf;
     const char *target;
+    gboolean differs = TRUE;
 
     entry = rcd_cache_lookup (rcd_cache_get_normal_cache (),
                               "distro_target",
@@ -1200,16 +1266,25 @@ saved_target_differs (RCDWorldRemote *remote)
         return TRUE;
 
     buf = rcd_cache_entry_map_file (entry);
+    rcd_cache_entry_unref (entry);
 
-    if (!buf || !buf->data)
+    if (!buf)
         return TRUE;
+
+    if (!buf->data)
+        goto cleanup;
 
     target = rc_distro_get_target (remote->distro);
 
     if (strlen (target) != buf->size)
-        return TRUE;
+        goto cleanup;
 
-    return strncmp (target, buf->data, buf->size);
+    differs = (gboolean) strncmp (target, buf->data, buf->size);
+
+ cleanup:
+    rc_buffer_unmap_file (buf);
+
+    return differs;
 }
 
 static void
@@ -1231,6 +1306,8 @@ save_target (RCDWorldRemote *remote)
         rcd_cache_entry_append (entry, target, strlen (target));
         rcd_cache_entry_close (entry);
     }
+
+    rcd_cache_entry_unref (entry);
 }
 
 static gboolean
@@ -1358,6 +1435,8 @@ rcd_world_remote_fetch_channels (RCDWorldRemote *remote, gboolean local,
     }
 
 cleanup:
+    rcd_cache_entry_unref (entry);
+
     if (buf)
         rc_buffer_unmap_file (buf);
 
@@ -1476,11 +1555,13 @@ extract_service_info (RCDWorldRemote *remote,
     if (g_strcasecmp (root->name, "service") != 0)
         return FALSE;
 
+    g_free (service->name);
     service->name = xml_get_prop (root, "name");
 
     if (!service->name)
         service->name = g_strdup (service->url);
 
+    g_free (service->unique_id);
     service->unique_id = xml_get_prop (root, "unique_id");
 
     if (!service->unique_id)
@@ -1620,7 +1701,7 @@ rcd_world_remote_parse_serviceinfo (RCDWorldRemote  *remote,
 }
 
 static RCPending *
-rcd_world_remote_fetch (RCDWorldRemote *remote, gboolean local, GError **error)
+rcd_world_remote_fetch (RCDWorldRemote *remote, GError **error)
 {
     char *url;
     char *cache_entry_str = NULL;
@@ -1641,37 +1722,6 @@ rcd_world_remote_fetch (RCDWorldRemote *remote, gboolean local, GError **error)
                        
     entry = rcd_cache_lookup (rcd_cache_get_normal_cache (),
                               "service_info", cache_entry_str, TRUE);
-    if (local) {
-        RCBuffer *buf;
-
-        buf = rcd_cache_entry_map_file (entry);
-
-        if (buf) {
-            pending = rcd_world_remote_parse_serviceinfo (remote, TRUE,
-                                                          buf->data,
-                                                          buf->size,
-                                                          &tmp_error);
-
-            rc_buffer_unmap_file (buf);
-
-            if (tmp_error == NULL)
-                goto cleanup;
-            else {
-                g_error_free (tmp_error);
-                tmp_error = NULL;
-
-                /* 
-                 * The data is bad on disk, so let's invalidate the
-                 * cache entry so we download it again
-                 */
-                rcd_cache_entry_invalidate (entry);
-                
-                entry = rcd_cache_lookup (rcd_cache_get_normal_cache (),
-                                          "service_info", cache_entry_str,
-                                          TRUE);
-            }
-        }
-    }
 
     url = g_strconcat (RC_WORLD_SERVICE (remote)->url,
                        "/serviceinfo.xml", NULL);
@@ -1681,28 +1731,40 @@ rcd_world_remote_fetch (RCDWorldRemote *remote, gboolean local, GError **error)
     data = rcd_transfer_begin_blocking (t);
 
     if (rcd_transfer_get_error (t)) {
-        g_set_error (error, RC_ERROR, RC_ERROR,
-                     "Unable to download service info: %s",
-                     rcd_transfer_get_error_string (t));
-        rc_debug (RC_DEBUG_LEVEL_CRITICAL,
+        /* Trying to use cached one */
+        RCBuffer *buf;
+
+        rc_debug (RC_DEBUG_LEVEL_WARNING,
                   "Unable to download service info: %s",
                   rcd_transfer_get_error_string (t));
-        goto cleanup;
-    }
 
-    pending = rcd_world_remote_parse_serviceinfo (remote, FALSE,
-                                                  data->data, data->len,
-                                                  &tmp_error);
+        buf = rcd_cache_entry_map_file (entry);
+        if (buf) {
+            pending = rcd_world_remote_parse_serviceinfo (remote, TRUE,
+                                                          buf->data,
+                                                          buf->size,
+                                                          &tmp_error);
+            rc_buffer_unmap_file (buf);
+        } else {
+            g_set_error (&tmp_error, RC_ERROR, RC_ERROR,
+                         "Unable to download service info: %s",
+                         rcd_transfer_get_error_string (t));
+        }
+    } else {
+        pending = rcd_world_remote_parse_serviceinfo (remote, FALSE,
+                                                      data->data,
+                                                      data->len,
+                                                      &tmp_error);
+    }
 
     if (tmp_error != NULL) {
         /* We don't want to cache bad data */
         rcd_cache_entry_invalidate (entry);
-
         g_propagate_error (error, tmp_error);
     }
 
- cleanup:
     g_free (cache_entry_str);
+    rcd_cache_entry_unref (entry);
 
     if (t)
         g_object_unref (t);

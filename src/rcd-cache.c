@@ -64,6 +64,8 @@ struct _RCDCache {
 struct _RCDCacheEntry {
     RCDCache *cache;
 
+    gint refs;
+
     char *source_id;
     char *file_tag;
     char *url;
@@ -99,6 +101,7 @@ rcd_cache_entry_new (RCDCache   *cache,
     entry = g_new0 (RCDCacheEntry, 1);
     
     entry->cache         = cache;
+    entry->refs          = 1;
     entry->source_id     = g_strdup (source_id);
     entry->file_tag      = g_strdup (file_tag);
     entry->url           = NULL;
@@ -146,20 +149,37 @@ rcd_cache_entry_new_from_url (RCDCache   *cache,
     return entry;
 }
 
-static void
-rcd_cache_entry_free (RCDCacheEntry *entry)
+RCDCacheEntry *
+rcd_cache_entry_ref (RCDCacheEntry *entry)
+{
+    if (entry) {
+        g_assert (entry->refs > 0);
+        ++entry->refs;
+    }
+
+    return entry;
+}
+
+void
+rcd_cache_entry_unref (RCDCacheEntry *entry)
 {
     if (entry != NULL) {
-        g_free (entry->source_id);
-        g_free (entry->file_tag);
-        g_free (entry->url);
-        g_free (entry->local_file);
-        g_free (entry->tmp_file);
-        g_free (entry->entity_tag);
-        g_free (entry->last_modified);
-        g_free (entry);
+
+        g_assert (entry->refs > 0);
+        --entry->refs;
+
+        if (entry->refs == 0) {
+            g_free (entry->source_id);
+            g_free (entry->file_tag);
+            g_free (entry->url);
+            g_free (entry->local_file);
+            g_free (entry->tmp_file);
+            g_free (entry->entity_tag);
+            g_free (entry->last_modified);
+            g_free (entry);
+        }
     }
-} /* rcd_cache_entry_free */
+} /* rcd_cache_entry_unref */
 
 static gboolean
 rcd_cache_entry_is_valid (RCDCacheEntry *entry)
@@ -245,7 +265,8 @@ rcd_cache_entry_close (RCDCacheEntry *entry)
     entry->tmp_file = NULL;
 
     g_hash_table_insert (entry->cache->entries,
-                         entry->local_file, entry);
+                         entry->local_file,
+                         rcd_cache_entry_ref (entry));
 } /* rcd_cache_entry_close */
 
 void
@@ -266,7 +287,7 @@ rcd_cache_entry_invalidate (RCDCacheEntry *entry)
 
     unlink (entry->local_file);
     g_hash_table_remove (entry->cache->entries, entry->local_file);
-    rcd_cache_entry_free (entry);
+    rcd_cache_entry_unref (entry);
 } /* rcd_cache_entry_invalidate */
 
 const char *
@@ -414,8 +435,8 @@ rcd_cache_lookup_entry (RCDCache      *cache,
     entry = g_hash_table_lookup (cache->entries, base_entry->local_file);
     if (entry) {
         if (rcd_cache_entry_is_valid (entry)) {
-            rcd_cache_entry_free (base_entry);
-            return entry;
+            rcd_cache_entry_unref (base_entry);
+            return rcd_cache_entry_ref (entry);
         } else {
             rcd_cache_entry_invalidate (entry);
         }
@@ -424,7 +445,7 @@ rcd_cache_lookup_entry (RCDCache      *cache,
            is not set, just return NULL. */
         if (! rcd_cache_entry_is_valid (base_entry)
             && ! return_base_on_cache_miss) {
-            rcd_cache_entry_free (base_entry);
+            rcd_cache_entry_unref (base_entry);
             return NULL;
         }
     }

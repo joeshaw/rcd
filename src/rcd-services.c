@@ -53,7 +53,6 @@ rcd_services_load (RCWorldMulti *multi)
     
     loaded = TRUE;
 
-
     /* Create our default services */
     world = rc_world_service_mount ("system:///", NULL);
     RC_WORLD_SERVICE (world)->is_unsaved = TRUE;
@@ -116,9 +115,10 @@ rcd_services_load (RCWorldMulti *multi)
             continue;
         }
 
-        if (strncmp (url, "file", 4) &&
-            rcd_options_get_no_network_flag ())
+        if (strncmp (url, "file", 4) && rcd_options_get_no_network_flag ()) {
+            g_free (url);
             continue;
+        }
 
         world = rc_world_service_mount (url, &err);
 

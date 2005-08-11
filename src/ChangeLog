@@ -1,3 +1,71 @@
+2005-08-05  Tambet Ingo  <tambet@ximian.com>
+
+	* rcd.c (rehash_data): unref pending.
+
+	* rcd-world-remote.c: Include rc-recurring.h to make it compile
+	without warnings.
+	(package_dup_fn, channel_dup_fn, rcd_world_remote_dup): Implement.
+	Implement deep copy for RCDWorldRemote. On refresh. if the service
+	isn't changed, the copied world is used instead of parsing the XML
+	metadata again.
+	(rcd_world_remote_assemble): Remove unused "remote_only" parsing.
+	(rcd_world_remote_class_init): Register world_dup() override.
+	(rcd_world_remote_fetch_distributions): unref cache entry.
+	(rcd_world_remote_fetch_licenses): ditto.
+	(rcd_world_remote_fetch_news): ditto.
+	(rcd_world_remote_fetch_mirrors): ditto.
+	(rcd_extract_packages_from_yum_buffer): ditto.
+	(rcd_world_remote_per_channel_cb): ditto.
+	(rcd_world_remote_activate): Unref pending.
+	(rcd_world_remote_per_channel_cb): ditto.
+	(rcd_world_remote_fetch): ditto.
+	(save_target): ditto.
+	(rcd_world_remote_fetch_channels): ditto.
+	(saved_target_differs): unref cache entry.
+	Unmap mapped memory when done.
+	(extract_service_info): Since the world is already duplicated,
+	free it's name and unique id before allocating new ones.
+	(rcd_world_remote_fetch): Remove the unused "local" argument and
+	dead code.
+
+	* rcd-transfer.c (rcd_transfer_finalize): unref cache entry.
+	(rcd_transfer_new): reference cache entry.
+
+	* rcd-transfer-http.c (http_done): Don't just free the protocol
+	structure, keep it's free_func() (if provided).
+
+	* rcd-transaction.c (get_packages_to_download): Unref cache entry.
+	(fetch_packages): Ditto.
+
+	* rcd-services.c (rcd_services_load): Free the service url if we're
+	going to ignore the service.
+
+	* rcd-rpc-service.c (service_set_url): Add a FIXME warning for
+	the future.
+	(service_refresh): Unref pending.
+	(service_refresh_blocking): Ditto.
+	(heartbeat_refresh_world_cb): Ditto.
+
+	* rcd-rpc-packsys.c (packsys_get_channel_icon): unref the cache
+	entry when done with it.
+
+	* rcd-cache.h: Declare reference counting.
+
+	* rcd-cache.c: Add reference counting for RCDCacheEntry.
+	(rcd_cache_entry_ref): Implement.
+	(rcd_cache_entry_unref): Implement.
+	(rcd_cache_entry_free): Remove.
+	(rcd_cache_entry_close): Increment reference before adding an entry
+	to cache.
+	(rcd_cache_entry_invalidate): Decrement reference when removin an
+	entry from the cache.
+	(rcd_cache_lookup_entry): Count referenecs correctly.
+
+2005-07-19  Tambet Ingo  <tambet@ximian.com>
+
+	* rcd-world-remote.c (saved_target_differs): Free RCBuffer when we're
+	done with it.
+
 2005-06-13  michael wolf  <maw@novell.com>
 
 	* rcd-prefs.h

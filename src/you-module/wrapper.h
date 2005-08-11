@@ -28,6 +28,7 @@
 
 #include <glib.h>
 #include "rc-you-patch.h"
+#include "rc-pending.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,6 +43,7 @@ typedef gboolean (*SuseProductCallback) (const gchar *name,
 
 RCYouPatchSList *rc_you_wrapper_get_installed_patches (RCChannel *channel);
 void rc_you_wrapper_install_patches (RCYouPatchSList  *list,
+                                     RCPending        *pending,
                                      GError          **error);
 
 void rc_you_wrapper_products_foreach (SuseProductCallback, gpointer user_data);

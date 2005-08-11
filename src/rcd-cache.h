@@ -34,6 +34,9 @@ typedef struct _RCDCacheEntry RCDCacheEntry;
 
 /* RCDCacheEntry functions */
 
+RCDCacheEntry *rcd_cache_entry_ref   (RCDCacheEntry *entry);
+void           rcd_cache_entry_unref (RCDCacheEntry *entry);
+
 void rcd_cache_entry_open       (RCDCacheEntry *entry);
 void rcd_cache_entry_append     (RCDCacheEntry *entry,
                                  const char    *data, 

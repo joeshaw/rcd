@@ -125,8 +125,11 @@ packsys_get_channel_icon (xmlrpc_env   *env,
     entry = rcd_cache_lookup (rcd_cache_get_normal_cache (),
                               "icon", channel_id, FALSE);
 
-    if (entry)
+    if (entry) {
         local_file = rcd_cache_entry_get_local_filename (entry);
+        rcd_cache_entry_unref (entry);
+    }
+
     if (!local_file) {
         xmlrpc_env_set_fault_formatted (env, RCD_RPC_FAULT_NO_ICON,
                                         "Can't get icon for channel '%s' (%s)",

@@ -1,3 +1,7 @@
+2005-08-05  Tambet Ingo  <tambet@ximian.com>
+
+	* wrapper.cc: Implement callbacks to get more information out liby2pm.
+
 2005-01-13  Tambet Ingo  <tambet@ximian.com>
 
 	* you.c (spew): Add ifdef'ed debug code.
