@@ -90,6 +90,8 @@ struct _RCDTransfer {
     gsize file_size;
     gsize bytes_transferred;
 
+    gint retries;
+
     GByteArray *data; /* If a blocking transfer or data is bufferred */
 };
 
@@ -98,6 +100,7 @@ struct _RCDTransferClass {
     
     void (*file_data) (RCDTransfer *, const char *buffer, gsize size);
     void (*file_done) (RCDTransfer *);
+    void (*file_reset) (RCDTransfer *);
 };
 
 #define RCD_TYPE_TRANSFER            (rcd_transfer_get_type ())
@@ -127,6 +130,7 @@ void              rcd_transfer_emit_data          (RCDTransfer *t,
                                                    const char  *buf,
                                                    gsize       size);
 void              rcd_transfer_emit_done          (RCDTransfer *t);
+void              rcd_transfer_emit_reset         (RCDTransfer *t);
 
 RCPending        *rcd_transfer_get_pending        (RCDTransfer *t);
 char             *rcd_transfer_get_local_filename (RCDTransfer *t);

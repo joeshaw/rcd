@@ -42,12 +42,17 @@
 #include "rcd-transfer-http.h"
 
 #define RCD_SOUP_PROTOCOL_FILE (g_quark_from_static_string ("file"))
+#define RCD_TRANSFER_RETRIES 3
+#define RCD_TRANSFER_RETRY_DELAY 3000
 
 static GObjectClass *parent_class;
+
+static void rcd_transfer_reset (RCDTransfer *t);
 
 enum {
     FILE_DATA,
     FILE_DONE,
+    FILE_RESET,
     LAST_SIGNAL
 };
 
@@ -100,17 +105,50 @@ rcd_transfer_file_data (RCDTransfer *t,
     }
 }
 
+static gboolean
+rcd_transfer_retry (RCDTransfer *t)
+{
+    t->retries--;
+    rcd_transfer_begin (t);
+
+    return FALSE;
+}
+
+static void
+rcd_transfer_file_reset (RCDTransfer *t)
+{
+    g_timeout_add (RCD_TRANSFER_RETRY_DELAY,
+                   (GSourceFunc) rcd_transfer_retry,
+                   t);
+}
+
 static void
 rcd_transfer_file_done (RCDTransfer *t)
 {
+    RCDTransferError err;
+
+    err = rcd_transfer_get_error (t);
+
+    /* Retry on these errors */
+
+    if (t->retries > 0 && (err == RCD_TRANSFER_ERROR_CANT_CONNECT || 
+                           err == RCD_TRANSFER_ERROR_IO)) {
+        rc_debug (RC_DEBUG_LEVEL_INFO, "Transfer %s failed: %s. Retrying.",
+                  t->url, rcd_transfer_error_to_string (err));
+        g_signal_stop_emission (t, signals[FILE_DONE], 0);
+        rcd_transfer_reset (t);
+        rcd_transfer_emit_reset (t);
+        return;
+    }
+
     if (t->pending) {
-        if (rcd_transfer_get_error (t) == RCD_TRANSFER_ERROR_CANCELLED)
+        if (err == RCD_TRANSFER_ERROR_CANCELLED)
             rc_pending_abort (t->pending, 0);
-        else if (rcd_transfer_get_error (t))
+        else if (err)
             rc_pending_fail (t->pending, 0, rcd_transfer_get_error_string (t));
         else
             rc_pending_finished (t->pending, 0);
-    }        
+    }
 
     /* Removes the ref added in rcd_transfer_begin() */
     g_object_unref (t);
@@ -127,6 +165,7 @@ rcd_transfer_class_init (RCDTransferClass *klass)
 
     klass->file_data = rcd_transfer_file_data;
     klass->file_done = rcd_transfer_file_done;
+    klass->file_reset = rcd_transfer_file_reset;
 
     signals[FILE_DATA] =
         g_signal_new ("file_data",
@@ -146,12 +185,22 @@ rcd_transfer_class_init (RCDTransferClass *klass)
                       NULL, NULL,
                       rcd_marshal_VOID__VOID,
                       G_TYPE_NONE, 0);
+
+    signals[FILE_RESET] =
+        g_signal_new ("file_reset",
+                      G_TYPE_FROM_CLASS (klass),
+                      G_SIGNAL_RUN_CLEANUP,
+                      G_STRUCT_OFFSET (RCDTransferClass, file_reset),
+                      NULL, NULL,
+                      rcd_marshal_VOID__VOID,
+                      G_TYPE_NONE, 0);
 }
 
 static void
 rcd_transfer_init (RCDTransfer *t)
 {
     t->error = RCD_TRANSFER_ERROR_NONE;
+    t->retries = RCD_TRANSFER_RETRIES;
 }
 
 GType
@@ -199,7 +248,7 @@ rcd_transfer_new (const char       *url,
 
     if (!t->protocol)
         rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_INVALID_URI, url);
-        
+
     t->url = g_strdup (url);
     t->filename = g_path_get_basename (t->url);
 
@@ -314,8 +363,14 @@ rcd_transfer_emit_data (RCDTransfer *t, const char *buf, gsize size)
 void
 rcd_transfer_emit_done (RCDTransfer *t)
 {
-    g_signal_emit(t, signals[FILE_DONE], 0);
+    g_signal_emit (t, signals[FILE_DONE], 0);
 } /* rcd_transfer_emit_done */
+
+void
+rcd_transfer_emit_reset (RCDTransfer *t)
+{
+    g_signal_emit (t, signals[FILE_RESET], 0);
+} /* rcd_transfer_emit_reset */
 
 void
 rcd_transfer_abort (RCDTransfer *t)
@@ -347,19 +402,48 @@ rcd_transfer_get_protocol_from_url (const char *url)
     return protocol;
 } /* rcd_transfer_get_protocol_from_url */
 
+static void
+rcd_transfer_reset (RCDTransfer *t)
+{
+    t->error = RCD_TRANSFER_ERROR_NONE;
+    g_free (t->error_string);
+    t->error_string = NULL;
+
+    if (t->pending)
+        rc_pending_update (t->pending, 0);
+
+    if (t->protocol) {
+        if (t->protocol->free_func)
+            t->protocol->free_func (t->protocol);
+        else
+            g_free (t->protocol);
+    }
+
+    t->protocol = rcd_transfer_get_protocol_from_url (t->url);
+    if (!t->protocol) {
+        rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_INVALID_URI, t->url);
+        return;
+    }
+
+    t->retries--;
+    t->file_size = 0;
+    t->bytes_transferred = 0;
+
+    if (t->data) {
+        g_byte_array_free (t->data, TRUE);
+        t->data = NULL;
+    }
+}
+
 int
 rcd_transfer_begin (RCDTransfer *t)
 {
     g_return_val_if_fail (RCD_IS_TRANSFER (t), -1);
 
-    t->bytes_transferred = 0;
-
-    if (!t->protocol) {
-        rcd_transfer_set_error (t, RCD_TRANSFER_ERROR_INVALID_URI, t->url);
+    if (!t->protocol)
         return -1;
-    }
 
-    rc_debug(RC_DEBUG_LEVEL_DEBUG, "Transfer URL: %s\n", t->url);
+    rc_debug (RC_DEBUG_LEVEL_DEBUG, "Transfer URL: %s\n", t->url);
 
     if (t->protocol->open_func (t)) {
         /* An error occurred in the open call. It's the open call's
@@ -440,4 +524,3 @@ rcd_transfer_begin_blocking (RCDTransfer *t)
 
     return t->data;
 }
-

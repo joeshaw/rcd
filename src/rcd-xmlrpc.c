@@ -321,6 +321,24 @@ cleanup:
 	return retval;
 }
 
+typedef struct {
+    char *data;
+    size_t len;
+} RequestResetInfo;
+
+static void
+transfer_reset_cb (RCDTransfer *t, gpointer user_data)
+{
+    RequestResetInfo *info = user_data;
+    RCDTransferProtocolHTTP *protocol;
+
+    protocol = (RCDTransferProtocolHTTP *) t->protocol;
+
+    rcd_transfer_protocol_http_set_method (protocol, SOUP_METHOD_POST);
+    rcd_transfer_protocol_http_set_request_body (protocol, info->data,
+                                                 info->len);
+}
+
 static void
 send_request (xmlrpc_env *env,
               char *uri,
@@ -332,6 +350,7 @@ send_request (xmlrpc_env *env,
     RCDTransfer *t;
     RCDTransferProtocolHTTP *protocol;
     const GByteArray *data;
+    RequestResetInfo info;
 
     t = rcd_transfer_new (uri,
                           RCD_TRANSFER_FLAGS_DONT_CACHE
@@ -348,6 +367,13 @@ send_request (xmlrpc_env *env,
     rcd_transfer_protocol_http_set_method (protocol, SOUP_METHOD_POST);
     rcd_transfer_protocol_http_set_request_body (protocol, xml_data,
                                                  xml_len);
+
+    info.data = xml_data;
+    info.len  = xml_len;
+
+    g_signal_connect (t, "file_reset",
+                      G_CALLBACK (transfer_reset_cb),
+                      &info);
 
     data = rcd_transfer_begin_blocking (t);
 
