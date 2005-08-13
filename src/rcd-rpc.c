@@ -504,6 +504,10 @@ rcd_rpc_remote_server_start (void)
         return FALSE;
     }
 
+    g_object_set (G_OBJECT (soup_server_get_listener (soup_server)),
+                  SOUP_SOCKET_FLAG_CLOEXEC, TRUE,
+                  NULL);
+
     auth_ctx.types = SOUP_AUTH_TYPE_DIGEST;
     auth_ctx.callback = soup_auth_callback;
     auth_ctx.digest_info.realm = "RCD";
