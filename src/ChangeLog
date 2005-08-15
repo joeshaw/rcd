@@ -1,3 +1,22 @@
+2005-08-15  Tambet Ingo  <tambet@ximian.com>
+
+	* rcd-transaction.h: Use int instead of GPid. Older versions of glib
+	don't have GPid and it's not like we work on windows anyway.
+
+	* rcd-xmlrpc.c (send_request): Handle RCDTransfer retrying.
+
+	* rcd-transfer.c: Implement retrying.
+
+	* rcd-transfer-http.c (http_done): Fix a compiler warning.
+	(http_open): Connect to a "authenticate" signal from SoupSession
+	only once. Fixes another massive memory leak.
+
+	* rcd-transaction.c (get_packages_to_download):
+	rcd_cache_entry_invalidate already unrefs the cache entry, don't do
+	it twice.
+
+	* rcd-world-remote.c: Ditto.
+
 2005-08-05  Tambet Ingo  <tambet@ximian.com>
 
 	* rcd.c (rehash_data): unref pending.

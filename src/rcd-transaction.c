@@ -902,10 +902,8 @@ get_packages_to_download (RCDTransaction *transaction, GError **err)
                                               package->package_filename,
                                               FALSE);
 
-                    if (entry) {
+                    if (entry)
                         rcd_cache_entry_invalidate (entry);
-                        rcd_cache_entry_unref (entry);
-                    }
 
                     /*
                      * We can't download another version of this package

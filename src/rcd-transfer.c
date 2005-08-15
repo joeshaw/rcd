@@ -70,6 +70,9 @@ rcd_transfer_finalize (GObject *obj)
     if (t->cache_entry)
         rcd_cache_entry_unref (t->cache_entry);
 
+    if (t->retry_handler)
+        g_source_remove (t->retry_handler);
+
     if (t->protocol) {
         if (t->protocol->free_func)
             t->protocol->free_func (t->protocol);
@@ -108,6 +111,7 @@ rcd_transfer_file_data (RCDTransfer *t,
 static gboolean
 rcd_transfer_retry (RCDTransfer *t)
 {
+    t->retry_handler = 0;
     t->retries--;
     rcd_transfer_begin (t);
 
@@ -117,9 +121,9 @@ rcd_transfer_retry (RCDTransfer *t)
 static void
 rcd_transfer_file_reset (RCDTransfer *t)
 {
-    g_timeout_add (RCD_TRANSFER_RETRY_DELAY,
-                   (GSourceFunc) rcd_transfer_retry,
-                   t);
+    t->retry_handler = g_timeout_add (RCD_TRANSFER_RETRY_DELAY,
+                                      (GSourceFunc) rcd_transfer_retry,
+                                      t);
 }
 
 static void
@@ -376,6 +380,11 @@ void
 rcd_transfer_abort (RCDTransfer *t)
 {
     g_return_if_fail (RCD_IS_TRANSFER (t));
+
+    if (t->retry_handler) {
+        g_source_remove (t->retry_handler);
+        t->retry_handler = 0;
+    }
 
     t->protocol->abort_func (t);
 } /* rcd_transfer_abort */

@@ -91,6 +91,7 @@ struct _RCDTransfer {
     gsize bytes_transferred;
 
     gint retries;
+    guint retry_handler;
 
     GByteArray *data; /* If a blocking transfer or data is bufferred */
 };

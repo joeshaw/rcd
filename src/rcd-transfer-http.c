@@ -226,7 +226,7 @@ http_done (SoupMessage *message, gpointer user_data)
             g_free (cache_filename);
 
             if (t->protocol->free_func)
-                t->protocol->free_func (protocol);
+                t->protocol->free_func (t->protocol);
             else
                 g_free (protocol);
             g_free (t->url);
@@ -432,8 +432,13 @@ http_open (RCDTransfer *t)
 
     protocol = (RCDTransferProtocolHTTP *) t->protocol;
 
-    if (!session)
+    if (!session) {
         session = soup_session_async_new ();
+
+        /* Connect to the authenticate signals */
+        g_signal_connect (session, "authenticate",
+                          G_CALLBACK (http_authenticate), NULL);
+    }
 
     protocol->session = g_object_ref (session);
     
@@ -477,10 +482,6 @@ http_open (RCDTransfer *t)
                       SHAREDIR "/rcd-ca-bundle.pem", NULL);
     } else
         g_object_set (session, SOUP_SESSION_SSL_CA_FILE, NULL, NULL);
-
-    /* Connect to the authenticate signals */
-    g_signal_connect (session, "authenticate",
-                      G_CALLBACK (http_authenticate), t);
 
     protocol->message = soup_message_new (protocol->method, t->url);
 
