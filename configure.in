@@ -63,7 +63,7 @@ AM_PROG_LIBTOOL
 
 ### get cflags and libs
 
-PKG_CHECK_MODULES(RCD, glib-2.0 gmodule-2.0 gobject-2.0 gthread-2.0 libxml-2.0 libredcarpet >= 2.2.2)
+PKG_CHECK_MODULES(RCD, glib-2.0 gmodule-2.0 gobject-2.0 gthread-2.0 libxml-2.0 libredcarpet >= 2.4.7)
 
 ###
 ### libsoup magic
@@ -84,7 +84,7 @@ if test "x$with_libsoup" != "x"; then
 
   export PKG_CONFIG_PATH
 
-  PKG_CHECK_MODULES(LIBSOUP, libsoup-2.2)
+  PKG_CHECK_MODULES(LIBSOUP, libsoup-2.2 >= 2.2.5)
 
   real_with_libsoup=`cd $with_libsoup && pwd`
 
@@ -95,7 +95,7 @@ if test "x$with_libsoup" != "x"; then
 
   RCD_LIBS=`echo $RCD_LIBS | sed 's/-lsoup//g'`
 else
-  PKG_CHECK_MODULES(LIBSOUP, libsoup-2.2)
+  PKG_CHECK_MODULES(LIBSOUP, libsoup-2.2 >= 2.2.5)
   RCD_CFLAGS="${RCD_CFLAGS:+$RCD_CFLAGS }$LIBSOUP_CFLAGS"
   LIBSOUP_LIBS=`echo $LIBSOUP_LIBS | sed 's/-lpthread//g'`
 fi
