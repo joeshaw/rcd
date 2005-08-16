@@ -1,3 +1,8 @@
+2005-08-16  Tambet Ingo  <tambet@ximian.com>
+
+	* rcd-prefs.c (rcd_prefs_get_mid, rcd_prefs_get_secret): Make these
+	functions thread safe as these are called from libsoup threads.
+
 2005-08-15  Tambet Ingo  <tambet@ximian.com>
 
 	* rcd-transaction.h: Use int instead of GPid. Older versions of glib

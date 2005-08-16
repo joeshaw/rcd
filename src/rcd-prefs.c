@@ -756,26 +756,32 @@ rcd_prefs_set_filesystem_check_timeout (gint timeout, GError **err)
     return TRUE;    
 }
 
+G_LOCK_DEFINE (mid);
+
 const char *
 rcd_prefs_get_mid (void)
 {
     static char *mid = NULL;
     RCBuffer *buf;
 
+    G_LOCK (mid);
+
     g_free (mid);
     mid = NULL;
 
     buf = rc_buffer_map_file (SYSCONFDIR "/mcookie");
-    if (!buf)
-        return NULL;
+    if (buf) {
+        mid = g_strndup (buf->data, 36);
+        mid[36] = '\0';
+        rc_buffer_unmap_file (buf);
+    }
 
-    mid = g_strndup (buf->data, 36);
-    mid[36] = '\0';
-
-    rc_buffer_unmap_file (buf);
+    G_UNLOCK (mid);
 
     return mid;
 } /* rcd_prefs_get_mid */
+
+G_LOCK_DEFINE (secret);
 
 const char *
 rcd_prefs_get_secret (void)
@@ -783,17 +789,19 @@ rcd_prefs_get_secret (void)
     static char *secret = NULL;
     RCBuffer *buf;
 
+    G_LOCK (secret);
+
     g_free (secret);
     secret = NULL;
 
     buf = rc_buffer_map_file (SYSCONFDIR "/partnernet");
-    if (!buf)
-        return NULL;
+    if (buf) {
+        secret = g_strndup (buf->data, 36);
+        secret[36] = '\0';
+        rc_buffer_unmap_file (buf);
+    }
 
-    secret = g_strndup (buf->data, 36);
-    secret[36] = '\0';
-
-    rc_buffer_unmap_file (buf);
+    G_UNLOCK (secret);
 
     return secret;
 } /* rcd_prefs_get_secret */
