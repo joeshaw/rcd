@@ -49,26 +49,46 @@
 class YouCallbacks : public InstYou::Callbacks
 {
  public:
-    RCPending *pending;
+    RCPending *transaction_pending;
+    RCPending *transaction_step_pending;
 
     YouCallbacks () {}
 
     bool progress (int percent) {
+        if (transaction_pending)
+            rc_pending_update (transaction_pending, (double) percent);
+
+        while (g_main_pending ())
+            g_main_iteration (TRUE);
+
         return true;
     }
 
     bool patchProgress (int percent, const std::string &str) {
+        if (transaction_step_pending) {
+            char *buf;
+
+            buf = g_strdup_printf ("install:%s", str.c_str ());
+
+            rc_pending_update (transaction_step_pending, (double) percent);
+            rc_pending_add_message (transaction_step_pending, buf);
+            g_free (buf);
+        }
+
+        while (g_main_pending ())
+            g_main_iteration (TRUE);
+
         return true;
     }
 
     PMError showError (const std::string &type,
                        const std::string &text,
                        const std::string &details) {
-        if (pending) {
+        if (transaction_pending) {
             char *buf;
 
             buf = g_strdup_printf ("patch:%s", text.c_str ());
-            rc_pending_add_message (pending, buf);
+            rc_pending_add_message (transaction_pending, buf);
             g_free (buf);
         }
 
@@ -197,7 +217,8 @@ static YouCallbacks *you_callback = NULL;
 
 void
 rc_you_wrapper_install_patches (RCYouPatchSList  *list,
-                                RCPending        *pending,
+                                RCPending        *transaction_pending,
+                                RCPending        *transaction_step_pending,
                                 GError          **error)
 {
     PMManager::PMSelectableVec::const_iterator it;
@@ -258,11 +279,14 @@ rc_you_wrapper_install_patches (RCYouPatchSList  *list,
     if (you_callback == NULL)
         you_callback = new YouCallbacks ();
 
-    you_callback->pending = pending;
+    you_callback->transaction_pending = transaction_pending;
+    you_callback->transaction_step_pending = transaction_step_pending;
     InstYou::setCallbacks (you_callback);
 
     err = you.processPatches ();
-    you_callback->pending = NULL;
+    you_callback->transaction_pending = NULL;
+    you_callback->transaction_step_pending = NULL;
+
     if (err) {
         gchar *buf = g_strdup_printf ("%s (%s)",
                                       rc_you_string_to_char (err.errstr ()),

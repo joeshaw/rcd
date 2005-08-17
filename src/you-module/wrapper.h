@@ -43,7 +43,8 @@ typedef gboolean (*SuseProductCallback) (const gchar *name,
 
 RCYouPatchSList *rc_you_wrapper_get_installed_patches (RCChannel *channel);
 void rc_you_wrapper_install_patches (RCYouPatchSList  *list,
-                                     RCPending        *pending,
+                                     RCPending        *transaction_pending,
+                                     RCPending        *transaction_step_pending,
                                      GError          **error);
 
 void rc_you_wrapper_products_foreach (SuseProductCallback, gpointer user_data);

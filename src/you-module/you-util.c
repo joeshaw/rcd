@@ -720,6 +720,7 @@ parser_package_end (RCYouPatchSAXContext *ctx, const xmlChar *name)
 
     /*
         <filename>sysconfig-0.31.0-15.8.i586.rpm</filename>
+        <filesize>1235253</filesize>
         <patchrpmfilename>sysconfig-0.31.0-15.8.i586.patch.rpm</patchrpmfilename>
         <patchrpmbasedon>0.31.0-15 0.31.0-15.3</patchrpmbasedon>
         <patchrpminstallsize>424070</patchrpminstallsize>
@@ -729,6 +730,10 @@ parser_package_end (RCYouPatchSAXContext *ctx, const xmlChar *name)
     else if (!strcmp (name, "filename")) {
         ctx->current_package->base_package =
             rc_you_file_new (rc_xml_strip (ctx->text_buffer));
+    } else if (!strcmp (name, "filesize")) {
+        g_return_if_fail (ctx->current_package->base_package != NULL);
+        ctx->current_package->base_package->size =
+            rc_string_to_guint32_with_default(ctx->text_buffer, 0);
     } else if (!strcmp (name, "patchrpmfilename")) {
         ctx->current_package->patch_rpm =
             rc_you_file_new (rc_xml_strip (ctx->text_buffer));

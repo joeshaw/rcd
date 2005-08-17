@@ -1,3 +1,15 @@
+2005-08-16  Tambet Ingo  <tambet@ximian.com>
+
+	* rc-you-transaction.c (get_files_to_download): Add package file size
+	to transaction's total download size.
+
+	* you-util.c (parser_package_end): Set file size property for patch
+	packages.
+
+	* wrapper.cc (Callbacks): Update transaction pending and transaction
+	step pending.
+	(rc_you_wrapper_install_patches): Add transaction step pending.
+
 2005-08-11  Tambet Ingo  <tambet@ximian.com>
 
 	* rc-world-you.c (fetch_patches): unref cache entry.

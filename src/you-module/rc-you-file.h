@@ -39,6 +39,7 @@ struct _RCYouFile {
     gchar *filename;
     gchar *url;
     gchar *local_path;
+    guint32 size;
 
     gint refs;
 };

@@ -451,6 +451,7 @@ rc_you_transaction_transaction (RCYouTransaction *transaction)
     if (transaction->flags != RCD_TRANSACTION_FLAGS_DOWNLOAD_ONLY)
         rc_you_wrapper_install_patches (transaction->patches,
                                         transaction->transaction_pending,
+                                        transaction->transaction_step_pending,
                                         &error);
     if (error)
         goto cleanup;
@@ -560,7 +561,9 @@ get_files_to_download (RCYouTransaction *transaction, GError **err)
 
                 transaction->files_to_download = 
                     g_slist_prepend (transaction->files_to_download,
-                                 rc_you_file_ref (package->base_package));
+                                     rc_you_file_ref (package->base_package));
+
+                transaction->total_download_size += package->base_package->size;
             } else if (package->patch_rpm) {
                 rc_you_file_set_url (package->patch_rpm,
                                      rc_maybe_merge_paths (patch_prefix,
