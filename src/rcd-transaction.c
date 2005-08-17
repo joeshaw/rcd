@@ -902,8 +902,10 @@ get_packages_to_download (RCDTransaction *transaction, GError **err)
                                               package->package_filename,
                                               FALSE);
 
-                    if (entry)
+                    if (entry) {
                         rcd_cache_entry_invalidate (entry);
+                        rcd_cache_entry_unref (entry);
+                    }
 
                     /*
                      * We can't download another version of this package
@@ -1157,6 +1159,7 @@ rcd_transaction_download (RCDTransaction *transaction)
         g_signal_connect (transaction->pool, "transfer_done",
                           G_CALLBACK (transfer_done_cb), transaction);
         rcd_transfer_pool_begin (transaction->pool);
+        g_object_unref (transaction->pool);
     }
     else {
         if (transaction->flags == RCD_TRANSACTION_FLAGS_DOWNLOAD_ONLY)

@@ -284,7 +284,6 @@ rcd_world_remote_fetch_distributions (RCDWorldRemote *remote, gboolean local)
     }
 
     if (!buffer) {
-        RCDTransfer *t;
         const GByteArray *data;
 
         t = rcd_transfer_new (remote->distributions_url,
@@ -311,12 +310,10 @@ rcd_world_remote_fetch_distributions (RCDWorldRemote *remote, gboolean local)
         rc_debug (RC_DEBUG_LEVEL_CRITICAL,
                   "Unable to parse distribution info");
         rcd_cache_entry_invalidate (entry);
-        entry = NULL;
     }
 
 cleanup:
-    if (entry)
-        rcd_cache_entry_unref (entry);
+    rcd_cache_entry_unref (entry);
 
     if (buf)
         rc_buffer_unmap_file (buf);
@@ -371,12 +368,10 @@ rcd_world_remote_fetch_licenses (RCDWorldRemote *remote, gboolean local)
     if (!rcd_license_parse (remote, buffer, buffer_len)) {
         rc_debug (RC_DEBUG_LEVEL_CRITICAL, "Unable to parse licenses info");
         rcd_cache_entry_invalidate (entry);
-        entry = NULL;
     }        
 
 cleanup:
-    if (entry)
-        rcd_cache_entry_unref (entry);
+    rcd_cache_entry_unref (entry);
 
     if (buf)
         rc_buffer_unmap_file (buf);
@@ -434,7 +429,6 @@ rcd_world_remote_fetch_news (RCDWorldRemote *remote, gboolean local)
     if (doc == NULL) {
         rc_debug (RC_DEBUG_LEVEL_CRITICAL, "Couldn't parse news XML file");
         rcd_cache_entry_invalidate (entry);
-        entry = NULL;
         goto cleanup;
     }
 
@@ -457,8 +451,7 @@ rcd_world_remote_fetch_news (RCDWorldRemote *remote, gboolean local)
     xmlFreeDoc (doc);
 
 cleanup:
-    if (entry)
-        rcd_cache_entry_unref (entry);
+    rcd_cache_entry_unref (entry);
 
     if (buf)
         rc_buffer_unmap_file (buf);
@@ -516,7 +509,6 @@ rcd_world_remote_fetch_mirrors (RCDWorldRemote *remote, gboolean local)
     if (doc == NULL) {
         rc_debug (RC_DEBUG_LEVEL_CRITICAL, "Couldn't parse mirrors XML file.");
         rcd_cache_entry_invalidate (entry);
-        entry = NULL;
         goto cleanup;
     }
 
@@ -1126,13 +1118,13 @@ rcd_world_remote_per_channel_cb (RCChannel *channel,
     
     /* Channel data */
     if (channel_data->flush) {
-        entry  = rcd_cache_lookup (rcd_cache_get_normal_cache (),
-                                   "channel_data", rc_channel_get_id (channel),
-                                   FALSE);
+        entry = rcd_cache_lookup (rcd_cache_get_normal_cache (),
+                                  "channel_data", rc_channel_get_id (channel),
+                                  FALSE);
 
         if (entry) {
             rcd_cache_entry_invalidate (entry);
-            entry = NULL;
+            rcd_cache_entry_unref (entry);
         }
     }
 
@@ -1203,8 +1195,10 @@ rcd_world_remote_per_channel_cb (RCChannel *channel,
                                    "icon", rc_channel_get_id (channel),
                                    FALSE);
 
-        if (entry)
+        if (entry) {
             rcd_cache_entry_invalidate (entry);
+            rcd_cache_entry_unref (entry);
+        }
     }
 
     entry = rcd_cache_lookup (rcd_cache_get_normal_cache (),
@@ -1426,7 +1420,6 @@ rcd_world_remote_fetch_channels (RCDWorldRemote *remote, gboolean local,
     if (N < 0) {
         /* Don't cache invalid data */
         rcd_cache_entry_invalidate (entry);
-        entry = NULL;
 
         g_set_error (error, RC_ERROR, RC_ERROR,
                      "Invalid channel data");
@@ -1441,8 +1434,7 @@ rcd_world_remote_fetch_channels (RCDWorldRemote *remote, gboolean local,
     }
 
 cleanup:
-    if (entry)
-        rcd_cache_entry_unref (entry);
+    rcd_cache_entry_unref (entry);
 
     if (buf)
         rc_buffer_unmap_file (buf);
@@ -1767,14 +1759,12 @@ rcd_world_remote_fetch (RCDWorldRemote *remote, GError **error)
     if (tmp_error != NULL) {
         /* We don't want to cache bad data */
         rcd_cache_entry_invalidate (entry);
-        entry = NULL;
         g_propagate_error (error, tmp_error);
     }
 
     g_free (cache_entry_str);
 
-    if (entry)
-        rcd_cache_entry_unref (entry);
+    rcd_cache_entry_unref (entry);
 
     if (t)
         g_object_unref (t);

@@ -99,7 +99,7 @@ rcd_cache_entry_new (RCDCache   *cache,
     g_assert (cache->filename_func != NULL);
 
     entry = g_new0 (RCDCacheEntry, 1);
-    
+
     entry->cache         = cache;
     entry->refs          = 1;
     entry->source_id     = g_strdup (source_id);
@@ -286,8 +286,9 @@ rcd_cache_entry_invalidate (RCDCacheEntry *entry)
     g_return_if_fail (entry);
 
     unlink (entry->local_file);
-    g_hash_table_remove (entry->cache->entries, entry->local_file);
-    rcd_cache_entry_unref (entry);
+
+    if (g_hash_table_remove (entry->cache->entries, entry->local_file))
+        rcd_cache_entry_unref (entry);
 } /* rcd_cache_entry_invalidate */
 
 const char *
