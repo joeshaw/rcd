@@ -442,7 +442,7 @@ service_refresh_blocking (xmlrpc_env   *env,
 {
     int size;
     RCWorld *world;
-    RCPending *pending;
+    RCPending *pending = NULL;
     GSList *pending_list;
     char *err_msg = NULL;
 

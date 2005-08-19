@@ -201,6 +201,7 @@ abort_transfers (gpointer user_data)
     RCDTransferPool *pool = RCD_TRANSFER_POOL (user_data);
 
     rcd_transfer_pool_abort (pool);
+    g_object_unref (pool);
 
     return FALSE;
 }
@@ -251,7 +252,7 @@ transfer_file_done_cb (RCDTransfer *transfer, gpointer user_data)
             pool->failing_error = err;
             pool->failing_transfer = transfer;
             /* Defer actually aborting until idle */
-            g_idle_add (abort_transfers, pool);
+            g_idle_add (abort_transfers, g_object_ref (pool));
         }
     }
 
