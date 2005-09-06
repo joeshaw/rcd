@@ -349,7 +349,7 @@ initialize_data (void)
 
     /* We don't want to read in the locks until after we have fetched the
        list of channels. */
-    // rcd_package_locks_load (rc_get_world ());
+    rcd_package_locks_load (rc_get_world ());
 } /* initialize_data */
 
 static void

@@ -1,3 +1,7 @@
+2005-09-06  Tambet Ingo  <tambet@ximian.com>
+
+	* rcd.c (initialize_data): Load package locks again.
+
 2005-08-19  Tambet Ingo  <tambet@ximian.com>
 
 	* rcd-rpc-service.c (service_refresh_blocking): Initialize the pending
