@@ -56,6 +56,9 @@ enum {
 static guint signals[LAST_SIGNAL] = { 0 };
 static GHashTable *abortable_transactions = NULL;
 
+static gboolean check_install_space (RCYouTransaction *transaction, 
+                                     GError **err);
+
 static void rc_you_transaction_send_log (RCYouTransaction *transaction,
                                          gboolean          successful,
                                          const char       *message);
@@ -64,7 +67,8 @@ static void rc_you_transaction_send_log (RCYouTransaction *transaction,
 
 enum {
     RC_YOU_TRANSACTION_ERROR_DOWNLOAD,
-    RC_YOU_TRANSACTION_ERROR_TRANSACTION
+    RC_YOU_TRANSACTION_ERROR_TRANSACTION,
+    RC_YOU_TRANSACTION_ERROR_DISKSPACE
 };
 
 static GQuark
@@ -476,13 +480,26 @@ rc_you_transaction_transaction (RCYouTransaction *transaction)
 static void
 rc_you_transaction_verification (RCYouTransaction *transaction)
 {
+    GError *err = NULL;
+
     if (rcd_transaction_is_locked ())
         rc_you_transaction_failed (transaction, transaction->transaction_pending,
                                    "Another transaction is already in progress");
     else {
+        if (!check_install_space (transaction, &err))
+            goto ERROR;
+
         rcd_transaction_lock ();
         transaction->locked = TRUE;
         rc_you_transaction_transaction (transaction);
+    }
+
+ ERROR:
+    if (err) {
+        rc_you_transaction_failed (transaction,
+                                   transaction->transaction_pending,
+                                   err->message);
+        g_error_free (err);
     }
 }
 
@@ -507,6 +524,7 @@ get_files_to_download (RCYouTransaction *transaction, GError **err)
 
     transaction->files_to_download = NULL;
     transaction->total_download_size = 0;
+    transaction->total_install_size = 0;
 
     for (iter = transaction->patches; iter; iter = iter->next) {
         RCYouPatch *patch = iter->data;
@@ -564,6 +582,7 @@ get_files_to_download (RCYouTransaction *transaction, GError **err)
                                      rc_you_file_ref (package->base_package));
 
                 transaction->total_download_size += package->base_package->size;
+                transaction->total_install_size += package->patch_rpm_size;
             } else if (package->patch_rpm) {
                 rc_you_file_set_url (package->patch_rpm,
                                      rc_maybe_merge_paths (patch_prefix,
@@ -604,6 +623,38 @@ format_size (gsize size)
 
     return output;
 } /* format_size */
+
+static gboolean
+check_install_space (RCYouTransaction *transaction, GError **err)
+{
+    gsize block_size;
+    gsize avail_blocks;
+    struct statvfs vfs_info;
+
+    if (!transaction->total_install_size)
+        return TRUE;
+
+    if (statvfs("/", &vfs_info)) {
+        g_set_error (err, RC_YOU_TRANSACTION_ERROR_DOMAIN,
+                     RC_YOU_TRANSACTION_ERROR_DISKSPACE,
+                     "Unable to get disk space info for /");
+        return FALSE;
+    }
+
+    block_size = vfs_info.f_frsize;
+    avail_blocks = vfs_info.f_bavail;
+
+    if (transaction->total_install_size / block_size + 1 > avail_blocks) {
+        g_set_error (err, RC_YOU_TRANSACTION_ERROR_DOMAIN,
+                     RC_YOU_TRANSACTION_ERROR_DISKSPACE,
+                     "Insufficient disk space: %s needed in /",
+                     format_size (transaction->total_install_size));
+
+        return FALSE;
+    }
+
+    return TRUE;
+} /*  check_install_space */
 
 static gboolean
 check_download_space (RCYouTransaction *transaction, GError **err)

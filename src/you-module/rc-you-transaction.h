@@ -54,6 +54,7 @@ struct _RCYouTransaction {
     RCPending *transaction_pending;
     RCPending *transaction_step_pending;
 
+    gsize total_install_size;
     gsize total_download_size;
     gsize current_download_size;
 

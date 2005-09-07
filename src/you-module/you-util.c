@@ -20,6 +20,7 @@
 
 #include "you-util.h"
 #include <string.h>
+#include <stdlib.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -408,16 +409,39 @@ write_patches (RCYouPatchSList *patches)
     }
 }
 
+static gint
+sort_patches (gconstpointer a, gconstpointer b)
+{
+    RCPackageSpec *aa = (RCPackageSpec *) a;
+    RCPackageSpec *bb = (RCPackageSpec *) b;
+    int x;
+    int y;
+
+    x = atoi (aa->version);
+    y = atoi (bb->version);
+
+    if (x > y)
+        return 1;
+    if (x < y)
+        return -1;
+
+    return 0;
+}
+
 void
 create_you_directory_structure (RCYouPatchSList *patches, GError **error)
 {
+    RCYouPatchSList *sorted;
+
     suse_product_initialize ();
 
-    write_directory_files (patches, error);
+    sorted = g_slist_sort (patches, sort_patches);
+
+    write_directory_files (sorted, error);
     if (*error)
         return;
 
-    write_patches (patches);
+    write_patches (sorted);
 }
 
 void

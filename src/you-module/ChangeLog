@@ -1,3 +1,15 @@
+2005-09-07  Tambet Ingo  <tambet@ximian.com>
+
+	Patch from Chris Rivera.
+	* rc-you-transaction.c (rc_you_transaction_verification): Check for
+	available disk space and fail if not enough.
+	(check_install_space): Implement.
+
+2005-09-06  Tambet Ingo  <tambet@ximian.com>
+
+	* you-util.c (create_you_directory_structure): Sort patches before
+	writing the directory.3 file.
+
 2005-08-16  Tambet Ingo  <tambet@ximian.com>
 
 	* rc-you-transaction.c (get_files_to_download): Add package file size
