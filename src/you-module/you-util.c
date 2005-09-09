@@ -435,13 +435,16 @@ create_you_directory_structure (RCYouPatchSList *patches, GError **error)
 
     suse_product_initialize ();
 
-    sorted = g_slist_sort (patches, sort_patches);
+    sorted = g_slist_copy (patches);
+    sorted = g_slist_sort (sorted, sort_patches);
 
     write_directory_files (sorted, error);
     if (*error)
         return;
 
     write_patches (sorted);
+
+    g_slist_free (sorted);
 }
 
 void

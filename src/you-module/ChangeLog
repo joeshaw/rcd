@@ -1,3 +1,8 @@
+2005-09-09  Tambet Ingo  <tambet@ximian.com>
+
+	* you-util.c (create_you_directory_structure): Make a copy of list
+	before sorting it.
+
 2005-09-07  Tambet Ingo  <tambet@ximian.com>
 
 	Patch from Chris Rivera.
