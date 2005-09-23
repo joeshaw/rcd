@@ -23,9 +23,6 @@
 #include <rc-debug.h>
 #include "wrapper.h"
 
-#define TMP_YOU_PATH_PREFIX "/tmp/lib"
-#define TMP_YOU_PATH TMP_YOU_PATH_PREFIX "/YaST2/you/mnt"
-
 typedef struct {
     gchar    *name;
     gchar    *version;
@@ -38,6 +35,32 @@ typedef struct {
 } SuseProduct;
 
 static GHashTable *products = NULL;
+
+static const char *
+tmp_you_path_prefix (void)
+{
+    static char *path = NULL;
+
+    if (path)
+        return path;
+
+    path = g_build_filename (g_get_tmp_dir (), "lib");
+
+    return path;
+}
+
+static const char *
+tmp_you_path (void)
+{
+    static char *path = NULL;
+
+    if (path)
+        return path;
+
+    path = g_build_filename (tmp_you_path_prefix (), "/YaST2/you/mnt");
+
+    return path;
+}
 
 static void
 destroy_product (SuseProduct *product)
@@ -72,7 +95,7 @@ add_product (const gchar *name, const gchar *version, const gchar *arch,
        prefix out of yast */
     suse_prefix = g_path_get_dirname (patch_path);
 
-    p->patch_path = g_build_filename (TMP_YOU_PATH, patch_path, NULL);
+    p->patch_path = g_build_filename (tmp_you_path (), patch_path, NULL);
     if (rc_mkdir (p->patch_path, 0755) < 0) {
         rc_debug (RC_DEBUG_LEVEL_ERROR,
                   "Can not use product '%s': Creation of directory '%s' failed",
@@ -81,7 +104,7 @@ add_product (const gchar *name, const gchar *version, const gchar *arch,
         return TRUE;
     }
 
-    p->rpm_path = g_build_filename (TMP_YOU_PATH, suse_prefix, "rpm", NULL);
+    p->rpm_path = g_build_filename (tmp_you_path (), suse_prefix, "rpm", NULL);
     if (rc_mkdir (p->rpm_path, 0755) < 0) {
         rc_debug (RC_DEBUG_LEVEL_ERROR,
                   "Can not use product '%s': Creation of directory '%s' failed",
@@ -90,7 +113,7 @@ add_product (const gchar *name, const gchar *version, const gchar *arch,
         return TRUE;
     }
 
-    p->script_path = g_build_filename (TMP_YOU_PATH, suse_prefix, "scripts", NULL);
+    p->script_path = g_build_filename (tmp_you_path (), suse_prefix, "scripts", NULL);
     if (rc_mkdir (p->script_path, 0755) < 0) {
         rc_debug (RC_DEBUG_LEVEL_ERROR,
                   "Can not use product '%s': Creation of directory '%s' failed",
@@ -126,7 +149,7 @@ suse_product_finalize (void)
 
     g_hash_table_destroy (products);
     products = NULL;
-    rc_rmdir (TMP_YOU_PATH_PREFIX);
+    rc_rmdir (tmp_you_path_prefix ());
 }
 
 static SuseProduct *
