@@ -1,3 +1,8 @@
+2005-09-28  Tambet Ingo  <tambet@ximian.com>
+
+	* rcd-expire.c (rcd_expire_foreach): Don't complain in the log in
+	DEBUG_LEVEL_WARNING if the directory doesn't exist. 
+
 2005-09-06  Tambet Ingo  <tambet@ximian.com>
 
 	* rcd.c (initialize_data): Load package locks again.

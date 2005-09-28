@@ -69,7 +69,7 @@ rcd_expire_foreach (const char *base_path,
   dir = g_dir_open (base_path, 0, NULL);
 
   if (dir == NULL) {
-    rc_debug (RC_DEBUG_LEVEL_WARNING,
+    rc_debug (RC_DEBUG_LEVEL_INFO,
 	      "Couldn't open directory '%s' for expiration",
 	      base_path);
     return;
