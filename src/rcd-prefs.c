@@ -27,6 +27,11 @@
 #include "rcd-prefs.h"
 
 #include <stdlib.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include <libredcarpet.h>
 #include <libsoup/soup-misc.h>
@@ -222,6 +227,35 @@ rcd_prefs_set_bind_ipaddress (const char *new_ip, GError **err)
 {
     const char *old_ip = rcd_prefs_get_bind_ipaddress ();
     gboolean diff;
+
+    /* Verify the new_ip is valid */
+    if (new_ip != NULL) {
+        struct in_addr temp;
+
+        if (inet_aton (new_ip, &temp) == 0) {
+            g_set_error (err, RCD_PREFS_ERROR, RCD_PREFS_ERROR, 
+                         "Invalid IP address");
+            return FALSE;
+        } else { /* check to see if we can bind to it */
+            struct sockaddr_in my_addr;
+            int sockfd;
+            int rc;
+
+            memset (&my_addr, 0, sizeof (my_addr));
+            sockfd = socket (AF_INET, SOCK_STREAM, 0);
+            my_addr.sin_family = AF_INET;
+            my_addr.sin_port = 0;
+            my_addr.sin_addr.s_addr = inet_addr (new_ip);
+            rc = bind (sockfd, (struct sockaddr *) &my_addr, sizeof (my_addr));
+            close (sockfd);
+
+            if (rc == -1) { /* can't bind to this address */
+                g_set_error (err, RCD_PREFS_ERROR, RCD_PREFS_ERROR, 
+                             "IP address not available on this machine");
+                return FALSE;
+            }
+        }
+    }
 
     /* Don't obey the command-line option anymore */
     rcd_options_reset_bind_ipaddress ();

@@ -1,3 +1,8 @@
+2005-09-29  Tambet Ingo  <tambet@ximian.com>
+
+	* rcd-prefs.c (rcd_prefs_set_bind_ipaddress): Check if ip address is
+	valid. Patch from Bryan Wooten.
+
 2005-09-28  Tambet Ingo  <tambet@ximian.com>
 
 	* rcd-expire.c (rcd_expire_foreach): Don't complain in the log in
