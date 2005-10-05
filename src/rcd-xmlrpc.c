@@ -303,7 +303,12 @@ xmlrpc_client_call_server_params (xmlrpc_env *env,
 
 	XMLRPC_FAIL_IF_FAULT(env);
 
-	/* Get the response back */
+    if (response_xml == NULL || response_len == 0) {
+        xmlrpc_env_set_fault (env, XMLRPC_PARSE_ERROR,
+                              "Server responded with an empty response");
+        goto cleanup;
+    }
+
 	retval = xmlrpc_parse_response (env, response_xml, response_len);
 	XMLRPC_FAIL_IF_FAULT(env);
 
@@ -592,6 +597,9 @@ file_done_cb (RCDTransfer *t, gpointer user_data)
     if (rcd_transfer_get_error (t)) {
         xmlrpc_env_set_fault (&env, rcd_transfer_get_error (t),
                               (char *) rcd_transfer_get_error_string (t));
+    } else if (t->data->data == NULL || t->data->len == 0) {
+        xmlrpc_env_set_fault (&env, XMLRPC_PARSE_ERROR,
+                              "Server responded with an empty response");
     } else {
         result = xmlrpc_parse_response (&env,
                                         t->data->data,
