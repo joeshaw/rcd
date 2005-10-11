@@ -739,8 +739,7 @@ parser_package_end (RCYouPatchSAXContext *ctx, const xmlChar *name)
 
     if (!strcmp (name, "package")) {
         ctx->current_patch->packages = g_slist_prepend
-            (ctx->current_patch->packages,
-             rc_you_package_ref (ctx->current_package));
+            (ctx->current_patch->packages, ctx->current_package);
         ctx->current_package = NULL;
         ctx->state = PARSER_PACKAGES;
     }
