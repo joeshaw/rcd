@@ -1,3 +1,7 @@
+2005-10-11  Michael Wolf  <maw@novell.com>
+
+	* configure.in: Bump to 2.4.9
+
 2005-08-15  Tambet Ingo  <tambet@ximian.com>
 
 	* configure.in: Update requirements for libredcarpet and libsoup.
