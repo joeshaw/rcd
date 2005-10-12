@@ -1,3 +1,9 @@
+2005-10-12  Tambet Ingo  <tambet@ximian.com>
+
+	* suse-product.c (tmp_you_path_prefix): g_build_filename() expects
+	NULL as a last argument.
+	(tmp_you_path): Ditto.
+
 2005-10-10  Tambet Ingo  <tambet@ximian.com>
 
 	* you-util.c (parser_package_end): Don't increase the reference count,

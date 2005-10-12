@@ -44,7 +44,7 @@ tmp_you_path_prefix (void)
     if (path)
         return path;
 
-    path = g_build_filename (g_get_tmp_dir (), "lib");
+    path = g_build_filename (g_get_tmp_dir (), "lib", NULL);
 
     return path;
 }
@@ -57,7 +57,7 @@ tmp_you_path (void)
     if (path)
         return path;
 
-    path = g_build_filename (tmp_you_path_prefix (), "/YaST2/you/mnt");
+    path = g_build_filename (tmp_you_path_prefix (), "/YaST2/you/mnt", NULL);
 
     return path;
 }
